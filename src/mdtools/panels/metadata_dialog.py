@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from mdtools import app_settings, foobar
+from mdtools import app_settings, foobar, user_paths
 from mdtools.gallery import downloaded_covers_dir, save_downloaded_cover
 from mdtools.metadata_lookup import (
     AlbumCandidate,
@@ -39,7 +39,9 @@ from mdtools.panels.mdrem_port import resolve_port
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
 from mdtools.project import ProjectMetadata, Track, format_time, parse_time
 
-TITLE_COL, TIME_COL = 0, 1
+# Artist sits between them: it belongs with the title it qualifies, and
+# is empty on an ordinary album (see ProjectMetadata.is_compilation).
+TITLE_COL, ARTIST_COL, TIME_COL = 0, 1, 2
 COVER_SIZE = 100
 
 _INVALID_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*]')
@@ -141,11 +143,13 @@ class MetadataDialog(QDialog):
 
         layout.addWidget(QLabel(self.tr("Tracks:")))
 
-        self.table = QTableWidget(0, 2)
-        self.table.setHorizontalHeaderLabels([self.tr("Title"), self.tr("Time (mm:ss, optional)")])
+        self.table = QTableWidget(0, 3)
+        self.table.setHorizontalHeaderLabels(
+            [self.tr("Title"), self.tr("Artist (only on a compilation)"), self.tr("Time (mm:ss, optional)")]
+        )
         self.table.horizontalHeader().setSectionResizeMode(TITLE_COL, QHeaderView.ResizeMode.Stretch)
         for track in metadata.tracks:
-            self._append_row(track.title, format_time(track.time_seconds))
+            self._append_row(track.title, format_time(track.time_seconds), track.artist)
         layout.addWidget(self.table)
 
         btn_row = QHBoxLayout()
@@ -270,7 +274,7 @@ class MetadataDialog(QDialog):
         self.year_spin.setValue(metadata.year or 0)
         self.table.setRowCount(0)
         for track in metadata.tracks:
-            self._append_row(track.title, format_time(track.time_seconds))
+            self._append_row(track.title, format_time(track.time_seconds), track.artist)
 
         self._fetch_cover_for(metadata.album, metadata.artist, len(metadata.tracks), metadata.year)
 
@@ -324,7 +328,10 @@ class MetadataDialog(QDialog):
         Deliberately overrides whatever a lookup found, without asking: the
         user clicked the picture they can see is wrong."""
         path, _ = QFileDialog.getOpenFileName(
-            self, self.tr("Choose Cover Art"), "", self.tr("Images (*.png *.jpg *.jpeg *.bmp *.webp)")
+            self,
+            self.tr("Choose Cover Art"),
+            user_paths.image_start_path(),
+            self.tr("Images (*.png *.jpg *.jpeg *.bmp *.webp)"),
         )
         if not path:
             return
@@ -379,15 +386,16 @@ class MetadataDialog(QDialog):
         year_text = str(candidate.year) if candidate.year else "?"
         return f"{candidate.artist_name} — {candidate.collection_name} ({year_text}, {candidate.track_count} tracks)"
 
-    def _append_row(self, title: str, time_text: str) -> int:
+    def _append_row(self, title: str, time_text: str, artist: str = "") -> int:
         row = self.table.rowCount()
         self.table.insertRow(row)
         self.table.setItem(row, TITLE_COL, QTableWidgetItem(title))
+        self.table.setItem(row, ARTIST_COL, QTableWidgetItem(artist))
         self.table.setItem(row, TIME_COL, QTableWidgetItem(time_text))
         return row
 
     def _add_track(self) -> None:
-        row = self._append_row("", "")
+        row = self._append_row("", "", "")
         title_item = self.table.item(row, TITLE_COL)
         self.table.setCurrentItem(title_item)
         self.table.editItem(title_item)
@@ -404,7 +412,7 @@ class MetadataDialog(QDialog):
         target = row + direction
         if target < 0 or target >= self.table.rowCount():
             return
-        for col in (TITLE_COL, TIME_COL):
+        for col in (TITLE_COL, ARTIST_COL, TIME_COL):
             a = self.table.takeItem(row, col)
             b = self.table.takeItem(target, col)
             self.table.setItem(row, col, b)
@@ -425,7 +433,9 @@ class MetadataDialog(QDialog):
                 continue
             time_item = self.table.item(row, TIME_COL)
             time_text = time_item.text() if time_item else ""
-            tracks.append(Track(title=title, time_seconds=parse_time(time_text)))
+            artist_item = self.table.item(row, ARTIST_COL)
+            artist = artist_item.text().strip() if artist_item else ""
+            tracks.append(Track(title=title, time_seconds=parse_time(time_text), artist=artist))
 
         return ProjectMetadata(
             album=self.album_edit.text().strip(),

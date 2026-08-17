@@ -30,6 +30,9 @@ _BAKE_DPI_KEY = "bake_dpi"
 _MDREM_ENABLED_KEY = "mdrem_enabled"
 _MDREM_PORT_KEY = "mdrem_port"
 _FOOBAR_URL_KEY = "foobar_url"
+_FOOBAR_EXE_KEY = "foobar_exe"
+_CD_RIP_FOLDER_KEY = "cd_rip_folder"
+_CD_DRIVE_KEY = "cd_drive"
 
 # foo_beefweb's own default listening address.
 DEFAULT_FOOBAR_URL = "http://localhost:8880"
@@ -114,3 +117,46 @@ def foobar_url() -> str:
 
 def set_foobar_url(value: str) -> None:
     _settings().setValue(_FOOBAR_URL_KEY, str(value).strip() or DEFAULT_FOOBAR_URL)
+
+
+def foobar_exe() -> str:
+    """foobar2000's own executable, which Record CD needs *in addition to*
+    the Beefweb URL above -- the two do different halves of the same job.
+    Beefweb cannot be given files outside its configured music directories
+    (see foobar.add_files_via_cli), so the ripped tracks go in through the
+    command line instead.
+
+    Empty means "not chosen yet"; callers fall back to
+    foobar.find_foobar_exe()."""
+    return str(_settings().value(_FOOBAR_EXE_KEY, "") or "")
+
+
+def set_foobar_exe(value: str) -> None:
+    _settings().setValue(_FOOBAR_EXE_KEY, str(value).strip())
+
+
+def default_cd_rip_folder() -> str:
+    """Under the system temp folder by default: a rip is the raw material
+    for a recording, not a music collection, and one album is a few hundred
+    megabytes that most users will never want again once the disc is
+    written. Changeable in Window > Settings for anyone who does."""
+    base = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.TempLocation)
+    return str(Path(base) / "MDTools CD Rip")
+
+
+def cd_rip_folder() -> str:
+    return str(_settings().value(_CD_RIP_FOLDER_KEY, "") or default_cd_rip_folder())
+
+
+def set_cd_rip_folder(value: str) -> None:
+    _settings().setValue(_CD_RIP_FOLDER_KEY, str(value).strip())
+
+
+def cd_drive() -> str:
+    """The optical drive last ripped from, so a second disc does not have
+    to be pointed at it again. Empty until one has been used."""
+    return str(_settings().value(_CD_DRIVE_KEY, "") or "")
+
+
+def set_cd_drive(value: str) -> None:
+    _settings().setValue(_CD_DRIVE_KEY, str(value).strip())

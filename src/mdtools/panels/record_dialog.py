@@ -44,7 +44,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from mdtools import foobar, mdrem
+from mdtools import foobar, mdrem, mixtape_cover
 from mdtools.gallery import save_downloaded_cover
 from mdtools.metadata_lookup import MetadataLookupError, find_cover
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
@@ -365,6 +365,15 @@ class RecordDialog(QDialog):
         metadata = foobar.metadata_from_playlist(self._items)
         self.result_metadata = metadata
         if not metadata.album and not metadata.artist:
+            return
+
+        # A mixtape has no sleeve to look up, and looking one up anyway is
+        # worse than having none: a search for "Various Artists" returns
+        # some unrelated record's artwork, which would then be printed on
+        # this disc's label as though it belonged to it. One is drawn from
+        # the track list instead -- see mixtape_cover.
+        if metadata.is_compilation():
+            metadata.cover_art = mixtape_cover.render_cover(metadata)
             return
 
         self.status_label.setText(self.tr("Looking up cover art..."))

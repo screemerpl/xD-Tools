@@ -14,6 +14,9 @@ fi
 # shift between versions/platforms.
 QT_TRANSLATIONS=$(.venv/bin/python -c "from PySide6.QtCore import QLibraryInfo; print(QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath))")
 
+# No bin/ is bundled here, unlike the Windows build: cdparanoia and flac
+# are packaged by every distribution, so cdrip.find_tool() picks them up
+# from PATH instead of a bundled copy.
 .venv/bin/pyinstaller --noconfirm --windowed --name MDTools --paths src \
     --add-data "src/mdtools/templates/defaults.json:mdtools/templates" \
     --add-data "src/mdtools/i18n/mdtools_pl.qm:mdtools/i18n" \
