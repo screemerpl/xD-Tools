@@ -23,3 +23,10 @@ Thumbs.db
 # pyproject.toml deklaruje je jako package-data, a build_windows.ps1 wprost je
 # pakuje (--add-data) zamiast przebudowywać — bez nich świeży klon traci
 # tłumaczenia, a build wywala się na brakującym pliku.
+
+# Projekty użytkownika. Zapisane domyślnie do Dokumenty/MiniDiscProjects
+# (patrz user_paths.py), ale zanim to powstało, okna plików startowały w
+# katalogu roboczym procesu — czyli tutaj, gdy aplikację uruchamia się z
+# repozytorium. Gdyby kiedyś miał tu trafić projekt przykładowy, dodaj go
+# przez `git add -f`.
+*.mdproj
