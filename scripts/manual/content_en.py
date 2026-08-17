@@ -455,6 +455,11 @@ BOOK = [
             {"p": "**Project > Record to MiniDisc from foobar2000...** does the whole job in one go: it "
                   "arms the deck, plays the album out of foobar2000, watches it to the end, writes the "
                   "titles, and lays out both labels from the album's own artwork."},
+            {"note": "**This needs the MDRem adapter, and the menu entry only appears once it is enabled "
+                     "in Window > Settings...** The adapter is what puts the deck into record and what "
+                     "marks the tracks. Without one, recording means pressing record on the deck yourself "
+                     "and letting its own LEVEL-SYNC decide where the tracks begin - MDTools has no part "
+                     "in that."},
             {"h2": "Setting up"},
             {"ol": [
                 "Install the **Beefweb Remote Control** component (`foo_beefweb`) in foobar2000. That is "

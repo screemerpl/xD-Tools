@@ -458,6 +458,11 @@ BOOK = [
             {"p": "**Projekt > Nagraj na MiniDisc z foobar2000...** robi całą robotę za jednym razem: "
                   "uzbraja magnetofon, odtwarza album z foobar2000, pilnuje go do końca, zapisuje tytuły "
                   "i układa obie etykiety z okładki albumu."},
+            {"note": "**To wymaga przystawki MDRem, a pozycja w menu pojawia się dopiero po jej włączeniu "
+                     "w Okno > Ustawienia...** To przystawka wprowadza magnetofon w nagrywanie i to ona "
+                     "stawia znaczniki ścieżek. Bez niej nagrywanie oznacza samodzielne wciśnięcie "
+                     "Record na magnetofonie i pozostawienie podziału na ścieżki jego własnemu "
+                     "LEVEL-SYNC — MDTools nie ma w tym udziału."},
             {"h2": "Przygotowanie"},
             {"ol": [
                 "Zainstaluj w foobar2000 komponent **Beefweb Remote Control** (`foo_beefweb`). Tak "

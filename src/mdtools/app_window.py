@@ -291,7 +291,7 @@ class MainWindow(QMainWindow):
         self.record_action = project_menu.addAction(
             self.tr("Record to MiniDisc from foobar2000..."), self._record_from_foobar
         )
-        self.record_action.setVisible(app_settings.mdrem_enabled())
+        self._sync_mdrem_actions()
 
         templates_menu = self.menuBar().addMenu(self.tr("&Templates"))
         templates_menu.addAction(self.tr("Manage Templates..."), self._manage_templates)
@@ -1092,6 +1092,17 @@ class MainWindow(QMainWindow):
         mdtools.app_settings and panels/settings_dialog.py."""
         dialog = SettingsDialog(self)
         dialog.exec()
+        self._sync_mdrem_actions()
+
+    def _sync_mdrem_actions(self) -> None:
+        """Re-reads the adapter setting into the menu.
+
+        Every other MDRem entry point lives on a dialog that is rebuilt each
+        time it opens, so it picks the setting up for free. This one is an
+        action built once at startup, and stayed visible after the adapter
+        was switched off -- offering to record an album through hardware the
+        user had just said they do not have."""
+        self.record_action.setVisible(app_settings.mdrem_enabled())
 
     def _save_as_template(self) -> None:
         """Captures the current page's template shape plus every layer on
@@ -1188,6 +1199,15 @@ class MainWindow(QMainWindow):
         AboutDialog(self).exec()
 
     def _record_from_foobar(self) -> None:
+        # The whole flow runs through the adapter -- it is what arms the deck
+        # and what marks the tracks -- so with the adapter switched off there
+        # is nothing here to do. Silent rather than a dialog: the menu entry
+        # is hidden in that state, so this is a backstop, not a path anyone
+        # is meant to arrive at. Without the adapter, recording means
+        # pressing record on the deck and letting its LEVEL-SYNC split the
+        # tracks.
+        if not app_settings.mdrem_enabled():
+            return
         port = resolve_port(self)
         if port is None:
             return

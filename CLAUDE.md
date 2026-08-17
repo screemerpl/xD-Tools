@@ -1578,6 +1578,21 @@ button nor the startup screen's Remote button is constructed visible at
 all. Without hardware they could do nothing but explain themselves, which
 is worse than not being there.
 
+**Those two gates are free; the Project > Record menu entry is not.** Both
+buttons live on dialogs that are rebuilt every time they open, so they read
+the setting afresh each time. `record_action` is built once, at startup, and
+stayed visible after the adapter was switched off mid-session -- offering to
+record an album through hardware the user had just said they do not have,
+and with it the "mark tracks through the adapter" option, which is precisely
+what someone without an adapter cannot use. `_sync_mdrem_actions()` is now
+called both when the menu is built and after Window > Settings closes; it is
+the place to extend if any other long-lived widget ever depends on this
+setting. `_record_from_foobar()` also returns immediately when the adapter
+is off, as a backstop behind the hidden entry -- the flow arms the deck and
+marks the tracks over infrared, so there is nothing it could do. Recording
+without the adapter means pressing record on the deck and letting its own
+LEVEL-SYNC split the tracks, which is not something this app drives.
+
 **Transport is PySide6's own `QtSerialPort`, not pyserial** -- it ships
 inside PySide6, so this feature adds nothing to `pyproject.toml` and needs
 no new `--add-data`/hidden-import handling in either build script. It's
