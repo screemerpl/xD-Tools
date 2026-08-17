@@ -1,6 +1,6 @@
 """Window > Settings... -- global, user-level app settings (currently just
 the DPI values used for the on-screen canvas, exports, and Bake Layers).
-Deliberately separate from Project > Metadata...: these apply the same way
+Deliberately separate from the Metadata dialog: these apply the same way
 regardless of which project is open, so they're read/written straight
 from mdtools.app_settings rather than living on the Project object.
 """
@@ -109,8 +109,8 @@ class SettingsDialog(QDialog):
         self.mdrem_check.setChecked(app_settings.mdrem_enabled())
         self.mdrem_check.setToolTip(
             self.tr(
-                "Adds Upload Tracklist to Project > Metadata... and a Remote window to the startup screen, "
-                "for writing titles onto the MiniDisc itself over infrared."
+                "Adds Upload Tracklist to the Metadata dialog, the Recording menu's entries, and a Remote "
+                "window to the startup screen, for writing titles onto the MiniDisc itself over infrared."
             )
         )
         self.mdrem_check.toggled.connect(self._sync_mdrem_enabled)
@@ -214,7 +214,7 @@ class SettingsDialog(QDialog):
 
     def _sync_mdrem_enabled(self, enabled: bool) -> None:
         """Only the port follows the checkbox. The foobar2000 address does
-        not: reading a playlist (Project > Metadata's "Load from
+        not: reading a playlist (the Metadata dialog's "Load from
         foobar2000") needs foobar, not the infrared adapter, so tying it to
         the adapter would disable a setting the user still needs."""
         self._mdrem_port_widget.setEnabled(enabled)

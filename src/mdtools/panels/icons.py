@@ -80,6 +80,13 @@ def gallery_icon() -> QIcon:
     return _load_svg_icon("gallery")
 
 
+def edit_metadata_icon() -> QIcon:
+    """A memo (pencil on a pad), for opening the album metadata editor --
+    deliberately not the musical note below, which is about inserting the
+    metadata onto the page rather than editing it."""
+    return _load_svg_icon("edit_metadata")
+
+
 def metadata_icon() -> QIcon:
     """A musical note, for Insert from Metadata (track titles/album
     info)."""

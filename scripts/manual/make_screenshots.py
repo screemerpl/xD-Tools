@@ -21,6 +21,7 @@ diagrams at doc/img/.
 from __future__ import annotations
 
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -521,6 +522,19 @@ SIGNAL_CHAIN_STRINGS = {
 # --- the screenshots themselves --------------------------------------------
 
 
+def _demo_album_folder() -> Path:
+    """A throwaway folder of empty files for the Record Folder screenshot.
+
+    Empty is enough: that dialog only ever lists filenames and asks foobar
+    (stood in for here) what the tags say, so it never opens one. Under the
+    temp folder rather than anywhere the reader might have real music."""
+    folder = Path(tempfile.gettempdir()) / "MDTools Manual" / f"{DEMO_ARTIST} - {DEMO_ALBUM} ({DEMO_YEAR})"
+    folder.mkdir(parents=True, exist_ok=True)
+    for index, (title, _length) in enumerate(DEMO_TRACKS, start=1):
+        (folder / f"{index:02d} {title}.flac").write_bytes(b"")
+    return folder
+
+
 def demo_metadata():
     from mdtools.project import ProjectMetadata, Track
 
@@ -539,6 +553,7 @@ def capture_language(app, code: str) -> None:
     from mdtools.panels.about_dialog import AboutDialog
     from mdtools.panels.cd_rip_dialog import CdRipDialog
     from mdtools.panels.erase_dialog import EraseDiscDialog
+    from mdtools.panels.folder_record_dialog import FolderRecordDialog
     from mdtools.panels.metadata_dialog import MetadataDialog
     from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
     from mdtools.panels.new_design_dialog import NewDesignDialog
@@ -616,6 +631,17 @@ def capture_language(app, code: str) -> None:
     rip._read_disc()
     save(rip, out / "cd-rip.png", settle_ms=400)
     close_quietly(rip)
+
+    # -- recording a folder of files, with a throwaway album on disk
+    folder = FolderRecordDialog("http://localhost:8880")
+    folder.show()
+    settle(200)
+    folder.set_folder(_demo_album_folder())
+    # Not _on_loaded(): that accepts the dialog and closes it. This is the
+    # state the user actually looks at -- what foobar made of the files.
+    folder._show_playlist(_make_fake_foobar()().playlist_items("p1"))
+    save(folder, out / "folder-record.png", settle_ms=400)
+    close_quietly(folder)
 
     save(EraseDiscDialog("COM7"), out / "erase.png")
 

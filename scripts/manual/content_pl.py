@@ -209,10 +209,11 @@ BOOK = [
     {
         "title": "Metadane i okładka",
         "blocks": [
-            {"p": "**Projekt > Metadane...** trzyma tytuł albumu, wykonawcę, rok i listę utworów. Warto je "
+            {"p": "**Metadane...** w panelu Narzędzia trzymają tytuł albumu, wykonawcę, rok i listę "
+                  "utworów. Warto je "
                   "wypełnić nawet przy samym projektowaniu etykiety: listę utworów można wrzucić na "
                   "grafikę jako tekst, a automatyczne układanie i nadawanie tytułów czytają właśnie stąd."},
-            {"fig": ("metadata", "Projekt > Metadane, z pobraną okładką i wczytaną listą utworów.")},
+            {"fig": ("metadata", "Okno Metadane, z pobraną okładką i wczytaną listą utworów.")},
             {"h2": "Trzy sposoby wypełnienia"},
             {"ol": [
                 "**Ręcznie.** Dodaj utwór, wpisz, ustaw kolejność przyciskami Przesuń w górę / w dół. "
@@ -247,7 +248,7 @@ BOOK = [
         "blocks": [
             {"p": "**Różdżka** w panelu Narzędzia buduje obie strony z okładki i listy utworów albumu. To "
                   "najszybsza droga od „mam płytę” do „mam co wydrukować”."},
-            {"p": "Najpierw wypełnij album i wykonawcę w Projekt > Metadane... — po tym program szuka. "
+            {"p": "Najpierw wypełnij album i wykonawcę w **Metadanych...** — po tym program szuka. "
                   "Jeżeli nie ma jeszcze okładki, najpierw ją znajdzie."},
             {"warn": "To **zastępuje obie strony** i zeruje historię cofania, więc program prosi o "
                      "potwierdzenie. Same metadane zostają nietknięte."},
@@ -369,9 +370,9 @@ BOOK = [
                   "działać: płytka zgłasza identyfikator USB `2E8A:0003`, ten sam co jej własny bootloader "
                   "i inne płytki Waveshare, więc jedyną pewną identyfikacją jest odpowiedź urządzenia na "
                   "`PING`."},
-            {"p": "Po zaznaczeniu pola pojawiają się trzy rzeczy: **Wyślij listę utworów** w Projekt > "
-                  "Metadane..., **Pilot...** na ekranie powitalnym oraz **Nagraj na MiniDisc z "
-                  "foobar2000...** w menu Projekt."},
+            {"p": "Po zaznaczeniu pola pojawiają się trzy rzeczy: **Wyślij listę utworów** w oknie "
+                  "Metadane..., **Pilot...** na ekranie powitalnym oraz całe menu **Nagrywanie** — "
+                  "wszystkie trzy sposoby nagrania płyty i Skasuj MiniDisc..."},
             {"note": "Adres foobar2000 na tej samej stronie celowo *nie* jest powiązany z tym polem — do "
                      "czytania playlisty potrzebny jest foobar2000, a nie przystawka na podczerwień."},
         ],
@@ -410,7 +411,7 @@ BOOK = [
     {
         "title": "Zapisywanie tytułów na płycie",
         "blocks": [
-            {"p": "**Projekt > Metadane... > Wyślij listę utworów** zapisuje tytuł płyty i nazwy "
+            {"p": "**Metadane... > Wyślij listę utworów** zapisuje tytuł płyty i nazwy "
                   "wszystkich utworów na samym MiniDisc. Tytuł płyty składa się jako "
                   "`Wykonawca - Album (Rok)`, z pominięciem tego, co niewypełnione."},
             {"fig": ("upload", "Wszystko widać, zanim cokolwiek zostanie zapisane.")},
@@ -462,7 +463,7 @@ BOOK = [
     {
         "title": "Nagrywanie albumu z foobar2000",
         "blocks": [
-            {"p": "**Projekt > Nagraj na MiniDisc z foobar2000...** robi całą robotę za jednym razem: "
+            {"p": "**Nagrywanie > Nagraj na MiniDisc z foobar2000...** robi całą robotę za jednym razem: "
                   "uzbraja magnetofon, odtwarza album z foobar2000, pilnuje go do końca, zapisuje tytuły "
                   "i układa obie etykiety z okładki albumu."},
             {"note": "**To wymaga przystawki MDRem, a pozycja w menu pojawia się dopiero po jej włączeniu "
@@ -527,7 +528,7 @@ BOOK = [
     {
         "title": "Nagrywanie z płyty CD",
         "blocks": [
-            {"p": "**Projekt > Nagraj CD na MiniDisc...** przegrywa płytę audio CD na MiniDisc. "
+            {"p": "**Nagrywanie > Nagraj CD na MiniDisc...** przegrywa płytę audio CD na MiniDisc. "
                   "Odczytuje płytę, ustala, co to za album, zgrywa każdą ścieżkę do pliku, ładuje te "
                   "pliki do foobar2000 we właściwej kolejności i przekazuje sterowanie nagrywaniu, "
                   "które już znasz - to samo uzbrajanie, te same znaczniki ścieżek, to samo nadawanie "
@@ -595,11 +596,53 @@ BOOK = [
                      "jeśli chcesz zachować."},
         ],
     },
+    {
+        "title": "Nagrywanie z folderu",
+        "blocks": [
+            {"p": "**Nagrywanie > Nagraj folder na MiniDisc...** nagrywa album, który masz już na "
+                  "dysku. Wskaż folder, w którym leży, a MDTools wczyta te pliki do foobar2000 we "
+                  "właściwej kolejności i przekaże sterowanie nagrywaniu, które już znasz — to samo "
+                  "uzbrajanie, te same znaczniki utworów, to samo nadawanie tytułów."},
+            {"note": "**To także wymaga przystawki MDRem** — pozycja pojawia się dopiero po jej "
+                     "włączeniu. Samo wczytanie folderu jej nie potrzebuje, ale nagranie tego, co "
+                     "wczytane, już tak."},
+            {"fig": ("folder-record", "Odczytany folder i to, co foobar2000 wyczytał ze znaczników.")},
+            {"h2": "Krok po kroku"},
+            {"ol": [
+                "Naciśnij **Przeglądaj...** i wskaż folder z albumem. FLAC, MP3 i wszystko inne, co "
+                "odtwarza foobar2000, zostanie rozpoznane; co nie jest dźwiękiem — okładki, plik cue, "
+                "log — jest pomijane.",
+                "Sprawdź kolejność. Bierze się z nazw plików, porównywanych tak, że `10` idzie po "
+                "`9`, a nie po `1`. Jeśli jest zła, poprawiać trzeba nazwy plików.",
+                "Sprawdź album i wykonawcę. Na początek są zgadywane z nazwy samego folderu, a to, co "
+                "jest w znacznikach plików, zastępuje ten domysł, gdy tylko ścieżki zostaną wczytane. "
+                "Jeżeli jedno i drugie jest nie tak, po prostu wpisz swoje.",
+                "Naciśnij **Wczytaj i nagraj**. Ścieżki trafiają do foobar2000, MDTools odczytuje, co "
+                "z nich wyszło, szuka okładki i samo otwiera okno nagrywania.",
+            ]},
+            {"h2": "Skąd biorą się tytuły"},
+            {"p": "Z plików — odczytanych przez foobar2000, a nie przez MDTools: z tych dwóch to on "
+                  "lepiej czyta znaczniki, a i tak musi je odczytać, żeby cokolwiek zagrać. Plik bez "
+                  "znacznika tytułu zostanie nagrany pod nazwą swojego pliku. To uczciwa odpowiedź i "
+                  "zwykle wystarczająca."},
+            {"p": "Album i wykonawca widoczni w tym oknie trafią na płytę i na etykietę, więc poprawkę "
+                  "warto zrobić przed naciśnięciem przycisku. Do Twoich plików nic nigdy nie jest "
+                  "zapisywane."},
+            {"h2": "Podfolder na płytę"},
+            {"p": "Folder, w którym leżą utwory, *jest* albumem, a jego podfoldery są pomijane — "
+                  "katalog ze skanami czy bonusami nie dołącza do listy. Dopiero gdy w samym folderze "
+                  "nie ma żadnego dźwięku, MDTools zagląda głębiej — i dzięki temu album dwupłytowy "
+                  "trzymany jako `CD1` i `CD2` wychodzi w kolejności płyt."},
+            {"warn": "Wczytanie folderu **czyści bieżącą playlistę foobar2000**, dokładnie tak samo "
+                     "jak nagrywanie z CD. Jeśli miałeś tam coś przygotowane, przenieś to wcześniej "
+                     "gdzie indziej."},
+        ],
+    },
     # ------------------------------------------------------------------
     {
         "title": "Kasowanie płyty",
         "blocks": [
-            {"p": "**Projekt > Skasuj MiniDisc...** czyści płytę w magnetofonie. Działa na tym, co "
+            {"p": "**Nagrywanie > Skasuj MiniDisc...** czyści płytę w magnetofonie. Działa na tym, co "
                   "fizycznie jest w środku, więc nie ma znaczenia, który projekt jest otwarty ani czy "
                   "w ogóle jakiś jest."},
             {"warn": "Nie da się tego cofnąć, a MDTools nie widzi wyniku. Upewnij się, że w "

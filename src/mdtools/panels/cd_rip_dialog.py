@@ -1,4 +1,4 @@
-"""Project > "Record CD to MiniDisc..." -- the step that turns a compact
+"""Recording > "Record CD to MiniDisc..." -- the step that turns a compact
 disc into something the existing recording flow can play.
 
 The sequence:

@@ -54,6 +54,10 @@ def pictures_dir() -> Path:
     return _standard(QStandardPaths.StandardLocation.PicturesLocation, "Pictures")
 
 
+def music_dir() -> Path:
+    return _standard(QStandardPaths.StandardLocation.MusicLocation, "Music")
+
+
 def projects_dir() -> Path:
     """Documents/MiniDiscProjects, created if it is not there yet.
 
@@ -126,3 +130,10 @@ def export_start_path(current_path: str | None, filename: str = "") -> str:
 
 def image_start_path() -> str:
     return str(pictures_dir())
+
+
+def music_start_path() -> str:
+    """Where "Record Folder to MiniDisc..." opens its folder picker. Music
+    for the same reason images come from Pictures -- the OS already has an
+    answer, and it is localised and redirectable in ways only it knows."""
+    return str(music_dir())

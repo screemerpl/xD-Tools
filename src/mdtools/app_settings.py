@@ -33,6 +33,7 @@ _FOOBAR_URL_KEY = "foobar_url"
 _FOOBAR_EXE_KEY = "foobar_exe"
 _CD_RIP_FOLDER_KEY = "cd_rip_folder"
 _CD_DRIVE_KEY = "cd_drive"
+_MUSIC_FOLDER_KEY = "music_folder"
 
 # foo_beefweb's own default listening address.
 DEFAULT_FOOBAR_URL = "http://localhost:8880"
@@ -160,3 +161,20 @@ def cd_drive() -> str:
 
 def set_cd_drive(value: str) -> None:
     _settings().setValue(_CD_DRIVE_KEY, str(value).strip())
+
+
+def music_folder() -> str:
+    """Where "Record Folder to MiniDisc..." last browsed -- the *parent* of
+    the album picked, since the next album is far more likely to be its
+    sibling than inside it. Empty until one has been chosen, at which point
+    the picker falls back to the OS's own Music folder
+    (user_paths.music_start_path).
+
+    Not exposed in Window > Settings: it is a picker's memory, not a
+    preference anyone would go looking for, unlike the rip folder, which
+    decides where hundreds of megabytes land."""
+    return str(_settings().value(_MUSIC_FOLDER_KEY, "") or "")
+
+
+def set_music_folder(value: str) -> None:
+    _settings().setValue(_MUSIC_FOLDER_KEY, str(value).strip())

@@ -35,7 +35,7 @@ class ProjectMetadata:
     year: int | None = None
     tracks: list[Track] = field(default_factory=list)
     # Raw image bytes (whatever format metadata_lookup.fetch_artwork()
-    # returned, typically JPEG) fetched via Project > Metadata's "Lookup
+    # returned, typically JPEG) fetched via the Metadata dialog's "Lookup
     # Track List..." -- saved with the project so reopening the Metadata
     # dialog later still shows it, not just a same-session preview.
     cover_art: bytes | None = None
