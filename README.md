@@ -82,10 +82,10 @@ single `.mdproj` JSON file, reusing the current file once one exists.
 renaming the project file afterwards, or deleting the original image you
 imported, doesn't break it.
 
-**Closing the window goes back to the startup screen**, so switching to
-another project doesn't mean relaunching MDTools. Unsaved changes are asked
-about first. To leave for good, use **File > Exit**, or cancel the startup
-screen.
+**File > Close Project** (Ctrl+W), and the window's close button, go back to
+the startup screen rather than quitting -- switching to another project
+doesn't mean relaunching MDTools. Unsaved changes are asked about first. To
+leave for good, use **File > Exit**, or cancel the startup screen.
 
 ## Disc label geometry
 

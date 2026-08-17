@@ -1987,6 +1987,13 @@ dialog must *not* close the window, which is exactly the case that would
 otherwise lose what the prompt was protecting.
 
 **Closing the window returns to the startup screen; it does not quit.**
+**File > Close Project** (Ctrl+W) is the same thing from the menu -- it is
+literally `self.close()`, so the guard, the startup loop and the re-show
+stay in `closeEvent` rather than being copied. It exists because a File
+menu whose only exit was "Exit" hid the split entirely: the first thing
+that happened after this shipped was closing from the menu and being
+surprised not to come back.
+
 `closeEvent` runs the unsaved-changes guard, then hides the window and loops
 `StartupDialog` until the user opens/creates something (window re-shown,
 event ignored) or cancels it (the close goes through, and with no other

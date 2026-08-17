@@ -119,6 +119,42 @@ def test_discarding_changes_does_not_ask_about_them_twice(qt_app, monkeypatch, t
     assert window.project.metadata.album == "Second"
 
 
+def test_file_close_project_goes_back_to_the_startup_screen(qt_app, monkeypatch, tmp_path):
+    """The menu's own route back. Without it the File menu offered only
+    Exit, hiding that the close button does something different -- which is
+    how the difference was discovered, by being surprised by it."""
+    window = _window(monkeypatch)
+    _startup_returns(monkeypatch, path=_saved_project(tmp_path, "Reopened"))
+
+    window._close_project()
+
+    assert window.project.metadata.album == "Reopened"
+    assert window.isVisible()
+    assert window._quitting is False, "closing a project must not arm a later quit"
+
+
+def test_close_project_still_asks_about_unsaved_changes(qt_app, monkeypatch):
+    window = _window(monkeypatch)
+    window._mark_dirty()
+    monkeypatch.setattr(
+        StartupDialog, "exec", lambda self: pytest.fail("the startup screen must not appear before the prompt")
+    )
+    monkeypatch.setattr(app_module.QMessageBox, "question", lambda *a, **k: app_module.QMessageBox.StandardButton.Cancel)
+
+    window._close_project()
+
+    assert window.project is not None, "cancelling must leave the project open"
+
+
+def test_the_file_menu_offers_both_ways_out(qt_app, monkeypatch):
+    window = _window(monkeypatch)
+
+    labels = [action.text() for action in window.file_menu.actions()]
+
+    assert "Close Project" in labels
+    assert "Exit" in labels
+
+
 def test_file_exit_quits_rather_than_going_back(qt_app, monkeypatch):
     window = _window(monkeypatch)
     monkeypatch.setattr(StartupDialog, "exec", lambda self: pytest.fail("Exit means leave"))

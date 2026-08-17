@@ -106,9 +106,10 @@ BOOK = [
                   "obrazy — do jednego pliku `.mdproj`. Obrazy są osadzone, a nie dowiązane, więc "
                   "przeniesienie projektu ani skasowanie oryginalnego zdjęcia niczego nie zepsuje."},
             {"h2": "Zamykanie projektu"},
-            {"p": "Zamknięcie okna nie kończy programu, tylko przywraca ekran powitalny — przejście do "
-                  "kolejnej płyty nie wymaga więc ponownego uruchamiania. Jeżeli są niezapisane zmiany, "
-                  "program najpierw o nie zapyta."},
+            {"p": "**Plik > Zamknij projekt** (Ctrl+W) nie kończy programu, tylko przywraca ekran "
+                  "powitalny — przejście do kolejnej płyty nie wymaga więc ponownego uruchamiania. "
+                  "Krzyżyk okna robi to samo. Jeżeli są niezapisane zmiany, program najpierw o nie "
+                  "zapyta."},
             {"p": "Żeby wyjść z MDTools na dobre, użyj **Plik > Zakończ** albo anuluj ekran powitalny, "
                   "kiedy się pojawi."},
         ],

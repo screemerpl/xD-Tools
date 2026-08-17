@@ -239,7 +239,10 @@ class MainWindow(QMainWindow):
         self.view.items_deleted.connect(self._on_items_deleted)
 
     def _build_menu(self) -> None:
-        file_menu = self.menuBar().addMenu(self.tr("&File"))
+        # Held on self for the same reason open_recent_menu and
+        # _language_actions are: re-fetching a QMenu through the menu bar
+        # later hands back a wrapper whose C++ object has been collected.
+        self.file_menu = file_menu = self.menuBar().addMenu(self.tr("&File"))
         file_menu.addAction(self.tr("New..."), self._new_design)
         file_menu.addAction(self.tr("Open Project..."), self._open_project)
         self.open_recent_menu = file_menu.addMenu(self.tr("Open Recent"))
@@ -255,6 +258,13 @@ class MainWindow(QMainWindow):
         file_menu.addSeparator()
         file_menu.addAction(self.tr("Print..."), self._print_project).setShortcut(QKeySequence.StandardKey.Print)
         file_menu.addSeparator()
+        # Both ways out, next to each other. The window's close button has
+        # gone back to the startup screen since it stopped quitting, but a
+        # menu offering only "Exit" hid that entirely -- which is exactly
+        # how it was found: from the menu, expecting to come back.
+        file_menu.addAction(self.tr("Close Project"), self._close_project).setShortcut(
+            QKeySequence.StandardKey.Close
+        )
         file_menu.addAction(self.tr("Exit"), self._exit_app)
 
         edit_menu = self.menuBar().addMenu(self.tr("&Edit"))
@@ -414,6 +424,15 @@ class MainWindow(QMainWindow):
                 continue  # the failure was already reported; offer the list again
             if self._new_design(prompt=True):
                 return True
+
+    def _close_project(self) -> None:
+        """File > Close Project -- back to the startup screen.
+
+        Deliberately just `close()`, so it is the same code path as the
+        window's close button rather than a parallel copy of it: the
+        unsaved-changes guard, the startup loop and the re-show all live in
+        closeEvent and stay in one place."""
+        self.close()
 
     def _exit_app(self) -> None:
         """File > Exit -- leave, rather than returning to the startup screen.

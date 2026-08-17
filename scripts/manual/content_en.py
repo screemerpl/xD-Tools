@@ -101,9 +101,10 @@ BOOK = [
                   "images you placed - into a single `.mdproj` file. Images are embedded, not linked, so "
                   "moving the project or deleting the original picture cannot break it."},
             {"h2": "Closing a project"},
-            {"p": "Closing the window brings the startup screen back rather than quitting, so moving on "
-                  "to another disc is not a trip through relaunching the program. If there are unsaved "
-                  "changes you are asked about them first."},
+            {"p": "**File > Close Project** (Ctrl+W) brings the startup screen back rather than quitting, "
+                  "so moving on to another disc is not a trip through relaunching the program. The "
+                  "window's own close button does the same thing. If there are unsaved changes you are "
+                  "asked about them first."},
             {"p": "To leave MDTools altogether, use **File > Exit**, or cancel the startup screen when it "
                   "reappears."},
         ],
