@@ -237,6 +237,17 @@ BOOK = [
                     "sources guess, and for a reissue, a compilation or a band with a common name they "
                     "regularly guess wrong - a search has no way of knowing which pressing you are "
                     "holding."},
+            {"h2": "When there is nothing good to be found"},
+            {"p": "MDTools would rather show no cover than the wrong one. A result has to match the "
+                  "album title **and** the artist before it is accepted: a title on its own is not "
+                  "enough, because a cover version of the title track by somebody else matches that "
+                  "perfectly. When nothing clears the bar, the preview stays empty - which is the "
+                  "honest answer, and one click away from being put right."},
+            {"p": "There is one more place to look first, though. FLAC files often carry the sleeve "
+                  "inside them, and most rips of your own CDs do. When a search comes back with "
+                  "nothing usable, that picture is used instead. It is certainly the right sleeve for "
+                  "that release; it comes second only because it is often a smaller scan than the "
+                  "600-pixel artwork a search returns. MP3 files are not read this way."},
             {"h2": "Putting metadata onto the page"},
             {"p": "The metadata button in the Tools panel inserts any single field - album, artist, year - "
                   "or the whole numbered track list, as a text layer. It can also insert the track list "
@@ -485,6 +496,15 @@ BOOK = [
                 "Aim the adapter at the deck's remote sensor and leave it there.",
             ]},
             {"fig": ("record", "The playlist as it will be recorded, in that order.")},
+            {"h2": "What the window shows"},
+            {"p": "The album, artist and year the disc will be titled with, the cover art it will be "
+                  "labelled with, and the track list - all of it editable. **This is the last place to "
+                  "correct any of it**: once the recording has run, those titles are already on the "
+                  "disc. The cover is looked up as the window opens rather than when the album ends, "
+                  "for the same reason. Everything freezes the moment recording starts."},
+            {"p": "Fill in the **Artist** column only when the tracks are by different performers. On "
+                  "an ordinary album it stays empty; on a compilation it is what tells MDTools the "
+                  "disc is one."},
             {"h2": "What happens"},
             {"ol": [
                 "MDTools shows the playlist and its total time, and warns if it will not fit on an "
@@ -552,7 +572,7 @@ BOOK = [
                 "MusicBrainz, which identifies it from the lengths of its tracks - a CD carries no text "
                 "of its own.",
                 "Check what came back. If several pressings match, pick the right one from "
-                "**Release**; the track titles change with it.",
+                "**Release**; the track titles and the cover art change with it.",
                 "Correct anything wrong. The titles are editable, and they are what gets written into "
                 "the files and later onto the MiniDisc.",
                 "Press **Rip and Record**. When the copy finishes, the recording window opens by "
@@ -584,6 +604,8 @@ BOOK = [
                   "recognised the same way, with the same result."},
             {"h2": "Where the copied files go"},
             {"p": "Into your temporary folder by default, under `MDTools CD Rip`, one folder per album. "
+                  "It is created if it is not there, so a folder you have only typed into Settings and "
+                  "never made is not a problem. "
                   "They are raw material for a recording rather than a music collection - one album is "
                   "a few hundred megabytes - and Window > Settings... can point that somewhere else."},
             {"p": "They are **not** deleted when the recording finishes, because foobar2000 still has "
@@ -607,16 +629,20 @@ BOOK = [
             {"fig": ("folder-record", "The folder read, and what foobar2000 made of its tags.")},
             {"h2": "Step by step"},
             {"ol": [
-                "Press **Browse...** and choose the folder the album is in. FLAC, MP3 and everything "
-                "else foobar2000 plays are recognised; anything that is not audio - artwork, a cue "
-                "sheet, a log - is ignored.",
+                "Press **Browse...** and choose the folder the album is in. It is loaded into "
+                "foobar2000 straight away - choosing it is the decision, so there is nothing further "
+                "to confirm. FLAC, MP3 and everything else foobar2000 plays are recognised; anything "
+                "that is not audio - artwork, a cue sheet, a log - is ignored.",
                 "Check the order. It comes from the filenames, compared so that `10` follows `9` "
                 "rather than `1`. If it is wrong, the filenames are what to fix.",
                 "Check the album and artist. They are guessed from the folder's own name to start "
                 "with, and whatever the files are tagged with replaces that guess as soon as the "
                 "tracks are loaded. Type over either if both are wrong.",
-                "Press **Load and Record**. The tracks go into foobar2000, MDTools reads back what it "
-                "made of them, looks up cover art, and the recording window opens by itself.",
+                "Look at what came back: the titles foobar read out of the files, and the cover "
+                "art - searched for first, and taken from inside the FLAC files themselves if the "
+                "search found nothing good.",
+                "Press **Record**. It only becomes available once foobar has actually taken the "
+                "tracks.",
             ]},
             {"h2": "Where the titles come from"},
             {"p": "From the files - read by foobar2000 rather than by MDTools, which is the better tag "
@@ -650,9 +676,11 @@ BOOK = [
                   "could only be tested safely on a protected disc, where the deck answers every one of "
                   "them with the same complaint."},
             {"p": "Rather than guess with your recording, MDTools sends Erase and then asks what the "
-                  "deck's display says. Only if you confirm it is asking something like **All Erase?** "
-                  "does the confirmation go out. Answer no and it backs the deck out of whatever menu "
-                  "it is sitting in."},
+                  "deck's display says. If it is showing something like **All Erase?**, press **Send "
+                  "Enter** and watch the display - the window stays open, so you can press it again. "
+                  "Some decks want it more than once, and there is no way for MDTools to find that "
+                  "out: the deck never answers back. Press **Done** when the disc is blank, or "
+                  "**Nothing Happened** to back the deck out of whatever menu it is sitting in."},
             {"fig": ("erase", "It sends the command, then asks what the deck is showing.")},
             {"note": "As with titling, an erase lives in the deck's memory until the disc is ejected. "
                      "MDTools offers to eject afterwards - take it, or the disc keeps its old contents "

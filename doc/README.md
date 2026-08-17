@@ -17,6 +17,15 @@ The user manual, built from source rather than written here.
 .venv\Scripts\python scripts\manual\build_manual.py       # all three, or pass "pl"
 ```
 
+**The screenshot step needs a real screen; the build step does not.**
+`make_screenshots.py` opens each dialog and grabs it, so it puts windows on
+your desktop while it runs, and it cannot be run under
+`QT_QPA_PLATFORM=offscreen` -- that platform reports no installed font
+families here and every caption comes out as tofu boxes. `build_manual.py`
+only renders a `QTextDocument` into a `QPdfWriter`: no window appears, so
+the text can be rebuilt at any time, including while MDTools itself is busy
+recording.
+
 The text lives in `scripts/manual/content_{en,pl,ja}.py` as a list of
 blocks; `build_manual.py` turns those into a `QTextDocument` and paints it
 onto a `QPdfWriter`. No LaTeX, no extra dependencies — everything used is
