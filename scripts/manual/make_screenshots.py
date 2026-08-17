@@ -248,10 +248,34 @@ def _install_cd_stand_ins() -> None:
     musicbrainz.lookup_disc = lookup
 
 
-def _make_fake_foobar():
+def _install_cover_stand_in() -> None:
+    """Stops the recording dialogs reaching iTunes, and gives them the demo
+    sleeve instead.
+
+    Two reasons, and the first is not cosmetic: this script is meant to
+    regenerate the same figures on any machine, offline (see DEMO_ALBUM), and
+    those dialogs now look a cover up as soon as they open. The second is
+    that the demo album is invented, so a real search correctly finds
+    nothing -- every figure would show an empty preview while the text
+    beside it describes the artwork.
+
+    Patched per importing module rather than on cover_preview itself: each
+    one did `from ... import fetch_into`, so its own name is what gets
+    called."""
+    from mdtools.panels import cd_rip_dialog, folder_record_dialog, record_dialog
+
+    def fake_fetch(preview, artist, album, track_count=None):
+        preview.set_cover(demo_cover_bytes())
+        return None
+
+    for module in (record_dialog, cd_rip_dialog, folder_record_dialog):
+        module.fetch_into = fake_fetch
+
+
+def _demo_playlist_items():
     from mdtools import foobar
 
-    items = [
+    return [
         foobar.PlaylistItem(
             track_number=str(index),
             title=title,
@@ -262,6 +286,25 @@ def _make_fake_foobar():
         )
         for index, (title, length) in enumerate(DEMO_TRACKS, start=1)
     ]
+
+
+def _install_folder_stand_in() -> None:
+    """Makes choosing a folder land straight in the loaded state.
+
+    Picking a folder now hands it to foobar2000 on a worker thread, which
+    this script has no real foobar for -- and a figure does not want a
+    thread in it anyway. Replacing the load with the result it would have
+    produced gives the dialog exactly the state a reader sees, including
+    the Record button being enabled."""
+    from mdtools.panels.folder_record_dialog import FolderRecordDialog
+
+    FolderRecordDialog._load = lambda self: self._on_loaded(_demo_playlist_items())
+
+
+def _make_fake_foobar():
+    from mdtools import foobar
+
+    items = _demo_playlist_items()
 
     class _FakeFoobar:
         def __init__(self, base_url: str = "", timeout: float = 0.0):
@@ -636,10 +679,7 @@ def capture_language(app, code: str) -> None:
     folder = FolderRecordDialog("http://localhost:8880")
     folder.show()
     settle(200)
-    folder.set_folder(_demo_album_folder())
-    # Not _on_loaded(): that accepts the dialog and closes it. This is the
-    # state the user actually looks at -- what foobar made of the files.
-    folder._show_playlist(_make_fake_foobar()().playlist_items("p1"))
+    folder.set_folder(_demo_album_folder())  # which loads it, see the stand-in
     save(folder, out / "folder-record.png", settle_ms=400)
     close_quietly(folder)
 
@@ -662,6 +702,8 @@ def main() -> int:
     mdrem.list_ports = _fake_ports
     foobar.FoobarClient = _make_fake_foobar()
     _install_cd_stand_ins()
+    _install_cover_stand_in()
+    _install_folder_stand_in()
 
     draw_ir_circuit(OUT_DIR / "ir-circuit.png")
     for code in ("en", "pl", "ja"):

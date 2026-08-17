@@ -235,6 +235,17 @@ BOOK = [
                     "otwiera okno wyboru pliku, żebyś sam wskazał właściwą. Oba automatyczne źródła "
                     "zgadują i przy wznowieniu, składance albo zespole o popularnej nazwie regularnie "
                     "zgadują źle — wyszukiwarka nie ma jak wiedzieć, które tłoczenie trzymasz w ręku."},
+            {"h2": "Gdy nie ma czego znaleźć"},
+            {"p": "MDTools woli nie pokazać żadnej okładki niż złą. Wynik musi zgadzać się i z "
+                  "tytułem albumu, **i** z wykonawcą: sam tytuł nie wystarcza, bo przeróbka "
+                  "tytułowego utworu nagrana przez kogoś innego pasuje do niego idealnie. Kiedy nic "
+                  "nie przechodzi progu, podgląd zostaje pusty — to uczciwa odpowiedź, a do "
+                  "poprawienia jej wystarczy jedno kliknięcie."},
+            {"p": "Jest jeszcze jedno miejsce do sprawdzenia. Pliki FLAC często niosą okładkę w "
+                  "sobie, a większość zgranych własnych płyt ją ma. Gdy wyszukiwarka nie zwróci nic "
+                  "sensownego, używany jest właśnie ten obrazek. To na pewno okładka tego wydania; "
+                  "jest druga w kolejce tylko dlatego, że bywa mniejszym skanem niż 600-pikselowa "
+                  "grafika z wyszukiwarki. Pliki MP3 nie są w ten sposób czytane."},
             {"h2": "Metadane na stronie"},
             {"p": "Przycisk metadanych w panelu Narzędzia wstawia dowolne pojedyncze pole — album, "
                   "wykonawcę, rok — albo całą numerowaną listę utworów jako warstwę tekstową. Potrafi też "
@@ -485,6 +496,15 @@ BOOK = [
                 "Wyceluj przystawkę w czujnik magnetofonu i zostaw ją tak.",
             ]},
             {"fig": ("record", "Playlista w kolejności, w jakiej trafi na płytę.")},
+            {"h2": "Co widać w oknie"},
+            {"p": "Album, wykonawca i rok, którymi płyta zostanie zatytułowana, okładka, którą "
+                  "dostanie etykieta, i lista utworów — wszystko do edycji. **To ostatnie miejsce, "
+                  "gdzie można to poprawić**: po nagraniu tytuły są już na płycie. Z tego samego "
+                  "powodu okładka szukana jest przy otwarciu okna, a nie po skończeniu albumu. W "
+                  "chwili startu nagrywania wszystko zamarza."},
+            {"p": "Kolumnę **Wykonawca** wypełniaj tylko wtedy, gdy utwory są różnych artystów. Na "
+                  "zwykłym albumie zostaje pusta; przy składance to właśnie ona mówi MDTools, że "
+                  "płyta nią jest."},
             {"h2": "Co się dzieje"},
             {"ol": [
                 "MDTools pokazuje playlistę i jej łączny czas, i ostrzega, jeśli nie zmieści się na "
@@ -554,7 +574,7 @@ BOOK = [
                 "MusicBrainz, który rozpoznaje ją po długościach ścieżek - sama płyta CD nie zawiera "
                 "żadnego tekstu.",
                 "Sprawdź, co wróciło. Jeśli pasuje kilka wydań, wybierz właściwe z pola **Wydanie**; "
-                "tytuły ścieżek zmienią się razem z nim.",
+                "tytuły ścieżek i okładka zmienią się razem z nim.",
                 "Popraw to, co się nie zgadza. Tytuły są edytowalne i to one trafiają do plików, a "
                 "później na MiniDisc.",
                 "Naciśnij **Zgraj i nagraj**. Po zakończeniu kopiowania okno nagrywania otworzy się "
@@ -586,8 +606,10 @@ BOOK = [
                   "jest rozpoznawana tak samo i z tym samym skutkiem."},
             {"h2": "Gdzie trafiają zgrane pliki"},
             {"p": "Domyślnie do folderu tymczasowego, do `MDTools CD Rip`, po jednym folderze na album. "
-                  "To półprodukt do nagrania, a nie kolekcja muzyki - jeden album to kilkaset megabajtów "
-                  "- a Okno > Ustawienia... pozwala wskazać inne miejsce."},
+                  "Jeśli go nie ma, zostanie utworzony, więc folder tylko wpisany w Ustawieniach i nigdy "
+                  "nie założony nie jest problemem. To półprodukt do nagrania, a nie kolekcja muzyki - "
+                  "jeden album to kilkaset megabajtów - a Okno > Ustawienia... pozwala wskazać inne "
+                  "miejsce."},
             {"p": "**Nie** są kasowane po zakończeniu nagrywania, bo foobar2000 wciąż ma je na "
                   "playliście i możesz chcieć ich posłuchać ponownie. Poprzednia kopia znika w chwili "
                   "rozpoczęcia następnej."},
@@ -609,16 +631,20 @@ BOOK = [
             {"fig": ("folder-record", "Odczytany folder i to, co foobar2000 wyczytał ze znaczników.")},
             {"h2": "Krok po kroku"},
             {"ol": [
-                "Naciśnij **Przeglądaj...** i wskaż folder z albumem. FLAC, MP3 i wszystko inne, co "
-                "odtwarza foobar2000, zostanie rozpoznane; co nie jest dźwiękiem — okładki, plik cue, "
-                "log — jest pomijane.",
+                "Naciśnij **Przeglądaj...** i wskaż folder z albumem. Zostanie od razu wczytany do "
+                "foobar2000 — wybór folderu jest decyzją, więc nie ma czego dodatkowo potwierdzać. "
+                "FLAC, MP3 i wszystko inne, co odtwarza foobar2000, zostanie rozpoznane; co nie jest "
+                "dźwiękiem — okładki, plik cue, log — jest pomijane.",
                 "Sprawdź kolejność. Bierze się z nazw plików, porównywanych tak, że `10` idzie po "
                 "`9`, a nie po `1`. Jeśli jest zła, poprawiać trzeba nazwy plików.",
                 "Sprawdź album i wykonawcę. Na początek są zgadywane z nazwy samego folderu, a to, co "
                 "jest w znacznikach plików, zastępuje ten domysł, gdy tylko ścieżki zostaną wczytane. "
                 "Jeżeli jedno i drugie jest nie tak, po prostu wpisz swoje.",
-                "Naciśnij **Wczytaj i nagraj**. Ścieżki trafiają do foobar2000, MDTools odczytuje, co "
-                "z nich wyszło, szuka okładki i samo otwiera okno nagrywania.",
+                "Obejrzyj, co wyszło: tytuły odczytane przez foobar2000 z plików oraz okładkę — "
+                "najpierw szukaną w sieci, a gdy nic sensownego nie znajdzie, braną z wnętrza "
+                "samych plików FLAC.",
+                "Naciśnij **Nagraj**. Przycisk zapala się dopiero wtedy, gdy foobar rzeczywiście "
+                "ścieżki przyjmie.",
             ]},
             {"h2": "Skąd biorą się tytuły"},
             {"p": "Z plików — odczytanych przez foobar2000, a nie przez MDTools: z tych dwóch to on "
@@ -655,9 +681,12 @@ BOOK = [
                   "zapisu dało się bezpiecznie testować tylko na płycie zabezpieczonej, gdzie "
                   "magnetofon odpowiada na każdy z nich tym samym komunikatem."},
             {"p": "Zamiast zgadywać Twoim nagraniem, MDTools wysyła Erase i pyta, co pokazuje "
-                  "wyświetlacz. Potwierdzenie idzie dalej tylko wtedy, gdy potwierdzisz, że widzisz "
-                  "pytanie w rodzaju **All Erase?**. Po odpowiedzi odmownej program wycofuje "
-                  "magnetofon z menu, w którym akurat stoi."},
+                  "wyświetlacz. Jeśli widzisz pytanie w rodzaju **All Erase?**, naciśnij **Wyślij "
+                  "Enter** i patrz na wyświetlacz — okienko zostaje otwarte, więc można nacisnąć "
+                  "jeszcze raz. Niektóre magnetofony chcą tego kilka razy, a MDTools nie ma jak tego "
+                  "sprawdzić: magnetofon nigdy nie odpowiada. Naciśnij **Gotowe**, gdy płyta jest już "
+                  "pusta, albo **Nic się nie stało**, żeby wycofać magnetofon z menu, w którym "
+                  "akurat stoi."},
             {"fig": ("erase", "Wysyła komendę, a potem pyta, co pokazuje magnetofon.")},
             {"note": "Tak jak przy tytułach, skasowanie żyje w pamięci magnetofonu do chwili "
                      "wysunięcia płyty. MDTools proponuje potem wysunięcie - skorzystaj, bo inaczej "
