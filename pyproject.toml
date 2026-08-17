@@ -1,7 +1,7 @@
 [project]
 name = "mdtools"
 version = "0.1.0"
-description = "Desktop workbench for MiniDisc: design disc labels and J-card inserts for Cricut cutting and printing, record albums from foobar2000, and title discs over infrared"
+description = "Desktop workbench for MiniDisc: design disc labels and J-card inserts for Cricut cutting and printing, record albums from foobar2000 or straight from a CD, and title discs over infrared"
 requires-python = ">=3.11"
 dependencies = [
     "PySide6>=6.7",

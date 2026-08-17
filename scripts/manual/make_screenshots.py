@@ -211,6 +211,42 @@ def _fake_ports():
     ]
 
 
+def _install_cd_stand_ins() -> None:
+    """A drive with the demo album in it, and a MusicBrainz that recognises
+    it -- so the CD window can be photographed with a disc read, on a
+    machine that has neither a drive nor a network."""
+    from mdtools import cdrip, musicbrainz
+
+    def drives():
+        return [cdrip.CdDrive(device="D:", label="Audio CD", has_media=True)]
+
+    def toc(device, run=None):
+        tracks, start = [], 0
+        for number, (_, seconds) in enumerate(DEMO_TRACKS, start=1):
+            sectors = seconds * cdrip.SECTORS_PER_SECOND
+            tracks.append(cdrip.TocTrack(number=number, first_lba=start, sectors=sectors))
+            start += sectors
+        return cdrip.DiscToc(tracks=tracks, leadout_lba=start)
+
+    def lookup(disc_toc, opener=None):
+        return [
+            musicbrainz.DiscRelease(
+                release_id="demo",
+                title=DEMO_ALBUM,
+                artist=DEMO_ARTIST,
+                year=DEMO_YEAR,
+                country="XE",
+                track_titles=[title for title, _ in DEMO_TRACKS],
+                track_artists=[""] * len(DEMO_TRACKS),
+            )
+        ]
+
+    cdrip.list_drives = drives
+    cdrip.read_toc = toc
+    cdrip.missing_tools = lambda: []
+    musicbrainz.lookup_disc = lookup
+
+
 def _make_fake_foobar():
     from mdtools import foobar
 
@@ -501,6 +537,8 @@ def capture_language(app, code: str) -> None:
     from mdtools import app_settings, i18n, mdrem
     from mdtools.app_window import MainWindow
     from mdtools.panels.about_dialog import AboutDialog
+    from mdtools.panels.cd_rip_dialog import CdRipDialog
+    from mdtools.panels.erase_dialog import EraseDiscDialog
     from mdtools.panels.metadata_dialog import MetadataDialog
     from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
     from mdtools.panels.new_design_dialog import NewDesignDialog
@@ -571,6 +609,16 @@ def capture_language(app, code: str) -> None:
     save(MDRemUploadDialog(metadata, "COM7"), out / "upload.png", settle_ms=400)
     save(RecordDialog("COM7", "http://localhost:8880"), out / "record.png", settle_ms=400)
 
+    # -- reading a CD, with the drive and MusicBrainz stood in for
+    rip = CdRipDialog("http://localhost:8880")
+    rip.show()
+    settle(200)
+    rip._read_disc()
+    save(rip, out / "cd-rip.png", settle_ms=400)
+    close_quietly(rip)
+
+    save(EraseDiscDialog("COM7"), out / "erase.png")
+
 
 def main() -> int:
     app = QApplication(sys.argv)
@@ -587,6 +635,7 @@ def main() -> int:
     mdrem.MDRemClient = _FakeDeck
     mdrem.list_ports = _fake_ports
     foobar.FoobarClient = _make_fake_foobar()
+    _install_cd_stand_ins()
 
     draw_ir_circuit(OUT_DIR / "ir-circuit.png")
     for code in ("en", "pl", "ja"):

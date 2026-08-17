@@ -9,6 +9,7 @@ from PySide6.QtGui import QActionGroup, QColor, QFont, QIcon, QKeySequence, QUnd
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
+    QDialog,
     QDockWidget,
     QFileDialog,
     QInputDialog,
@@ -20,7 +21,7 @@ from PySide6.QtWidgets import (
     QToolBar,
 )
 
-from mdtools import app_settings, gallery, i18n, recent_projects
+from mdtools import app_settings, gallery, i18n, mixtape_cover, recent_projects, user_paths
 from mdtools.auto_layout import place_cover_on_label, place_logo_on_slider, recolour_insertion_mark
 from mdtools.gallery import save_downloaded_cover
 from mdtools.jcard_layout import build_jcard
@@ -37,9 +38,12 @@ from mdtools.io.project_io import item_from_dict, item_to_dict, load_project, sa
 from mdtools.io.svg_export import export_svg
 from mdtools.panels.about_dialog import AboutDialog
 from mdtools.panels.asset_gallery_dialog import AssetGalleryDialog
+from mdtools.panels.cd_rip_dialog import CdRipDialog
+from mdtools.panels.erase_dialog import EraseDiscDialog
 from mdtools.panels import icons
 from mdtools.panels.grayscale_export_dialog import GrayscaleExportDialog
 from mdtools.panels.layers_panel import LayersPanel
+from mdtools.mdrem import disc_title
 from mdtools.panels.mdrem_port import resolve_port
 from mdtools.panels.metadata_dialog import MetadataDialog
 from mdtools.panels.record_dialog import RecordDialog
@@ -290,6 +294,13 @@ class MainWindow(QMainWindow):
         # MDRem entry points, there is nothing it could usefully do.
         self.record_action = project_menu.addAction(
             self.tr("Record to MiniDisc from foobar2000..."), self._record_from_foobar
+        )
+        self.record_cd_action = project_menu.addAction(
+            self.tr("Record CD to MiniDisc..."), self._record_cd
+        )
+        project_menu.addSeparator()
+        self.erase_disc_action = project_menu.addAction(
+            self.tr("Erase MiniDisc..."), self._erase_disc
         )
         self._sync_mdrem_actions()
 
@@ -873,7 +884,7 @@ class MainWindow(QMainWindow):
         if not scene:
             return
         path, _ = QFileDialog.getOpenFileName(
-            self, self.tr("Add Image"), "", self.tr("Images (*.png *.jpg *.jpeg *.bmp)")
+            self, self.tr("Add Image"), user_paths.image_start_path(), self.tr("Images (*.png *.jpg *.jpeg *.bmp)")
         )
         if not path:
             return
@@ -934,7 +945,10 @@ class MainWindow(QMainWindow):
         if self.project is None:
             return
         path, _ = QFileDialog.getOpenFileName(
-            self, self.tr("Import Metadata from Project"), "", self._project_file_filter()
+            self,
+            self.tr("Import Metadata from Project"),
+            user_paths.project_start_path(None),
+            self._project_file_filter(),
         )
         if not path:
             return
@@ -947,7 +961,9 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(self.tr("Imported metadata from {path}").format(path=path), 5000)
 
     def _open_project(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, self.tr("Open Project"), "", self._project_file_filter())
+        path, _ = QFileDialog.getOpenFileName(
+            self, self.tr("Open Project"), user_paths.project_start_path(None), self._project_file_filter()
+        )
         if not path:
             return
         self._open_project_path(path)
@@ -1007,8 +1023,14 @@ class MainWindow(QMainWindow):
     def _save_project_as(self) -> bool:
         if self.project is None:
             return False
+        # First save proposes "Artist - Album (Year).mdproj" in the
+        # projects folder, using the same disc_title() the deck is told, so
+        # the file and the disc cannot end up named differently.
         path, _ = QFileDialog.getSaveFileName(
-            self, self.tr("Save Project As"), self.current_project_path or "", self._project_file_filter()
+            self,
+            self.tr("Save Project As"),
+            user_paths.project_start_path(self.current_project_path, disc_title(self.project.metadata)),
+            self._project_file_filter(),
         )
         if not path:
             return False
@@ -1023,7 +1045,9 @@ class MainWindow(QMainWindow):
         scene = self._current_scene()
         if scene is None:
             return
-        path, _ = QFileDialog.getSaveFileName(self, self.tr("Export Cut SVG"), "", self.tr("SVG (*.svg)"))
+        path, _ = QFileDialog.getSaveFileName(
+            self, self.tr("Export Cut SVG"), self._export_start_path(), self.tr("SVG (*.svg)")
+        )
         if not path:
             return
         export_svg(scene, path)
@@ -1033,7 +1057,9 @@ class MainWindow(QMainWindow):
         scene = self._current_scene()
         if scene is None:
             return
-        path, _ = QFileDialog.getSaveFileName(self, self.tr("Export Print PNG"), "", self.tr("PNG (*.png)"))
+        path, _ = QFileDialog.getSaveFileName(
+            self, self.tr("Export Print PNG"), self._export_start_path(), self.tr("PNG (*.png)")
+        )
         if not path:
             return
         export_png(scene, path, grayscale=False)
@@ -1060,7 +1086,7 @@ class MainWindow(QMainWindow):
         self._sync_grayscale_controls()
 
         path, _ = QFileDialog.getSaveFileName(
-            self, self.tr("Export Print PNG (Grayscale)"), "", self.tr("PNG (*.png)")
+            self, self.tr("Export Print PNG (Grayscale)"), self._export_start_path(), self.tr("PNG (*.png)")
         )
         if not path:
             return
@@ -1074,7 +1100,7 @@ class MainWindow(QMainWindow):
         printer. See panels/print_dialog.py."""
         if self.project is None:
             return
-        dialog = PrintDialog(self.project, self)
+        dialog = PrintDialog(self.project, self, self._export_start_path())
         dialog.exec()
 
     def _project_file_filter(self) -> str:
@@ -1102,7 +1128,16 @@ class MainWindow(QMainWindow):
         action built once at startup, and stayed visible after the adapter
         was switched off -- offering to record an album through hardware the
         user had just said they do not have."""
-        self.record_action.setVisible(app_settings.mdrem_enabled())
+        enabled = app_settings.mdrem_enabled()
+        self.record_action.setVisible(enabled)
+        # Ripping a CD needs no adapter, but this entry does not stop at
+        # ripping -- it goes straight on to record what it ripped, which
+        # does. Splitting a rip-only entry out of it would be inventing a
+        # feature nobody asked for.
+        self.record_cd_action.setVisible(enabled)
+        # Erasing is nothing but adapter keypresses, so without one there is
+        # not even a partial operation to offer.
+        self.erase_disc_action.setVisible(enabled)
 
     def _save_as_template(self) -> None:
         """Captures the current page's template shape plus every layer on
@@ -1211,6 +1246,44 @@ class MainWindow(QMainWindow):
         port = resolve_port(self)
         if port is None:
             return
+        self._run_record_dialog(port)
+
+    def _record_cd(self) -> None:
+        """Project > Record CD to MiniDisc... -- rips the disc into
+        foobar2000's playlist, then records that playlist exactly as the
+        entry above does.
+
+        The port is resolved before the rip rather than after it: the rip is
+        the expensive half, and discovering there is no adapter to record
+        through is worth finding out beforehand."""
+        if not app_settings.mdrem_enabled():
+            return
+        port = resolve_port(self)
+        if port is None:
+            return
+        rip = CdRipDialog(app_settings.foobar_url(), self)
+        if rip.exec() != QDialog.DialogCode.Accepted:
+            return
+        self._run_record_dialog(port)
+
+    def _erase_disc(self) -> None:
+        """Project > Erase MiniDisc... -- clears the disc in the deck.
+
+        Deliberately not tied to the open project: it acts on whatever is
+        physically in the deck, which has nothing to do with which label is
+        being designed. Same backstop as the other MDRem entries, since the
+        whole operation is adapter keypresses."""
+        if not app_settings.mdrem_enabled():
+            return
+        port = resolve_port(self)
+        if port is None:
+            return
+        EraseDiscDialog(port, self).exec()
+
+    def _run_record_dialog(self, port: str) -> None:
+        """The recording itself, shared by both entry points -- by the time
+        it runs, "what is in foobar's playlist" is the only input, whether a
+        CD put it there or the user did."""
         dialog = RecordDialog(port, app_settings.foobar_url(), self)
         dialog.exec()
         # What was just recorded is also what the label should describe, so
@@ -1273,6 +1346,13 @@ class MainWindow(QMainWindow):
         """Looks up cover art for metadata that has none yet, filling in a
         missing year while it is at it. Silent on failure -- the caller
         checks whether it worked and says something more useful."""
+        # A compilation is not something that can be looked up -- see
+        # record_dialog._capture_metadata for why searching anyway is worse
+        # than not searching. It gets a cover drawn from its own track list.
+        if metadata.is_compilation():
+            metadata.cover_art = mixtape_cover.render_cover(metadata)
+            return
+
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
             data, chosen = find_cover(metadata.artist, metadata.album, len(metadata.tracks))
@@ -1287,6 +1367,14 @@ class MainWindow(QMainWindow):
             return
         metadata.cover_art = data
         save_downloaded_cover(chosen.artist_name, chosen.collection_name, data)
+
+    def _export_start_path(self) -> str:
+        """Exports land beside the project they came from, or in the
+        projects folder if it has never been saved -- the SVG that cuts a
+        design and the PNG that prints it are the same job as the .mdproj,
+        and the set is only findable at cutting time if they stayed
+        together."""
+        return user_paths.export_start_path(self.current_project_path)
 
     def _template_named(self, kind: str, name: str):
         from mdtools.templates import registry

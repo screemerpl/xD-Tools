@@ -48,7 +48,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from mdtools import app_settings
+from mdtools import app_settings, user_paths
 from mdtools.grayscale import BRIGHTNESS_RANGE, CONTRAST_RANGE, apply_grayscale
 from mdtools.io.png_export import render_scene_to_image
 from mdtools.io.project_io import load_project
@@ -169,8 +169,12 @@ class _PrintDialogBase(QDialog):
     PREVIEW_PX_PER_MM = 4.0
     MARGIN_MM = 5.0
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, start_dir: str = ""):
         super().__init__(parent)
+        # Where Export PNG/PDF open. PrintDialog passes the project's own
+        # folder; Multiprint has no single project to belong to, so it
+        # falls back to the projects folder.
+        self._start_dir = start_dir or user_paths.export_start_path(None)
         self._dpi = app_settings.default_export_dpi()
         self._layout = QVBoxLayout(self)
         self._options_form = QFormLayout()
@@ -322,7 +326,7 @@ class _PrintDialogBase(QDialog):
         diverge from either. Unlike a printed page or a PDF, a PNG has no
         physical "paper" to represent, so the page background is left
         fully transparent rather than painted white."""
-        path, _ = QFileDialog.getSaveFileName(self, self.tr("Export PNG"), "", self.tr("PNG (*.png)"))
+        path, _ = QFileDialog.getSaveFileName(self, self.tr("Export PNG"), self._start_dir, self.tr("PNG (*.png)"))
         if not path:
             return
         if not path.lower().endswith(".png"):
@@ -346,7 +350,7 @@ class _PrintDialogBase(QDialog):
         quality" here just means reusing the same DPI-rendered artwork
         (Window > Settings' Default Export DPI) every other export in
         this app already uses -- not a separate, heavier render path."""
-        path, _ = QFileDialog.getSaveFileName(self, self.tr("Export PDF"), "", self.tr("PDF (*.pdf)"))
+        path, _ = QFileDialog.getSaveFileName(self, self.tr("Export PDF"), self._start_dir, self.tr("PDF (*.pdf)"))
         if not path:
             return
         if not path.lower().endswith(".pdf"):
@@ -363,8 +367,8 @@ class _PrintDialogBase(QDialog):
 
 
 class PrintDialog(_PrintDialogBase):
-    def __init__(self, project: Project, parent=None):
-        super().__init__(parent)
+    def __init__(self, project: Project, parent=None, start_dir: str = ""):
+        super().__init__(parent, start_dir)
         self.setWindowTitle(self.tr("Print"))
         self.project = project
 
@@ -545,7 +549,9 @@ class MultiprintDialog(_PrintDialogBase):
         return self._items
 
     def _on_add(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, self.tr("Add Project"), "", self.tr("MDTools Project (*.mdproj)"))
+        path, _ = QFileDialog.getOpenFileName(
+            self, self.tr("Add Project"), user_paths.project_start_path(None), self.tr("MDTools Project (*.mdproj)")
+        )
         if not path:
             return
         try:

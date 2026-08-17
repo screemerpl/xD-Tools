@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QDoubleSpinBox,
+    QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -25,11 +26,22 @@ from PySide6.QtWidgets import (
 
 from PySide6.QtCore import Qt
 
-from mdtools import app_settings, mdrem
+from mdtools import app_settings, foobar, mdrem
 
 DPI_RANGE = (20.0, 4800.0)
 
 _PORT_ROLE = Qt.ItemDataRole.UserRole
+
+
+def _with_button(edit: QLineEdit, button: QPushButton) -> QWidget:
+    """A line edit and its Browse button as one form field, the same
+    packing the MDRem port row uses for its Detect button."""
+    widget = QWidget()
+    row = QHBoxLayout(widget)
+    row.setContentsMargins(0, 0, 0, 0)
+    row.addWidget(edit, 1)
+    row.addWidget(button)
+    return widget
 
 
 class SettingsDialog(QDialog):
@@ -133,10 +145,52 @@ class SettingsDialog(QDialog):
             )
         )
         layout.addRow(self.tr("foobar2000 (Beefweb) URL"), self.foobar_url_edit)
+
+        self._build_cd_rows(layout)
         self._mdrem_form = layout
 
         self._populate_ports(app_settings.mdrem_port())
         self._sync_mdrem_enabled(self.mdrem_check.isChecked())
+
+    def _build_cd_rows(self, layout: QFormLayout) -> None:
+        """Settings for Record CD to MiniDisc.
+
+        Neither is tied to the MDRem checkbox, for the same reason the
+        Beefweb URL above is not: they describe foobar2000 and the
+        filesystem, not the infrared adapter."""
+        self.foobar_exe_edit = QLineEdit(app_settings.foobar_exe() or (foobar.find_foobar_exe() or ""))
+        self.foobar_exe_edit.setToolTip(
+            self.tr(
+                "foobar2000's own program file. Ripped CD tracks are loaded through it rather than through "
+                "Beefweb, which refuses files outside the music folders configured in foobar itself."
+            )
+        )
+        browse_exe = QPushButton(self.tr("Browse..."))
+        browse_exe.clicked.connect(self._browse_foobar_exe)
+        layout.addRow(self.tr("foobar2000 program"), _with_button(self.foobar_exe_edit, browse_exe))
+
+        self.cd_rip_folder_edit = QLineEdit(app_settings.cd_rip_folder())
+        self.cd_rip_folder_edit.setToolTip(
+            self.tr(
+                "Where a ripped CD is written. One album is a few hundred megabytes; earlier rips are deleted "
+                "when the next one starts, not when a recording ends, so they stay playable in the meantime."
+            )
+        )
+        browse_folder = QPushButton(self.tr("Browse..."))
+        browse_folder.clicked.connect(self._browse_rip_folder)
+        layout.addRow(self.tr("CD rip folder"), _with_button(self.cd_rip_folder_edit, browse_folder))
+
+    def _browse_foobar_exe(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, self.tr("foobar2000 program"), self.foobar_exe_edit.text(), self.tr("Programs (*.exe);;All files (*)")
+        )
+        if path:
+            self.foobar_exe_edit.setText(path)
+
+    def _browse_rip_folder(self) -> None:
+        path = QFileDialog.getExistingDirectory(self, self.tr("CD rip folder"), self.cd_rip_folder_edit.text())
+        if path:
+            self.cd_rip_folder_edit.setText(path)
 
     def _populate_ports(self, selected: str) -> None:
         """Lists the ports currently present, but never drops `selected`.
@@ -190,6 +244,7 @@ class SettingsDialog(QDialog):
         self.screen_dpi_spin.setValue(app_settings.DEFAULT_SCREEN_DPI)
         self.export_dpi_spin.setValue(app_settings.DEFAULT_EXPORT_DPI)
         self.bake_dpi_spin.setValue(app_settings.DEFAULT_BAKE_DPI)
+        self.cd_rip_folder_edit.setText(app_settings.default_cd_rip_folder())
 
     def _on_accept(self) -> None:
         app_settings.set_screen_dpi(self.screen_dpi_spin.value())
@@ -198,4 +253,6 @@ class SettingsDialog(QDialog):
         app_settings.set_mdrem_enabled(self.mdrem_check.isChecked())
         app_settings.set_mdrem_port(self.selected_port())
         app_settings.set_foobar_url(self.foobar_url_edit.text())
+        app_settings.set_foobar_exe(self.foobar_exe_edit.text())
+        app_settings.set_cd_rip_folder(self.cd_rip_folder_edit.text())
         self.accept()

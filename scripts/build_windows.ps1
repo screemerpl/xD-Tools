@@ -22,6 +22,7 @@ $qtTranslations = & ".venv/Scripts/python.exe" -c "from PySide6.QtCore import QL
     --add-data "$qtTranslations/qtbase_ja.qm;PySide6/translations" `
     --add-data "assets/img;assets/img" `
     --add-data "assets/icons;assets/icons" `
+    --add-data "bin/win64;bin/win64" `
     src/mdtools/main.py
 
 Write-Host "Build output: dist/MDTools/MDTools.exe"

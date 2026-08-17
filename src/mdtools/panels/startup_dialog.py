@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from mdtools import app_settings
+from mdtools import app_settings, user_paths
 from mdtools.panels.mdrem_port import resolve_port
 from mdtools.panels.print_dialog import MultiprintDialog
 from mdtools.panels.remote_dialog import RemoteDialog
@@ -98,7 +98,12 @@ class StartupDialog(QDialog):
             self._open_item(item)
 
     def _browse(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, self.tr("Open Project"), "", self.tr("MDTools Project (*.mdproj)"))
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.tr("Open Project"),
+            user_paths.project_start_path(None),
+            self.tr("MDTools Project (*.mdproj)"),
+        )
         if not path:
             return
         self.result_path = path

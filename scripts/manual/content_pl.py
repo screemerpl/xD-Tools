@@ -112,6 +112,13 @@ BOOK = [
                   "zapyta."},
             {"p": "Żeby wyjść z MDTools na dobre, użyj **Plik > Zakończ** albo anuluj ekran powitalny, "
                   "kiedy się pojawi."},
+            {"h2": "Gdzie zapisywane są projekty"},
+            {"p": "Przy pierwszym zapisie MDTools proponuje **Dokumenty\\MiniDiscProjects** i nazwę pliku "
+                  "zbudowaną z samego albumu - `Skillet - Unleashed (2016).mdproj`. To ten sam napis, "
+                  "który dostaje magnetofon, więc plik na komputerze i tytuł na płycie się zgadzają."},
+            {"p": "Pozostałe okna plików też startują w sensownym miejscu: **Dodaj obraz...** i okładka "
+                  "otwierają się w folderze Obrazy, a eksporty SVG, PNG i PDF **obok projektu, z "
+                  "którego pochodzą**, żeby projekt i pliki, które go tną i drukują, trzymały się razem."},
         ],
     },
     # ------------------------------------------------------------------
@@ -514,6 +521,104 @@ BOOK = [
             {"p": "MD mieści 80 minut w SP. MDTools ostrzega, gdy playlista jest dłuższa, ale może "
                   "wyłącznie ostrzec — LP2 i LP4 trzeba ustawić na samym magnetofonie i nie da się "
                   "odczytać, w którym trybie jest."},
+        ],
+    },
+    # ------------------------------------------------------------------
+    {
+        "title": "Nagrywanie z płyty CD",
+        "blocks": [
+            {"p": "**Projekt > Nagraj CD na MiniDisc...** przegrywa płytę audio CD na MiniDisc. "
+                  "Odczytuje płytę, ustala, co to za album, zgrywa każdą ścieżkę do pliku, ładuje te "
+                  "pliki do foobar2000 we właściwej kolejności i przekazuje sterowanie nagrywaniu, "
+                  "które już znasz - to samo uzbrajanie, te same znaczniki ścieżek, to samo nadawanie "
+                  "tytułów."},
+            {"note": "**To również wymaga przystawki MDRem**, a pozycja w menu pojawia się dopiero po "
+                     "jej włączeniu. Sam odczyt płyty przystawki nie potrzebuje, ale ta pozycja nie "
+                     "kończy się na odczycie: przechodzi od razu do nagrywania tego, co odczytała."},
+            {"h2": "Dlaczego najpierw kopia"},
+            {"p": "foobar2000 potrafi odtwarzać płytę CD bezpośrednio i tak byłoby prościej. Wtedy "
+                  "jednak płyta jest czytana na żywo, w trakcie nagrywania, bez żadnego zabezpieczenia "
+                  "- napęd potykający się o rysę w 31. minucie zapisze to potknięcie na MiniDisc, a "
+                  "nagrania na MiniDisc nie da się potem załatać."},
+            {"p": "Wcześniejsza kopia przenosi każdy błąd odczytu w miejsce, gdzie kosztuje tylko "
+                  "ponowną próbę. MDTools używa do tego **cdparanoi**, zbudowanej właśnie po to, by "
+                  "męczyć uszkodzoną płytę aż do poprawnego odczytu, oraz **flac** do zapisu wyniku. "
+                  "Oba narzędzia są dołączone do MDTools; nie trzeba niczego instalować."},
+            {"fig": ("cd-rip", "Płyta odczytana, rozpoznana i gotowa do zgrania.")},
+            {"h2": "Krok po kroku"},
+            {"ol": [
+                "Włóż płytę do napędu i wybierz napęd z listy. **Odśwież** szuka ponownie, jeśli "
+                "podłączyłeś napęd już po otwarciu okna.",
+                "Naciśnij **Odczytaj płytę**. MDTools czyta spis treści i wyszukuje płytę w "
+                "MusicBrainz, który rozpoznaje ją po długościach ścieżek - sama płyta CD nie zawiera "
+                "żadnego tekstu.",
+                "Sprawdź, co wróciło. Jeśli pasuje kilka wydań, wybierz właściwe z pola **Wydanie**; "
+                "tytuły ścieżek zmienią się razem z nim.",
+                "Popraw to, co się nie zgadza. Tytuły są edytowalne i to one trafiają do plików, a "
+                "później na MiniDisc.",
+                "Naciśnij **Zgraj i nagraj**. Po zakończeniu kopiowania okno nagrywania otworzy się "
+                "samo.",
+            ]},
+            {"note": "Płyta, której nie ma w MusicBrainz - każda nagrana samodzielnie i sporo mniej "
+                     "znanych wydań - wraca po prostu z numerowanymi tytułami zastępczymi do "
+                     "nadpisania. Poza tym nic się nie zmienia."},
+            {"h2": "Ile to trwa"},
+            {"p": "Licz się z **około piętnastoma minutami na cały album**, czyli mniej więcej trzy "
+                  "razy szybciej niż odtwarzanie. To cdparanoia pracująca starannie i jest to cena "
+                  "korekcji błędów, dla której w ogóle warto było robić kopię. Samo nagrywanie trwa "
+                  "potem tyle, ile album, bo odbywa się w czasie rzeczywistym."},
+            {"h2": "Kiedy płyta jest składanką"},
+            {"p": "Składanka to nie album, a traktowanie jej jak albumu psuje się w widoczny sposób: "
+                  "płyta dostaje nazwę od tego utworu, który akurat był pierwszy, J-card przypisuje "
+                  "dwanaście utworów jednemu wykonawcy, a wyszukiwanie okładki zwraca okładkę zupełnie "
+                  "innej płyty."},
+            {"p": "Dlatego MDTools to sprawdza. Jeśli większości ścieżek nie da się przypisać jednemu "
+                  "wykonawcy, podpisuje płytę jako **Various Artists**, nazywa ją `Mixtape` (chyba że "
+                  "wydanie ma własną nazwę), wypisuje wykonawcę przy każdym utworze na J-card i "
+                  "**rysuje okładkę na podstawie listy utworów** zamiast jej szukać."},
+            {"p": "Wypełnij kolumnę **Wykonawca** samodzielnie, gdy wiesz, że płyta jest składanką, a "
+                  "MusicBrainz tego nie podał - to właśnie ta kolumna jest sprawdzana."},
+            {"note": "Album z gościnnym udziałem w jednym utworze **nie jest** składanką i nie jest tak "
+                     "traktowany. Sprawdzane jest to, czy większość utworów należy do tego samego "
+                     "wykonawcy, a nie to, czy podpisy się w ogóle różnią."},
+            {"p": "To samo dotyczy nagrywania z foobar2000: playlista złożona z niepowiązanych utworów "
+                  "jest rozpoznawana tak samo i z tym samym skutkiem."},
+            {"h2": "Gdzie trafiają zgrane pliki"},
+            {"p": "Domyślnie do folderu tymczasowego, do `MDTools CD Rip`, po jednym folderze na album. "
+                  "To półprodukt do nagrania, a nie kolekcja muzyki - jeden album to kilkaset megabajtów "
+                  "- a Okno > Ustawienia... pozwala wskazać inne miejsce."},
+            {"p": "**Nie** są kasowane po zakończeniu nagrywania, bo foobar2000 wciąż ma je na "
+                  "playliście i możesz chcieć ich posłuchać ponownie. Poprzednia kopia znika w chwili "
+                  "rozpoczęcia następnej."},
+            {"warn": "Załadowanie zgranych ścieżek do foobar2000 **czyści jego bieżącą playlistę**. To, "
+                     "co miałeś tam przygotowane, przepadnie - przenieś to wcześniej gdzie indziej, "
+                     "jeśli chcesz zachować."},
+        ],
+    },
+    # ------------------------------------------------------------------
+    {
+        "title": "Kasowanie płyty",
+        "blocks": [
+            {"p": "**Projekt > Skasuj MiniDisc...** czyści płytę w magnetofonie. Działa na tym, co "
+                  "fizycznie jest w środku, więc nie ma znaczenia, który projekt jest otwarty ani czy "
+                  "w ogóle jakiś jest."},
+            {"warn": "Nie da się tego cofnąć, a MDTools nie widzi wyniku. Upewnij się, że w "
+                     "magnetofonie jest ta płyta, o którą Ci chodzi, i że jej suwak zabezpieczający "
+                     "jest zamknięty."},
+            {"h2": "Dlaczego pyta, co widzisz"},
+            {"p": "To jedyna operacja, przy której MDTools nie wie, co robi jego własna komenda. "
+                  "Klawisz **Erase** jest rozpoznawany przez magnetofon jako polecenie zapisu - tyle "
+                  "udało się potwierdzić - ale nie ustalono, które menu edycji otwiera, bo klawisze "
+                  "zapisu dało się bezpiecznie testować tylko na płycie zabezpieczonej, gdzie "
+                  "magnetofon odpowiada na każdy z nich tym samym komunikatem."},
+            {"p": "Zamiast zgadywać Twoim nagraniem, MDTools wysyła Erase i pyta, co pokazuje "
+                  "wyświetlacz. Potwierdzenie idzie dalej tylko wtedy, gdy potwierdzisz, że widzisz "
+                  "pytanie w rodzaju **All Erase?**. Po odpowiedzi odmownej program wycofuje "
+                  "magnetofon z menu, w którym akurat stoi."},
+            {"fig": ("erase", "Wysyła komendę, a potem pyta, co pokazuje magnetofon.")},
+            {"note": "Tak jak przy tytułach, skasowanie żyje w pamięci magnetofonu do chwili "
+                     "wysunięcia płyty. MDTools proponuje potem wysunięcie - skorzystaj, bo inaczej "
+                     "przy zaniku zasilania płyta zachowa starą zawartość."},
         ],
     },
     # ------------------------------------------------------------------

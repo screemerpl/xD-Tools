@@ -154,3 +154,96 @@ def test_play_targets_a_specific_playlist_item():
     sent: list = []
     _client({}, sent).play("p1", 0)
     assert sent[0][0] == "/api/player/play/p1/0"
+
+
+# --- filling the playlist for a CD rip --------------------------------------
+#
+# The awkward half of Record CD to MiniDisc: Beefweb makes the playlist and
+# reads it back, but cannot be handed the files (see add_files_via_cli).
+
+
+def test_clearing_a_playlist_posts_to_its_clear_endpoint():
+    sent: list = []
+    _client({}, sent).clear_playlist("p1")
+    assert sent[0][0] == "/api/playlists/p1/clear"
+
+
+def test_browser_roots_is_usually_empty_which_is_why_files_go_in_by_cli():
+    """Captured from the live component on a normal install: no music
+    directories configured, so every path is refused by items/add."""
+    client = _client({"/api/browser/roots": {"pathSeparator": "\\", "roots": []}})
+    assert client.browser_roots() == []
+
+
+def test_add_files_via_cli_sends_one_command_in_playlist_order():
+    """One call with every file, not one per file: foobar adds a batch in
+    the order it receives it."""
+    calls: list = []
+
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        return type("R", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+
+    foobar.add_files_via_cli("fb2k.exe", ["01.flac", "02.flac"], run=fake_run)
+
+    assert calls == [["fb2k.exe", "/add", "01.flac", "02.flac"]]
+
+
+def test_adding_no_files_does_not_launch_anything():
+    def explode(*args, **kwargs):
+        raise AssertionError("should not have run foobar2000")
+
+    foobar.add_files_via_cli("fb2k.exe", [], run=explode)
+
+
+def test_a_failing_command_line_becomes_a_foobar_error():
+    def fake_run(command, **kwargs):
+        return type("R", (), {"returncode": 1, "stdout": "", "stderr": ""})()
+
+    with pytest.raises(foobar.FoobarError):
+        foobar.add_files_via_cli("fb2k.exe", ["01.flac"], run=fake_run)
+
+
+def test_waiting_for_the_add_polls_until_the_count_settles():
+    """The command line returns as soon as foobar has accepted the files;
+    reading and tagging them happens afterwards, so the count climbs for a
+    moment. Asking once would see a half-filled playlist."""
+    counts = iter([0, 1, 3])
+    client = foobar.FoobarClient()
+    client.playlists = lambda: [foobar.Playlist("p1", "Default", next(counts), True)]
+
+    settled = foobar.wait_for_item_count(client, "p1", 3, sleep=lambda _: None)
+
+    assert settled == 3
+
+
+def test_waiting_gives_up_at_the_deadline_rather_than_looping_forever():
+    client = foobar.FoobarClient()
+    client.playlists = lambda: [foobar.Playlist("p1", "Default", 1, True)]
+    clock = iter([0.0, 0.0, 99.0])
+
+    settled = foobar.wait_for_item_count(client, "p1", 3, sleep=lambda _: None, now=lambda: next(clock))
+
+    assert settled == 1
+
+
+def test_replacing_the_current_playlist_clears_it_then_adds(monkeypatch):
+    """Deliberately the *current* playlist rather than a new one: the record
+    flow reads whatever is current, so this keeps one meaning of "what is
+    about to be recorded"."""
+    sent: list = []
+    client = _client({"/api/playlists": PLAYLISTS}, sent)
+    added: list = []
+    monkeypatch.setattr(foobar, "add_files_via_cli", lambda exe, paths, **kw: added.append((exe, list(paths))))
+
+    playlist = foobar.replace_current_playlist(client, "fb2k.exe", ["01.flac", "02.flac"], wait=lambda *a, **k: 2)
+
+    assert playlist.id == "p1"
+    assert ("/api/playlists/p1/clear", {}) in sent
+    assert added == [("fb2k.exe", ["01.flac", "02.flac"])]
+
+
+def test_replacing_a_playlist_when_foobar_has_none_open_is_an_error():
+    client = _client({"/api/playlists": {"playlists": []}})
+    with pytest.raises(foobar.FoobarError):
+        foobar.replace_current_playlist(client, "fb2k.exe", ["01.flac"])
