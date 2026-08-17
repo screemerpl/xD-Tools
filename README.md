@@ -11,6 +11,16 @@ straight from foobar2000 with a track mark at every song, write the disc and
 track titles onto the MiniDisc itself, lay out both labels from the album's
 own artwork, and use the software remote to drive the deck.
 
+**Record from a CD** -- pick an optical drive, and MDTools extracts the disc
+to FLAC with the bundled cdparanoia and flac, identifies it on MusicBrainz
+from its table of contents, loads the tracks into foobar2000 in disc order,
+and hands over to the same recording flow.
+
+**Mixtapes too** -- a disc or playlist whose tracks are by different artists
+is recognised as a compilation, credited to Various Artists rather than to
+whoever happened to be first, and given a cover drawn from its own track
+list, since there is no sleeve to look up.
+
 ## Manual
 
 A full user manual lives in [`doc/`](doc/), as a PDF in each of the three
@@ -40,6 +50,11 @@ src/mdtools/
   main.py                entry point
   app_window.py           main window: page switcher, menus, docks, wiring
   project.py              Project / ProjectMetadata / Track dataclasses
+  mdrem.py                MDRem infrared adapter: serial protocol, upload plan
+  foobar.py               foobar2000 over its Beefweb REST API, plus its command line
+  cdrip.py                audio CD: drives, table of contents, extraction to FLAC
+  musicbrainz.py          identifying a CD from its table of contents
+  mixtape_cover.py        draws a cover for a compilation, from its track list
   canvas/
     scene.py              DesignScene: template outline + design items
     view.py                zoomable/pannable view + mouse scale/rotate handles
@@ -56,10 +71,13 @@ src/mdtools/
     layers_panel.py         list + select + reorder + delete items
     new_design_dialog.py     disc+cover template pickers for File > New
     metadata_dialog.py       album/artist/year/track-list editor
+    record_dialog.py         record from foobar2000 onto the deck, then title it
+    cd_rip_dialog.py         rip a CD into foobar2000's playlist, then record it
   io/
     svg_export.py           exports just the cut/fold shapes as physically-accurate SVG
     png_export.py           exports print artwork as PNG, clipped to the template outline
     project_io.py            save/load a whole project as one self-contained .mdproj JSON
+bin/win64/              bundled cdparanoia + flac (Windows only) -- see its ATTRIBUTION.md
 tests/
 scripts/
   build_windows.ps1

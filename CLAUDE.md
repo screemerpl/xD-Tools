@@ -8,7 +8,9 @@ outgrew the name -- **"MDTools - MiniDisc Studio"**, not "Label Designer":
   Cricut cutting machine plus a regular printer;
 - with an MDRem infrared adapter, records an album from foobar2000 onto a
   deck with a track mark at every song, writes the disc and track titles
-  onto the MiniDisc, and stands in for the deck's remote.
+  onto the MiniDisc, and stands in for the deck's remote;
+- rips an audio CD to FLAC, identifies it on MusicBrainz from its table of
+  contents, loads it into foobar2000 in disc order, and records that.
 
 Keep the window title, Help > About, the README, `pyproject.toml`'s
 `description` and the user manual in step when that scope shifts again --
@@ -39,7 +41,11 @@ src/mdtools/
   gallery.py                bundled asset gallery (assets/img) + per-user downloaded-covers cache, merged
   metadata_lookup.py         iTunes Search API: track list + release year + cover art, given Album + Artist
   mdrem.py                  MDRem IR adapter: serial protocol, transliteration, upload plan (no Qt UI)
-  foobar.py                 foobar2000 via its Beefweb REST API: playlist, player state, control (no Qt UI)
+  foobar.py                 foobar2000 via its Beefweb REST API *and* its command line (no Qt UI)
+  cdrip.py                  audio CD: drives, TOC, disc ids, rip plan, cdparanoia/flac (no Qt UI)
+  musicbrainz.py            identifying a CD from its TOC alone -- a CD carries no text (no Qt UI)
+  mixtape_cover.py          draws a cover for a compilation, which by definition has none
+  user_paths.py             where every file dialog starts: Documents/MiniDiscProjects, Pictures
   auto_layout.py            places cover art on a disc label and the logo on its slider (no Qt UI beyond items)
   jcard_layout.py           builds the three J-card panels: front cover, spine band, track list (no Qt UI)
   palette.py                background/accent/text colours pulled out of a cover image (Pillow, no Qt)
@@ -68,6 +74,8 @@ src/mdtools/
     mdrem_upload_dialog.py      preview-then-write dialog + the worker thread driving an upload
     remote_dialog.py            software Sony MD remote, opened from the startup screen
     record_dialog.py            Project > Record to MiniDisc from foobar2000: arm, play, watch, hand off to titling
+    cd_rip_dialog.py            Project > Record CD to MiniDisc: read TOC, identify, rip, fill playlist, hand off
+    erase_dialog.py             Project > Erase MiniDisc: a guided, ask-the-user-what-you-see erase
     about_dialog.py             Help > About MDTools
     asset_gallery_dialog.py     Insert Asset: pick one of the bundled gallery images
   io/
@@ -76,7 +84,9 @@ src/mdtools/
     project_io.py               save/load a whole project as one self-contained .mdproj JSON
 assets/
   img/                      bundled asset gallery (currently just the MDTools logo) -- see gallery.py
-tests/          292+ tests, all offscreen via QT_QPA_PLATFORM=offscreen
+bin/
+  win64/                    bundled cdparanoia + flac + their DLLs -- see cdrip.py and its ATTRIBUTION.md
+tests/          685+ tests, all offscreen via QT_QPA_PLATFORM=offscreen
 doc/            the built user manual (PDF x3) + its generated screenshots -- see doc/README.md
 scripts/
   build_windows.ps1 / build_linux.sh   PyInstaller onedir build
@@ -1559,6 +1569,54 @@ actually painted with it -- confirmed by a regression test that forces
 `gc.collect()` immediately after enabling it and checks the effect is
 still there.
 
+**Two save/load bugs found together, from one report ("the track list looks
+wrong after reopening -- as if the font were off").** The font was innocent:
+`QFont.toString()`/`fromString()` round-trips exactly, fractional point
+sizes included. What was actually happening:
+
+1. **`textWidth` was never saved.** `jcard_layout` wraps the track list to
+   the panel width; Qt's default is not to wrap, so it came back as long
+   unwrapped lines running off the card. Restored **before**
+   `transformOriginPoint` in `item_from_dict`, and that order is
+   load-bearing: the wrap width decides `boundingRect()`, and the origin is
+   that rect's centre.
+2. **`transformOriginPoint` was recomputed as `boundingRect().center()`
+   rather than saved -- and it is not always that.** `jcard_layout._fit_text()`
+   shrinks and wraps a text layer *after* creating it and never re-anchors
+   the origin, so a live J-card pivots around a point from before the
+   fitting. Those panels are rotated a quarter turn, so a different pivot
+   puts the text somewhere else entirely. It is now stored. Reproducing
+   what was actually there beats deriving something defensible -- and it
+   avoids touching the panel-placement maths, which is correct as it stands.
+
+**Then, prompted by "check the other layer types too": a scaled rectangle or
+ellipse was scaled a *second* time on load, and moved.** Unlike text and
+images, which scale through a transform, `set_item_scale()` resizes a
+shape's own `rect()` and caches the pre-scale size in `BASE_RECT_ROLE` the
+first time it is called (see `canvas/items.py`). `"w"`/`"h"` in the file are
+the rect as it stood, scaling already included -- so a freshly loaded item,
+with nothing cached, adopted that scaled size as its *base*, and the
+`set_item_scale()` call at the end of `item_from_dict` multiplied by the
+factor again. A 2x-wide rectangle reloaded 4x wide, and since that call also
+re-centres the shape, it moved too. Copy/paste shared the bug, going through
+the same two functions. Fixed by seeding `BASE_RECT_ROLE` with
+`w/scale_x, h/scale_y` before that call -- **derived rather than stored in a
+new field, so projects saved before the fix are repaired on load** and there
+is no second rule for older files.
+
+**Why none of this was caught: the existing tests compared saved fields, and
+every field that was being saved round-tripped perfectly.** The new ones
+(`test_item_roundtrip.py`, `test_jcard_roundtrip.py`) compare
+`item.mapToScene(item.boundingRect()).boundingRect()` -- where the layer
+actually lands on the page -- across a matrix of every item type against
+several rotation/scale combinations. Note the matrix deliberately includes
+scale `(1.0, 1.0)`: multiplying by one hides a double-scaling bug
+completely, and that was the only case previously covered. There is also a
+save-twice/load-twice test, since a per-round error compounds, and a check
+that a reloaded shape's *base* rect is right, not just its visible size --
+getting the appearance right over a wrong base would restore the bug the
+moment the user dragged a handle.
+
 **Known caveat:** projects saved before the z-order (`"z"`) field existed in
 the `.mdproj` schema load with every item defaulted to z=0 (a tie), so Move
 Up/Down appears broken (swapping equal values is a no-op) on old saves
@@ -1799,6 +1857,319 @@ track times are known up front, so `DISC_SP_SECONDS` (80 min) turns "the
 recording got cut off at minute 80" into a warning beforehand. It only ever
 warns -- which recording mode the deck is in (SP/LP2/LP4) can neither be
 read nor set through the key table, so it is not MDTools' decision to make.
+
+**"Record CD to MiniDisc..." (`cdrip.py` + `musicbrainz.py` +
+`panels/cd_rip_dialog.py`) rips an audio CD into foobar2000's playlist and
+then hands over to the flow above, unchanged.** That hand-off is the design:
+arming the deck, the lead-in, a track mark at every boundary and titling
+afterwards all already exist and are driven by whatever foobar happens to
+have in its playlist, so this feature's job is only to make the playlist say
+the right thing. `_record_cd` and `_record_from_foobar` share
+`_run_record_dialog()`; `RecordDialog` never learns a CD was involved.
+
+**It rips rather than letting foobar play the CD directly** -- foobar can
+open a disc, and that was the shorter path. But then the disc is read in
+real time *during* the recording, and a drive stumbling on a scratch at
+minute 31 puts that stumble on the MiniDisc, which cannot be patched
+afterwards. Ripping first moves every read error to a point where it costs a
+re-read and nothing else, which is the whole subject cdparanoia exists for.
+
+**Both tools are bundled binaries in `bin/win64`, not dependencies** --
+`cd-paranoia.exe` (libcdio's maintained cdparanoia port) and `flac.exe`,
+with their DLLs; provenance, versions and licences are in
+`bin/win64/ATTRIBUTION.md`, which is not optional paperwork (both are GPL).
+`cdrip.tools_dir()` resolves them exactly like `gallery.gallery_dir()` /
+`icons.icons_dir()` -- `sys._MEIPASS` when frozen, repo root in dev --
+and `scripts/build_windows.ps1` `--add-data`s the folder. **Nothing is
+bundled for Linux and that is deliberate**: both tools are distro packages
+there, so `find_tool()` falls through to PATH and no build-script change was
+needed. Writing our own CDDA reader over `IOCTL_CDROM_RAW_READ` was
+considered and rejected -- jitter correction and re-read logic is what
+cdparanoia *is*, and ours would be a worse copy of it.
+
+**Two things about cdparanoia's behaviour were established by running the
+bundled binary, not read anywhere, and the code depends on both.** It writes
+everything to **stderr**, success included (stdout is reserved for ripped
+audio), and **`-Q` exits 0 even when it found no drive at all**. So neither
+the exit code nor stdout can decide whether reading the TOC worked -- having
+parsed a track table out of the output is the only evidence there is. A rip
+proper *does* exit non-zero, which is what `rip_track` checks. See
+`test_a_clean_exit_with_no_toc_in_it_is_still_a_failure`.
+
+**Progress within a track comes from the output file's size, and the child's
+stderr goes to a file rather than a pipe.** Reading the pipe line by line was
+the first implementation and the obvious shape; it has two failure modes the
+current one avoids. It assumes cdparanoia terminates its progress output with
+newlines (it redraws a bar, and only `-e` promises lines at all), and it makes
+**cancelling depend on a line arriving** -- a quiet stretch would leave Stop
+doing nothing until the track finished. Not reading the pipe at all is not an
+option either: a full pipe buffer blocks the child. A file has no buffer to
+fill, so `rip_track` polls the clock (`RIP_POLL_S`, which is therefore also
+the worst-case Stop latency) and measures the growing WAV. Progress parsed out
+of cdparanoia's own `@ n` field was rejected separately: it means different
+things in different builds, while a file's size on disk cannot be misread.
+Measuring the file then gives the correctness check for free --
+`RipTask.expected_wav_bytes` is what the TOC says the track must weigh
+(44 + sectors x 2352), and **a track that came up short fails the rip however
+cleanly the process exited**, because a truncated track is not something you
+notice after it is on a MiniDisc. The log is deleted on success and **kept on
+failure**, where it is the only diagnosis a bad disc gets. Note the ordering
+constraint: both deletions happen after the `with open(...)` block, since
+Windows refuses to unlink a file that is still open.
+
+**Cancelling a rip is immediate, unlike cancelling an MDRem upload.** There
+the worker is mid-way through a blocking exchange that would leave the deck
+in name-edit mode; here killing the reader leaves nothing anywhere, and the
+partial WAV is deleted on the way out. A failed or cancelled rip must also
+**never reach the playlist** -- a half-ripped album loaded into foobar would
+be recorded as though it were the whole disc.
+
+**A CD carries no text at all, so identification is `musicbrainz.py`, not
+the existing iTunes lookup.** `metadata_lookup.py` takes an artist and album
+name, which is exactly what a bare disc cannot supply. MusicBrainz trades a
+TOC for one. Two queries, deliberately, because they fail in opposite
+directions: the **exact disc id** matches this pressing and nothing else but
+only hits if somebody submitted it, while the **fuzzy TOC search**
+(`/discid/-?toc=...`) finds releases nobody ever submitted an id for, at the
+cost of returning every pressing with the same track lengths. Exact first.
+Cover art still comes from `metadata_lookup.find_cover()` -- it already
+caches into the asset gallery, and MusicBrainz's artwork is a separate
+service. MusicBrainz **refuses requests without an identifying User-Agent**,
+so `_USER_AGENT` is not politeness.
+
+**The disc id's 100 fixed hex slots are load-bearing, not padding.** They
+are what makes two pressings hash identically regardless of track count, so
+it must not be "simplified" to just the tracks that exist. Verified end to
+end against the live service while building this: the TOC of Nirvana's
+*Nevermind* hashes to `I5l9cCSFccLKFEKS.7wqSZAorPU-`, which musicbrainz.org
+resolves to that release -- that string is the test vector in
+`test_cdrip.py`, and it is the one expectation in that file that came from
+outside it.
+
+**Beefweb cannot be given the ripped files, which is why `foobar.py` now
+also drives foobar2000's command line.** `POST /api/playlists/{id}/items/add`
+answers **403 "item is not under allowed path"** for anything outside the
+music directories configured in foobar's own preferences -- and that list
+starts out, and on a normal install stays, empty (`GET /api/browser/roots`
+returned `{"roots": []}` on the real install this was built against; adding a
+file from the user's own Music folder was refused). `foobar2000.exe /add` has
+no such notion. So Beefweb still makes the playlist, clears it and reads back
+what landed, and the *files* go in through `add_files_via_cli()`. Splitting
+one operation across two transports is not elegant; making every user
+configure a whitelist before a CD could be recorded is worse.
+`find_foobar_exe()` reads the `App Paths` registry key, and the location is
+overridable in Window > Settings.
+
+**`wait_for_item_count()` exists because `/add` returns before foobar has
+finished.** The command line is answered as soon as foobar *accepts* the
+files; reading and tagging them happens after, so asking for the playlist
+immediately reports a count still climbing.
+
+**Tags are written at encode time, and that is what makes the titles
+correct downstream.** `flac --tag=...` gets TITLE/ARTIST/ALBUMARTIST/
+ALBUM/DATE/TRACKNUMBER, so `foobar.metadata_from_playlist()` -- and
+therefore what gets written onto the MiniDisc -- reads the CD's real titles
+with no special casing anywhere. Both ARTIST and ALBUMARTIST, since the
+record flow reads `%album artist%` for the disc title. Filenames are
+zero-padded with the track number in front so disc order survives even if
+something along the way sorts them. Tags reach the encoder as **command line
+arguments**, so a Polish or Japanese title surviving that trip on Windows is
+an assumption about flac.exe's own argv handling, not something this code
+can guarantee -- which is why
+`test_the_bundled_encoder_writes_non_ascii_tags_without_mangling_them` runs
+the real bundled encoder and reads the Vorbis comment block back out of the
+FLAC. If that ever stops being true, every title on every ripped disc is
+silently wrong.
+
+**Old rips are deleted at the start of the next one, never at the end of a
+recording** -- the files stay in foobar's playlist for as long as the user
+might replay them, so deleting them when a recording finished would pull
+them out from under it (user's explicit choice among the alternatives).
+`clean_stale_rip_folders()` only removes folders holding nothing but
+`.flac`/`.wav`/`.log`: the rip folder is user-configurable, so it can be
+pointed somewhere that also holds something else, and a recursive delete has
+no business guessing. Default location is under the system temp folder --
+a rip is raw material for a recording, not a music collection.
+
+**The entry is gated behind the MDRem setting like the other recording
+entries**, via `_sync_mdrem_actions()`. Ripping needs no adapter, but this
+entry does not stop at ripping. The port is resolved *before* the rip, and
+foobar's reachability and location are checked before it too: the rip is the
+expensive half, and every one of those failures costs minutes if discovered
+afterwards and nothing if discovered first.
+
+**Verified end to end on real hardware** (a USB drive, Skillet's *Unleashed*),
+after being built blind on a machine with no optical drive at all:
+- `cd-paranoia -Q`'s real output matches the parser exactly; that capture is
+  now a fixture (`REAL_TOC_OUTPUT`) so a hand-written one can never drift
+  from the shape the bundled binary actually produces.
+- The **plain drive letter** (`-d F:`) works, so `device_candidates()`' first
+  spelling is the one that hits. The `\\.\F:` fallback has therefore never
+  been needed in practice -- keep it, but don't take it as load-bearing.
+- The disc's identifier (`_dODxWGqmW9J1Ez3UiD8Z1z2JpY-`) resolved on
+  musicbrainz.org to the right release with the right track count -- a
+  second live-verified vector alongside Nevermind's.
+- A ripped track came out **byte-exact against the TOC** (40,560,284 bytes),
+  and the tags survived the whole way round: written by flac.exe, read back
+  by foobar2000, `metadata_from_playlist()` returning the right artist,
+  album, year and titles. That round trip is the thing the MiniDisc's own
+  titles depend on.
+- Windows' CDFS reports the label **"Audio CD"** for an audio disc, so
+  `GetVolumeInformationW` succeeds where the code originally assumed it
+  would fail. `has_media` is a usable "something is in there" hint, never
+  the authority -- reading the TOC is.
+
+**Speed is the one unwelcome finding: about 3x, i.e. ~80 s for a 3:50
+track and ~15 minutes for a 43-minute album.** That is cdparanoia being
+thorough on a cheap USB drive, and it is the price of the error correction
+this feature exists for. If it ever needs to be faster, the lever is `-Z`
+(disable paranoia) -- which trades away exactly the thing that made ripping
+preferable to letting foobar play the disc live, so it should be a visible
+choice, never a quiet default.
+
+**Every file dialog starts somewhere deliberate -- `mdtools/user_paths.py`.**
+All of them used to pass `""` as the starting directory, which leaves Qt on
+the process's working directory: wherever the app was launched from, and for
+a frozen build the install folder. Projects landed next to the executable
+and exports scattered wherever the last dialog had wandered. The rule now is
+the one the OS already sets -- documents in Documents, pictures from
+Pictures -- with one named folder of its own,
+`Documents/MiniDiscProjects`, because a project is a thing a user should be
+able to find again a year later.
+
+- **`QStandardPaths`, never a hand-built `%USERPROFILE%/Documents`**: the
+  real folder is localised (Dokumenty, ドキュメント) and can be redirected
+  to OneDrive or another drive, and only the OS knows where it is.
+- **Created on demand, not at startup.** A folder appearing in someone's
+  Documents before they have saved anything is clutter; but a dialog
+  pointed at a directory that does not exist falls back somewhere
+  arbitrary, so `projects_dir()` creates it at the moment a dialog is about
+  to open in it. A read-only Documents falls back to Documents itself
+  rather than raising.
+- **Derived, not configurable.** The CD rip folder is a setting because it
+  holds hundreds of megabytes somebody may need off their system drive;
+  these are starting points for a picker, and a preference per dialog would
+  be more machinery than the problem deserves.
+- **Exports land beside the project** they came from, falling back to the
+  projects folder -- the SVG that cuts a design and the PNG that prints it
+  are the same job as the `.mdproj`, and the set is only findable at
+  cutting time if it stayed together. `PrintDialog` therefore takes a
+  `start_dir`; `MultiprintDialog` has no single project to belong to and
+  gets the fallback.
+
+**A first save is proposed as "Artist - Album (Year).mdproj", from
+`mdrem.disc_title()` -- the same function that composes what the deck is
+told.** One function, so the file on disk and the title on the disc cannot
+drift into disagreeing about what the album is. It is deliberately **not**
+run through `mdrem.transliterate()`: that strips a title to ASCII because
+the deck can display nothing else, and mangling "Zażółć" into "Zazolc" on
+disk would be carrying a hardware restriction somewhere it does not apply.
+Empty metadata suggests no filename at all rather than a bare ".mdproj".
+
+`test_user_paths.py` closes with a blanket guard
+(`test_no_dialog_is_left_starting_on_the_working_directory`) that drives
+every entry point and asserts none passes an empty directory, so this cannot
+quietly regress one dialog at a time.
+
+**Project > "Erase MiniDisc..." (`panels/erase_dialog.py`) is built around
+an admission: we do not know what the ERASE key does.** The firmware's own
+findings say `ERASE` (SIRC `0x07DA`) is *recognised* by an MDS-JE480 as a
+write command -- sent to a write-protected disc it produced the deck's
+protection message, which a wrong code would not have -- but the entire
+write group was only ever tested behind the write-protect tab, deliberately
+(`RECORD` would otherwise have wiped the test recording), and at three-second
+intervals the deck's message never cleared between keys, so **which key does
+what was never distinguished**. Shipping "press this to erase your disc" on
+that basis would be guessing with someone's recording.
+
+So it is a **guided sequence that asks the user what their deck's display
+says** -- STOP, then ERASE, then a question, and only a Yes sends ENTER to
+accept. The user's eyes are the only instrument available; this is the same
+shape, and the same reasoning, as RecordDialog arming the deck and then
+asking whether it really armed. Three details worth keeping:
+- **A "no" sends CANCEL**, rather than just stopping. Leaving the deck
+  parked on a destructive confirmation would arm it for whoever next walks
+  past.
+- **The question is about the display, never about the outcome.** "Is it
+  asking you to confirm?" is observable; "did it work?" is not, and the
+  answer decides whether an irreversible key goes out.
+- **It offers to eject afterwards**, because an erased TOC is volatile until
+  the disc comes out -- exactly as a written one is
+  (`MDRemUploadDialog._offer_eject`).
+
+It is deliberately **not tied to the open project**: it acts on whatever
+disc is physically in the deck, which has nothing to do with which label is
+being designed, so it works with no project open at all.
+
+**A playlist or a CD may be a compilation, and almost everything downstream
+assumed an album.** A mixtape takes its album and artist from whichever
+track happened to be first, so the disc gets titled after one track's
+record, the J-card credits one performer for twelve, and a cover art lookup
+keyed on those words returns some unrelated sleeve -- presented as though it
+were this disc's. `ProjectMetadata.is_compilation()` is the one predicate
+everything else hangs off.
+
+**The detection deliberately is not "do the track artists differ".** That
+would call every album with a guest feature a compilation, which is exactly
+the mistake `foobar.album_artist()` already exists to avoid. It asks whether
+*most* tracks can be attributed to one artist -- the album's own if it has
+one, else the commonest track artist -- with `_same_artist()` matching by
+substring either way, so "Falling In Reverse" still claims the track
+credited to "Falling In Reverse, Jelly Roll". A release credited to Various
+Artists says so outright and is taken at its word. **Absence of per-track
+artists is not evidence**: a hand-typed or looked-up track list has none,
+and stays an ordinary album.
+
+**Getting this wrong is asymmetric, so the negative case carries the
+weight.** A compilation misread as an album is a plain-looking cover; an
+album misread as a compilation is renamed to Various Artists, has its sleeve
+replaced and its J-card rewritten. Half of `test_compilation.py` pins down
+the ordinary path being untouched -- see
+`test_a_guest_feature_does_not_make_an_album_a_compilation` and
+`test_an_ordinary_albums_track_lines_are_unchanged_by_the_artist_field`.
+
+**`Track.artist` is the new field this rests on**, plumbed through
+`project_io` (defaulting to `""`, so projects saved before it load as the
+ordinary albums they were), `foobar`'s column set (`%artist%` **appended**
+to `_COLUMNS`, so every existing positional index keeps its meaning), the
+CD rip dialog's own Artist column, and the Metadata dialog's. That last one
+was not optional: `_current_metadata()` rebuilds the track list out of the
+table, so without a column to hold them, opening Project > Metadata... on a
+mixtape and pressing OK silently dropped every performer and the project
+stopped being a compilation just for having been looked at.
+
+**`foobar.album_title()` now answers "the album these are all from", not
+"track one's album".** Weighed against the tracks that actually carry an
+album tag, **not** against the whole playlist -- counting untagged tracks as
+votes against would strip the name off a half-tagged ordinary record, which
+is a regression on the normal path for the sake of the unusual one.
+
+**`mixtape_cover.render_cover()` draws a cover rather than special-casing
+every layout.** It returns ordinary PNG bytes for `metadata.cover_art`, so
+`auto_layout`, `jcard_layout`, `palette` and the `.mdproj` all carry on
+exactly as they do for a fetched sleeve -- nothing downstream knows. Two
+constraints shaped it, both physical:
+- **It has to survive grayscale.** Two colours chosen to contrast by hue can
+  convert to the same grey, at which point the accent rule disappears into
+  its own background. The accent is therefore separated by *luminance*, and
+  the search ladder desaturates towards a pale tint when brightness alone
+  cannot get there -- which it cannot for blue, carrying 0.0722 of luminance
+  against green's 0.7152. `test_background_and_accent_stay_apart_in_grayscale`
+  sweeps every hue rather than trusting one sample, and is what caught that.
+- **It has to survive being small.** The list is fitted by measurement, and
+  each track gets a **hanging indent** -- wrapping "01 Artist - Title" as one
+  paragraph puts continuation lines hard against the numbers, where "Heaven"
+  on its own line reads as track 03.
+An analogous accent hue replaced a complementary one after looking at a
+render: hot pink on bottle green was garish where a lifted neighbour reads
+as deliberate. The seed is a SHA-1 of the track list, not `hash()`, which is
+salted per process and would repaint the cover on every run.
+
+**Where the branch actually goes in: `record_dialog._capture_metadata()` and
+`app_window._fetch_cover_into_metadata()`, both immediately before their
+`find_cover()` call.** Not inside `find_cover` itself -- Project >
+Metadata...'s own "Lookup Track List..." button should still search for
+whatever the user typed, because there they asked for a search.
 
 **Templates > "Change Template for This Page..." (`app_window.apply_template`)
 swaps a page onto a different template.** Until it existed a template could
@@ -2199,7 +2570,8 @@ Three details that are load-bearing here:
   `scripts/manual/make_screenshots.py`, which builds a demo project and
   grabs each dialog rather than anyone capturing them by hand. Two things
   follow. First, a UI change that renames a menu item or moves a control
-  invalidates **thirty-nine screenshots**, not one -- rerun the generator
+  invalidates **forty-five screenshots** (fifteen figures x three
+  languages), not one -- rerun the generator
   rather than patching a figure. Second, the Polish and Japanese manuals
   show Polish and Japanese screenshots, so the menu names quoted in their
   text have to match `i18n/mdtools_{pl,ja}.ts` exactly; a rename means

@@ -107,6 +107,14 @@ BOOK = [
                   "asked about them first."},
             {"p": "To leave MDTools altogether, use **File > Exit**, or cancel the startup screen when it "
                   "reappears."},
+            {"h2": "Where your projects are saved"},
+            {"p": "The first time you save, MDTools proposes **Documents\\MiniDiscProjects** and a file "
+                  "name built from the album itself - `Skillet - Unleashed (2016).mdproj`. That is the "
+                  "same line the deck is told to display, so the file on your computer and the title on "
+                  "the disc agree with each other."},
+            {"p": "Other file dialogs start somewhere sensible too: **Add Image...** and cover art open "
+                  "in your Pictures folder, and the SVG, PNG and PDF exports open **next to the project "
+                  "they came from**, so the design and the files that cut and print it stay together."},
         ],
     },
     # ------------------------------------------------------------------
@@ -511,6 +519,101 @@ BOOK = [
             {"p": "An MD holds 80 minutes in SP. MDTools warns when the playlist is longer than that, but "
                   "it can only warn - LP2 and LP4 have to be set on the deck itself, and there is no way "
                   "to read back which mode it is in."},
+        ],
+    },
+    # ------------------------------------------------------------------
+    {
+        "title": "Recording a CD",
+        "blocks": [
+            {"p": "**Project > Record CD to MiniDisc...** copies an audio CD onto a MiniDisc. It reads "
+                  "the disc, works out what album it is, extracts every track to a file, loads those "
+                  "files into foobar2000 in the right order, and then hands over to the recording you "
+                  "already know - the same arming, the same track marks, the same titling."},
+            {"note": "**This needs the MDRem adapter too**, and the menu entry only appears once it is "
+                     "enabled. Reading a CD does not need it, but this entry does not stop at reading "
+                     "one: it goes straight on to record what it read."},
+            {"h2": "Why it copies the disc first"},
+            {"p": "foobar2000 can play a CD directly, and letting it do so would be simpler. But then "
+                  "the disc is being read in real time, during the recording, with nothing to fall back "
+                  "on - a drive stumbling over a scratch at minute 31 puts that stumble on the "
+                  "MiniDisc, and a MiniDisc recording is not something you can patch afterwards."},
+            {"p": "Copying first moves every read error to a point where it costs a re-read and nothing "
+                  "else. MDTools uses **cdparanoia** for this, built precisely to keep working at a "
+                  "damaged disc until it gets the audio right, and **flac** to store the result. Both "
+                  "ship with MDTools; there is nothing to install."},
+            {"fig": ("cd-rip", "The disc read, identified, and ready to copy.")},
+            {"h2": "Step by step"},
+            {"ol": [
+                "Put the CD in the drive and choose the drive from the list. **Refresh** looks again if "
+                "you plugged one in after opening the window.",
+                "Press **Read Disc**. MDTools reads the table of contents and looks the disc up on "
+                "MusicBrainz, which identifies it from the lengths of its tracks - a CD carries no text "
+                "of its own.",
+                "Check what came back. If several pressings match, pick the right one from "
+                "**Release**; the track titles change with it.",
+                "Correct anything wrong. The titles are editable, and they are what gets written into "
+                "the files and later onto the MiniDisc.",
+                "Press **Rip and Record**. When the copy finishes, the recording window opens by "
+                "itself.",
+            ]},
+            {"note": "A disc that is not in MusicBrainz - anything home-burned, and plenty of obscure "
+                     "releases - simply comes back with numbered placeholder titles for you to type "
+                     "over. Nothing else about the process changes."},
+            {"h2": "How long it takes"},
+            {"p": "Expect roughly **fifteen minutes for a full album**, about three times faster than "
+                  "playing it. That is cdparanoia being careful, and it is the price of the error "
+                  "correction that made copying worth doing in the first place. The recording itself "
+                  "then takes as long as the album does, because it happens in real time."},
+            {"h2": "When the disc is a compilation"},
+            {"p": "A mixtape is not an album, and treating it like one goes wrong in visible ways: the "
+                  "disc gets named after whichever track happened to be first, the J-card credits one "
+                  "performer for twelve, and a cover art search returns some unrelated record's "
+                  "sleeve."},
+            {"p": "So MDTools checks. If most of the tracks cannot be attributed to a single artist, it "
+                  "credits the disc to **Various Artists**, names it `Mixtape` unless the release has a "
+                  "name of its own, prints each performer beside their track on the J-card, and "
+                  "**draws a cover from the track list** instead of looking one up."},
+            {"p": "Fill in the **Artist** column yourself when you know a disc is a compilation and "
+                  "MusicBrainz did not say so - that column is what the check reads."},
+            {"note": "An album with a guest feature on one track is **not** a compilation, and is not "
+                     "treated as one. The test is whether most tracks belong to the same artist, not "
+                     "whether the credits vary at all."},
+            {"p": "The same applies when recording from foobar2000: a playlist of unrelated tracks is "
+                  "recognised the same way, with the same result."},
+            {"h2": "Where the copied files go"},
+            {"p": "Into your temporary folder by default, under `MDTools CD Rip`, one folder per album. "
+                  "They are raw material for a recording rather than a music collection - one album is "
+                  "a few hundred megabytes - and Window > Settings... can point that somewhere else."},
+            {"p": "They are **not** deleted when the recording finishes, because foobar2000 still has "
+                  "them in its playlist and you may want to play them again. The previous copy is "
+                  "cleared out when you start the next one."},
+            {"warn": "Loading the copied tracks into foobar2000 **empties its current playlist**. "
+                     "Anything you had queued up there is gone, so move it elsewhere first if you want "
+                     "to keep it."},
+        ],
+    },
+    # ------------------------------------------------------------------
+    {
+        "title": "Erasing a disc",
+        "blocks": [
+            {"p": "**Project > Erase MiniDisc...** clears the disc in the deck. It works on whatever is "
+                  "physically loaded, so it does not care which project is open, or whether one is."},
+            {"warn": "There is no undo, and MDTools cannot see the result. Make sure the disc in the "
+                     "deck is the one you mean, and that its write-protect tab is closed."},
+            {"h2": "Why it asks what you can see"},
+            {"p": "This is the one operation where MDTools does not know what its own command does. The "
+                  "**Erase** key is recognised by the deck as a write command - that much was confirmed "
+                  "- but which editing menu it opens was never established, because the write keys "
+                  "could only be tested safely on a protected disc, where the deck answers every one of "
+                  "them with the same complaint."},
+            {"p": "Rather than guess with your recording, MDTools sends Erase and then asks what the "
+                  "deck's display says. Only if you confirm it is asking something like **All Erase?** "
+                  "does the confirmation go out. Answer no and it backs the deck out of whatever menu "
+                  "it is sitting in."},
+            {"fig": ("erase", "It sends the command, then asks what the deck is showing.")},
+            {"note": "As with titling, an erase lives in the deck's memory until the disc is ejected. "
+                     "MDTools offers to eject afterwards - take it, or the disc keeps its old contents "
+                     "should the deck lose power."},
         ],
     },
     # ------------------------------------------------------------------
