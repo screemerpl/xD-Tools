@@ -1,4 +1,4 @@
-"""Project > "Erase MiniDisc..." -- clears a disc through the MDRem
+"""Recording > "Erase MiniDisc..." -- clears a disc through the MDRem
 adapter.
 
 This is the most destructive thing MDTools can ask a deck to do, and it is

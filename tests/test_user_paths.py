@@ -26,10 +26,13 @@ def fake_home(tmp_path, monkeypatch):
     QStandardPaths.setTestModeEnabled(True)
     documents = tmp_path / "Documents"
     pictures = tmp_path / "Pictures"
+    music = tmp_path / "Music"
     documents.mkdir()
     pictures.mkdir()
+    music.mkdir()
     monkeypatch.setattr(user_paths, "documents_dir", lambda: documents)
     monkeypatch.setattr(user_paths, "pictures_dir", lambda: pictures)
+    monkeypatch.setattr(user_paths, "music_dir", lambda: music)
     yield tmp_path
     QStandardPaths.setTestModeEnabled(False)
 
@@ -62,6 +65,10 @@ def test_a_read_only_documents_falls_back_rather_than_raising(fake_home, monkeyp
 
 def test_images_come_from_pictures(fake_home):
     assert user_paths.image_start_path() == str(fake_home / "Pictures")
+
+
+def test_an_album_folder_is_looked_for_in_music(fake_home):
+    assert user_paths.music_start_path() == str(fake_home / "Music")
 
 
 def test_an_unset_standard_location_still_beats_the_working_directory(monkeypatch):
@@ -187,6 +194,18 @@ def test_exports_start_beside_a_saved_project(qt_app, fake_home, monkeypatch, tm
     window._export_svg()
 
     assert seen == [str(tmp_path / "here")]
+
+
+def test_the_album_folder_picker_starts_in_music(qt_app, fake_home, monkeypatch):
+    """Record Folder's own picker. It is not reachable from MainWindow the
+    way the others are -- it lives on its dialog -- so the blanket guard
+    below cannot see it."""
+    from mdtools.panels.folder_record_dialog import FolderRecordDialog
+
+    seen = _capture(monkeypatch, QFileDialog, "getExistingDirectory")
+    FolderRecordDialog()._browse()
+
+    assert seen == [str(fake_home / "Music")]
 
 
 def test_no_dialog_is_left_starting_on_the_working_directory(qt_app, fake_home, monkeypatch):

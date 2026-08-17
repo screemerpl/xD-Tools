@@ -267,7 +267,7 @@ def _finish_recording(dialog, monkeypatch) -> None:
 
 def test_a_finished_recording_is_adopted_as_the_projects_metadata(qt_app, monkeypatch, no_hardware, no_lookup):
     """Otherwise the user has just recorded an album and still has to type
-    its name into Project > Metadata... by hand."""
+    its name into the Tools panel's Metadata dialog by hand."""
     dialog = _dialog(FakeClient(_items(3)), monkeypatch)
     _finish_recording(dialog, monkeypatch)
 
@@ -336,3 +336,83 @@ def test_stopping_mid_recording_stops_both_ends(qt_app, monkeypatch, no_hardware
 
     assert client.stopped, "foobar must be stopped"
     assert "SEND STOP" in no_hardware, "the deck must be stopped too"
+
+
+# --- metadata handed in by the caller ---------------------------------------
+#
+# Record Folder passes what its own dialog settled on, because a folder holds
+# somebody else's files and nothing rewrites them -- an album name corrected
+# there reaches the disc no other way. The CD flow deliberately does not: it
+# wrote its titles into the files it created, so the playlist carries them.
+
+
+def test_metadata_handed_in_is_what_the_disc_is_titled_from(qt_app, monkeypatch, no_hardware, no_lookup):
+    from mdtools.project import ProjectMetadata, Track
+
+    given = ProjectMetadata(album="Posluchaj", artist="Kult", tracks=[Track("Arahja")])
+    monkeypatch.setattr(record_module.foobar, "FoobarClient", lambda *a, **k: FakeClient(_items(3)))
+    dialog = RecordDialog("COM_TEST", metadata=given)
+    dialog._deck = record_module.mdrem.MDRemClient("COM_TEST")
+    _finish_recording(dialog, monkeypatch)
+
+    assert dialog.result_metadata is given
+    assert dialog.result_metadata.album == "Posluchaj"
+
+
+def test_a_cover_that_came_with_it_is_not_looked_up_again(qt_app, monkeypatch, no_hardware):
+    """Record Folder looks one up before recording, while the user can
+    still correct the album name. A second search could only answer the
+    same question worse."""
+    from mdtools.project import ProjectMetadata, Track
+
+    monkeypatch.setattr(
+        record_module, "find_cover", lambda *a, **k: pytest.fail("must not search for a second cover")
+    )
+    given = ProjectMetadata(album="Unleashed", artist="Skillet", tracks=[Track("A")], cover_art=b"PNG")
+    monkeypatch.setattr(record_module.foobar, "FoobarClient", lambda *a, **k: FakeClient(_items(3)))
+    dialog = RecordDialog("COM_TEST", metadata=given)
+    dialog._deck = record_module.mdrem.MDRemClient("COM_TEST")
+    _finish_recording(dialog, monkeypatch)
+
+    assert dialog.result_metadata.cover_art == b"PNG"
+
+
+def test_without_any_the_playlist_is_still_the_source(qt_app, monkeypatch, no_hardware, no_lookup):
+    """The ordinary path, unchanged: every other entry point passes
+    nothing."""
+    dialog = _dialog(FakeClient(_items(3)), monkeypatch)
+    _finish_recording(dialog, monkeypatch)
+
+    assert dialog.result_metadata.album == "Album"
+
+
+def test_the_titles_written_onto_the_disc_are_the_ones_that_were_captured(qt_app, monkeypatch, no_hardware, no_lookup):
+    """_offer_titling used to rebuild the metadata from the playlist all
+    over again, which would have thrown away exactly the correction this
+    parameter exists to carry."""
+    from mdtools.project import ProjectMetadata, Track
+
+    uploaded: list = []
+
+    class _FakeUpload:
+        def __init__(self, metadata, port, parent=None, clear_default=True):
+            uploaded.append(metadata)
+
+        def exec(self):
+            return 0
+
+    monkeypatch.setattr(record_module, "MDRemUploadDialog", _FakeUpload)
+    monkeypatch.setattr(
+        record_module.QMessageBox, "question", lambda *a, **k: record_module.QMessageBox.StandardButton.Yes
+    )
+    given = ProjectMetadata(album="Posluchaj", artist="Kult", tracks=[Track("Arahja")])
+    monkeypatch.setattr(record_module.foobar, "FoobarClient", lambda *a, **k: FakeClient(_items(3)))
+    dialog = RecordDialog("COM_TEST", metadata=given)
+    dialog._deck = record_module.mdrem.MDRemClient("COM_TEST")
+    dialog._recording = True
+    dialog._started = True
+    dialog._highest_index = len(dialog._items) - 1
+
+    dialog._poll()
+
+    assert uploaded == [given]

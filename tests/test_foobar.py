@@ -135,6 +135,46 @@ def test_metadata_from_an_empty_playlist_is_empty_not_an_error():
     assert metadata.album == "" and metadata.tracks == []
 
 
+# --- untagged files --------------------------------------------------------
+#
+# What Record Folder exists for: somebody's own folder of files, which may
+# carry no tags at all. foobar substitutes the filename for a missing
+# %title% itself, but a disc full of blank track names is not a risk worth
+# taking on behaviour that is nowhere pinned down, so %path% is asked for
+# and the fallback is made here as well.
+
+
+def test_a_file_with_no_title_tag_is_named_after_its_file():
+    item = foobar.PlaylistItem.from_columns(
+        ["", "", "", "", "", "212", "", r"C:\Music\Skillet\03 Feel Invincible.flac"]
+    )
+    assert item.display_title() == "03 Feel Invincible"
+
+
+def test_a_real_title_always_wins_over_the_filename():
+    item = foobar.PlaylistItem.from_columns(
+        ["3", "Feel Invincible", "Skillet", "Unleashed", "2016", "212", "Skillet", r"C:\Music\track03.flac"]
+    )
+    assert item.display_title() == "Feel Invincible"
+
+
+def test_no_title_and_no_path_is_still_just_empty():
+    """%path% is appended to the column set, so an older or unexpected
+    response simply pads to "" -- which has to stay the answer it was
+    before, not raise."""
+    assert foobar.PlaylistItem.from_columns(["1", ""]).display_title() == ""
+
+
+def test_the_filename_fallback_reaches_the_track_list():
+    """The point of it: this is what gets written onto the disc."""
+    items = [
+        foobar.PlaylistItem.from_columns(["", "", "", "", "", "100", "", "/music/mix/01 Unknown Song.mp3"]),
+        foobar.PlaylistItem.from_columns(["", "", "", "", "", "100", "", "/music/mix/02 Another.mp3"]),
+    ]
+    titles = [track.title for track in foobar.metadata_from_playlist(items).tracks]
+    assert titles == ["01 Unknown Song", "02 Another"]
+
+
 # --- control ---------------------------------------------------------------
 
 

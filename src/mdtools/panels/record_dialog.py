@@ -1,4 +1,4 @@
-"""Project > "Record to MiniDisc from foobar2000..." -- records an album
+"""Recording > "Record to MiniDisc from foobar2000..." -- records an album
 from foobar2000 onto a MiniDisc over S/PDIF, then titles the result.
 
 The sequence, and why each step is where it is:
@@ -74,7 +74,24 @@ def _mmss(seconds: float) -> str:
 
 
 class RecordDialog(QDialog):
-    def __init__(self, port: str, base_url: str = foobar.DEFAULT_BASE_URL, parent=None):
+    def __init__(
+        self,
+        port: str,
+        base_url: str = foobar.DEFAULT_BASE_URL,
+        parent=None,
+        metadata: ProjectMetadata | None = None,
+    ):
+        """`metadata`, when given, is what the disc gets titled from instead
+        of the playlist's own tags.
+
+        Only Record Folder passes it, and only because it has to: a folder
+        holds somebody else's files, which nothing here rewrites, so an
+        album name typed into that dialog can reach the disc no other way.
+        The CD flow deliberately does *not* -- it writes its titles into the
+        files it created, so the playlist already carries them, and one
+        source of truth beats two that can disagree. Either way it describes
+        the very playlist that is about to be recorded: it is built from the
+        same items, moments earlier."""
         super().__init__(parent)
         self.setWindowTitle(self.tr("Record to MiniDisc from foobar2000"))
         self.resize(520, 500)
@@ -90,6 +107,7 @@ class RecordDialog(QDialog):
         # as project metadata, with cover art if any was found. None means
         # nothing was recorded, so nothing should be adopted.
         self.result_metadata: ProjectMetadata | None = None
+        self._given_metadata = metadata
         # Held open for the whole session rather than reopened per key:
         # opening a serial port costs far more than sending, and a track
         # mark's accuracy depends on how fast it goes out.
@@ -172,7 +190,9 @@ class RecordDialog(QDialog):
             return
 
         for item in self._items:
-            QTreeWidgetItem(self.tree, [item.track_number, item.title, _mmss(item.length_seconds)])
+            # display_title(), not title: an untagged file is recorded under
+            # its filename, so that is what this list has to show.
+            QTreeWidgetItem(self.tree, [item.track_number, item.display_title(), _mmss(item.length_seconds)])
         self.tree.resizeColumnToContents(0)
         self.tree.resizeColumnToContents(2)
 
@@ -320,7 +340,9 @@ class RecordDialog(QDialog):
         elapsed = done + state.position
         total = max(1, foobar.total_seconds(self._items))
         self.progress.setValue(int(1000 * min(1.0, elapsed / total)))
-        title = self._items[state.item_index].title if 0 <= state.item_index < len(self._items) else ""
+        title = (
+            self._items[state.item_index].display_title() if 0 <= state.item_index < len(self._items) else ""
+        )
         self.status_label.setText(
             self.tr("Recording {index} of {count}: {title} -- {elapsed} of {total}").format(
                 index=state.item_index + 1,
@@ -362,9 +384,15 @@ class RecordDialog(QDialog):
         top: a failure here leaves the metadata itself intact rather than
         losing the whole capture, exactly as MetadataDialog treats its own
         artwork fetch."""
-        metadata = foobar.metadata_from_playlist(self._items)
+        metadata = self._given_metadata or foobar.metadata_from_playlist(self._items)
         self.result_metadata = metadata
         if not metadata.album and not metadata.artist:
+            return
+        if metadata.cover_art:
+            # Already looked one up (Record Folder does, before recording,
+            # while the user is still able to correct the album name).
+            # Fetching a second one could only replace it with a worse
+            # answer to the same question.
             return
 
         # A mixtape has no sleeve to look up, and looking one up anyway is
@@ -404,7 +432,9 @@ class RecordDialog(QDialog):
         )
         if answer != QMessageBox.StandardButton.Yes:
             return
-        metadata = foobar.metadata_from_playlist(self._items)
+        # Whatever _capture_metadata settled on, so an album name corrected
+        # before the recording is the one written onto the disc.
+        metadata = self.result_metadata or foobar.metadata_from_playlist(self._items)
         # A disc that was just recorded has no titles to erase, and erasing
         # is roughly half the total time.
         MDRemUploadDialog(metadata, self._port, self, clear_default=False).exec()

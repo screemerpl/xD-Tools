@@ -40,6 +40,7 @@ from mdtools.panels.about_dialog import AboutDialog
 from mdtools.panels.asset_gallery_dialog import AssetGalleryDialog
 from mdtools.panels.cd_rip_dialog import CdRipDialog
 from mdtools.panels.erase_dialog import EraseDiscDialog
+from mdtools.panels.folder_record_dialog import FolderRecordDialog
 from mdtools.panels import icons
 from mdtools.panels.grayscale_export_dialog import GrayscaleExportDialog
 from mdtools.panels.layers_panel import LayersPanel
@@ -203,6 +204,7 @@ class MainWindow(QMainWindow):
         self.tool_panel.bake_layers_requested.connect(self._bake_layers)
         self.tool_panel.save_as_template_requested.connect(self._save_as_template)
         self.tool_panel.auto_layout_requested.connect(self._auto_layout_from_metadata)
+        self.tool_panel.edit_metadata_requested.connect(self._edit_metadata)
         self.tool_panel.metadata_menu.aboutToShow.connect(self._populate_metadata_menu)
         self.tool_panel.metadata_text_requested.connect(self._insert_metadata_text)
         self.tool_panel.metadata_columns_requested.connect(self._insert_metadata_columns)
@@ -288,18 +290,29 @@ class MainWindow(QMainWindow):
         # that, deleting twice / pushing two undo entries for one press.
         edit_menu.addAction(self.tr("Delete"), self._delete_selected)
 
-        project_menu = self.menuBar().addMenu(self.tr("&Project"))
-        project_menu.addAction(self.tr("Metadata..."), self._edit_metadata)
+        # Nothing but recording lives here. It was "Project" and held the
+        # metadata editor as well, which put the one dialog used while
+        # designing a label in the same menu as three that drive a tape
+        # deck; the editor is now a Tools panel button, next to the layers
+        # it feeds. The three sources -- a CD, whatever foobar already has,
+        # and a folder of files -- all end in the same recording.
+        recording_menu = self.menuBar().addMenu(self.tr("&Recording"))
         # Hidden rather than disabled without the adapter: like the other
         # MDRem entry points, there is nothing it could usefully do.
-        self.record_action = project_menu.addAction(
-            self.tr("Record to MiniDisc from foobar2000..."), self._record_from_foobar
-        )
-        self.record_cd_action = project_menu.addAction(
+        self.record_cd_action = recording_menu.addAction(
             self.tr("Record CD to MiniDisc..."), self._record_cd
         )
-        project_menu.addSeparator()
-        self.erase_disc_action = project_menu.addAction(
+        self.record_folder_action = recording_menu.addAction(
+            self.tr("Record Folder to MiniDisc..."), self._record_folder
+        )
+        self.record_action = recording_menu.addAction(
+            self.tr("Record to MiniDisc from foobar2000..."), self._record_from_foobar
+        )
+        recording_menu.addSeparator()
+        # Erasing is not recording, but it is what you do to a disc you are
+        # about to record over, and it is the same deck and the same
+        # adapter -- keeping it here beats a menu of its own for one entry.
+        self.erase_disc_action = recording_menu.addAction(
             self.tr("Erase MiniDisc..."), self._erase_disc
         )
         self._sync_mdrem_actions()
@@ -1133,8 +1146,10 @@ class MainWindow(QMainWindow):
         # Ripping a CD needs no adapter, but this entry does not stop at
         # ripping -- it goes straight on to record what it ripped, which
         # does. Splitting a rip-only entry out of it would be inventing a
-        # feature nobody asked for.
+        # feature nobody asked for. Same for loading a folder into
+        # foobar2000: on its own it is not a feature anyone asked for.
         self.record_cd_action.setVisible(enabled)
+        self.record_folder_action.setVisible(enabled)
         # Erasing is nothing but adapter keypresses, so without one there is
         # not even a partial operation to offer.
         self.erase_disc_action.setVisible(enabled)
@@ -1249,7 +1264,7 @@ class MainWindow(QMainWindow):
         self._run_record_dialog(port)
 
     def _record_cd(self) -> None:
-        """Project > Record CD to MiniDisc... -- rips the disc into
+        """Recording > Record CD to MiniDisc... -- rips the disc into
         foobar2000's playlist, then records that playlist exactly as the
         entry above does.
 
@@ -1266,8 +1281,27 @@ class MainWindow(QMainWindow):
             return
         self._run_record_dialog(port)
 
+    def _record_folder(self) -> None:
+        """Recording > Record Folder to MiniDisc... -- loads an album that
+        is already on disk into foobar2000's playlist, then records it.
+
+        The same shape as _record_cd, and for the same reasons: the port is
+        resolved first (there is no point loading a playlist for a recording
+        that cannot happen), and the dialog's own result is the hand-off.
+        Unlike the CD, its metadata *is* passed on -- see FolderRecordDialog
+        for why files nobody rewrote cannot carry an edit by themselves."""
+        if not app_settings.mdrem_enabled():
+            return
+        port = resolve_port(self)
+        if port is None:
+            return
+        folder = FolderRecordDialog(app_settings.foobar_url(), self)
+        if folder.exec() != QDialog.DialogCode.Accepted:
+            return
+        self._run_record_dialog(port, metadata=folder.result_metadata)
+
     def _erase_disc(self) -> None:
-        """Project > Erase MiniDisc... -- clears the disc in the deck.
+        """Recording > Erase MiniDisc... -- clears the disc in the deck.
 
         Deliberately not tied to the open project: it acts on whatever is
         physically in the deck, which has nothing to do with which label is
@@ -1280,16 +1314,16 @@ class MainWindow(QMainWindow):
             return
         EraseDiscDialog(port, self).exec()
 
-    def _run_record_dialog(self, port: str) -> None:
-        """The recording itself, shared by both entry points -- by the time
-        it runs, "what is in foobar's playlist" is the only input, whether a
-        CD put it there or the user did."""
-        dialog = RecordDialog(port, app_settings.foobar_url(), self)
+    def _run_record_dialog(self, port: str, metadata: ProjectMetadata | None = None) -> None:
+        """The recording itself, shared by all three entry points -- by the
+        time it runs, "what is in foobar's playlist" is the only input,
+        whether a CD put it there, a folder did, or the user did."""
+        dialog = RecordDialog(port, app_settings.foobar_url(), self, metadata=metadata)
         dialog.exec()
         # What was just recorded is also what the label should describe, so
         # the playlist's metadata (plus whatever cover art was found for it)
         # is adopted by the project rather than left for the user to retype
-        # into Project > Metadata... by hand.
+        # into the Tools panel's Metadata dialog by hand.
         if dialog.result_metadata is not None and self.project is not None:
             self.project.metadata = dialog.result_metadata
             self._mark_dirty()
@@ -1311,7 +1345,7 @@ class MainWindow(QMainWindow):
             QMessageBox.information(
                 self,
                 self.tr("Auto-Layout Disc Label"),
-                self.tr("Fill in the album and artist in Project > Metadata... first."),
+                self.tr("Fill in the album and artist in the Tools panel's Metadata... first."),
             )
             return
 
@@ -1323,7 +1357,7 @@ class MainWindow(QMainWindow):
                 self.tr("Auto-Layout Disc Label"),
                 self.tr(
                     "No cover art could be found for this album, and the layout is built around it. Add an "
-                    "image yourself, or fetch one with Project > Metadata...'s lookup."
+                    "image yourself, or fetch one with the Metadata dialog's lookup."
                 ),
             )
             return

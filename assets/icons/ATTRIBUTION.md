@@ -21,5 +21,6 @@ other contributors, licensed under
 | zoom_fit.svg   | Triangular Ruler      | 1f4d0     |
 | grayscale.svg  | First Quarter Moon    | 1f313     |
 | autolayout.svg | Magic Wand            | 1fa84     |
+| edit_metadata.svg | Memo               | 1f4dd     |
 
 No modifications were made to the source SVGs beyond renaming the files.

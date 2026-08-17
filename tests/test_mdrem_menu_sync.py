@@ -184,8 +184,8 @@ def test_a_finished_rip_hands_straight_over_to_the_recording_dialog(qt_app, isol
     class _FakeRecord:
         result_metadata = None
 
-        def __init__(self, port, url, parent=None):
-            recorded.append(port)
+        def __init__(self, port, url, parent=None, metadata=None):
+            recorded.append((port, metadata))
 
         def exec(self):
             return QDialog.DialogCode.Accepted
@@ -195,4 +195,8 @@ def test_a_finished_rip_hands_straight_over_to_the_recording_dialog(qt_app, isol
 
     _window()._record_cd()
 
-    assert recorded == ["COM7"]
+    # No metadata is handed over: the rip wrote its titles into the files
+    # themselves, so the playlist already carries them, and one source of
+    # truth beats two that can disagree. Record Folder is the case that has
+    # to pass them -- see test_folder_record_dialog.py.
+    assert recorded == [("COM7", None)]

@@ -54,7 +54,8 @@ DEFAULT_TIMEOUT_S = 5.0
 # Both are asked for, because the difference between them is the entire
 # signal a compilation gives off -- see ProjectMetadata.is_compilation().
 # %artist% is appended at the end rather than slotted in beside %album
-# artist%, so every positional index below keeps meaning what it meant.
+# artist%, so every positional index below keeps meaning what it meant --
+# and %path% after it for the same reason.
 _COLUMNS = [
     "%tracknumber%",
     "%title%",
@@ -63,6 +64,7 @@ _COLUMNS = [
     "%date%",
     "%length_seconds%",
     "%artist%",
+    "%path%",
 ]
 _COLUMNS_PARAM = ",".join(_COLUMNS)
 
@@ -85,6 +87,7 @@ class PlaylistItem:
     date: str
     length_seconds: int
     artist: str = ""
+    path: str = ""
 
     @classmethod
     def from_columns(cls, columns: list[str]) -> PlaylistItem:
@@ -101,7 +104,22 @@ class PlaylistItem:
             date=padded[4],
             length_seconds=length,
             artist=padded[6],
+            path=padded[7],
         )
+
+    def display_title(self) -> str:
+        """The title to record, falling back to the filename.
+
+        foobar2000 substitutes the filename for a missing %title% itself, so
+        on a live install this is usually belt and braces -- but a folder of
+        untagged files is precisely the case Record Folder exists to handle,
+        and a disc full of blank track names is not a failure worth risking
+        on behaviour nobody here can pin down. Falls back to the empty
+        string when there is no path either, which is what it was before."""
+        if self.title.strip():
+            return self.title
+        stem = Path(self.path).stem if self.path else ""
+        return stem or self.title
 
 
 @dataclass
@@ -416,7 +434,7 @@ def metadata_from_playlist(items: list[PlaylistItem]) -> ProjectMetadata:
         artist=album_artist(items),
         year=album_year(items),
         tracks=[
-            Track(title=item.title, time_seconds=item.length_seconds or None, artist=item.artist)
+            Track(title=item.display_title(), time_seconds=item.length_seconds or None, artist=item.artist)
             for item in items
         ],
     )

@@ -17,6 +17,7 @@ class ToolPanel(QWidget):
     bake_layers_requested = Signal()
     save_as_template_requested = Signal()
     auto_layout_requested = Signal()
+    edit_metadata_requested = Signal()
     metadata_text_requested = Signal(str)  # emits the text to insert
     metadata_columns_requested = Signal(list)  # emits column texts to insert as side-by-side layers
 
@@ -40,6 +41,17 @@ class ToolPanel(QWidget):
         asset_btn = self._icon_button(icons.gallery_icon(), self.tr("Insert Asset..."))
         asset_btn.clicked.connect(self.insert_asset_requested)
         layout.addWidget(asset_btn)
+
+        # Next to Insert from Metadata rather than in a menu: the album
+        # details and the layers built out of them are one job, and the menu
+        # this used to live in is now about recording only.
+        edit_metadata_btn = self._icon_button(
+            icons.edit_metadata_icon(),
+            self.tr("Metadata..."),
+            self.tr("The album title, artist, year and track list this project describes"),
+        )
+        edit_metadata_btn.clicked.connect(self.edit_metadata_requested)
+        layout.addWidget(edit_metadata_btn)
 
         self.metadata_button = QToolButton()
         self.metadata_button.setIcon(icons.metadata_icon())
@@ -131,7 +143,7 @@ class ToolPanel(QWidget):
         self.metadata_menu.clear()
         column_entries = column_entries or []
         if not entries and not column_entries:
-            action = self.metadata_menu.addAction(self.tr("(fill in Project > Metadata... first)"))
+            action = self.metadata_menu.addAction(self.tr("(fill the metadata in first)"))
             action.setEnabled(False)
             return
         for label, text in entries:
