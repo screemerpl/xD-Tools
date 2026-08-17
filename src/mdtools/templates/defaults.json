@@ -1,0 +1,96 @@
+{
+  "_readme": "All dimensions were provided directly by the user (measured from real media/cases) and are trusted as-is, except slider_gap_mm on the disc-with-slider template (canvas layout spacing between the two independent cut shapes, not a measured part dimension), and on the two Full disc label templates: width_mm/height_mm (69.4x66.4) is the MD's own 71x68mm size inset by a 0.8mm margin on all sides, and slider_notch_top_mm (25.2) is the user's '26mm from the MD's top edge' adjusted for that same 0.8mm label margin -- both are derived, not independently measured, numbers. On the (with Slider) variant, slider_width_mm/slider_height_mm/slider_corner_radius_mm intentionally match slider_notch_width_mm/slider_notch_height_mm/slider_notch_corner_radius_mm exactly, so the printable sticker shape nests inside the notch it's meant to sit on.",
+  "disc": [
+    {
+      "name": "MiniDisc Disc Label",
+      "kind": "disc",
+      "width_mm": 37.0,
+      "height_mm": 52.0,
+      "chamfer_mm": 3.0,
+      "fillet_mm": 1.0,
+      "safe_margin_mm": 1.5,
+      "verified": true,
+      "builtin": true
+    },
+    {
+      "name": "MiniDisc Disc Label (with Slider)",
+      "kind": "disc",
+      "width_mm": 37.0,
+      "height_mm": 52.0,
+      "chamfer_mm": 3.0,
+      "fillet_mm": 1.0,
+      "safe_margin_mm": 1.5,
+      "slider_width_mm": 27.5,
+      "slider_height_mm": 17.5,
+      "slider_corner_radius_mm": 2.5,
+      "slider_gap_mm": 3.0,
+      "verified": true,
+      "builtin": true
+    },
+    {
+      "name": "Full disc label",
+      "kind": "disc",
+      "shape": "full_label",
+      "width_mm": 69.4,
+      "height_mm": 66.4,
+      "corner_radius_mm": 4.0,
+      "slider_notch_width_mm": 27.5,
+      "slider_notch_height_mm": 17.5,
+      "slider_notch_corner_radius_mm": 2.5,
+      "slider_notch_top_mm": 25.2,
+      "slider_notch_buffer_mm": 0.8,
+      "slider_travel_mm": 18.0,
+      "verified": true,
+      "builtin": true
+    },
+    {
+      "name": "Full disc label (with Slider)",
+      "kind": "disc",
+      "shape": "full_label",
+      "width_mm": 69.4,
+      "height_mm": 66.4,
+      "corner_radius_mm": 4.0,
+      "slider_notch_width_mm": 27.5,
+      "slider_notch_height_mm": 17.5,
+      "slider_notch_corner_radius_mm": 2.5,
+      "slider_notch_top_mm": 25.2,
+      "slider_notch_buffer_mm": 0.8,
+      "slider_travel_mm": 18.0,
+      "slider_width_mm": 27.5,
+      "slider_height_mm": 17.5,
+      "slider_corner_radius_mm": 2.5,
+      "verified": true,
+      "builtin": true
+    }
+  ],
+  "cover": [
+    {
+      "name": "MiniDisc Cover (J-Card)",
+      "kind": "cover",
+      "width_mm": 126.0,
+      "height_mm": 73.0,
+      "corner_radius_mm": 2.0,
+      "fold_offsets_mm": [58.85, 67.15],
+      "safe_margin_mm": 1.5,
+      "verified": true,
+      "builtin": true
+    },
+    {
+      "name": "MiniDisc Cover (J-Card + Window)",
+      "kind": "cover",
+      "width_mm": 126.0,
+      "height_mm": 73.0,
+      "corner_radius_mm": 2.0,
+      "fold_offsets_mm": [58.85, 67.15],
+      "safe_margin_mm": 1.5,
+      "cutout_width_mm": 40.0,
+      "cutout_height_mm": 40.0,
+      "cutout_radius_mm": 1.0,
+      "cutout_from_fold_mm": 10.3,
+      "cutout_from_bottom_mm": 3.45,
+      "cutout_side": "right",
+      "verified": true,
+      "builtin": true
+    }
+  ]
+}

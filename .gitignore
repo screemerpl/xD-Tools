@@ -1,0 +1,25 @@
+# Wirtualne środowisko i wyniki budowania
+.venv/
+build/
+dist/
+*.egg-info/
+# Generowany przez PyInstaller — scripts/build_windows.ps1 buduje z flag CLI,
+# nie z tego pliku.
+MDTools.spec
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Lokalna pamięć zgód narzędzia — nic wspólnego z aplikacją.
+.claude/
+
+# Systemowe
+Thumbs.db
+.DS_Store
+
+# UWAGA: src/mdtools/i18n/*.qm NIE są ignorowane, choć są generowane z .ts.
+# pyproject.toml deklaruje je jako package-data, a build_windows.ps1 wprost je
+# pakuje (--add-data) zamiast przebudowywać — bez nich świeży klon traci
+# tłumaczenia, a build wywala się na brakującym pliku.
