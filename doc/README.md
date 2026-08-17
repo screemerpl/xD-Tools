@@ -26,6 +26,14 @@ only renders a `QTextDocument` into a `QPdfWriter`: no window appears, so
 the text can be rebuilt at any time, including while MDTools itself is busy
 recording.
 
+**The screenshot script must never reach the network either.** The demo
+album is invented so the figures regenerate identically anywhere, offline --
+and the recording dialogs now look a cover up as soon as they open, which
+would break that (and leave every preview empty, since a real search
+correctly finds nothing for an album that does not exist). `fetch_into` is
+stood in for per importing module, alongside the serial-port and foobar2000
+stand-ins.
+
 The text lives in `scripts/manual/content_{en,pl,ja}.py` as a list of
 blocks; `build_manual.py` turns those into a `QTextDocument` and paints it
 onto a `QPdfWriter`. No LaTeX, no extra dependencies — everything used is
