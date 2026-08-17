@@ -62,3 +62,37 @@ def test_both_kinds_of_entries_appear_together_with_a_separator(qt_app):
     labels = [a.text() for a in actions if not a.isSeparator()]
     assert labels == ["Album Title", "Full Track List (2 Columns)"]
     assert any(a.isSeparator() for a in actions)
+
+
+def test_the_metadata_pair_is_fenced_off_by_a_separator(qt_app):
+    """Four buttons that put something on the page, then a rule, then the
+    two about what the project *is*, then a rule, then the page-wide
+    operations."""
+    from PySide6.QtWidgets import QFrame
+
+    panel = ToolPanel()
+    layout = panel.layout()
+    order = []
+    for index in range(layout.count()):
+        widget = layout.itemAt(index).widget()
+        if widget is None:
+            continue
+        if isinstance(widget, QToolButton):
+            order.append(widget.toolTip().splitlines()[0])
+        elif isinstance(widget, QFrame):
+            order.append("---")
+
+    assert order == [
+        "Add Text",
+        "Add Rectangle",
+        "Add Image...",
+        "Insert Asset...",
+        "---",
+        "Metadata...",
+        "Insert from Metadata",
+        "---",
+        "Clip Layers",
+        "Bake Layers",
+        "Save as Template...",
+        "Auto-Layout Disc Label",
+    ]

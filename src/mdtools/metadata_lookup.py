@@ -211,22 +211,58 @@ def match_confidence(candidate: AlbumCandidate, artist: str, album: str, track_c
     return 0.55 * album_score + 0.30 * artist_score + 0.15 * _track_count_closeness(candidate, track_count)
 
 
+# Below this, "the best of these" is not the same as "a match". Chosen
+# against a real failure: a folder of Falling In Reverse's "Popular
+# Monster", an album iTunes does not carry at all, matched a one-track cover
+# version of the title track by an unrelated artist at 0.605 -- a perfect
+# album title (0.55) plus almost nothing else -- and its sleeve was shown as
+# though it belonged to the disc. A genuine hit scores 0.85 without a known
+# track count and past 0.90 with one, so the gap is wide and this sits in
+# the middle of it.
+MIN_MATCH_CONFIDENCE = 0.70
+
+# The blended score alone is not enough, which is worth stating plainly
+# because it looks as though it should be: title (0.55) plus a track count
+# that happens to agree (0.15) already reaches 0.70 with the artist
+# contributing nothing, and "right title, wrong artist" is precisely the
+# failure above. So the artist is checked on its own terms as well -- but
+# only when the caller supplied one, since with no artist to compare there
+# is nothing to judge. A real variant lands well clear of this: "Falling In
+# Reverse & Jelly Roll" against "Falling In Reverse" scores about 0.70,
+# "Bowie, David" against "David Bowie" about 0.77, while the unrelated
+# artists in the failing search all came in under 0.25.
+MIN_ARTIST_SIMILARITY = 0.40
+
+
 def best_match(
     candidates: list[AlbumCandidate], artist: str, album: str, track_count: int | None = None
 ) -> AlbumCandidate | None:
-    """The single best candidate, for flows that cannot stop and ask.
+    """The single best candidate, for flows that cannot stop and ask -- or
+    None when none of them is good enough to be called a match.
 
-    MetadataDialog still shows a picker -- a person choosing beats any
-    heuristic. This exists for the automated record flow, where interrupting
-    a finished recording to ask about cover art would be worse than
-    occasionally picking a wrong edition of the right album."""
+    MetadataDialog still shows a picker; a person choosing beats any
+    heuristic, and it deliberately does not go through here. This exists for
+    the automated flows, where interrupting a finished recording to ask
+    about cover art would be worse than occasionally picking a wrong edition
+    of the right album.
+
+    A wrong edition is one thing; a wrong *record* is another, and returning
+    one is worse than returning nothing -- the caller has other places to
+    look (the picture inside the files, see embedded_cover) and, failing
+    that, no cover at all is an honest answer where somebody else's sleeve
+    printed on this disc is not."""
     if not candidates:
         return None
     # Track count breaks ties, never overrides a better name match -- the
     # same rule the interactive ranking uses. It matters because stripping
     # edition noise makes "Popular Monster - Single" score identically to
     # "Popular Monster", and among equals the fuller release is the album.
-    return max(candidates, key=lambda c: (match_confidence(c, artist, album, track_count), c.track_count))
+    chosen = max(candidates, key=lambda c: (match_confidence(c, artist, album, track_count), c.track_count))
+    if match_confidence(chosen, artist, album, track_count) < MIN_MATCH_CONFIDENCE:
+        return None
+    if artist.strip() and _similarity(artist, chosen.artist_name) < MIN_ARTIST_SIMILARITY:
+        return None
+    return chosen
 
 
 def _upsized_artwork_url(url: str | None) -> str | None:

@@ -418,6 +418,26 @@ def sanitize_filename(text: str) -> str:
     return cleaned or "Unknown"
 
 
+def ensure_folder(path: Path) -> Path:
+    """Creates a folder and every parent it needs, or says why it could not.
+
+    The rip folder is a setting, and a setting is a path somebody typed --
+    it routinely names a directory that does not exist yet, which is not an
+    error, it is the normal state before the first rip. Every caller that is
+    about to *use* it therefore creates it, rather than any of them assuming
+    somebody else already did. Same "created on demand, at the moment it is
+    needed" rule as user_paths.projects_dir().
+
+    What is left is the case a folder genuinely cannot be made -- a drive
+    that is not there, a path with no write permission. That is worth a
+    sentence naming the folder, not an unhandled OSError."""
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise CdRipError(f"could not create the folder {path}: {exc}") from exc
+    return path
+
+
 def rip_folder_name(artist: str, album: str) -> str:
     artist = sanitize_filename(artist) if artist.strip() else "Unknown Artist"
     album = sanitize_filename(album) if album.strip() else "Unknown Album"

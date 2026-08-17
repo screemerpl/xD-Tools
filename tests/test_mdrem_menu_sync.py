@@ -172,7 +172,13 @@ def test_a_finished_rip_hands_straight_over_to_the_recording_dialog(qt_app, isol
     app_settings.set_mdrem_enabled(True)
     monkeypatch.setattr(app_module, "resolve_port", lambda *a, **k: "COM7")
 
+    from mdtools.project import ProjectMetadata
+
+    identified = ProjectMetadata(album="Unleashed", artist="Skillet", cover_art=b"art")
+
     class _AcceptedRip:
+        result_metadata = identified
+
         def __init__(self, *args, **kwargs):
             pass
 
@@ -195,8 +201,8 @@ def test_a_finished_rip_hands_straight_over_to_the_recording_dialog(qt_app, isol
 
     _window()._record_cd()
 
-    # No metadata is handed over: the rip wrote its titles into the files
-    # themselves, so the playlist already carries them, and one source of
-    # truth beats two that can disagree. Record Folder is the case that has
-    # to pass them -- see test_folder_record_dialog.py.
-    assert recorded == [("COM7", None)]
+    # The rip's own metadata goes with it. Its titles are the ones it wrote
+    # into the files, so they say what the playlist says; what it adds is
+    # the artwork found while identifying the disc, which nothing in a
+    # playlist carries.
+    assert recorded == [("COM7", identified)]

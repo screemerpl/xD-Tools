@@ -7,6 +7,8 @@ from mdtools.app_settings rather than living on the Project object.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -26,7 +28,7 @@ from PySide6.QtWidgets import (
 
 from PySide6.QtCore import Qt
 
-from mdtools import app_settings, foobar, mdrem
+from mdtools import app_settings, cdrip, foobar, mdrem
 
 DPI_RANGE = (20.0, 4800.0)
 
@@ -188,7 +190,22 @@ class SettingsDialog(QDialog):
             self.foobar_exe_edit.setText(path)
 
     def _browse_rip_folder(self) -> None:
-        path = QFileDialog.getExistingDirectory(self, self.tr("CD rip folder"), self.cd_rip_folder_edit.text())
+        """Creates the configured folder before browsing to it.
+
+        Before the first rip it does not exist yet -- that is the normal
+        state, not a mistake -- and a picker opened on a directory that is
+        not there does not politely fall back: it complains. Creating it
+        first is also what the user asked for in so many words: if the
+        folder is missing, make it."""
+        start = self.cd_rip_folder_edit.text().strip()
+        if start:
+            try:
+                cdrip.ensure_folder(Path(start))
+            except cdrip.CdRipError:
+                # Not worth a dialog on the way to a dialog: the picker
+                # simply opens wherever it can, and OK will explain.
+                start = ""
+        path = QFileDialog.getExistingDirectory(self, self.tr("CD rip folder"), start)
         if path:
             self.cd_rip_folder_edit.setText(path)
 
@@ -255,4 +272,26 @@ class SettingsDialog(QDialog):
         app_settings.set_foobar_url(self.foobar_url_edit.text())
         app_settings.set_foobar_exe(self.foobar_exe_edit.text())
         app_settings.set_cd_rip_folder(self.cd_rip_folder_edit.text())
+        self._create_rip_folder()
         self.accept()
+
+    def _create_rip_folder(self) -> None:
+        """Makes the chosen folder now, so a rip never trips over it.
+
+        A failure warns but does not block OK, the same rule the MDRem port
+        follows: a drive that is not plugged in right now is a reason to say
+        so, not a reason to refuse the setting."""
+        folder = self.cd_rip_folder_edit.text().strip()
+        if not folder:
+            return
+        try:
+            cdrip.ensure_folder(Path(folder))
+        except cdrip.CdRipError as exc:
+            QMessageBox.warning(
+                self,
+                self.tr("CD rip folder"),
+                self.tr(
+                    "That folder could not be created: {error}\n\nThe setting has been saved anyway, but a "
+                    "CD cannot be ripped there until it exists."
+                ).format(error=exc),
+            )

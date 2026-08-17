@@ -42,9 +42,12 @@ class ToolPanel(QWidget):
         asset_btn.clicked.connect(self.insert_asset_requested)
         layout.addWidget(asset_btn)
 
-        # Next to Insert from Metadata rather than in a menu: the album
-        # details and the layers built out of them are one job, and the menu
-        # this used to live in is now about recording only.
+        layout.addWidget(self._separator())
+
+        # The metadata pair, fenced off from the four buttons above it: those
+        # put something on the page, these two are about what the project
+        # *is* -- Metadata... edits the album's own details, and Insert from
+        # Metadata puts a piece of them onto the page.
         edit_metadata_btn = self._icon_button(
             icons.edit_metadata_icon(),
             self.tr("Metadata..."),
@@ -63,10 +66,7 @@ class ToolPanel(QWidget):
         self._toolbar_buttons.append(self.metadata_button)
         layout.addWidget(self.metadata_button)
 
-        separator = QFrame()
-        separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setFrameShadow(QFrame.Shadow.Sunken)
-        layout.addWidget(separator)
+        layout.addWidget(self._separator())
 
         clip_layers_btn = self._icon_button(
             icons.crop_icon(),
@@ -119,6 +119,13 @@ class ToolPanel(QWidget):
         button_size = self.metadata_button.sizeHint()
         for button in self._toolbar_buttons:
             button.setFixedSize(button_size)
+
+    @staticmethod
+    def _separator() -> QFrame:
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        return line
 
     def _icon_button(self, icon, tooltip: str, extra_tooltip: str | None = None) -> QToolButton:
         """Icon-only button (no visible text) -- the label always lives in

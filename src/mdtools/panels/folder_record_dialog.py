@@ -34,11 +34,11 @@ _RipWorker, minus everything to do with a disc.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import QThread, Qt, Signal
+from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
-    QApplication,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
@@ -56,9 +56,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mdtools import app_settings, audio_folder, foobar, mixtape_cover, user_paths
-from mdtools.gallery import save_downloaded_cover
-from mdtools.metadata_lookup import MetadataLookupError, find_cover
+from mdtools import app_settings, audio_folder, embedded_cover, foobar, mixtape_cover, user_paths
+from mdtools.panels.cover_preview import CoverPreview, fetch_into
 from mdtools.project import ProjectMetadata
 
 # The same 80 minutes RecordDialog and CdRipDialog warn about, checked here
@@ -132,7 +131,13 @@ class FolderRecordDialog(QDialog):
         form.addRow(self.tr("Artist"), self.artist_edit)
         form.addRow(self.tr("Album"), self.album_edit)
         form.addRow(self.tr("Year"), self.year_spin)
-        layout.addLayout(form)
+
+        self.cover_label = CoverPreview()
+
+        header = QHBoxLayout()
+        header.addLayout(form, 1)
+        header.addWidget(self.cover_label)
+        layout.addLayout(header)
 
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels([self.tr("#"), self.tr("Title"), self.tr("Artist"), self.tr("Length")])
@@ -159,15 +164,20 @@ class FolderRecordDialog(QDialog):
         self.progress.setVisible(False)
         layout.addWidget(self.progress)
 
-        self.status_label = QLabel(self.tr("Choose the folder holding the album."))
+        self.status_label = QLabel(
+            self.tr("Choose the folder holding the album. It replaces foobar2000's current playlist.")
+        )
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
 
         self.buttons = QDialogButtonBox()
-        self.start_btn = QPushButton(self.tr("Load and Record"))
-        self.start_btn.setEnabled(False)
-        self.start_btn.clicked.connect(self._start)
-        self.buttons.addButton(self.start_btn, QDialogButtonBox.ButtonRole.AcceptRole)
+        # One button, and it is the one that matters. Choosing a folder is
+        # already the decision; making the user then press "Load Folder" was
+        # asking them to confirm something they had just done.
+        self.record_btn = QPushButton(self.tr("Record"))
+        self.record_btn.setEnabled(False)
+        self.record_btn.clicked.connect(self._on_record)
+        self.buttons.addButton(self.record_btn, QDialogButtonBox.ButtonRole.AcceptRole)
         self.close_btn = QPushButton(self.tr("Cancel"))
         self.close_btn.clicked.connect(self.reject)
         self.buttons.addButton(self.close_btn, QDialogButtonBox.ButtonRole.RejectRole)
@@ -205,8 +215,14 @@ class FolderRecordDialog(QDialog):
         return user_paths.music_start_path()
 
     def set_folder(self, folder: Path) -> None:
-        """Lists what is in the folder. Nothing is sent to foobar yet -- the
-        user's current playlist is not replaced until they commit to it."""
+        """Lists what is in the folder and loads it into foobar2000.
+
+        Loading happens here rather than behind a second button: picking a
+        folder in this dialog *is* the decision, and asking the user to then
+        confirm it was asking them to press a button for something they had
+        already done. It does replace their current playlist, which is why
+        the dialog says so before they browse -- the same bargain Record CD
+        makes."""
         self._folder = folder
         self.folder_edit.setText(str(folder))
         self._paths = audio_folder.list_audio_files(folder)
@@ -218,7 +234,7 @@ class FolderRecordDialog(QDialog):
             self.status_label.setText(
                 self.tr("No audio files in that folder. Choose the one the tracks are actually in.")
             )
-            self.start_btn.setEnabled(False)
+            self.record_btn.setEnabled(False)
             self.warning_label.setVisible(False)
             return
 
@@ -227,13 +243,9 @@ class FolderRecordDialog(QDialog):
         self.artist_edit.setText(artist)
         self.album_edit.setText(album)
         self.year_spin.setValue(year or 0)
-        self.start_btn.setEnabled(True)
-        self.status_label.setText(
-            self.tr(
-                "{count} audio files. Loading them into foobar2000 will replace its current playlist."
-            ).format(count=len(self._paths))
-        )
+        self.record_btn.setEnabled(False)  # until foobar has actually taken them
         self._warn_about_count()
+        self._load()
 
     def _show_filenames(self) -> None:
         """What is known before foobar has seen the files: their names, in
@@ -258,7 +270,19 @@ class FolderRecordDialog(QDialog):
 
     # --- loading ----------------------------------------------------------
 
-    def _start(self) -> None:
+    def _on_record(self) -> None:
+        """Hands the loaded playlist over to the recording window."""
+        if not self._items:
+            return
+        self.result_metadata = self._final_metadata()
+        self.accept()
+
+    def _load(self) -> None:
+        """Replaces foobar's playlist with this folder, on a worker thread.
+
+        Kept separate from set_folder so that listing a folder and sending
+        it somewhere stay two different things in the code, even though one
+        follows the other for the user."""
         if not self._paths:
             return
         exe = self._resolve_foobar_exe()
@@ -314,7 +338,6 @@ class FolderRecordDialog(QDialog):
 
     def _set_running(self, running: bool) -> None:
         for widget in (
-            self.start_btn,
             self.browse_btn,
             self.tree,
             self.artist_edit,
@@ -335,7 +358,11 @@ class FolderRecordDialog(QDialog):
             return
         self._show_playlist(items)
         self.result_metadata = self._capture_metadata(items)
-        self.accept()
+        self.cover_label.set_cover(self.result_metadata.cover_art)
+        self.record_btn.setEnabled(True)
+        self.status_label.setText(
+            self.tr("Loaded into foobar2000. Check the album below, then record.")
+        )
 
     def _on_worker_finished(self) -> None:
         self._worker = None
@@ -422,24 +449,31 @@ class FolderRecordDialog(QDialog):
 
         Never a title. What foobar is about to play is what will be on the
         disc, in that order; an iTunes result is whatever the search
-        matched. Failure is silent for the same reason it is in
-        MetadataDialog -- artwork is a bonus on top of a capture that has
-        already succeeded."""
+        matched."""
         self.status_label.setText(self.tr("Looking up cover art..."))
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            data, chosen = find_cover(metadata.artist, metadata.album, len(metadata.tracks))
-        except MetadataLookupError:
-            return
-        finally:
-            QApplication.restoreOverrideCursor()
-
+        chosen = fetch_into(self.cover_label, metadata.artist, metadata.album, len(metadata.tracks))
         if chosen is not None and metadata.year is None:
             metadata.year = chosen.year
-        if data is None or chosen is None:
-            return
-        metadata.cover_art = data
-        save_downloaded_cover(chosen.artist_name, chosen.collection_name, data)
+        if not self.cover_label.data:
+            # Last resort: the sleeve the files themselves carry. Certainly
+            # the right one for this release, where a search result is only
+            # a guess -- but usually a smaller, rougher image, which is why
+            # it comes second rather than first. See embedded_cover.
+            self.cover_label.set_cover(embedded_cover.cover_from_files(self._paths))
+        metadata.cover_art = self.cover_label.data
+
+    def _final_metadata(self) -> ProjectMetadata:
+        """What the second press hands over: the captured album with
+        whatever the user changed on screen since, artwork included -- the
+        preview is clickable, and a cover chosen there has to survive."""
+        captured = self.result_metadata or ProjectMetadata()
+        return replace(
+            captured,
+            artist=self.artist_edit.text().strip() or captured.artist,
+            album=self.album_edit.text().strip() or captured.album,
+            year=self.year_spin.value() or captured.year,
+            cover_art=self.cover_label.data,
+        )
 
     # --- shutdown ----------------------------------------------------------
 

@@ -19,9 +19,11 @@ Two consequences shape this dialog:
 - **It is a guided sequence, not a single button.** ERASE is sent, and then
   the user is asked what their deck's display actually says, because that is
   the only instrument available -- there is no feedback channel of any kind.
-  Only after they confirm a prompt appeared does ENTER go out to accept it.
-  This mirrors RecordDialog arming the deck and then asking whether it
-  really armed, which exists for exactly the same reason.
+  ENTER only goes out when they press it themselves, on a prompt window that
+  stays open so they can press it again: on a real MDS-JE480 one press did
+  nothing visible, and how many a given model's menu wants is not knowable
+  from here (see ConfirmPromptDialog). This mirrors RecordDialog arming the
+  deck and then asking whether it really armed, for the same reason.
 - **Backing out sends CANCEL.** If the deck is sitting on a confirmation the
   user does not want to accept, leaving it there would arm a destructive
   prompt for whoever next touches the deck.
@@ -50,6 +52,83 @@ _PREPARE_KEY = "SEND STOP"
 _ERASE_KEY = "SEND ERASE"
 _CONFIRM_KEY = "SEND ENTER"
 _BACK_OUT_KEY = "SEND CANCEL"
+
+
+class ConfirmPromptDialog(QDialog):
+    """Asks what the deck's display shows, with ENTER as a button.
+
+    ENTER used to be sent once, automatically, the moment the user answered
+    "yes it is asking me" -- and on a real MDS-JE480 that turned out to do
+    nothing visible, with "maybe it needs it twice?" the obvious next
+    thought and no way to try. The deck cannot be read back, so how many
+    presses a particular model's menu takes is not knowable from here; the
+    only workable answer is to hand the key to the person who can see the
+    display and let them press it as many times as it takes.
+
+    Three ways out, and they are not the same:
+      - **Done** -- the prompt was accepted. Only counts if ENTER actually
+        went out at least once, which is what stops "Done" becoming a way
+        to claim an erase that was never confirmed.
+      - **Nothing happened** -- the deck never asked. The caller backs it
+        out with CANCEL rather than leaving it parked on a destructive
+        prompt for whoever next walks past.
+      - closing the window, which is the same as the above.
+    """
+
+    def __init__(self, send, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(self.tr("Erase MiniDisc"))
+        self.resize(440, 220)
+        self._send = send
+        # How many times ENTER actually went out. Read by the caller: a Done
+        # with none sent is not a confirmed erase.
+        self.sent = 0
+
+        layout = QVBoxLayout(self)
+        question = QLabel(
+            self.tr(
+                "Erase was sent to the deck.\n\nIs it now asking you to confirm -- showing something like "
+                '"All Erase?"\n\nIf it is, press Send Enter and watch the display. Some decks need it '
+                "more than once."
+            )
+        )
+        question.setWordWrap(True)
+        layout.addWidget(question)
+
+        self.status_label = QLabel()
+        self.status_label.setWordWrap(True)
+        self.status_label.setVisible(False)
+        layout.addWidget(self.status_label)
+
+        layout.addStretch(1)
+
+        buttons = QDialogButtonBox()
+        self.enter_btn = QPushButton(self.tr("Send Enter"))
+        self.enter_btn.setDefault(True)
+        self.enter_btn.clicked.connect(self._send_enter)
+        buttons.addButton(self.enter_btn, QDialogButtonBox.ButtonRole.ActionRole)
+        self.done_btn = QPushButton(self.tr("Done"))
+        self.done_btn.clicked.connect(self.accept)
+        buttons.addButton(self.done_btn, QDialogButtonBox.ButtonRole.AcceptRole)
+        self.nothing_btn = QPushButton(self.tr("Nothing Happened"))
+        self.nothing_btn.clicked.connect(self.reject)
+        buttons.addButton(self.nothing_btn, QDialogButtonBox.ButtonRole.RejectRole)
+        layout.addWidget(buttons)
+
+    def _send_enter(self) -> None:
+        if not self._send(_CONFIRM_KEY):
+            # The caller has already reported why; there is nothing further
+            # this window can offer once the adapter has gone.
+            self.reject()
+            return
+        self.sent += 1
+        self.status_label.setText(
+            self.tr(
+                "Enter sent ({count}). If the display has not changed, send it again; if the disc is "
+                "blank now, press Done."
+            ).format(count=self.sent)
+        )
+        self.status_label.setVisible(True)
 
 
 class EraseDiscDialog(QDialog):
@@ -118,9 +197,7 @@ class EraseDiscDialog(QDialog):
         if not self._send(_PREPARE_KEY) or not self._send(_ERASE_KEY):
             return
 
-        if self._deck_is_asking():
-            if not self._send(_CONFIRM_KEY):
-                return
+        if self._run_confirm_prompt():
             self.erased = True
             self._show(
                 self.tr(
@@ -159,24 +236,16 @@ class EraseDiscDialog(QDialog):
         )
         return answer == QMessageBox.StandardButton.Ok
 
-    def _deck_is_asking(self) -> bool:
-        """The only instrument available is the user's own eyes.
+    def _run_confirm_prompt(self) -> bool:
+        """Hands ENTER to the user and reports whether they got anywhere.
 
-        Deliberately phrased as a question about the display rather than
-        "did it work" -- the answer decides whether a confirmation key is
-        sent, so it has to be about something observable, not about an
-        outcome nobody can see yet."""
-        answer = QMessageBox.question(
-            self,
-            self.tr("Erase MiniDisc"),
-            self.tr(
-                "Erase was sent to the deck.\n\nIs it now asking you to confirm -- showing something like "
-                '"All Erase?" or "Erase??"'
-            ),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        return answer == QMessageBox.StandardButton.Yes
+        The only instrument available is their own eyes, so this asks about
+        the *display* -- something observable -- rather than about the
+        outcome, which nobody can see yet. True means ENTER went out at
+        least once and they said the deck took it."""
+        prompt = ConfirmPromptDialog(self._send, self)
+        accepted = prompt.exec() == QDialog.DialogCode.Accepted
+        return accepted and prompt.sent > 0
 
     def _offer_eject(self) -> None:
         """An erased TOC lives in the deck's memory until the disc is

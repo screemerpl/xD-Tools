@@ -57,45 +57,46 @@ MDRem赤外線アダプターがあれば、デッキ自体も操作します: f
 <context>
     <name>CdRipDialog</name>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="165"/>
-        <location filename="../panels/cd_rip_dialog.py" line="477"/>
-        <location filename="../panels/cd_rip_dialog.py" line="491"/>
+        <location filename="../panels/cd_rip_dialog.py" line="167"/>
+        <location filename="../panels/cd_rip_dialog.py" line="502"/>
+        <location filename="../panels/cd_rip_dialog.py" line="539"/>
+        <location filename="../panels/cd_rip_dialog.py" line="553"/>
         <source>Record CD to MiniDisc</source>
         <translation>CDをMiniDiscに録音</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="191"/>
-        <location filename="../panels/cd_rip_dialog.py" line="200"/>
+        <location filename="../panels/cd_rip_dialog.py" line="196"/>
+        <location filename="../panels/cd_rip_dialog.py" line="211"/>
         <source>Artist</source>
         <translation>アーティスト</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="192"/>
+        <location filename="../panels/cd_rip_dialog.py" line="197"/>
         <source>Album</source>
         <translation>アルバム</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="193"/>
+        <location filename="../panels/cd_rip_dialog.py" line="198"/>
         <source>Year</source>
         <translation>年</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="194"/>
+        <location filename="../panels/cd_rip_dialog.py" line="199"/>
         <source>Release</source>
         <translation>リリース</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="200"/>
+        <location filename="../panels/cd_rip_dialog.py" line="211"/>
         <source>#</source>
         <translation>#</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="200"/>
+        <location filename="../panels/cd_rip_dialog.py" line="211"/>
         <source>Title</source>
         <translation>タイトル</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="200"/>
+        <location filename="../panels/cd_rip_dialog.py" line="211"/>
         <source>Length</source>
         <translation>長さ</translation>
     </message>
@@ -104,103 +105,112 @@ MDRem赤外線アダプターがあれば、デッキ自体も操作します: f
         <translation type="vanished">ここでタイトルを編集できます。編集した内容は取り込んだファイルに書き込まれ、そのままMiniDiscのタイトルになります。</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="206"/>
+        <location filename="../panels/cd_rip_dialog.py" line="217"/>
         <source>Titles and artists can be edited here -- they are written into the ripped files, and are what ends up on the MiniDisc. Fill the artist column in when the disc is a compilation: MDTools then names it accordingly and draws it a cover of its own.</source>
         <translation>ここでタイトルとアーティストを編集できます。編集した内容は取り込んだファイルに書き込まれ、そのままMiniDiscのタイトルになります。ディスクがコンピレーションの場合はアーティスト欄を入力してください。MDToolsがそれに応じた名前を付け、独自のカバーを作成します。</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="230"/>
+        <location filename="../panels/cd_rip_dialog.py" line="241"/>
         <source>Rip and Record</source>
         <translation>取り込んで録音</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="234"/>
-        <location filename="../panels/cd_rip_dialog.py" line="513"/>
+        <location filename="../panels/cd_rip_dialog.py" line="245"/>
+        <location filename="../panels/cd_rip_dialog.py" line="575"/>
         <source>Cancel</source>
         <translation>キャンセル</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="247"/>
+        <location filename="../panels/cd_rip_dialog.py" line="258"/>
         <source>Drive</source>
         <translation>ドライブ</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="250"/>
+        <location filename="../panels/cd_rip_dialog.py" line="261"/>
         <source>Refresh</source>
         <translation>更新</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="253"/>
+        <location filename="../panels/cd_rip_dialog.py" line="264"/>
         <source>Read Disc</source>
         <translation>ディスクを読み取る</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="267"/>
+        <location filename="../panels/cd_rip_dialog.py" line="278"/>
         <source>No CD drive was found. Connect one and press Refresh.</source>
         <translation>CDドライブが見つかりません。接続してから更新を押してください。</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="274"/>
+        <location filename="../panels/cd_rip_dialog.py" line="285"/>
         <source>Insert an audio CD and press Read Disc.</source>
         <translation>オーディオCDを入れて、ディスクを読み取るを押してください。</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="286"/>
+        <location filename="../panels/cd_rip_dialog.py" line="297"/>
         <source>These bundled tools are missing, so a CD cannot be read: {tools}. Reinstall MDTools, or put them on your PATH.</source>
         <translation>同梱ツールが見つからないため、CDを読み取れません: {tools}。MDToolsを再インストールするか、PATHに配置してください。</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="301"/>
+        <location filename="../panels/cd_rip_dialog.py" line="312"/>
         <source>Reading the disc...</source>
         <translation>ディスクを読み取っています...</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="306"/>
+        <location filename="../panels/cd_rip_dialog.py" line="317"/>
         <source>Could not read the disc: {error}</source>
         <translation>ディスクを読み取れませんでした: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="327"/>
+        <location filename="../panels/cd_rip_dialog.py" line="338"/>
         <source>Track {number}</source>
         <translation>トラック {number}</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="343"/>
+        <location filename="../panels/cd_rip_dialog.py" line="354"/>
         <source>This disc runs {total}, longer than the {limit} an MD holds in SP mode. Set the deck to LP2 first, or the recording will be cut short.</source>
         <translation>このディスクは {total} で、SPモードのMDに収まる {limit} を超えています。デッキをLP2に設定してください。そうしないと録音が途中で切れます。</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="356"/>
+        <location filename="../panels/cd_rip_dialog.py" line="367"/>
         <source>Looking the disc up on MusicBrainz...</source>
         <translation>MusicBrainzでディスクを検索しています...</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="363"/>
+        <location filename="../panels/cd_rip_dialog.py" line="374"/>
         <source>The disc could not be looked up ({error}) -- type the titles in yourself.</source>
         <translation>ディスクを検索できませんでした ({error})。タイトルは手入力してください。</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="371"/>
+        <location filename="../panels/cd_rip_dialog.py" line="382"/>
         <source>This disc is not in MusicBrainz -- type the album, artist and titles in yourself.</source>
         <translation>このディスクはMusicBrainzにありません。アルバム名、アーティスト名、タイトルを手入力してください。</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="388"/>
+        <location filename="../panels/cd_rip_dialog.py" line="399"/>
         <source>Identified as {name}. Check the titles, then rip.</source>
         <translation>{name} と判別しました。タイトルを確認してから取り込んでください。</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="454"/>
+        <location filename="../panels/cd_rip_dialog.py" line="504"/>
+        <source>The rip folder could not be created: {error}
+
+Choose a different one in Window &gt; Settings...</source>
+        <translation>取り込み先フォルダーを作成できませんでした: {error}
+
+ウィンドウ &gt; 設定... で別のフォルダーを指定してください。</translation>
+    </message>
+    <message>
+        <location filename="../panels/cd_rip_dialog.py" line="516"/>
         <source>Starting...</source>
         <translation>開始しています...</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="479"/>
+        <location filename="../panels/cd_rip_dialog.py" line="541"/>
         <source>foobar2000 could not be found. The ripped tracks are loaded into it through its own program file, so its location has to be set in Window &gt; Settings...</source>
         <translation>foobar2000が見つかりません。取り込んだトラックはfoobar2000の実行ファイル経由で読み込まれるため、その場所をウィンドウ &gt; 設定... で指定してください。</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="493"/>
+        <location filename="../panels/cd_rip_dialog.py" line="555"/>
         <source>Could not reach foobar2000: {error}
 
 It must be running with the Beefweb Remote Control component (foo_beefweb) enabled.</source>
@@ -209,44 +219,128 @@ It must be running with the Beefweb Remote Control component (foo_beefweb) enabl
 foobar2000が起動し、Beefweb Remote Control (foo_beefweb) コンポーネントが有効になっている必要があります。</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="513"/>
+        <location filename="../panels/cd_rip_dialog.py" line="575"/>
         <source>Stop</source>
         <translation>停止</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="519"/>
+        <location filename="../panels/cd_rip_dialog.py" line="581"/>
         <source>Ripping {index} of {count}: {title}</source>
         <translation>取り込み中 {index}/{count}: {title}</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="527"/>
+        <location filename="../panels/cd_rip_dialog.py" line="589"/>
         <source>Encoding {index} of {count}...</source>
         <translation>エンコード中 {index}/{count}...</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="532"/>
+        <location filename="../panels/cd_rip_dialog.py" line="594"/>
         <source>Loading the tracks into foobar2000...</source>
         <translation>トラックをfoobar2000に読み込んでいます...</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="539"/>
+        <location filename="../panels/cd_rip_dialog.py" line="601"/>
         <source>Ripping failed: {error}</source>
         <translation>取り込みに失敗しました: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="543"/>
+        <location filename="../panels/cd_rip_dialog.py" line="605"/>
         <source>Stopped. Nothing was recorded.</source>
         <translation>停止しました。録音は行われていません。</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="547"/>
+        <location filename="../panels/cd_rip_dialog.py" line="609"/>
         <source>The disc is ripped and loaded into foobar2000.</source>
         <translation>ディスクを取り込み、foobar2000に読み込みました。</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="570"/>
+        <location filename="../panels/cd_rip_dialog.py" line="632"/>
         <source>Stopping...</source>
         <translation>停止しています...</translation>
+    </message>
+</context>
+<context>
+    <name>ConfirmPromptDialog</name>
+    <message>
+        <location filename="../panels/erase_dialog.py" line="80"/>
+        <source>Erase MiniDisc</source>
+        <translation>MiniDiscを消去</translation>
+    </message>
+    <message>
+        <location filename="../panels/erase_dialog.py" line="90"/>
+        <source>Erase was sent to the deck.
+
+Is it now asking you to confirm -- showing something like &quot;All Erase?&quot;
+
+If it is, press Send Enter and watch the display. Some decks need it more than once.</source>
+        <translation>デッキにERASEを送信しました。
+
+「All Erase?」のような確認表示が出ていますか。
+
+出ていれば「Enterを送信」を押して、表示を見てください。デッキによっては複数回必要です。</translation>
+    </message>
+    <message>
+        <location filename="../panels/erase_dialog.py" line="106"/>
+        <source>Send Enter</source>
+        <translation>Enterを送信</translation>
+    </message>
+    <message>
+        <location filename="../panels/erase_dialog.py" line="110"/>
+        <source>Done</source>
+        <translation>完了</translation>
+    </message>
+    <message>
+        <location filename="../panels/erase_dialog.py" line="113"/>
+        <source>Nothing Happened</source>
+        <translation>何も起きなかった</translation>
+    </message>
+    <message>
+        <location filename="../panels/erase_dialog.py" line="127"/>
+        <source>Enter sent ({count}). If the display has not changed, send it again; if the disc is blank now, press Done.</source>
+        <translation>Enterを送信しました（{count}回）。表示が変わらなければもう一度送信してください。ディスクが空になっていれば「完了」を押してください。</translation>
+    </message>
+</context>
+<context>
+    <name>CoverPreview</name>
+    <message>
+        <location filename="../panels/cover_preview.py" line="54"/>
+        <source>Click to choose the cover art yourself -- use this when the fetched one is wrong.</source>
+        <translation>クリックすると自分でジャケット画像を選べます。取得された画像が違うときに使ってください。</translation>
+    </message>
+    <message>
+        <location filename="../panels/cover_preview.py" line="101"/>
+        <source>No cover
+
+(click to
+choose one)</source>
+        <translation>ジャケットなし
+
+(クリックして
+選択)</translation>
+    </message>
+    <message>
+        <location filename="../panels/cover_preview.py" line="119"/>
+        <location filename="../panels/cover_preview.py" line="130"/>
+        <location filename="../panels/cover_preview.py" line="140"/>
+        <source>Choose Cover Art</source>
+        <translation>ジャケット画像を選ぶ</translation>
+    </message>
+    <message>
+        <location filename="../panels/cover_preview.py" line="121"/>
+        <source>Images (*.png *.jpg *.jpeg *.bmp *.webp)</source>
+        <translation>画像 (*.png *.jpg *.jpeg *.bmp *.webp)</translation>
+    </message>
+    <message>
+        <location filename="../panels/cover_preview.py" line="131"/>
+        <source>Could not read the file:
+{error}</source>
+        <translation>ファイルを読み込めませんでした:
+{error}</translation>
+    </message>
+    <message>
+        <location filename="../panels/cover_preview.py" line="140"/>
+        <source>That file could not be read as an image.</source>
+        <translation>このファイルは画像として読み込めませんでした。</translation>
     </message>
 </context>
 <context>
@@ -260,15 +354,14 @@ foobar2000が起動し、Beefweb Remote Control (foo_beefweb) コンポーネン
 <context>
     <name>EraseDiscDialog</name>
     <message>
-        <location filename="../panels/erase_dialog.py" line="58"/>
-        <location filename="../panels/erase_dialog.py" line="152"/>
-        <location filename="../panels/erase_dialog.py" line="171"/>
-        <location filename="../panels/erase_dialog.py" line="188"/>
+        <location filename="../panels/erase_dialog.py" line="137"/>
+        <location filename="../panels/erase_dialog.py" line="229"/>
+        <location filename="../panels/erase_dialog.py" line="257"/>
         <source>Erase MiniDisc</source>
         <translation>MiniDiscを消去</translation>
     </message>
     <message>
-        <location filename="../panels/erase_dialog.py" line="71"/>
+        <location filename="../panels/erase_dialog.py" line="150"/>
         <source>This asks the deck to erase everything on the disc. It cannot be undone, and MDTools cannot see the result -- the deck has no way to report back.
 
 Make sure the right disc is loaded and its write-protect tab is closed.</source>
@@ -277,28 +370,28 @@ Make sure the right disc is loaded and its write-protect tab is closed.</source>
 正しいディスクが入っていること、誤消去防止タブが閉じていることを確認してください。</translation>
     </message>
     <message>
-        <location filename="../panels/erase_dialog.py" line="81"/>
+        <location filename="../panels/erase_dialog.py" line="160"/>
         <source>Note: which editing menu your deck opens in response is not something MDTools can know, so it will ask you what the display shows before confirming anything.</source>
         <translation>注意: お使いのデッキがどの編集メニューを開くかはMDToolsには分かりません。そのため、何かを確定する前に表示内容をお尋ねします。</translation>
     </message>
     <message>
-        <location filename="../panels/erase_dialog.py" line="96"/>
+        <location filename="../panels/erase_dialog.py" line="175"/>
         <source>Erase Disc</source>
         <translation>ディスクを消去</translation>
     </message>
     <message>
-        <location filename="../panels/erase_dialog.py" line="99"/>
+        <location filename="../panels/erase_dialog.py" line="178"/>
         <source>Cancel</source>
         <translation>キャンセル</translation>
     </message>
     <message>
-        <location filename="../panels/erase_dialog.py" line="114"/>
-        <location filename="../panels/erase_dialog.py" line="209"/>
+        <location filename="../panels/erase_dialog.py" line="193"/>
+        <location filename="../panels/erase_dialog.py" line="278"/>
         <source>MDRem: {error}</source>
         <translation>MDRem: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/erase_dialog.py" line="127"/>
+        <location filename="../panels/erase_dialog.py" line="204"/>
         <source>The confirmation was accepted. Check the deck -- it should now report a blank disc.
 
 Nothing is written to the disc until it is ejected.</source>
@@ -307,18 +400,18 @@ Nothing is written to the disc until it is ejected.</source>
 ディスクを取り出すまで、内容はディスクに書き込まれません。</translation>
     </message>
     <message>
-        <location filename="../panels/erase_dialog.py" line="139"/>
+        <location filename="../panels/erase_dialog.py" line="216"/>
         <source>No confirmation was accepted, so nothing was sent to complete an erase. If the disc is write-protected, close its tab and try again; otherwise erase it from the deck&apos;s own front panel.</source>
         <translation>確認が受け付けられなかったため、消去を完了させる操作は送信していません。ディスクが誤消去防止状態であればタブを閉じてやり直してください。そうでなければデッキ本体から消去してください。</translation>
     </message>
     <message>
-        <location filename="../panels/erase_dialog.py" line="147"/>
-        <location filename="../panels/erase_dialog.py" line="220"/>
+        <location filename="../panels/erase_dialog.py" line="224"/>
+        <location filename="../panels/erase_dialog.py" line="289"/>
         <source>Close</source>
         <translation>閉じる</translation>
     </message>
     <message>
-        <location filename="../panels/erase_dialog.py" line="154"/>
+        <location filename="../panels/erase_dialog.py" line="231"/>
         <source>Everything on the disc will be erased, including its titles. This cannot be undone.
 
 Continue?</source>
@@ -327,16 +420,15 @@ Continue?</source>
 続行しますか?</translation>
     </message>
     <message>
-        <location filename="../panels/erase_dialog.py" line="173"/>
         <source>Erase was sent to the deck.
 
 Is it now asking you to confirm -- showing something like &quot;All Erase?&quot; or &quot;Erase??&quot;</source>
-        <translation>消去コマンドをデッキに送信しました。
+        <translation type="vanished">消去コマンドをデッキに送信しました。
 
 「All Erase?」や「Erase??」のような確認表示が出ていますか?</translation>
     </message>
     <message>
-        <location filename="../panels/erase_dialog.py" line="190"/>
+        <location filename="../panels/erase_dialog.py" line="259"/>
         <source>The erase is only held in the deck&apos;s memory until the disc is ejected -- it is lost if the deck powers off first.
 
 Eject now to make it permanent?</source>
@@ -345,7 +437,7 @@ Eject now to make it permanent?</source>
 今すぐ取り出して確定しますか?</translation>
     </message>
     <message>
-        <location filename="../panels/erase_dialog.py" line="203"/>
+        <location filename="../panels/erase_dialog.py" line="272"/>
         <source>MDRem: not connected</source>
         <translation>MDRem: 接続されていません</translation>
     </message>
@@ -353,105 +445,106 @@ Eject now to make it permanent?</source>
 <context>
     <name>FolderRecordDialog</name>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="106"/>
-        <location filename="../panels/folder_record_dialog.py" line="292"/>
-        <location filename="../panels/folder_record_dialog.py" line="306"/>
+        <location filename="../panels/folder_record_dialog.py" line="105"/>
+        <location filename="../panels/folder_record_dialog.py" line="316"/>
+        <location filename="../panels/folder_record_dialog.py" line="330"/>
         <source>Record Folder to MiniDisc</source>
         <translation>フォルダーをMiniDiscに録音</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="132"/>
-        <location filename="../panels/folder_record_dialog.py" line="138"/>
+        <location filename="../panels/folder_record_dialog.py" line="131"/>
+        <location filename="../panels/folder_record_dialog.py" line="143"/>
         <source>Artist</source>
         <translation>アーティスト</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="133"/>
+        <location filename="../panels/folder_record_dialog.py" line="132"/>
         <source>Album</source>
         <translation>アルバム</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="134"/>
+        <location filename="../panels/folder_record_dialog.py" line="133"/>
         <source>Year</source>
         <translation>年</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="138"/>
+        <location filename="../panels/folder_record_dialog.py" line="143"/>
         <source>#</source>
         <translation>#</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="138"/>
+        <location filename="../panels/folder_record_dialog.py" line="143"/>
         <source>Title</source>
         <translation>タイトル</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="138"/>
+        <location filename="../panels/folder_record_dialog.py" line="143"/>
         <source>Length</source>
         <translation>長さ</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="144"/>
+        <location filename="../panels/folder_record_dialog.py" line="149"/>
         <source>The tracks are recorded in the order shown, which comes from the filenames. Titles come from the files&apos; own tags; a file with no title tag is recorded under its filename.</source>
         <translation>トラックは表示された順、つまりファイル名の順に録音されます。タイトルはファイル自身のタグから読み取り、タイトルタグのないファイルはファイル名で録音されます。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="162"/>
         <source>Choose the folder holding the album.</source>
-        <translation>アルバムが入っているフォルダーを選んでください。</translation>
+        <translation type="vanished">アルバムが入っているフォルダーを選んでください。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="167"/>
         <source>Load and Record</source>
-        <translation>読み込んで録音</translation>
+        <translation type="vanished">読み込んで録音</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="171"/>
+        <source>Load Folder</source>
+        <translation type="vanished">フォルダーを読み込む</translation>
+    </message>
+    <message>
+        <location filename="../panels/folder_record_dialog.py" line="181"/>
         <source>Cancel</source>
         <translation>キャンセル</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="182"/>
+        <location filename="../panels/folder_record_dialog.py" line="192"/>
         <source>Folder</source>
         <translation>フォルダー</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="186"/>
+        <location filename="../panels/folder_record_dialog.py" line="196"/>
         <source>Browse...</source>
         <translation>参照...</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="193"/>
+        <location filename="../panels/folder_record_dialog.py" line="203"/>
         <source>Choose Album Folder</source>
         <translation>アルバムのフォルダーを選択</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="219"/>
+        <location filename="../panels/folder_record_dialog.py" line="235"/>
         <source>No audio files in that folder. Choose the one the tracks are actually in.</source>
         <translation>そのフォルダーには音声ファイルがありません。トラックが実際に入っているフォルダーを選んでください。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="233"/>
         <source>{count} audio files. Loading them into foobar2000 will replace its current playlist.</source>
-        <translation>音声ファイル {count} 個。foobar2000に読み込むと、現在のプレイリストが置き換えられます。</translation>
+        <translation type="vanished">音声ファイル {count} 個。foobar2000に読み込むと、現在のプレイリストが置き換えられます。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="253"/>
+        <location filename="../panels/folder_record_dialog.py" line="265"/>
         <source>That is {count} tracks -- far more than a MiniDisc holds. Check that this is one album&apos;s folder and not a whole library.</source>
         <translation>トラックが {count} 個あり、MiniDiscに収まる量をはるかに超えています。ライブラリ全体ではなく、1枚のアルバムのフォルダーかどうか確認してください。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="272"/>
+        <location filename="../panels/folder_record_dialog.py" line="296"/>
         <source>Loading the tracks into foobar2000...</source>
         <translation>トラックをfoobar2000に読み込んでいます...</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="294"/>
+        <location filename="../panels/folder_record_dialog.py" line="318"/>
         <source>foobar2000 could not be found. The tracks are loaded into it through its own program file, so its location has to be set in Window &gt; Settings...</source>
         <translation>foobar2000が見つかりません。トラックはfoobar2000の実行ファイル経由で読み込まれるため、その場所をウィンドウ &gt; 設定... で指定してください。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="308"/>
+        <location filename="../panels/folder_record_dialog.py" line="332"/>
         <source>Could not reach foobar2000: {error}
 
 It must be running with the Beefweb Remote Control component (foo_beefweb) enabled.</source>
@@ -460,27 +553,42 @@ It must be running with the Beefweb Remote Control component (foo_beefweb) enabl
 foobar2000が起動し、Beefweb Remote Control (foo_beefweb) コンポーネントが有効になっている必要があります。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="327"/>
+        <location filename="../panels/folder_record_dialog.py" line="350"/>
         <source>Could not load the tracks: {error}</source>
         <translation>トラックを読み込めませんでした: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="333"/>
+        <location filename="../panels/folder_record_dialog.py" line="356"/>
         <source>foobar2000 accepted no tracks from that folder -- none of them could be played.</source>
         <translation>foobar2000はそのフォルダーのトラックを1つも受け付けませんでした。どれも再生できません。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="363"/>
+        <location filename="../panels/folder_record_dialog.py" line="177"/>
+        <source>Record</source>
+        <translation>録音</translation>
+    </message>
+    <message>
+        <location filename="../panels/folder_record_dialog.py" line="168"/>
+        <source>Choose the folder holding the album. It replaces foobar2000&apos;s current playlist.</source>
+        <translation>アルバムが入っているフォルダーを選んでください。foobar2000の現在のプレイリストが置き換えられます。</translation>
+    </message>
+    <message>
+        <location filename="../panels/folder_record_dialog.py" line="364"/>
+        <source>Loaded into foobar2000. Check the album below, then record.</source>
+        <translation>foobar2000に読み込みました。下のアルバム情報を確認してから録音してください。</translation>
+    </message>
+    <message>
+        <location filename="../panels/folder_record_dialog.py" line="390"/>
         <source>This runs {total}, longer than the {limit} an MD holds in SP mode. Set the deck to LP2 first, or the recording will be cut short.</source>
         <translation>これは {total} で、SPモードのMDに収まる {limit} を超えています。デッキをLP2に設定してください。そうしないと録音が途中で切れます。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="428"/>
+        <location filename="../panels/folder_record_dialog.py" line="453"/>
         <source>Looking up cover art...</source>
         <translation>カバーアートを検索中...</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="454"/>
+        <location filename="../panels/folder_record_dialog.py" line="488"/>
         <source>Waiting for foobar2000 to finish...</source>
         <translation>foobar2000の処理が終わるのを待っています...</translation>
     </message>
@@ -1144,18 +1252,18 @@ The other page and the project&apos;s metadata are left alone.</source>
         <translation>後で</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1347"/>
-        <location filename="../app_window.py" line="1357"/>
+        <location filename="../app_window.py" line="1351"/>
+        <location filename="../app_window.py" line="1361"/>
         <source>Auto-Layout Disc Label</source>
         <translation>ディスクラベルを自動配置</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1348"/>
+        <location filename="../app_window.py" line="1352"/>
         <source>Fill in the album and artist in the Tools panel&apos;s Metadata... first.</source>
         <translation>先にツールパネルのメタデータ... でアルバム名とアーティストを入力してください。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1359"/>
+        <location filename="../app_window.py" line="1363"/>
         <source>No cover art could be found for this album, and the layout is built around it. Add an image yourself, or fetch one with the Metadata dialog&apos;s lookup.</source>
         <translation>このアルバムのカバーアートが見つかりませんでした。この配置はカバーアートを前提にしています。画像を自分で追加するか、メタデータ画面の検索で取得してください。</translation>
     </message>
@@ -1168,12 +1276,12 @@ The other page and the project&apos;s metadata are left alone.</source>
         <translation type="vanished">このアルバムのカバーアートが見つかりませんでした。この配置はカバーアートを前提にしています。画像を自分で追加するか、プロジェクト &gt; メタデータ... の検索で取得してください。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1367"/>
+        <location filename="../app_window.py" line="1371"/>
         <source>Auto-Layout</source>
         <translation>自動配置</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1369"/>
+        <location filename="../app_window.py" line="1373"/>
         <source>This replaces everything on both pages -- the disc label and the J-card -- and resets the undo history.
 
 The project&apos;s metadata is left alone.</source>
@@ -1182,12 +1290,12 @@ The project&apos;s metadata is left alone.</source>
 プロジェクトのメタデータはそのまま残ります。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1491"/>
+        <location filename="../app_window.py" line="1495"/>
         <source>Lay Out J-Card</source>
         <translation>Jカードの配置</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1493"/>
+        <location filename="../app_window.py" line="1497"/>
         <source>J-Card</source>
         <translation>Jカード</translation>
     </message>
@@ -1200,17 +1308,17 @@ The cover page and the project&apos;s metadata are left alone.</source>
 カバーページとプロジェクトのメタデータはそのまま残ります。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1452"/>
+        <location filename="../app_window.py" line="1456"/>
         <source>Lay Out Disc Label</source>
         <translation>ディスクラベルの配置</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1461"/>
+        <location filename="../app_window.py" line="1465"/>
         <source>Cover Art</source>
         <translation>カバーアート</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1465"/>
+        <location filename="../app_window.py" line="1469"/>
         <source>MiniDisc Logo</source>
         <translation>MiniDiscロゴ</translation>
     </message>
@@ -1275,27 +1383,27 @@ The cover page and the project&apos;s metadata are left alone.</source>
 <context>
     <name>MetadataDialog</name>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="80"/>
+        <location filename="../panels/metadata_dialog.py" line="58"/>
         <source>Project Metadata</source>
         <translation>プロジェクトのメタデータ</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="92"/>
+        <location filename="../panels/metadata_dialog.py" line="66"/>
         <source>Album title</source>
         <translation>アルバム名</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="95"/>
+        <location filename="../panels/metadata_dialog.py" line="69"/>
         <source>Artist</source>
         <translation>アーティスト</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="122"/>
+        <location filename="../panels/metadata_dialog.py" line="96"/>
         <source>(unspecified)</source>
         <translation>(未指定)</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="124"/>
+        <location filename="../panels/metadata_dialog.py" line="98"/>
         <source>Year of release</source>
         <translation>発売年</translation>
     </message>
@@ -1306,145 +1414,137 @@ cover</source>
 なし</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="97"/>
+        <location filename="../panels/metadata_dialog.py" line="71"/>
         <source>Lookup Track List...</source>
         <translation>トラックリストを検索...</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="100"/>
+        <location filename="../panels/metadata_dialog.py" line="74"/>
         <source>Fetch the track list, release year and cover art from the iTunes Search API, using Album + Artist above. A fetched cover is saved for Tools &gt; Insert Asset... to pick up.</source>
         <translation>上記のアルバム名とアーティストを使って、iTunes Search APIからトラックリスト、発売年、カバーアートを取得します。取得したカバーはツール &gt; アセットを挿入...から選択できるように保存されます。</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="110"/>
-        <location filename="../panels/metadata_dialog.py" line="258"/>
-        <location filename="../panels/metadata_dialog.py" line="266"/>
+        <location filename="../panels/metadata_dialog.py" line="84"/>
+        <location filename="../panels/metadata_dialog.py" line="222"/>
+        <location filename="../panels/metadata_dialog.py" line="230"/>
         <source>Load from foobar2000</source>
         <translation>foobar2000から読み込む</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="113"/>
+        <location filename="../panels/metadata_dialog.py" line="87"/>
         <source>Fills these fields from whatever is loaded in foobar2000&apos;s current playlist, then looks up its cover art. Needs the Beefweb Remote Control component (foo_beefweb).</source>
         <translation>foobar2000の現在のプレイリストの内容でこれらの項目を埋め、続けてカバーアートを検索します。Beefweb Remote Control (foo_beefweb) コンポーネントが必要です。</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="132"/>
         <source>Click to choose the cover art yourself -- use this when the fetched one is wrong.</source>
-        <translation>クリックすると自分でジャケット画像を選べます。取得された画像が違うときに使ってください。</translation>
+        <translation type="vanished">クリックすると自分でジャケット画像を選べます。取得された画像が違うときに使ってください。</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="144"/>
+        <location filename="../panels/metadata_dialog.py" line="108"/>
         <source>Tracks:</source>
         <translation>トラック:</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="148"/>
+        <location filename="../panels/metadata_dialog.py" line="112"/>
         <source>Title</source>
         <translation>タイトル</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="148"/>
+        <location filename="../panels/metadata_dialog.py" line="112"/>
         <source>Time (mm:ss, optional)</source>
         <translation>時間 (分:秒、任意)</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="148"/>
+        <location filename="../panels/metadata_dialog.py" line="112"/>
         <source>Artist (only on a compilation)</source>
         <translation>アーティスト (コンピレーションのみ)</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="156"/>
+        <location filename="../panels/metadata_dialog.py" line="120"/>
         <source>Add Track</source>
         <translation>トラックを追加</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="158"/>
+        <location filename="../panels/metadata_dialog.py" line="122"/>
         <source>Remove Selected</source>
         <translation>選択項目を削除</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="160"/>
+        <location filename="../panels/metadata_dialog.py" line="124"/>
         <source>Move Up</source>
         <translation>上へ移動</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="162"/>
+        <location filename="../panels/metadata_dialog.py" line="126"/>
         <source>Move Down</source>
         <translation>下へ移動</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="171"/>
+        <location filename="../panels/metadata_dialog.py" line="135"/>
         <source>Upload Tracklist</source>
         <translation>トラックリストを転送</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="174"/>
+        <location filename="../panels/metadata_dialog.py" line="138"/>
         <source>Writes the album title and every track name onto the MiniDisc itself, using the MDRem infrared adapter. Takes several minutes.</source>
         <translation>MDRem赤外線アダプターを使って、アルバム名とすべてのトラック名をMiniDisc本体に書き込みます。数分かかります。</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="192"/>
-        <location filename="../panels/metadata_dialog.py" line="202"/>
-        <location filename="../panels/metadata_dialog.py" line="378"/>
+        <location filename="../panels/metadata_dialog.py" line="156"/>
+        <location filename="../panels/metadata_dialog.py" line="166"/>
+        <location filename="../panels/metadata_dialog.py" line="302"/>
         <source>Lookup Track List</source>
         <translation>トラックリストを検索</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="192"/>
+        <location filename="../panels/metadata_dialog.py" line="156"/>
         <source>Fill in Album title and Artist first.</source>
         <translation>先にアルバム名とアーティストを入力してください。</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="203"/>
+        <location filename="../panels/metadata_dialog.py" line="167"/>
         <source>No album matching &quot;{album}&quot; by &quot;{artist}&quot; was found.</source>
         <translation>「{artist}」の「{album}」に一致するアルバムが見つかりませんでした。</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="212"/>
+        <location filename="../panels/metadata_dialog.py" line="176"/>
         <source>Select Album</source>
         <translation>アルバムを選択</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="213"/>
+        <location filename="../panels/metadata_dialog.py" line="177"/>
         <source>Multiple matches were found -- choose the correct one:</source>
         <translation>複数の候補が見つかりました。正しいものを選んでください:</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="267"/>
+        <location filename="../panels/metadata_dialog.py" line="231"/>
         <source>foobar2000&apos;s current playlist is empty.</source>
         <translation>foobar2000の現在のプレイリストが空です。</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="332"/>
-        <location filename="../panels/metadata_dialog.py" line="341"/>
-        <location filename="../panels/metadata_dialog.py" line="348"/>
         <source>Choose Cover Art</source>
-        <translation>ジャケット画像を選ぶ</translation>
+        <translation type="vanished">ジャケット画像を選ぶ</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="334"/>
         <source>Images (*.png *.jpg *.jpeg *.bmp *.webp)</source>
-        <translation>画像 (*.png *.jpg *.jpeg *.bmp *.webp)</translation>
+        <translation type="vanished">画像 (*.png *.jpg *.jpeg *.bmp *.webp)</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="341"/>
         <source>Could not read the file:
 {error}</source>
-        <translation>ファイルを読み込めませんでした:
+        <translation type="vanished">ファイルを読み込めませんでした:
 {error}</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="348"/>
         <source>That file could not be read as an image.</source>
-        <translation>このファイルは画像として読み込めませんでした。</translation>
+        <translation type="vanished">このファイルは画像として読み込めませんでした。</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="355"/>
         <source>No cover
 
 (click to
 choose one)</source>
-        <translation>ジャケットなし
+        <translation type="vanished">ジャケットなし
 
 (クリックして
 選択)</translation>
@@ -1716,47 +1816,68 @@ choose one)</source>
 <context>
     <name>RecordDialog</name>
     <message>
-        <location filename="../panels/record_dialog.py" line="96"/>
+        <location filename="../panels/record_dialog.py" line="100"/>
         <source>Record to MiniDisc from foobar2000</source>
         <translation>foobar2000からMiniDiscに録音</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="123"/>
+        <location filename="../panels/record_dialog.py" line="136"/>
+        <location filename="../panels/record_dialog.py" line="148"/>
+        <source>Artist</source>
+        <translation>アーティスト</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="137"/>
+        <source>Album</source>
+        <translation>アルバム</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="138"/>
+        <source>Year</source>
+        <translation>年</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="148"/>
         <source>#</source>
         <translation>#</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="123"/>
+        <location filename="../panels/record_dialog.py" line="148"/>
         <source>Title</source>
         <translation>タイトル</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="123"/>
+        <location filename="../panels/record_dialog.py" line="148"/>
         <source>Length</source>
         <translation>長さ</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="127"/>
+        <location filename="../panels/record_dialog.py" line="154"/>
+        <source>Everything above and in the Title column can be edited, and is what gets written onto the disc. Fill the Artist column in only on a compilation, where each track has its own.</source>
+        <translation>上の項目とタイトル列は編集でき、その内容がディスクに書き込まれます。アーティスト列は、曲ごとに演奏者が違うコンピレーションのときだけ埋めてください。</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="161"/>
         <source>Mark tracks through the adapter</source>
         <translation>アダプターでトラックマークを付ける</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="131"/>
+        <location filename="../panels/record_dialog.py" line="165"/>
         <source>Sends a track mark at each track change instead of relying on the deck hearing a gap. This is the only thing that splits a gapless album correctly -- but turn LEVEL-SYNC off on the deck when using it, or both will mark the same boundary and leave a stray sliver of a track between them.</source>
         <translation>デッキが無音を検出するのに頼らず、トラックが変わるたびにトラックマークを送信します。ギャップレスのアルバムを正しく分割できるのはこれだけです。ただし使用時はデッキのLEVEL-SYNCをオフにしてください。そうしないと両方が同じ境界にマークを付け、その間に極端に短いトラックが残ります。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="156"/>
+        <location filename="../panels/record_dialog.py" line="190"/>
         <source>Start Recording</source>
         <translation>録音を開始</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="159"/>
+        <location filename="../panels/record_dialog.py" line="193"/>
         <source>Cancel</source>
         <translation>キャンセル</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="180"/>
+        <location filename="../panels/record_dialog.py" line="214"/>
         <source>Could not reach foobar2000: {error}
 
 It must be running with the Beefweb Remote Control component (foo_beefweb) enabled.</source>
@@ -1765,47 +1886,47 @@ It must be running with the Beefweb Remote Control component (foo_beefweb) enabl
 foobar2000が起動し、Beefweb Remote Control (foo_beefweb) コンポーネントが有効になっている必要があります。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="188"/>
+        <location filename="../panels/record_dialog.py" line="222"/>
         <source>foobar2000&apos;s current playlist is empty -- load the album first.</source>
         <translation>foobar2000の現在のプレイリストが空です。先にアルバムを読み込んでください。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="202"/>
+        <location filename="../panels/record_dialog.py" line="235"/>
         <source>Playlist &quot;{playlist}&quot; -- {count} tracks, {total} total.
 It will be recorded to the disc in this order, then titled from these names.</source>
         <translation>プレイリスト「{playlist}」— {count} トラック、合計 {total}。
 この順序でディスクに録音し、これらの名前でタイトルを付けます。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="213"/>
+        <location filename="../panels/record_dialog.py" line="302"/>
         <source>This is longer than the {limit} an MD holds in SP mode. Set the deck to LP2 first, or the recording will be cut short.</source>
         <translation>SPモードのMDに収まる {limit} を超えています。デッキをLP2に設定してください。そうしないと録音が途中で切れます。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="228"/>
-        <location filename="../panels/record_dialog.py" line="299"/>
+        <location filename="../panels/record_dialog.py" line="317"/>
+        <location filename="../panels/record_dialog.py" line="389"/>
         <source>foobar2000: {error}</source>
         <translation>foobar2000: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="240"/>
+        <location filename="../panels/record_dialog.py" line="330"/>
         <source>Stop</source>
         <translation>停止</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="243"/>
+        <location filename="../panels/record_dialog.py" line="333"/>
         <source>Recording started -- waiting for the first track...</source>
         <translation>録音を開始しました。最初のトラックを待っています...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="251"/>
-        <location filename="../panels/record_dialog.py" line="278"/>
-        <location filename="../panels/record_dialog.py" line="429"/>
+        <location filename="../panels/record_dialog.py" line="341"/>
+        <location filename="../panels/record_dialog.py" line="368"/>
+        <location filename="../panels/record_dialog.py" line="516"/>
         <source>Record to MiniDisc</source>
         <translation>MiniDiscに録音</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="253"/>
+        <location filename="../panels/record_dialog.py" line="343"/>
         <source>Recording replaces whatever is on the disc, and nothing about it can be undone.
 
 Make sure the right disc is loaded and its write-protect tab is open, then continue.</source>
@@ -1814,13 +1935,13 @@ Make sure the right disc is loaded and its write-protect tab is open, then conti
 正しいディスクが入っていること、書き込み禁止タブが開いていることを確認してから続行してください。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="271"/>
-        <location filename="../panels/record_dialog.py" line="453"/>
+        <location filename="../panels/record_dialog.py" line="361"/>
+        <location filename="../panels/record_dialog.py" line="540"/>
         <source>MDRem: {error}</source>
         <translation>MDRem: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="280"/>
+        <location filename="../panels/record_dialog.py" line="370"/>
         <source>The deck was told to start recording.
 
 Is it now showing record-pause (REC lit, paused)?</source>
@@ -1829,48 +1950,47 @@ Is it now showing record-pause (REC lit, paused)?</source>
 録音一時停止の状態になっていますか (REC点灯、一時停止)?</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="288"/>
+        <location filename="../panels/record_dialog.py" line="378"/>
         <source>Cancelled -- the deck was not recording.</source>
         <translation>中止しました。デッキは録音していませんでした。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="307"/>
+        <location filename="../panels/record_dialog.py" line="397"/>
         <source>Lost contact with foobar2000: {error}</source>
         <translation>foobar2000との通信が切れました: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="347"/>
+        <location filename="../panels/record_dialog.py" line="437"/>
         <source>Recording {index} of {count}: {title} -- {elapsed} of {total}</source>
         <translation>録音中 {index}/{count}: {title} — {elapsed} / {total}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="362"/>
-        <location filename="../panels/record_dialog.py" line="468"/>
+        <location filename="../panels/record_dialog.py" line="452"/>
+        <location filename="../panels/record_dialog.py" line="555"/>
         <source>Close</source>
         <translation>閉じる</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="369"/>
+        <location filename="../panels/record_dialog.py" line="459"/>
         <source>Playback stopped at track {reached} of {count}, so the disc is incomplete. Titling it now would name tracks that were never recorded.</source>
         <translation>再生が {count} 曲中 {reached} 曲目で停止したため、ディスクは不完全です。ここでタイトルを付けると、録音されていないトラックに名前を付けることになります。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="376"/>
+        <location filename="../panels/record_dialog.py" line="466"/>
         <source>Recording finished. The titles can be written now.</source>
         <translation>録音が完了しました。タイトルを書き込めます。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="407"/>
         <source>Looking up cover art...</source>
-        <translation>カバーアートを検索中...</translation>
+        <translation type="vanished">カバーアートを検索中...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="430"/>
+        <location filename="../panels/record_dialog.py" line="517"/>
         <source>Write the album and track titles onto the disc now?</source>
         <translation>アルバム名とトラック名を今すぐディスクに書き込みますか?</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="447"/>
+        <location filename="../panels/record_dialog.py" line="534"/>
         <source>MDRem: not connected</source>
         <translation>MDRem: 未接続</translation>
     </message>
@@ -1951,52 +2071,52 @@ Is it now showing record-pause (REC lit, paused)?</source>
 <context>
     <name>SettingsDialog</name>
     <message>
-        <location filename="../panels/settings_dialog.py" line="50"/>
+        <location filename="../panels/settings_dialog.py" line="52"/>
         <source>Settings</source>
         <translation>設定</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="60"/>
+        <location filename="../panels/settings_dialog.py" line="62"/>
         <source>Dots per inch used to display the canvas on screen at 100% zoom. Not necessarily your monitor&apos;s real physical DPI -- adjust this if content looks the wrong physical size on screen.</source>
         <translation>100%表示時にキャンバスを画面に表示するための解像度(DPI)です。モニターの実際の物理DPIと一致しない場合があります -- 画面上でのサイズが実際の物理サイズと異なる場合に調整してください。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="64"/>
+        <location filename="../panels/settings_dialog.py" line="66"/>
         <source>Screen DPI</source>
         <translation>画面のDPI</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="66"/>
+        <location filename="../panels/settings_dialog.py" line="68"/>
         <source>Applies to newly created or reopened projects -- not the one currently open.</source>
         <translation>新しく作成または再度開いたプロジェクトに適用されます -- 現在開いているプロジェクトには適用されません。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="76"/>
+        <location filename="../panels/settings_dialog.py" line="78"/>
         <source>Default DPI for Export Print PNG / Export Print PNG (Grayscale).</source>
         <translation>印刷用PNGの書き出し・グレースケール書き出しの既定のDPIです。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="78"/>
+        <location filename="../panels/settings_dialog.py" line="80"/>
         <source>Default Export DPI</source>
         <translation>既定の書き出しDPI</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="86"/>
+        <location filename="../panels/settings_dialog.py" line="88"/>
         <source>DPI Tools &gt; Bake Layers renders at. Higher than the default export DPI by default, since a baked layer&apos;s resolution is locked in permanently, unlike a re-renderable vector layer.</source>
         <translation>ツール &gt; レイヤーを統合の書き出し解像度(DPI)です。統合後のレイヤーは解像度が固定され、後で再レンダリングできるベクターレイヤーとは異なるため、既定では書き出しDPIより高く設定されています。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="90"/>
+        <location filename="../panels/settings_dialog.py" line="92"/>
         <source>Bake DPI</source>
         <translation>統合DPI</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="94"/>
+        <location filename="../panels/settings_dialog.py" line="96"/>
         <source>Restore Defaults</source>
         <translation>既定値に戻す</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="108"/>
+        <location filename="../panels/settings_dialog.py" line="110"/>
         <source>Enable MDRem IR remote adapter</source>
         <translation>MDRem赤外線リモコンアダプターを有効にする</translation>
     </message>
@@ -2005,87 +2125,97 @@ Is it now showing record-pause (REC lit, paused)?</source>
         <translation type="vanished">プロジェクト &gt; メタデータ... に「トラックリストを転送」を、起動画面にリモコンウィンドウを追加します。赤外線でMiniDisc本体にタイトルを書き込むための機能です。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="112"/>
+        <location filename="../panels/settings_dialog.py" line="114"/>
         <source>Adds Upload Tracklist to the Metadata dialog, the Recording menu&apos;s entries, and a Remote window to the startup screen, for writing titles onto the MiniDisc itself over infrared.</source>
         <translation>メタデータ画面に「トラックリストを転送」を、録音メニューの各項目を、起動画面にリモコンウィンドウを追加します。赤外線でMiniDisc本体にタイトルを書き込むための機能です。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="121"/>
+        <location filename="../panels/settings_dialog.py" line="123"/>
         <source>Serial port the MDRem adapter is connected to.</source>
         <translation>MDRemアダプターが接続されているシリアルポート。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="123"/>
+        <location filename="../panels/settings_dialog.py" line="125"/>
         <source>Detect</source>
         <translation>検出</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="126"/>
+        <location filename="../panels/settings_dialog.py" line="128"/>
         <source>Asks every serial port whether an MDRem adapter answers on it. The board&apos;s USB ID is shared with its own bootloader and other boards, so it can only be identified by replying.</source>
         <translation>各シリアルポートにMDRemアダプターが応答するか問い合わせます。基板のUSB IDはブートローダーや他の基板と共通のため、応答によってのみ識別できます。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="138"/>
+        <location filename="../panels/settings_dialog.py" line="140"/>
         <source>MDRem port</source>
         <translation>MDRemポート</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="143"/>
+        <location filename="../panels/settings_dialog.py" line="145"/>
         <source>Where foobar2000&apos;s Beefweb Remote Control component listens, used by Record to MiniDisc. Change it only if you moved Beefweb off its default port.</source>
         <translation>MiniDiscへの録音で使用する、foobar2000のBeefweb Remote Controlコンポーネントの待ち受けアドレス。Beefwebを既定のポートから変更した場合のみ変更してください。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="147"/>
+        <location filename="../panels/settings_dialog.py" line="149"/>
         <source>foobar2000 (Beefweb) URL</source>
         <translation>foobar2000 (Beefweb) のアドレス</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="164"/>
+        <location filename="../panels/settings_dialog.py" line="166"/>
         <source>foobar2000&apos;s own program file. Ripped CD tracks are loaded through it rather than through Beefweb, which refuses files outside the music folders configured in foobar itself.</source>
         <translation>foobar2000の実行ファイル。取り込んだCDトラックはBeefwebではなくこれを介して読み込まれます。Beefwebはfoobar2000側で設定された音楽フォルダー以外のファイルを拒否するためです。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="168"/>
-        <location filename="../panels/settings_dialog.py" line="179"/>
+        <location filename="../panels/settings_dialog.py" line="170"/>
+        <location filename="../panels/settings_dialog.py" line="181"/>
         <source>Browse...</source>
         <translation>参照...</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="170"/>
-        <location filename="../panels/settings_dialog.py" line="185"/>
+        <location filename="../panels/settings_dialog.py" line="172"/>
+        <location filename="../panels/settings_dialog.py" line="187"/>
         <source>foobar2000 program</source>
         <translation>foobar2000の実行ファイル</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="175"/>
+        <location filename="../panels/settings_dialog.py" line="177"/>
         <source>Where a ripped CD is written. One album is a few hundred megabytes; earlier rips are deleted when the next one starts, not when a recording ends, so they stay playable in the meantime.</source>
         <translation>取り込んだCDの保存先。1枚で数百MBになります。以前の取り込みは録音の終了時ではなく次の取り込みの開始時に削除されるため、それまでは再生できます。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="181"/>
-        <location filename="../panels/settings_dialog.py" line="191"/>
+        <location filename="../panels/settings_dialog.py" line="183"/>
+        <location filename="../panels/settings_dialog.py" line="208"/>
+        <location filename="../panels/settings_dialog.py" line="292"/>
         <source>CD rip folder</source>
         <translation>CD取り込みフォルダー</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="185"/>
+        <location filename="../panels/settings_dialog.py" line="187"/>
         <source>Programs (*.exe);;All files (*)</source>
         <translation>プログラム (*.exe);;すべてのファイル (*)</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="209"/>
+        <location filename="../panels/settings_dialog.py" line="226"/>
         <source>{port} (not connected)</source>
         <translation>{port} (未接続)</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="234"/>
+        <location filename="../panels/settings_dialog.py" line="251"/>
         <source>Detect MDRem</source>
         <translation>MDRemの検出</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="235"/>
+        <location filename="../panels/settings_dialog.py" line="252"/>
         <source>No MDRem adapter answered on any serial port. Check that it is plugged in.</source>
         <translation>どのシリアルポートでもMDRemアダプターが応答しませんでした。接続を確認してください。</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="294"/>
+        <source>That folder could not be created: {error}
+
+The setting has been saved anyway, but a CD cannot be ripped there until it exists.</source>
+        <translation>このフォルダーを作成できませんでした: {error}
+
+設定は保存しましたが、フォルダーができるまでそこにCDを取り込むことはできません。</translation>
     </message>
 </context>
 <context>
@@ -2397,17 +2527,17 @@ Is it now showing record-pause (REC lit, paused)?</source>
         <translation>アセットを挿入...</translation>
     </message>
     <message>
-        <location filename="../panels/tool_panel.py" line="50"/>
+        <location filename="../panels/tool_panel.py" line="53"/>
         <source>Metadata...</source>
         <translation>メタデータ...</translation>
     </message>
     <message>
-        <location filename="../panels/tool_panel.py" line="51"/>
+        <location filename="../panels/tool_panel.py" line="54"/>
         <source>The album title, artist, year and track list this project describes</source>
         <translation>このプロジェクトが表すアルバム名、アーティスト、年、トラックリスト</translation>
     </message>
     <message>
-        <location filename="../panels/tool_panel.py" line="59"/>
+        <location filename="../panels/tool_panel.py" line="62"/>
         <source>Insert from Metadata</source>
         <translation>メタデータから挿入</translation>
     </message>
@@ -2452,7 +2582,7 @@ Is it now showing record-pause (REC lit, paused)?</source>
         <translation>プロジェクトのメタデータからディスクラベルを作成します: 全面テンプレート、その形に切り抜いたカバーアート、スライダー上のMiniDiscロゴ。ページ全体を置き換えます。</translation>
     </message>
     <message>
-        <location filename="../panels/tool_panel.py" line="146"/>
+        <location filename="../panels/tool_panel.py" line="153"/>
         <source>(fill the metadata in first)</source>
         <translation>(先にメタデータを入力してください)</translation>
     </message>

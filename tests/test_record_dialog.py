@@ -52,6 +52,27 @@ def _items(count: int, seconds: int = 200) -> list[foobar.PlaylistItem]:
     ]
 
 
+
+def _png() -> bytes:
+    """A real one-pixel image, since these bytes go through a QPixmap."""
+    from PySide6.QtCore import QBuffer
+    from PySide6.QtGui import QColor, QImage
+
+    image = QImage(1, 1, QImage.Format.Format_ARGB32)
+    image.fill(QColor("red"))
+    buffer = QBuffer()
+    buffer.open(QBuffer.OpenModeFlag.WriteOnly)
+    image.save(buffer, "PNG")
+    return bytes(buffer.data())
+
+@pytest.fixture(autouse=True)
+def no_cover_lookup(monkeypatch):
+    """The dialog looks a cover up as soon as the playlist loads, so every
+    construction in this file would otherwise reach iTunes. Tests that care
+    about the lookup override this with their own stand-in."""
+    monkeypatch.setattr(record_module, "fetch_into", lambda *a, **k: None)
+
+
 @pytest.fixture
 def no_hardware(monkeypatch):
     """Never let a test reach the adapter -- SEND RECORD on a real deck
@@ -250,9 +271,10 @@ def test_marking_can_be_turned_off_for_a_deck_doing_its_own_level_sync(qt_app, m
 
 
 @pytest.fixture
-def no_lookup(monkeypatch):
-    """No network, and no cover found -- the plain case."""
-    monkeypatch.setattr(record_module, "find_cover", lambda *a, **k: (None, None))
+def no_lookup(no_cover_lookup):
+    """No network, and no cover found -- the plain case. The autouse guard
+    above already does it; this name stays because it says so at the call
+    site."""
 
 
 def _finish_recording(dialog, monkeypatch) -> None:
@@ -276,31 +298,55 @@ def test_a_finished_recording_is_adopted_as_the_projects_metadata(qt_app, monkey
     assert [track.title for track in dialog.result_metadata.tracks] == ["Track 1", "Track 2", "Track 3"]
 
 
-def test_cover_art_is_looked_up_for_what_was_recorded(qt_app, monkeypatch, no_hardware, tmp_path):
-    found = AlbumCandidate(
-        collection_id=1,
-        artist_name="Artist",
-        collection_name="Album",
-        year=1999,
-        track_count=3,
-        artwork_url="http://example/600x600bb.jpg",
-    )
-    monkeypatch.setattr(record_module, "find_cover", lambda *a, **k: (b"JPEGBYTES", found))
-    monkeypatch.setattr(record_module, "save_downloaded_cover", lambda *a, **k: tmp_path / "c.jpg")
+def test_cover_art_is_looked_up_before_recording_not_after(qt_app, monkeypatch, no_hardware):
+    """It used to happen once the album had finished playing, which is the
+    worst moment to find out the search matched the wrong release. Now it is
+    on screen while the album name can still be corrected."""
+    calls: list = []
+
+    def fake_fetch(preview, artist, album, track_count=None):
+        calls.append((artist, album, track_count))
+        preview.set_cover(_png())
+        return AlbumCandidate(
+            collection_id=1,
+            artist_name="Artist",
+            collection_name="Album",
+            year=1999,
+            track_count=3,
+            artwork_url="http://example/600x600bb.jpg",
+        )
+
+    monkeypatch.setattr(record_module, "fetch_into", fake_fetch)
 
     dialog = _dialog(FakeClient(_items(3)), monkeypatch)
-    _finish_recording(dialog, monkeypatch)
 
-    assert dialog.result_metadata.cover_art == b"JPEGBYTES"
+    assert calls == [("Artist", "Album", 3)], "looked up as the playlist loaded"
+    _finish_recording(dialog, monkeypatch)
+    assert dialog.result_metadata.cover_art == _png()
+
+
+def test_a_year_the_tags_did_not_have_comes_from_the_cover_lookup(qt_app, monkeypatch, no_hardware):
+    def fake_fetch(preview, artist, album, track_count=None):
+        return AlbumCandidate(
+            collection_id=1, artist_name="Artist", collection_name="Album", year=1999, track_count=3
+        )
+
+    monkeypatch.setattr(record_module, "fetch_into", fake_fetch)
+    items = [
+        foobar.PlaylistItem.from_columns([str(n), f"Track {n}", "Artist", "Album", "", "200"])
+        for n in range(1, 4)
+    ]
+
+    dialog = _dialog(FakeClient(items), monkeypatch)
+
+    assert dialog.year_spin.value() == 1999
 
 
 def test_a_failed_cover_lookup_still_keeps_the_metadata(qt_app, monkeypatch, no_hardware):
     """Cover art is a bonus on top of the capture, exactly as it is in
-    MetadataDialog -- losing it must not lose the track list too."""
-    def boom(*args, **kwargs):
-        raise record_module.MetadataLookupError("no network")
-
-    monkeypatch.setattr(record_module, "find_cover", boom)
+    MetadataDialog -- losing it must not lose the track list too.
+    cover_preview.fetch_into swallows the error itself and answers None."""
+    monkeypatch.setattr(record_module, "fetch_into", lambda *a, **k: None)
 
     dialog = _dialog(FakeClient(_items(3)), monkeypatch)
     _finish_recording(dialog, monkeypatch)
@@ -355,8 +401,10 @@ def test_metadata_handed_in_is_what_the_disc_is_titled_from(qt_app, monkeypatch,
     dialog._deck = record_module.mdrem.MDRemClient("COM_TEST")
     _finish_recording(dialog, monkeypatch)
 
-    assert dialog.result_metadata is given
-    assert dialog.result_metadata.album == "Posluchaj"
+    # A copy, not the same object: the dialog reads its own widgets back, so
+    # a correction made in it is what comes out.
+    assert dialog.result_metadata is not given
+    assert (dialog.result_metadata.album, dialog.result_metadata.artist) == ("Posluchaj", "Kult")
 
 
 def test_a_cover_that_came_with_it_is_not_looked_up_again(qt_app, monkeypatch, no_hardware):
@@ -366,15 +414,15 @@ def test_a_cover_that_came_with_it_is_not_looked_up_again(qt_app, monkeypatch, n
     from mdtools.project import ProjectMetadata, Track
 
     monkeypatch.setattr(
-        record_module, "find_cover", lambda *a, **k: pytest.fail("must not search for a second cover")
+        record_module, "fetch_into", lambda *a, **k: pytest.fail("must not search for a second cover")
     )
-    given = ProjectMetadata(album="Unleashed", artist="Skillet", tracks=[Track("A")], cover_art=b"PNG")
+    given = ProjectMetadata(album="Unleashed", artist="Skillet", tracks=[Track("A")], cover_art=_png())
     monkeypatch.setattr(record_module.foobar, "FoobarClient", lambda *a, **k: FakeClient(_items(3)))
     dialog = RecordDialog("COM_TEST", metadata=given)
     dialog._deck = record_module.mdrem.MDRemClient("COM_TEST")
     _finish_recording(dialog, monkeypatch)
 
-    assert dialog.result_metadata.cover_art == b"PNG"
+    assert dialog.result_metadata.cover_art == _png()
 
 
 def test_without_any_the_playlist_is_still_the_source(qt_app, monkeypatch, no_hardware, no_lookup):
@@ -386,12 +434,9 @@ def test_without_any_the_playlist_is_still_the_source(qt_app, monkeypatch, no_ha
     assert dialog.result_metadata.album == "Album"
 
 
-def test_the_titles_written_onto_the_disc_are_the_ones_that_were_captured(qt_app, monkeypatch, no_hardware, no_lookup):
+def test_the_titles_written_onto_the_disc_are_the_ones_on_screen(qt_app, monkeypatch, no_hardware, no_lookup):
     """_offer_titling used to rebuild the metadata from the playlist all
-    over again, which would have thrown away exactly the correction this
-    parameter exists to carry."""
-    from mdtools.project import ProjectMetadata, Track
-
+    over again, which would have thrown away every edit made here."""
     uploaded: list = []
 
     class _FakeUpload:
@@ -405,14 +450,103 @@ def test_the_titles_written_onto_the_disc_are_the_ones_that_were_captured(qt_app
     monkeypatch.setattr(
         record_module.QMessageBox, "question", lambda *a, **k: record_module.QMessageBox.StandardButton.Yes
     )
-    given = ProjectMetadata(album="Posluchaj", artist="Kult", tracks=[Track("Arahja")])
-    monkeypatch.setattr(record_module.foobar, "FoobarClient", lambda *a, **k: FakeClient(_items(3)))
-    dialog = RecordDialog("COM_TEST", metadata=given)
-    dialog._deck = record_module.mdrem.MDRemClient("COM_TEST")
+    dialog = _dialog(FakeClient(_items(3)), monkeypatch)
+    dialog.album_edit.setText("Posluchaj")
+    dialog.artist_edit.setText("Kult")
+    dialog.tree.topLevelItem(0).setText(1, "Arahja")
     dialog._recording = True
     dialog._started = True
     dialog._highest_index = len(dialog._items) - 1
 
     dialog._poll()
 
-    assert uploaded == [given]
+    assert uploaded == [dialog.result_metadata]
+    assert (uploaded[0].album, uploaded[0].artist) == ("Posluchaj", "Kult")
+    assert uploaded[0].tracks[0].title == "Arahja"
+
+
+def test_an_edited_track_artist_keeps_a_mixtape_a_mixtape(qt_app, monkeypatch, no_hardware, no_lookup):
+    """Rebuilding tracks from the Title column alone would drop every
+    performer, and with them the only thing that makes a compilation one --
+    exactly the bug MetadataDialog had before it grew an Artist column."""
+    dialog = _dialog(FakeClient(_items(3)), monkeypatch)
+    dialog.artist_edit.clear()
+    dialog.album_edit.clear()
+    for index, performer in enumerate(("New Order", "The Cure", "Depeche Mode")):
+        dialog.tree.topLevelItem(index).setText(2, performer)
+
+    _finish_recording(dialog, monkeypatch)
+
+    assert [track.artist for track in dialog.result_metadata.tracks] == [
+        "New Order",
+        "The Cure",
+        "Depeche Mode",
+    ]
+    assert dialog.result_metadata.is_compilation()
+
+
+def test_the_track_list_is_frozen_once_recording_starts(qt_app, monkeypatch, no_hardware, no_lookup):
+    """What is on screen when the deck starts is what gets written when it
+    stops; renaming the album halfway through would only make the two
+    disagree."""
+    dialog = _dialog(FakeClient(_items(3)), monkeypatch)
+    monkeypatch.setattr(
+        record_module.QMessageBox, "warning", lambda *a, **k: record_module.QMessageBox.StandardButton.Ok
+    )
+    monkeypatch.setattr(
+        record_module.QMessageBox, "question", lambda *a, **k: record_module.QMessageBox.StandardButton.Yes
+    )
+
+    dialog._start()
+
+    assert not dialog.tree.isEnabled()
+    assert not dialog.album_edit.isEnabled()
+    assert not dialog.cover_label.isEnabled()
+
+
+def test_the_dialog_opens_on_what_the_disc_will_be_called(qt_app, monkeypatch, no_hardware, no_lookup):
+    """Not just a list of paths: the album, the artist and the artwork are
+    what actually gets written onto the MiniDisc."""
+    dialog = _dialog(FakeClient(_items(3)), monkeypatch)
+
+    assert dialog.artist_edit.text() == "Artist"
+    assert dialog.album_edit.text() == "Album"
+    assert dialog.year_spin.value() == 2024
+
+
+def test_artwork_that_came_with_the_metadata_is_shown_straight_away(qt_app, monkeypatch, no_hardware):
+    from mdtools.project import ProjectMetadata, Track
+
+    monkeypatch.setattr(
+        record_module, "fetch_into", lambda *a, **k: pytest.fail("nothing to look up, it already has one")
+    )
+    given = ProjectMetadata(album="Unleashed", artist="Skillet", tracks=[Track("A")], cover_art=_png())
+    monkeypatch.setattr(record_module.foobar, "FoobarClient", lambda *a, **k: FakeClient(_items(3)))
+
+    dialog = RecordDialog("COM_TEST", metadata=given)
+
+    assert dialog.cover_label.data == _png()
+
+
+def test_a_cover_inside_the_playlists_own_files_is_the_last_resort(qt_app, monkeypatch, no_hardware):
+    """Reachable because %path% is in the playlist's column set, so this
+    covers an ordinary foobar playlist too, not just a loaded folder."""
+    monkeypatch.setattr(record_module, "fetch_into", lambda *a, **k: None)
+    seen: list = []
+
+    def fake_embedded(paths):
+        seen.extend(paths)
+        return _png()
+
+    monkeypatch.setattr(record_module.embedded_cover, "cover_from_files", fake_embedded)
+    items = [
+        foobar.PlaylistItem.from_columns(
+            [str(n), f"Track {n}", "Artist", "Album", "2024", "200", "", f"/music/{n}.flac"]
+        )
+        for n in range(1, 4)
+    ]
+
+    dialog = _dialog(FakeClient(items), monkeypatch)
+
+    assert dialog.cover_label.data == _png()
+    assert seen == ["/music/1.flac", "/music/2.flac", "/music/3.flac"]
