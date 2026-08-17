@@ -138,9 +138,10 @@ BOOK = [
             {"h2": "The three panels"},
             {"p": "**Tools** (left) adds things to the page: text, a filled rectangle, an image from a "
                   "file, an image from the built-in gallery, or text taken straight from the project's "
-                  "metadata. Below the separator are the four page-wide operations - Clip Layers, Bake "
-                  "Layers, Save as Template and Auto-Layout. Every button is icon-only; hover for its "
-                  "name."},
+                  "metadata. **Metadata...** - the album's own details - lives here too, beside the "
+                  "layers it feeds. Below the separator are the four page-wide operations - Clip "
+                  "Layers, Bake Layers, Save as Template and Auto-Layout. Every button is icon-only; "
+                  "hover for its name."},
             {"p": "**Properties** (top right) edits whatever is selected, and shows only the fields that "
                   "apply to it: text gets its content, size, font and colour; a rectangle gets a colour; "
                   "an image gets neither. **Probe...** picks a colour off the canvas itself, which is how "
@@ -208,11 +209,12 @@ BOOK = [
     {
         "title": "Metadata and cover art",
         "blocks": [
-            {"p": "**Project > Metadata...** holds the album title, artist, year and track list. It is "
+            {"p": "**Metadata...** in the Tools panel holds the album title, artist, year and track "
+                  "list. It is "
                   "worth filling in even if you are only designing a label: the track list can be dropped "
                   "onto the artwork as text, and the automatic layout and the disc titling both read from "
                   "here."},
-            {"fig": ("metadata", "Project > Metadata, with cover art fetched and a track list loaded.")},
+            {"fig": ("metadata", "The Metadata dialog, with cover art fetched and a track list loaded.")},
             {"h2": "Three ways to fill it in"},
             {"ol": [
                 "**By hand.** Add Track, type, and reorder with Move Up / Move Down. Times are optional "
@@ -249,7 +251,7 @@ BOOK = [
             {"p": "The **magic wand** in the Tools panel builds both pages from the album's own artwork "
                   "and track list. It is the fastest route from \"I have a disc\" to \"I have something "
                   "to print\"."},
-            {"p": "Fill in album and artist in Project > Metadata... first - that is what it searches by. "
+            {"p": "Fill in album and artist in **Metadata...** first - that is what it searches by. "
                   "If there is no cover art yet it looks one up before starting."},
             {"warn": "It **replaces both pages** and resets the undo history, so it asks for confirmation "
                      "first. The metadata itself is left alone."},
@@ -368,9 +370,9 @@ BOOK = [
                   "to work that way: the board reports the USB ID `2E8A:0003`, which is also its own "
                   "bootloader's and other Waveshare boards', so the only reliable identification is the "
                   "device replying to a `PING`."},
-            {"p": "Two things appear once the checkbox is ticked: **Upload Tracklist** in Project > "
-                  "Metadata..., **Remote...** on the startup screen, and **Record to MiniDisc from "
-                  "foobar2000...** in the Project menu."},
+            {"p": "Three things appear once the checkbox is ticked: **Upload Tracklist** in the "
+                  "Metadata dialog, **Remote...** on the startup screen, and the whole **Recording** "
+                  "menu - all three ways of recording a disc, and Erase MiniDisc..."},
             {"note": "The foobar2000 address on the same page is deliberately *not* tied to the checkbox - "
                      "reading a playlist needs foobar2000, not the infrared adapter."},
         ],
@@ -409,7 +411,7 @@ BOOK = [
     {
         "title": "Writing titles onto the disc",
         "blocks": [
-            {"p": "**Project > Metadata... > Upload Tracklist** writes the disc title and every track name "
+            {"p": "**Metadata... > Upload Tracklist** writes the disc title and every track name "
                   "onto the MiniDisc itself. The disc title is assembled as `Artist - Album (Year)`, "
                   "skipping whatever is not filled in."},
             {"fig": ("upload", "Everything is shown before anything is written.")},
@@ -460,7 +462,7 @@ BOOK = [
     {
         "title": "Recording an album from foobar2000",
         "blocks": [
-            {"p": "**Project > Record to MiniDisc from foobar2000...** does the whole job in one go: it "
+            {"p": "**Recording > Record to MiniDisc from foobar2000...** does the whole job in one go: it "
                   "arms the deck, plays the album out of foobar2000, watches it to the end, writes the "
                   "titles, and lays out both labels from the album's own artwork."},
             {"note": "**This needs the MDRem adapter, and the menu entry only appears once it is enabled "
@@ -525,7 +527,7 @@ BOOK = [
     {
         "title": "Recording a CD",
         "blocks": [
-            {"p": "**Project > Record CD to MiniDisc...** copies an audio CD onto a MiniDisc. It reads "
+            {"p": "**Recording > Record CD to MiniDisc...** copies an audio CD onto a MiniDisc. It reads "
                   "the disc, works out what album it is, extracts every track to a file, loads those "
                   "files into foobar2000 in the right order, and then hands over to the recording you "
                   "already know - the same arming, the same track marks, the same titling."},
@@ -592,11 +594,52 @@ BOOK = [
                      "to keep it."},
         ],
     },
+    {
+        "title": "Recording a folder of files",
+        "blocks": [
+            {"p": "**Recording > Record Folder to MiniDisc...** records an album you already have on "
+                  "disk. Point it at the folder it is in, and MDTools loads those files into foobar2000 "
+                  "in the right order and hands over to the recording you already know - the same "
+                  "arming, the same track marks, the same titling."},
+            {"note": "**This needs the MDRem adapter too**, and the entry only appears once it is "
+                     "enabled. Loading a folder does not need one; going on to record what was loaded "
+                     "does."},
+            {"fig": ("folder-record", "The folder read, and what foobar2000 made of its tags.")},
+            {"h2": "Step by step"},
+            {"ol": [
+                "Press **Browse...** and choose the folder the album is in. FLAC, MP3 and everything "
+                "else foobar2000 plays are recognised; anything that is not audio - artwork, a cue "
+                "sheet, a log - is ignored.",
+                "Check the order. It comes from the filenames, compared so that `10` follows `9` "
+                "rather than `1`. If it is wrong, the filenames are what to fix.",
+                "Check the album and artist. They are guessed from the folder's own name to start "
+                "with, and whatever the files are tagged with replaces that guess as soon as the "
+                "tracks are loaded. Type over either if both are wrong.",
+                "Press **Load and Record**. The tracks go into foobar2000, MDTools reads back what it "
+                "made of them, looks up cover art, and the recording window opens by itself.",
+            ]},
+            {"h2": "Where the titles come from"},
+            {"p": "From the files - read by foobar2000 rather than by MDTools, which is the better tag "
+                  "reader of the two and has to read them anyway in order to play them. A file with no "
+                  "title tag is recorded under its filename: the honest answer, and usually a usable "
+                  "one."},
+            {"p": "The album and artist shown in this window are what gets written onto the disc and "
+                  "onto the label, so a correction is worth making before you press the button. "
+                  "Nothing is ever written back into your files."},
+            {"h2": "A subfolder per disc"},
+            {"p": "A folder with tracks in it *is* the album, and its subfolders are left alone - a "
+                  "scans or bonus directory does not join the running order. Only when the folder "
+                  "itself holds no audio at all does MDTools look inside, which is what makes a "
+                  "two-disc album kept as `CD1` and `CD2` come out in disc order."},
+            {"warn": "Loading a folder **empties foobar2000's current playlist**, exactly as recording "
+                     "a CD does. Move anything you had queued up there elsewhere first."},
+        ],
+    },
     # ------------------------------------------------------------------
     {
         "title": "Erasing a disc",
         "blocks": [
-            {"p": "**Project > Erase MiniDisc...** clears the disc in the deck. It works on whatever is "
+            {"p": "**Recording > Erase MiniDisc...** clears the disc in the deck. It works on whatever is "
                   "physically loaded, so it does not care which project is open, or whether one is."},
             {"warn": "There is no undo, and MDTools cannot see the result. Make sure the disc in the "
                      "deck is the one you mean, and that its write-protect tab is closed."},

@@ -16,6 +16,10 @@ to FLAC with the bundled cdparanoia and flac, identifies it on MusicBrainz
 from its table of contents, loads the tracks into foobar2000 in disc order,
 and hands over to the same recording flow.
 
+**Record from a folder** -- point MDTools at an album you already have on
+disk, in any format foobar2000 plays, and it loads those files into the
+playlist in filename order and records them the same way.
+
 **Mixtapes too** -- a disc or playlist whose tracks are by different artists
 is recognised as a compilation, credited to Various Artists rather than to
 whoever happened to be first, and given a cover drawn from its own track
@@ -54,6 +58,7 @@ src/mdtools/
   foobar.py               foobar2000 over its Beefweb REST API, plus its command line
   cdrip.py                audio CD: drives, table of contents, extraction to FLAC
   musicbrainz.py          identifying a CD from its table of contents
+  audio_folder.py         which files in a folder are the album, and in what order
   mixtape_cover.py        draws a cover for a compilation, from its track list
   canvas/
     scene.py              DesignScene: template outline + design items
@@ -73,6 +78,7 @@ src/mdtools/
     metadata_dialog.py       album/artist/year/track-list editor
     record_dialog.py         record from foobar2000 onto the deck, then title it
     cd_rip_dialog.py         rip a CD into foobar2000's playlist, then record it
+    folder_record_dialog.py  load a folder of audio files into that playlist instead
   io/
     svg_export.py           exports just the cut/fold shapes as physically-accurate SVG
     png_export.py           exports print artwork as PNG, clipped to the template outline
@@ -88,8 +94,8 @@ scripts/
 
 Every project has exactly two pages -- a **Disc Label** and a **Cover /
 J-Card** -- switchable via the dropdown in the toolbar. **File > New...**
-asks for one template of each kind to start both. **Project > Metadata...**
-opens a dialog for album title, artist, year of release, and an optional
+asks for one template of each kind to start both. **Metadata...** in the Tools
+panel opens a dialog for album title, artist, year of release, and an optional
 track list (title + optional mm:ss time) -- handy to have next to the
 J-card while laying out the tracklist text.
 
@@ -131,7 +137,7 @@ else. Loading an existing saved project never re-adds them.
 - **Tools** panel: add text, a color-filled rectangle, or an image, or
   insert text straight from the project's metadata (album title, artist,
   year, or any track) via **Insert from Metadata** -- fill that in first
-  via **Project > Metadata...**.
+  via **Metadata...**, the button next to it.
 - Click an item to select it; drag its **body** to move it. **Properties**
   only shows the fields that actually apply to the selected item's type:
   text gets Text/Font size/Font.../Color, shapes get Color, images get
@@ -159,7 +165,7 @@ else. Loading an existing saved project never re-adds them.
 1. **File > New...** and pick a disc template and a cover template.
 2. Switch between **Disc Label** / **Cover / J-Card** with the toolbar
    dropdown; each has its own independent design.
-3. **Project > Metadata...** to fill in album/artist/year/tracks.
+3. **Metadata...** in the Tools panel to fill in album/artist/year/tracks.
 4. **File > Export Print PNG...** -- your artwork at 300 DPI by default,
    clipped to the template's cut outline (transparent outside it, including
    the chamfered/filleted-away corners). Print this normally.
@@ -178,7 +184,7 @@ Turn it on in **Window > Settings...** ("Enable MDRem IR remote adapter"),
 pick the serial port, or press **Detect** to have MDTools ask each port
 whether an adapter answers. Two things then appear:
 
-- **Project > Metadata... > Upload Tracklist** writes the disc title
+- **Metadata... > Upload Tracklist** writes the disc title
   (`Artist - Album (Year)`) and every track name onto the disc. It shows
   exactly what it will write first, then works through it with a progress
   bar.
@@ -211,7 +217,7 @@ Worth knowing before you use it:
 
 ### Recording a whole album from foobar2000
 
-**Project > Record to MiniDisc from foobar2000...** does the whole job in
+**Recording > Record to MiniDisc from foobar2000...** does the whole job in
 one go: it arms the deck, plays the album out of foobar2000 over S/PDIF,
 watches it to the end, then writes the titles.
 
@@ -252,17 +258,42 @@ Two caveats:
 - **Set the recording mode (SP/LP2) on the deck yourself.** MDTools has no
   reliable way to read or change it.
 
+### Recording an album from a folder of files
+
+**Recording > Record Folder to MiniDisc...** records an album that is already
+on disk. Browse to the folder, and MDTools loads those files into foobar2000
+and hands over to the recording above -- the same arming, track marks and
+titling.
+
+- **Which files**: anything foobar2000 plays (FLAC, MP3, M4A, OGG, Opus,
+  WAV, ...). Artwork, cue sheets and logs are ignored.
+- **What order**: the filenames, compared so `10` follows `9` rather than
+  `1`. A folder that holds tracks *is* the album and its subfolders are left
+  alone; only a folder with no audio directly in it is looked inside, which
+  is what puts a two-disc album kept as `CD1`/`CD2` in disc order.
+- **Where the titles come from**: the files' own tags, read by foobar2000
+  rather than by MDTools -- it is the better tag reader of the two and has
+  to read them anyway to play them. A file with no title tag is recorded
+  under its filename.
+- **The album and artist** start out guessed from the folder's name
+  (`Artist - Album (Year)`), are replaced by the tags as soon as the tracks
+  load, and are replaced again by anything you type over them. That is the
+  only way a correction reaches the disc: nothing here writes to your files.
+
+Loading a folder **empties foobar2000's current playlist**, exactly as
+recording a CD does.
+
 ### Filling in metadata from foobar2000
 
 You don't have to be recording to use foobar2000 as a metadata source.
-**Project > Metadata... > Load from foobar2000** fills in the album, artist,
+**Metadata... > Load from foobar2000** fills in the album, artist,
 year and the whole track list from whatever is in foobar's current playlist,
 then looks up the cover art for it. Handy when you ripped a CD and just want
 a label for it -- the tags on the actual files beat a search, and the track
 order is guaranteed to be the one you have.
 
 **If the cover that comes back is the wrong one, click it.** The preview in
-Project > Metadata... is a button: it opens a file picker so you can point at
+the Metadata dialog is a button: it opens a file picker so you can point at
 the right sleeve yourself. Both automatic sources guess, and for a reissue,
 a compilation or a band with a common name they regularly guess wrong.
 
@@ -289,7 +320,7 @@ from the cover itself.
   (split into two columns once the list gets long).
 
 It **replaces both pages** and resets the undo history, so it asks before
-doing it. Fill in album and artist in **Project > Metadata...** first -- that
+doing it. Fill in album and artist in **Metadata...** first -- that
 is what it searches by. Everything it produces is ordinary layers: move,
 restyle or delete them like anything else.
 

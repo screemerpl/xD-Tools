@@ -44,6 +44,7 @@ src/mdtools/
   foobar.py                 foobar2000 via its Beefweb REST API *and* its command line (no Qt UI)
   cdrip.py                  audio CD: drives, TOC, disc ids, rip plan, cdparanoia/flac (no Qt UI)
   musicbrainz.py            identifying a CD from its TOC alone -- a CD carries no text (no Qt UI)
+  audio_folder.py           which files in a folder are the album, and in what order (no Qt)
   mixtape_cover.py          draws a cover for a compilation, which by definition has none
   user_paths.py             where every file dialog starts: Documents/MiniDiscProjects, Pictures
   auto_layout.py            places cover art on a disc label and the logo on its slider (no Qt UI beyond items)
@@ -73,9 +74,10 @@ src/mdtools/
     mdrem_port.py               resolve_port(): the saved port, a probe, or a warning -- shared by both entry points
     mdrem_upload_dialog.py      preview-then-write dialog + the worker thread driving an upload
     remote_dialog.py            software Sony MD remote, opened from the startup screen
-    record_dialog.py            Project > Record to MiniDisc from foobar2000: arm, play, watch, hand off to titling
-    cd_rip_dialog.py            Project > Record CD to MiniDisc: read TOC, identify, rip, fill playlist, hand off
-    erase_dialog.py             Project > Erase MiniDisc: a guided, ask-the-user-what-you-see erase
+    record_dialog.py            Recording > Record to MiniDisc from foobar2000: arm, play, watch, hand off to titling
+    cd_rip_dialog.py            Recording > Record CD to MiniDisc: read TOC, identify, rip, fill playlist, hand off
+    folder_record_dialog.py     Recording > Record Folder to MiniDisc: a folder of files into that playlist instead
+    erase_dialog.py             Recording > Erase MiniDisc: a guided, ask-the-user-what-you-see erase
     about_dialog.py             Help > About MDTools
     asset_gallery_dialog.py     Insert Asset: pick one of the bundled gallery images
   io/
@@ -86,7 +88,7 @@ assets/
   img/                      bundled asset gallery (currently just the MDTools logo) -- see gallery.py
 bin/
   win64/                    bundled cdparanoia + flac + their DLLs -- see cdrip.py and its ATTRIBUTION.md
-tests/          685+ tests, all offscreen via QT_QPA_PLATFORM=offscreen
+tests/          855+ tests, all offscreen via QT_QPA_PLATFORM=offscreen
 doc/            the built user manual (PDF x3) + its generated screenshots -- see doc/README.md
 scripts/
   build_windows.ps1 / build_linux.sh   PyInstaller onedir build
@@ -861,7 +863,7 @@ base64 like any other image, no lingering tie to the gallery.
 
 **Metadata lookup (`metadata_lookup.py`) is this app's only network
 access, and deliberately the simplest possible implementation.** "Lookup
-Track List..." in `MetadataDialog` (Project > Metadata...) hits the
+Track List..." in `MetadataDialog` (the Tools panel's Metadata...) hits the
 iTunes Search API (no API key/signup, chosen explicitly over
 MusicBrainz/Discogs for that reason) via plain stdlib `urllib.request` —
 synchronous/blocking, not `QtNetwork`'s async `QNetworkAccessManager` —
@@ -929,7 +931,7 @@ me a bigger size" API parameter). Once tracks are fetched,
    real field, saved with the project** (`project_io.py`'s
    `_metadata_to_dict`/`_metadata_from_dict` base64-encode it exactly like
    image layers already are, under `"cover_art_base64"`, `None` when
-   there's no cover). This is why reopening Project > Metadata... later
+   there's no cover). This is why reopening the Metadata dialog later
    still shows the cover: `MetadataDialog.__init__` seeds
    `self._cover_art` from `metadata.cover_art` and calls
    `_show_cover_bytes()` immediately if it's set, rather than only ever
@@ -1636,7 +1638,7 @@ button nor the startup screen's Remote button is constructed visible at
 all. Without hardware they could do nothing but explain themselves, which
 is worse than not being there.
 
-**Those two gates are free; the Project > Record menu entry is not.** Both
+**Those two gates are free; the Recording menu's entries are not.** Both
 buttons live on dialogs that are rebuilt every time they open, so they read
 the setting afresh each time. `record_action` is built once, at startup, and
 stayed visible after the adapter was switched off mid-session -- offering to
@@ -1768,7 +1770,7 @@ easier than a thumb does.
 `panels/record_dialog.py`) records an album from foobar2000 onto a
 MiniDisc over S/PDIF and then titles it.** foobar plays; the deck records;
 MDTools watches which track is playing and, when the playlist ends, hands
-off to the existing Upload Tracklist dialog. Reached from the Project menu,
+off to the existing Upload Tracklist dialog. Reached from the Recording menu,
 hidden unless MDRem is enabled like every other MDRem entry point.
 
 **`foobar.py` talks to the Beefweb Remote Control component
@@ -2027,6 +2029,81 @@ this feature exists for. If it ever needs to be faster, the lever is `-Z`
 preferable to letting foobar play the disc live, so it should be a visible
 choice, never a quiet default.
 
+**The Project menu became "Recording", and the metadata editor moved out of
+it onto the Tools panel.** The menu held the one dialog used while *designing
+a label* next to three that drive a tape deck; nothing but recording is in it
+now (`app_window._build_menu`), and `ToolPanel.edit_metadata_requested` opens
+`MetadataDialog` from a button beside "Insert from Metadata" -- the album's
+details next to the layers built out of them. **Erase MiniDisc... stayed**,
+below a separator: it is not recording, but it is what you do to a disc you
+are about to record over, through the same deck and the same adapter, and a
+menu of its own for one entry would be worse. Every user-facing string that
+said "Project > Metadata..." had to change with it -- `app_window`,
+`settings_dialog`, `tool_panel`'s own empty-menu placeholder, the README and
+all three manuals -- so grep for a menu path before assuming it is still
+true.
+
+**"Record Folder to MiniDisc..." (`audio_folder.py` +
+`panels/folder_record_dialog.py`) is the third source of a recording, and
+structurally the thinnest.** Where `cdrip.py` has to *make* the audio first,
+this only has to point foobar2000 at files that already exist: list them,
+replace the playlist, read it back, hand off to `RecordDialog` exactly as the
+CD flow does.
+
+**Nothing here reads a tag, on purpose.** There is no tag library in this
+project and foobar2000 is a better one than anything that could be added for
+this -- it has to read the files to play them regardless. So `audio_folder.py`
+decides only *which* files and in *what order*, and every title, artist,
+album and length comes back out of Beefweb afterwards. Two consequences:
+
+- **`%path%` is appended to `foobar._COLUMNS`** (same "append, never insert"
+  rule `%artist%` already followed, so no positional index shifts), feeding
+  `PlaylistItem.display_title()` -- the title, else the filename stem.
+  foobar substitutes a filename for a missing `%title%` itself, so this is
+  usually belt and braces, but a folder of untagged files is exactly what
+  this feature is for and a disc of blank track names is not worth risking
+  on behaviour nobody here pinned down. `RecordDialog`'s own track list and
+  progress line use it too, so what is listed is what gets recorded.
+- **Order comes from the filename** (`natural_key`, digit runs compared as
+  numbers so `10` follows `9`), because it is the only ordering signal that
+  exists before foobar has seen the files. A folder holding tracks *is* the
+  album and its subfolders are skipped; only a folder with no audio directly
+  in it is recursed into, which is what puts a `CD1`/`CD2` two-disc album in
+  disc order without letting somebody pick a library root and silently get
+  all of it.
+
+**Three sources decide the album name, in strict order: what the user typed
+beats the tags, which beat the folder name.** The middle rung is the one
+that is easy to get wrong and did get wrong first time round -- the fields
+are *prefilled* from `guess_from_folder_name()` before foobar has read a
+single tag, so treating whatever sits in them as the user's word let a folder
+called "Disc 1" quietly rename a properly tagged record.
+`FolderRecordDialog._resolve()` compares each field against the guess it was
+seeded with: still holding it means untouched. A cleared field deliberately
+counts as untouched rather than as "no name", since falling back to the tags
+is what emptying a wrong guess actually wants.
+
+**This is the only entry point that hands metadata forward to
+`RecordDialog(..., metadata=...)`, and it has to.** The CD flow deliberately
+does not: it wrote its titles into the files it created, so the playlist
+already carries them and one source of truth beats two. A folder is somebody
+else's files and *nothing here rewrites them*, so an album name corrected in
+this dialog reaches the disc no other way. `_capture_metadata` uses the given
+metadata when there is one, and skips its own cover lookup when that metadata
+already carries artwork; `_offer_titling` now reuses `result_metadata` rather
+than rebuilding from the playlist, which would have thrown the correction
+away at the last step.
+
+**The load runs on a `QThread`, unlike everything else in this dialog.**
+`add_files_via_cli` and `wait_for_item_count` have a 30 second timeout each,
+so the worst case is a minute of frozen window -- normally it is a second or
+two, but that is not a bet worth taking. **Cancelling is deliberately not
+offered**: the playlist has already been cleared, the work is inside
+foobar2000, and stopping halfway would leave it holding part of an album
+with no indication why. `reject()` says so and returns; `closeEvent` ignores
+the X. (Compare `cdrip`'s worker, where cancelling is immediate and right,
+and the MDRem upload's, where it takes effect only between steps.)
+
 **Every file dialog starts somewhere deliberate -- `mdtools/user_paths.py`.**
 All of them used to pass `""` as the starting directory, which leaves Qt on
 the process's working directory: wherever the app was launched from, and for
@@ -2071,7 +2148,7 @@ Empty metadata suggests no filename at all rather than a bare ".mdproj".
 every entry point and asserts none passes an empty directory, so this cannot
 quietly regress one dialog at a time.
 
-**Project > "Erase MiniDisc..." (`panels/erase_dialog.py`) is built around
+**Recording > "Erase MiniDisc..." (`panels/erase_dialog.py`) is built around
 an admission: we do not know what the ERASE key does.** The firmware's own
 findings say `ERASE` (SIRC `0x07DA`) is *recognised* by an MDS-JE480 as a
 write command -- sent to a write-protected disc it produced the deck's
@@ -2134,7 +2211,7 @@ ordinary albums they were), `foobar`'s column set (`%artist%` **appended**
 to `_COLUMNS`, so every existing positional index keeps its meaning), the
 CD rip dialog's own Artist column, and the Metadata dialog's. That last one
 was not optional: `_current_metadata()` rebuilds the track list out of the
-table, so without a column to hold them, opening Project > Metadata... on a
+table, so without a column to hold them, opening the Metadata dialog on a
 mixtape and pressing OK silently dropped every performer and the project
 stopped being a compilation just for having been looked at.
 
@@ -2250,7 +2327,7 @@ cover art (and a missing year) via `find_cover` before deciding it cannot
 proceed -- the layout is built around the cover, so without one there is
 nothing to gain by clearing the page first.
 
-**Project > Metadata... can also pull its fields straight from foobar2000
+**The Metadata dialog can also pull its fields straight from foobar2000
 ("Load from foobar2000").** Same source the record flow uses, available when
 nothing is being recorded -- what is queued to play is usually exactly what
 the label is for, and it beats a search because these are the real files
@@ -2570,7 +2647,7 @@ Three details that are load-bearing here:
   `scripts/manual/make_screenshots.py`, which builds a demo project and
   grabs each dialog rather than anyone capturing them by hand. Two things
   follow. First, a UI change that renames a menu item or moves a control
-  invalidates **forty-five screenshots** (fifteen figures x three
+  invalidates **forty-eight screenshots** (sixteen figures x three
   languages), not one -- rerun the generator
   rather than patching a figure. Second, the Polish and Japanese manuals
   show Polish and Japanese screenshots, so the menu names quoted in their
