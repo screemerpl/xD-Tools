@@ -898,7 +898,31 @@ candidate's own year if the lookup response's collection entry lacks one.
 `lookup_album()` still exists as a one-shot convenience (auto-picks
 `search_albums()`'s top-ranked candidate) for callers that can't offer an
 interactive picker, but `MetadataDialog` itself always uses the two-call
-form. Both calls can raise `MetadataLookupError` (caught by the dialog
+form.
+
+**`best_match()` returns None when nothing is actually a match, and the
+test for that is two-part.** Found by a user pointing at a folder of
+Falling In Reverse's *Popular Monster* -- an album iTunes does not carry at
+all -- and getting a one-track cover version of the title track by an
+unrelated artist, whose sleeve was then shown as this disc's. Verified live
+while fixing: the same search for *Nevermind* used to hand back **Drake's
+"Honestly, Nevermind"**, because the real album is not in iTunes' album
+search results either.
+- `MIN_MATCH_CONFIDENCE` (0.70) on the blended score. A genuine hit is 0.85
+  without a known track count and past 0.90 with one; the failing case was
+  0.605.
+- `MIN_ARTIST_SIMILARITY` (0.40) on the artist alone, and this is the one
+  that does the real work -- the blend cannot carry it, because a perfect
+  title (0.55) plus a track count that happens to agree (0.15) already
+  reaches 0.70 with the artist contributing nothing. Measured against the
+  live results: every wrong artist scored under 0.15, while "Falling In
+  Reverse & Jelly Roll" against "Falling In Reverse" scores 0.68 and
+  "Bowie, David" against "David Bowie" 0.73. Skipped when the caller gave
+  no artist, since there is then nothing to judge.
+
+Returning nothing is the point: a wrong *edition* is a nuisance, a wrong
+*record* is somebody else's artwork printed on this disc -- and the callers
+have a better place to look anyway (`embedded_cover`). Both calls can raise `MetadataLookupError` (caught by the dialog
 and shown via `QMessageBox.warning`, never left to propagate/crash) for
 no-match, network, and bad-response cases alike — one exception type, one
 place the UI has to handle. A successful lookup **replaces** the whole
