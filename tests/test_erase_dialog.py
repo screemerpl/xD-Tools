@@ -49,10 +49,16 @@ class _FakeClient:
         self.closed = True
 
 
-def _wire(monkeypatch, *, confirm=True, deck_asks=True, eject=False, fail_on=None):
-    """Fakes the adapter and every modal answer. A real QMessageBox.exec()
-    blocks forever under the offscreen platform."""
-    from PySide6.QtWidgets import QMessageBox
+def _wire(monkeypatch, *, confirm=True, enter_presses=1, done=None, eject=False, fail_on=None):
+    """Fakes the adapter and every modal answer.
+
+    The confirmation prompt is a real dialog now, not a Yes/No box, so its
+    exec() is replaced by one that presses Send Enter `enter_presses` times
+    through the actual handler -- the key really goes out through the fake
+    client -- and then answers Done or Nothing Happened. A real exec() would
+    block forever under the offscreen platform.
+    """
+    from PySide6.QtWidgets import QDialog, QMessageBox
 
     client = _FakeClient("COM7", fail_on)
     monkeypatch.setattr(module.mdrem, "MDRemClient", lambda port: client)
@@ -60,13 +66,22 @@ def _wire(monkeypatch, *, confirm=True, deck_asks=True, eject=False, fail_on=Non
     ok = QMessageBox.StandardButton.Ok if confirm else QMessageBox.StandardButton.Cancel
     monkeypatch.setattr(module.QMessageBox, "warning", staticmethod(lambda *a, **k: ok))
 
-    answers = iter(
-        [
-            QMessageBox.StandardButton.Yes if deck_asks else QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.Yes if eject else QMessageBox.StandardButton.No,
-        ]
+    accept = enter_presses > 0 if done is None else done
+
+    def fake_prompt_exec(self):
+        for _ in range(enter_presses):
+            self._send_enter()
+        return QDialog.DialogCode.Accepted if accept else QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(module.ConfirmPromptDialog, "exec", fake_prompt_exec)
+
+    monkeypatch.setattr(
+        module.QMessageBox,
+        "question",
+        staticmethod(
+            lambda *a, **k: QMessageBox.StandardButton.Yes if eject else QMessageBox.StandardButton.No
+        ),
     )
-    monkeypatch.setattr(module.QMessageBox, "question", staticmethod(lambda *a, **k: next(answers)))
     return client
 
 
@@ -90,7 +105,7 @@ def test_erasing_stops_the_deck_first_then_asks_it_to_erase(qt_app, monkeypatch)
 
 
 def test_the_confirmation_key_goes_out_only_once_the_user_has_seen_the_prompt(qt_app, monkeypatch):
-    client = _wire(monkeypatch, deck_asks=True)
+    client = _wire(monkeypatch)
     dialog = EraseDiscDialog("COM7")
 
     dialog._erase()
@@ -102,7 +117,7 @@ def test_the_confirmation_key_goes_out_only_once_the_user_has_seen_the_prompt(qt
 def test_a_deck_that_never_asked_is_never_confirmed(qt_app, monkeypatch):
     """The whole safeguard. If the display showed nothing, sending ENTER
     would be pressing a button on a menu nobody can see."""
-    client = _wire(monkeypatch, deck_asks=False)
+    client = _wire(monkeypatch, enter_presses=0)
     dialog = EraseDiscDialog("COM7")
 
     dialog._erase()
@@ -112,7 +127,7 @@ def test_a_deck_that_never_asked_is_never_confirmed(qt_app, monkeypatch):
 
 
 def test_backing_out_cancels_so_the_deck_is_not_left_on_a_destructive_prompt(qt_app, monkeypatch):
-    client = _wire(monkeypatch, deck_asks=False)
+    client = _wire(monkeypatch, enter_presses=0)
     EraseDiscDialog("COM7")._erase()
 
     assert client.sent[-1] == "SEND CANCEL"
@@ -121,14 +136,14 @@ def test_backing_out_cancels_so_the_deck_is_not_left_on_a_destructive_prompt(qt_
 def test_a_successful_erase_offers_to_eject(qt_app, monkeypatch):
     """The erased TOC is volatile until the disc comes out, exactly as a
     written one is."""
-    client = _wire(monkeypatch, deck_asks=True, eject=True)
+    client = _wire(monkeypatch, eject=True)
     EraseDiscDialog("COM7")._erase()
 
     assert client.sent[-1] == "SEND EJECT"
 
 
 def test_declining_the_eject_leaves_the_disc_in(qt_app, monkeypatch):
-    client = _wire(monkeypatch, deck_asks=True, eject=False)
+    client = _wire(monkeypatch, eject=False)
     EraseDiscDialog("COM7")._erase()
 
     assert "SEND EJECT" not in client.sent
@@ -146,13 +161,61 @@ def test_a_failure_partway_reports_it_and_closes_the_port(qt_app, monkeypatch):
 
 
 def test_the_port_is_released_when_the_dialog_is_dismissed(qt_app, monkeypatch):
-    client = _wire(monkeypatch, deck_asks=False)
+    client = _wire(monkeypatch, enter_presses=0)
     dialog = EraseDiscDialog("COM7")
     dialog._client = client
 
     dialog.reject()
 
     assert client.closed
+
+
+def test_enter_can_be_sent_as_many_times_as_the_deck_needs(qt_app, monkeypatch):
+    """The reason this stopped being a Yes/No box: one press did nothing
+    visible on a real MDS-JE480, and nothing here can tell how many a given
+    model wants."""
+    client = _wire(monkeypatch, enter_presses=3)
+    dialog = EraseDiscDialog("COM7")
+
+    dialog._erase()
+
+    assert client.sent.count("SEND ENTER") == 3
+    assert dialog.erased is True
+
+
+def test_done_without_ever_sending_enter_is_not_an_erase(qt_app, monkeypatch):
+    """Otherwise Done would be a way to claim an erase that was never
+    confirmed -- and the deck would be left parked on the prompt."""
+    client = _wire(monkeypatch, enter_presses=0, done=True)
+    dialog = EraseDiscDialog("COM7")
+
+    dialog._erase()
+
+    assert "SEND ENTER" not in client.sent
+    assert dialog.erased is False
+    assert client.sent[-1] == "SEND CANCEL"
+
+
+def test_the_prompt_window_really_has_an_enter_button_wired_to_the_key(qt_app):
+    """Straight through the widget, not through the fake exec above."""
+    sent: list[str] = []
+    prompt = module.ConfirmPromptDialog(lambda key: (sent.append(key), True)[1])
+
+    prompt.enter_btn.click()
+    prompt.enter_btn.click()
+
+    assert sent == ["SEND ENTER", "SEND ENTER"]
+    assert prompt.sent == 2
+    assert "2" in prompt.status_label.text()
+
+
+def test_a_dead_adapter_closes_the_prompt_instead_of_counting_presses(qt_app):
+    prompt = module.ConfirmPromptDialog(lambda key: False)
+
+    prompt.enter_btn.click()
+
+    assert prompt.sent == 0
+    assert prompt.result() != 1
 
 
 # --- the menu entry ---------------------------------------------------

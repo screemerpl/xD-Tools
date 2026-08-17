@@ -1279,7 +1279,11 @@ class MainWindow(QMainWindow):
         rip = CdRipDialog(app_settings.foobar_url(), self)
         if rip.exec() != QDialog.DialogCode.Accepted:
             return
-        self._run_record_dialog(port)
+        # The rip's own metadata goes forward. Its titles are the ones it
+        # wrote into the files, so they say the same thing the playlist
+        # does -- what it adds is the artwork it found (or the user picked)
+        # while identifying the disc, which nothing in a playlist carries.
+        self._run_record_dialog(port, metadata=rip.result_metadata)
 
     def _record_folder(self) -> None:
         """Recording > Record Folder to MiniDisc... -- loads an album that

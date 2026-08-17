@@ -34,11 +34,11 @@ _RipWorker, minus everything to do with a disc.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import QThread, Qt, Signal
+from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (
-    QApplication,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
@@ -57,8 +57,7 @@ from PySide6.QtWidgets import (
 )
 
 from mdtools import app_settings, audio_folder, foobar, mixtape_cover, user_paths
-from mdtools.gallery import save_downloaded_cover
-from mdtools.metadata_lookup import MetadataLookupError, find_cover
+from mdtools.panels.cover_preview import CoverPreview, fetch_into
 from mdtools.project import ProjectMetadata
 
 # The same 80 minutes RecordDialog and CdRipDialog warn about, checked here
@@ -132,7 +131,13 @@ class FolderRecordDialog(QDialog):
         form.addRow(self.tr("Artist"), self.artist_edit)
         form.addRow(self.tr("Album"), self.album_edit)
         form.addRow(self.tr("Year"), self.year_spin)
-        layout.addLayout(form)
+
+        self.cover_label = CoverPreview()
+
+        header = QHBoxLayout()
+        header.addLayout(form, 1)
+        header.addWidget(self.cover_label)
+        layout.addLayout(header)
 
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels([self.tr("#"), self.tr("Title"), self.tr("Artist"), self.tr("Length")])
@@ -164,7 +169,7 @@ class FolderRecordDialog(QDialog):
         layout.addWidget(self.status_label)
 
         self.buttons = QDialogButtonBox()
-        self.start_btn = QPushButton(self.tr("Load and Record"))
+        self.start_btn = QPushButton(self.tr("Load Folder"))
         self.start_btn.setEnabled(False)
         self.start_btn.clicked.connect(self._start)
         self.buttons.addButton(self.start_btn, QDialogButtonBox.ButtonRole.AcceptRole)
@@ -259,6 +264,17 @@ class FolderRecordDialog(QDialog):
     # --- loading ----------------------------------------------------------
 
     def _start(self) -> None:
+        """Loads the folder, or -- once it is loaded -- hands it over.
+
+        Two presses rather than one, so what was found is on screen before
+        the recording window opens: the album it turned out to be, the
+        artwork it will be labelled with, and the titles foobar read out of
+        the files. There is nothing to check in a dialog that closes the
+        instant you press its only button."""
+        if self._items:
+            self.result_metadata = self._final_metadata()
+            self.accept()
+            return
         if not self._paths:
             return
         exe = self._resolve_foobar_exe()
@@ -335,7 +351,11 @@ class FolderRecordDialog(QDialog):
             return
         self._show_playlist(items)
         self.result_metadata = self._capture_metadata(items)
-        self.accept()
+        self.cover_label.set_cover(self.result_metadata.cover_art)
+        self.start_btn.setText(self.tr("Record"))
+        self.status_label.setText(
+            self.tr("Loaded into foobar2000. Check the album below, then record.")
+        )
 
     def _on_worker_finished(self) -> None:
         self._worker = None
@@ -422,24 +442,25 @@ class FolderRecordDialog(QDialog):
 
         Never a title. What foobar is about to play is what will be on the
         disc, in that order; an iTunes result is whatever the search
-        matched. Failure is silent for the same reason it is in
-        MetadataDialog -- artwork is a bonus on top of a capture that has
-        already succeeded."""
+        matched."""
         self.status_label.setText(self.tr("Looking up cover art..."))
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            data, chosen = find_cover(metadata.artist, metadata.album, len(metadata.tracks))
-        except MetadataLookupError:
-            return
-        finally:
-            QApplication.restoreOverrideCursor()
-
+        chosen = fetch_into(self.cover_label, metadata.artist, metadata.album, len(metadata.tracks))
         if chosen is not None and metadata.year is None:
             metadata.year = chosen.year
-        if data is None or chosen is None:
-            return
-        metadata.cover_art = data
-        save_downloaded_cover(chosen.artist_name, chosen.collection_name, data)
+        metadata.cover_art = self.cover_label.data
+
+    def _final_metadata(self) -> ProjectMetadata:
+        """What the second press hands over: the captured album with
+        whatever the user changed on screen since, artwork included -- the
+        preview is clickable, and a cover chosen there has to survive."""
+        captured = self.result_metadata or ProjectMetadata()
+        return replace(
+            captured,
+            artist=self.artist_edit.text().strip() or captured.artist,
+            album=self.album_edit.text().strip() or captured.album,
+            year=self.year_spin.value() or captured.year,
+            cover_art=self.cover_label.data,
+        )
 
     # --- shutdown ----------------------------------------------------------
 

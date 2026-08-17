@@ -56,7 +56,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mdtools import app_settings, cdrip, foobar, musicbrainz
+from mdtools import app_settings, cdrip, foobar, mixtape_cover, musicbrainz
+from mdtools.panels.cover_preview import CoverPreview, fetch_into
+from mdtools.project import ProjectMetadata, Track, apply_compilation_naming
 
 # An MD holds 80 minutes in SP -- the same limit RecordDialog warns about,
 # checked here as well because here it is still free to act on: the disc in
@@ -170,11 +172,14 @@ class CdRipDialog(QDialog):
         self._worker: _RipWorker | None = None
         self._closing = False
         # Read by MainWindow after exec(): where the tracks were written, so
-        # a message can name it. The metadata itself is deliberately *not*
-        # passed on -- RecordDialog reads the playlist we just filled, which
-        # carries the same titles because they were written into the files
-        # as tags. One source of truth, not two that can disagree.
+        # a message can name it.
         self.result_folder: Path | None = None
+        # And what the disc turned out to be. The titles in it are the same
+        # ones the playlist carries -- they were written into the files as
+        # tags, so there is no second source of truth to disagree with. What
+        # it adds is the artwork, which a FLAC file's tags do not carry here
+        # and which the user may have corrected by clicking the preview.
+        self.result_metadata: ProjectMetadata | None = None
 
         layout = QVBoxLayout(self)
 
@@ -194,7 +199,13 @@ class CdRipDialog(QDialog):
         form.addRow(self.tr("Release"), self.release_combo)
         self._form = form
         form.setRowVisible(self.release_combo, False)
-        layout.addLayout(form)
+
+        self.cover_label = CoverPreview()
+
+        header = QHBoxLayout()
+        header.addLayout(form, 1)
+        header.addWidget(self.cover_label)
+        layout.addLayout(header)
 
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels([self.tr("#"), self.tr("Title"), self.tr("Artist"), self.tr("Length")])
@@ -396,6 +407,12 @@ class CdRipDialog(QDialog):
         self.artist_edit.setText(release.artist)
         self.album_edit.setText(release.title)
         self.year_spin.setValue(release.year or 0)
+        # Looked up here rather than after the recording, and re-looked-up
+        # when a different pressing is picked: this is the moment the album
+        # is decided, and the artwork is what the label is built around. It
+        # also gives the user something to disagree with -- the preview is
+        # clickable -- while there is still time to fix it.
+        fetch_into(self.cover_label, release.artist, release.title, len(release.track_titles))
         for index in range(self.tree.topLevelItemCount()):
             item = self.tree.topLevelItem(index)
             if index < len(release.track_titles):
@@ -430,6 +447,39 @@ class CdRipDialog(QDialog):
             track_artists=self.track_artists(),
         )
 
+    def build_metadata(self) -> ProjectMetadata:
+        """The disc as project metadata, from the fields and the tree.
+
+        Handed to RecordDialog so it opens on the album this is, artwork
+        included. The titles in it are the same ones the ripped files are
+        tagged with, so it is not a second source of truth competing with
+        the playlist -- it is the playlist's own contents plus a cover,
+        which a tag cannot carry to foobar and back."""
+        tracks = []
+        for index, track in enumerate(self._toc.tracks if self._toc else []):
+            row = self.tree.topLevelItem(index)
+            tracks.append(
+                Track(
+                    title=row.text(1).strip() if row is not None else "",
+                    time_seconds=int(track.seconds) or None,
+                    artist=row.text(2).strip() if row is not None else "",
+                )
+            )
+        metadata = apply_compilation_naming(
+            ProjectMetadata(
+                album=self.album_edit.text().strip(),
+                artist=self.artist_edit.text().strip(),
+                year=self.year_spin.value() or None,
+                tracks=tracks,
+                cover_art=self.cover_label.data,
+            )
+        )
+        if metadata.is_compilation() and not metadata.cover_art:
+            # Nothing to look up for a Various Artists disc -- see
+            # cover_preview.fetch_into. One is drawn from the track list.
+            metadata.cover_art = mixtape_cover.render_cover(metadata)
+        return metadata
+
     def _start(self) -> None:
         if self._toc is None:
             return
@@ -440,10 +490,22 @@ class CdRipDialog(QDialog):
             return
 
         plan = self.build_plan()
+        self.result_metadata = self.build_metadata()
         # Previous rips go now, not at the end of this one: the files stay
         # in foobar's playlist for as long as the user might replay them.
         cdrip.clean_stale_rip_folders(plan.folder.parent, keep=plan.folder)
-        plan.folder.mkdir(parents=True, exist_ok=True)
+        try:
+            cdrip.ensure_folder(plan.folder)
+        except cdrip.CdRipError as exc:
+            QMessageBox.warning(
+                self,
+                self.tr("Record CD to MiniDisc"),
+                self.tr(
+                    "The rip folder could not be created: {error}\n\nChoose a different one in "
+                    "Window > Settings..."
+                ).format(error=exc),
+            )
+            return
         self.result_folder = plan.folder
 
         self._set_running(True)

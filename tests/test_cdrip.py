@@ -554,3 +554,35 @@ def test_a_folder_holding_anything_but_rip_output_is_left_alone(tmp_path):
 
     assert cdrip.clean_stale_rip_folders(tmp_path) == []
     assert (theirs / "beach.jpg").exists()
+
+
+# --- making the rip folder --------------------------------------------
+#
+# The rip folder is a setting, which means it is a path somebody typed: it
+# routinely names a directory that does not exist yet. That is the normal
+# state before the first rip, not an error, so whoever is about to use it
+# creates it.
+
+
+def test_a_missing_folder_and_all_its_parents_are_created(tmp_path):
+    target = tmp_path / "one" / "two" / "three"
+
+    assert cdrip.ensure_folder(target) == target
+    assert target.is_dir()
+
+
+def test_creating_a_folder_that_is_already_there_is_fine(tmp_path):
+    cdrip.ensure_folder(tmp_path)
+    assert tmp_path.is_dir()
+
+
+def test_a_folder_that_cannot_be_made_says_which_one_and_why(tmp_path):
+    """A drive that is not there, or a path with no write permission --
+    worth a sentence naming the folder, not an unhandled OSError."""
+    blocked = tmp_path / "a-file"
+    blocked.write_text("not a directory")
+
+    with pytest.raises(cdrip.CdRipError) as error:
+        cdrip.ensure_folder(blocked / "underneath")
+
+    assert "underneath" in str(error.value)

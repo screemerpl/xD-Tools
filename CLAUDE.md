@@ -76,6 +76,7 @@ src/mdtools/
     remote_dialog.py            software Sony MD remote, opened from the startup screen
     record_dialog.py            Recording > Record to MiniDisc from foobar2000: arm, play, watch, hand off to titling
     cd_rip_dialog.py            Recording > Record CD to MiniDisc: read TOC, identify, rip, fill playlist, hand off
+    cover_preview.py            the cover thumbnail that is also the button for replacing it, plus its lookup
     folder_record_dialog.py     Recording > Record Folder to MiniDisc: a folder of files into that playlist instead
     erase_dialog.py             Recording > Erase MiniDisc: a guided, ask-the-user-what-you-see erase
     about_dialog.py             Help > About MDTools
@@ -88,7 +89,7 @@ assets/
   img/                      bundled asset gallery (currently just the MDTools logo) -- see gallery.py
 bin/
   win64/                    bundled cdparanoia + flac + their DLLs -- see cdrip.py and its ATTRIBUTION.md
-tests/          855+ tests, all offscreen via QT_QPA_PLATFORM=offscreen
+tests/          890+ tests, all offscreen via QT_QPA_PLATFORM=offscreen
 doc/            the built user manual (PDF x3) + its generated screenshots -- see doc/README.md
 scripts/
   build_windows.ps1 / build_linux.sh   PyInstaller onedir build
@@ -1792,6 +1793,50 @@ that order; a lookup returns whatever release the search matched. Same
 reason `MetadataDialog` uses its live field values rather than the saved
 project when uploading.
 
+**`RecordDialog` is the last word on what the disc gets called, and it now
+shows that**: an editable Artist/Album/Year, a clickable cover, and an
+editable Title (and Artist) column, instead of the bare list of track names
+and lengths it used to be. The only place to fix a wrong album name was
+previously the project's own metadata *after* the recording -- too late for
+the titles already written onto the disc. So `_capture_metadata` reads the
+**widgets**, not the playlist, and `_offer_titling` reuses that result
+rather than rebuilding from the playlist as it did (which would have
+discarded every edit at the last step). Two details:
+- **The Artist column is read back as well as the Title.** Rebuilding
+  tracks from titles alone drops every performer, and with them the only
+  thing that makes a compilation one (`ProjectMetadata.is_compilation`) --
+  a disc would stop being a mixtape for having been looked at. The
+  identical bug was found and fixed in `MetadataDialog` once already.
+- **Everything freezes when recording starts** (`_set_fields_editable`):
+  what is on screen at that moment is what gets written when it stops.
+
+**The cover is looked up when the playlist loads, not when the album ends.**
+The same call, moved. After a recording is the worst possible moment to
+discover the search matched the wrong release -- nothing can be done but
+retype the album and go round again; now it is on screen while the name can
+still be corrected, or the picture clicked. A side effect worth having:
+`_capture_metadata` no longer touches the network at all, and it runs the
+instant an album finishes, where a hanging lookup would hold up the offer
+to write the titles.
+
+**`panels/cover_preview.py` is that picture, shared by four dialogs** (the
+Metadata editor and all three recording sources) -- `CoverPreview`, a
+QLabel that is also the button for replacing what it shows, plus
+`fetch_into()`, the blocking-with-a-wait-cursor lookup that fills it. It
+was lifted out of `metadata_dialog.py`'s private `_CoverLabel` when the
+second caller appeared. Not merely to avoid duplication: the rules it
+carries are the same everywhere and none of them are obvious.
+- **Every automatic source guesses**, so the picture must be clickable.
+- **`set_cover()` keeps bytes it cannot draw** and reports False rather
+  than dropping them. They came from somewhere that had a reason for them,
+  and Pillow (which `palette.py` reads a cover with) understands formats Qt
+  does not. The one caller that must be strict is `choose_file()`, where an
+  unreadable pick means the user pointed at a PDF -- and it puts the
+  previous cover back, since a bad pick must not destroy a good one.
+- **`fetch_into()` never runs for a compilation.** A search for "Various
+  Artists" returns an unrelated record's sleeve; callers branch on
+  `is_compilation()` first and draw one with `mixtape_cover` instead.
+
 **`RecordDialog` deliberately has no worker thread**, unlike the upload it
 hands off to. Every step here is either instantaneous (one localhost HTTP
 call, one infrared frame) or a `QTimer` poll; the genuinely long part --
@@ -1868,6 +1913,16 @@ afterwards all already exist and are driven by whatever foobar happens to
 have in its playlist, so this feature's job is only to make the playlist say
 the right thing. `_record_cd` and `_record_from_foobar` share
 `_run_record_dialog()`; `RecordDialog` never learns a CD was involved.
+
+`CdRipDialog.result_metadata` *is* handed forward, which it originally was
+not. The old reasoning -- the rip writes its titles into the files, so the
+playlist already carries them and a second copy could only disagree --
+still holds for the titles, and they are the same strings either way. What
+a playlist cannot carry is the **artwork**: the disc's cover is now looked
+up as soon as MusicBrainz identifies it (and again when a different
+pressing is picked from the Release combo), shown in a clickable preview,
+and would otherwise be thrown away between the two dialogs and searched
+for a second time.
 
 **It rips rather than letting foobar play the CD directly** -- foobar can
 open a disc, and that was the shorter path. But then the disc is read in
@@ -2094,6 +2149,14 @@ already carries artwork; `_offer_titling` now reuses `result_metadata` rather
 than rebuilding from the playlist, which would have thrown the correction
 away at the last step.
 
+**It takes two presses, not one -- Load Folder, then Record.** The first
+version loaded and accepted in the same click, so the dialog vanished the
+instant it had anything to show. What it has to show is the point: which
+album the tags turned out to describe, the artwork it will be labelled
+with, and the titles foobar read out of the files. Cancelling after the
+load leaves the playlist replaced and nothing recorded, which is exactly
+what the CD flow does too.
+
 **The load runs on a `QThread`, unlike everything else in this dialog.**
 `add_files_via_cli` and `wait_for_item_count` have a 30 second timeout each,
 so the worst case is a minute of frozen window -- normally it is a second or
@@ -2103,6 +2166,19 @@ foobar2000, and stopping halfway would leave it holding part of an album
 with no indication why. `reject()` says so and returns; `closeEvent` ignores
 the X. (Compare `cdrip`'s worker, where cancelling is immediate and right,
 and the MDRem upload's, where it takes effect only between steps.)
+
+**`cdrip.ensure_folder()` -- the rip folder is a path somebody typed, so
+it routinely names a directory that does not exist.** That is the normal
+state before the first rip, not an error, and it used to be left for
+whatever came next to trip over: Windows' native folder picker complains
+rather than politely falling back when opened on a missing directory. Now
+`SettingsDialog` creates it before browsing *and* on OK, and `CdRipDialog`
+creates it before ripping. Same "created on demand, at the moment it is
+needed" rule as `user_paths.projects_dir()`. A folder that genuinely cannot
+be made (a drive that is not there, no write permission) raises
+`CdRipError` naming it -- and in Settings that **warns without blocking
+OK**, the same rule the MDRem port follows: hardware that is unplugged
+right now is a reason to say so, not a reason to refuse the setting.
 
 **Every file dialog starts somewhere deliberate -- `mdtools/user_paths.py`.**
 All of them used to pass `""` as the starting directory, which leaves Qt on
@@ -2164,6 +2240,16 @@ says** -- STOP, then ERASE, then a question, and only a Yes sends ENTER to
 accept. The user's eyes are the only instrument available; this is the same
 shape, and the same reasoning, as RecordDialog arming the deck and then
 asking whether it really armed. Three details worth keeping:
+- **ENTER is a button the user presses, not something sent for them.**
+  It used to go out once, automatically, the moment they answered "yes, it
+  is asking me" -- and on the real MDS-JE480 that did nothing visible, with
+  "maybe it needs it twice?" the obvious next thought and no way to try.
+  The deck cannot be read back, so how many presses a given model's menu
+  wants is not knowable from here; `ConfirmPromptDialog` hands the key to
+  the person who can see the display and stays open so they can press it
+  again, counting as it goes. **Done only counts as a confirmed erase if
+  ENTER actually went out at least once** -- otherwise it would be a way to
+  claim an erase that never happened.
 - **A "no" sends CANCEL**, rather than just stopping. Leaving the deck
   parked on a destructive confirmation would arm it for whoever next walks
   past.

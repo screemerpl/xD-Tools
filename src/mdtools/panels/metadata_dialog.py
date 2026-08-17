@@ -35,6 +35,7 @@ from mdtools.metadata_lookup import (
     find_cover,
     search_albums,
 )
+from mdtools.panels.cover_preview import CoverPreview
 from mdtools.panels.mdrem_port import resolve_port
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
 from mdtools.project import ProjectMetadata, Track, format_time, parse_time
@@ -51,39 +52,12 @@ def _sanitize_filename(text: str) -> str:
     return _INVALID_FILENAME_CHARS.sub("_", text).strip() or "cover"
 
 
-class _CoverLabel(QLabel):
-    """The cover preview, clickable.
-
-    Both automatic sources here guess: iTunes returns whatever release its
-    search matched, which for a reissue, a compilation or a band with a
-    common name is regularly the wrong artwork. Being able to point at a
-    file is the only way out of that, so the picture itself is the button
-    -- clicking what you want to change is where anyone looks first."""
-
-    clicked = Signal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-
-    def mouseReleaseEvent(self, event) -> None:
-        # Released inside, not merely pressed: a press that wandered off the
-        # label before letting go is how anyone cancels a misclick.
-        if event.button() == Qt.MouseButton.LeftButton and self.rect().contains(event.position().toPoint()):
-            self.clicked.emit()
-        super().mouseReleaseEvent(event)
-
-
 class MetadataDialog(QDialog):
     def __init__(self, metadata: ProjectMetadata, parent=None):
         super().__init__(parent)
         self.setWindowTitle(self.tr("Project Metadata"))
         self.resize(420, 480)
         self.result_metadata: ProjectMetadata | None = None
-        # Carries over into result_metadata on OK -- seeded from whatever
-        # was already saved with the project, so reopening this dialog
-        # later still shows a cover fetched in an earlier session.
-        self._cover_art: bytes | None = metadata.cover_art
 
         layout = QVBoxLayout(self)
 
@@ -123,18 +97,8 @@ class MetadataDialog(QDialog):
         self.year_spin.setValue(metadata.year or 0)
         form.addRow(self.tr("Year of release"), self.year_spin)
 
-        self.cover_label = _CoverLabel()
-        self.cover_label.setFixedSize(COVER_SIZE, COVER_SIZE)
-        self.cover_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.cover_label.setFrameShape(QFrame.Shape.Box)
-        self.cover_label.setScaledContents(False)
-        self.cover_label.setToolTip(
-            self.tr("Click to choose the cover art yourself -- use this when the fetched one is wrong.")
-        )
-        self.cover_label.clicked.connect(self._choose_cover_file)
-        self._show_no_cover()
-        if self._cover_art:
-            self._show_cover_bytes(self._cover_art)
+        self.cover_label = CoverPreview(COVER_SIZE)
+        self.cover_label.set_cover(metadata.cover_art)
 
         top_row = QHBoxLayout()
         top_row.addLayout(form, 1)
@@ -297,8 +261,7 @@ class MetadataDialog(QDialog):
             self.year_spin.setValue(chosen.year)
         if data is None or chosen is None:
             return
-        self._cover_art = data
-        self._show_cover_bytes(data)
+        self.cover_label.set_cover(data)
         save_downloaded_cover(chosen.artist_name, chosen.collection_name, data)
 
     def _fetch_and_save_cover(self, candidate: AlbumCandidate) -> None:
@@ -309,9 +272,9 @@ class MetadataDialog(QDialog):
 
         Saved in two places, for two different purposes: the per-user
         gallery cache (so it's immediately selectable from Tools > Insert
-        Asset...), and self._cover_art (so it's carried into
-        result_metadata on OK and saved with the *project*, restoring the
-        preview here next time this dialog is reopened)."""
+        Asset...), and the preview widget, which is what carries it into
+        result_metadata on OK and so into the saved *project* -- which is
+        why reopening this dialog later still shows it."""
         try:
             data = fetch_artwork(candidate.artwork_url)
         except MetadataLookupError:
@@ -319,52 +282,13 @@ class MetadataDialog(QDialog):
 
         filename = f"{_sanitize_filename(candidate.artist_name)} - {_sanitize_filename(candidate.collection_name)}.jpg"
         (downloaded_covers_dir() / filename).write_bytes(data)
-        self._cover_art = data
-        self._show_cover_bytes(data)
+        self.cover_label.set_cover(data)
 
-    def _choose_cover_file(self) -> None:
-        """Replaces the cover with a local image file.
-
-        Deliberately overrides whatever a lookup found, without asking: the
-        user clicked the picture they can see is wrong."""
-        path, _ = QFileDialog.getOpenFileName(
-            self,
-            self.tr("Choose Cover Art"),
-            user_paths.image_start_path(),
-            self.tr("Images (*.png *.jpg *.jpeg *.bmp *.webp)"),
-        )
-        if not path:
-            return
-        try:
-            data = Path(path).read_bytes()
-        except OSError as exc:
-            QMessageBox.warning(self, self.tr("Choose Cover Art"), self.tr("Could not read the file:\n{error}").format(error=exc))
-            return
-        # Checked here rather than trusted from the extension: the bytes are
-        # what gets saved into the project and later handed to the layout
-        # code, which has no way to report back that they were never an image.
-        if not self._show_cover_bytes(data):
-            QMessageBox.warning(
-                self, self.tr("Choose Cover Art"), self.tr("That file could not be read as an image.")
-            )
-            return
-        self._cover_art = data
-
-    def _show_no_cover(self) -> None:
-        self.cover_label.setPixmap(QPixmap())
-        self.cover_label.setText(self.tr("No cover\n\n(click to\nchoose one)"))
-
-    def _show_cover_bytes(self, data: bytes) -> bool:
-        pixmap = QPixmap()
-        if not pixmap.loadFromData(data):
-            return False
-        self.cover_label.setText("")
-        self.cover_label.setPixmap(
-            pixmap.scaled(
-                COVER_SIZE, COVER_SIZE, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
-            )
-        )
-        return True
+    @property
+    def _cover_art(self) -> bytes | None:
+        """The cover the preview is holding. One owner, so a fetch, a
+        locally chosen file and what OK returns cannot disagree."""
+        return self.cover_label.data
 
     def _run_lookup(self, call):
         """Runs a blocking metadata_lookup call with a wait cursor and the
@@ -442,7 +366,7 @@ class MetadataDialog(QDialog):
             artist=self.artist_edit.text().strip(),
             year=self.year_spin.value() or None,
             tracks=tracks,
-            cover_art=self._cover_art,
+            cover_art=self.cover_label.data,
         )
 
     def _upload_tracklist(self) -> None:

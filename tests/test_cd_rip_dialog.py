@@ -30,6 +30,13 @@ def toc() -> cdrip.DiscToc:
     return cdrip.parse_toc(TOC_TEXT)
 
 
+@pytest.fixture(autouse=True)
+def no_cover_lookup(monkeypatch):
+    """Identifying a disc now also fetches its artwork, so every _read()
+    below would otherwise reach iTunes. Tests about the cover override it."""
+    monkeypatch.setattr(module, "fetch_into", lambda *a, **k: None)
+
+
 @pytest.fixture
 def dialog(qt_app, monkeypatch, tmp_path):
     """A dialog with a drive present, the bundled tools accounted for, and
@@ -365,3 +372,121 @@ def test_a_playlist_that_cannot_be_filled_is_reported_as_a_failure(qt_app, monke
     worker.run()
 
     assert failures == ["foobar2000 has no playlist open"]
+
+
+# --- the artwork, and what goes on to the recording -------------------
+
+
+def _png() -> bytes:
+    from PySide6.QtCore import QBuffer
+    from PySide6.QtGui import QColor, QImage
+
+    image = QImage(2, 2, QImage.Format.Format_ARGB32)
+    image.fill(QColor("red"))
+    buffer = QBuffer()
+    buffer.open(QBuffer.OpenModeFlag.WriteOnly)
+    image.save(buffer, "PNG")
+    return bytes(buffer.data())
+
+
+def test_identifying_a_disc_also_fetches_its_cover(dialog, monkeypatch, toc):
+    """Looked up here rather than after the recording, which was the worst
+    possible moment to find out the search matched the wrong release."""
+    asked: list = []
+
+    def fake_fetch(preview, artist, album, track_count=None):
+        asked.append((artist, album, track_count))
+        preview.set_cover(_png())
+        return None
+
+    monkeypatch.setattr(module, "fetch_into", fake_fetch)
+
+    _read(dialog, monkeypatch, toc, [_release("Nevermind", "Nirvana", 1991, ["a", "b", "c"])])
+
+    assert asked == [("Nirvana", "Nevermind", 3)]
+    assert dialog.cover_label.data == _png()
+
+
+def test_picking_a_different_pressing_looks_its_cover_up_again(dialog, monkeypatch, toc):
+    asked: list = []
+    monkeypatch.setattr(
+        module, "fetch_into", lambda preview, artist, album, n=None: asked.append(album)
+    )
+    releases = [
+        _release("Nevermind", "Nirvana", 1991, ["a", "b", "c"]),
+        _release("Nevermind (Deluxe)", "Nirvana", 2011, ["a", "b", "c"]),
+    ]
+    _read(dialog, monkeypatch, toc, releases)
+
+    dialog.release_combo.setCurrentIndex(1)
+
+    assert asked == ["Nevermind", "Nevermind (Deluxe)"]
+
+
+def test_the_disc_is_handed_on_as_metadata_artwork_included(dialog, monkeypatch, toc):
+    """A FLAC tag carries the titles to foobar and back, but not the
+    sleeve -- so this is what the recording window opens on."""
+    _read(dialog, monkeypatch, toc, [_release("Nevermind", "Nirvana", 1991, ["Teen Spirit", "In Bloom", "Polly"])])
+    dialog.cover_label.set_cover(_png())
+
+    metadata = dialog.build_metadata()
+
+    assert (metadata.artist, metadata.album, metadata.year) == ("Nirvana", "Nevermind", 1991)
+    assert [track.title for track in metadata.tracks] == ["Teen Spirit", "In Bloom", "Polly"]
+    assert metadata.cover_art == _png()
+
+
+def test_an_edited_title_is_what_gets_handed_on(dialog, monkeypatch, toc):
+    _read(dialog, monkeypatch, toc, [_release("Nevermind", "Nirvana", 1991, ["a", "b", "c"])])
+    dialog.tree.topLevelItem(0).setText(1, "Smells Like Teen Spirit")
+
+    assert dialog.build_metadata().tracks[0].title == "Smells Like Teen Spirit"
+
+
+def test_a_disc_with_per_track_artists_is_handed_on_as_a_compilation(dialog, monkeypatch, toc):
+    """The Artist column is the whole signal, and it has to survive the
+    trip -- otherwise the disc stops being a mixtape on the way over."""
+    _read(dialog, monkeypatch, toc, [])
+    for index, performer in enumerate(("New Order", "The Cure", "Depeche Mode")):
+        dialog.tree.topLevelItem(index).setText(2, performer)
+
+    metadata = dialog.build_metadata()
+
+    assert metadata.is_compilation()
+    assert metadata.artist == "Various Artists"
+    assert metadata.cover_art, "one is drawn, since there is no sleeve to look up"
+
+
+# --- the rip folder ---------------------------------------------------
+
+
+def test_a_rip_folder_that_does_not_exist_yet_is_simply_created(dialog, monkeypatch, toc, tmp_path):
+    """The normal state before the first rip, not an error."""
+    root = tmp_path / "somewhere" / "new"
+    monkeypatch.setattr(app_settings, "cd_rip_folder", lambda: str(root))
+    _read(dialog, monkeypatch, toc, [_release("Nevermind", "Nirvana", 1991, ["a", "b", "c"])])
+    monkeypatch.setattr(dialog, "_resolve_foobar_exe", lambda: "fb2k.exe")
+    monkeypatch.setattr(dialog, "_foobar_reachable", lambda: True)
+    monkeypatch.setattr(module._RipWorker, "start", lambda self: None)
+
+    dialog._start()
+
+    assert dialog.result_folder is not None and dialog.result_folder.is_dir()
+
+
+def test_a_folder_that_cannot_be_created_is_explained_not_crashed(dialog, monkeypatch, toc):
+    _read(dialog, monkeypatch, toc, [_release("Nevermind", "Nirvana", 1991, ["a", "b", "c"])])
+    monkeypatch.setattr(dialog, "_resolve_foobar_exe", lambda: "fb2k.exe")
+    monkeypatch.setattr(dialog, "_foobar_reachable", lambda: True)
+    monkeypatch.setattr(
+        module.cdrip, "ensure_folder", lambda path: (_ for _ in ()).throw(cdrip.CdRipError("read-only"))
+    )
+    warned: list = []
+    monkeypatch.setattr(module.QMessageBox, "warning", staticmethod(lambda *a, **k: warned.append(a[2])))
+    monkeypatch.setattr(
+        module._RipWorker, "start", lambda self: pytest.fail("must not start a rip with nowhere to write")
+    )
+
+    dialog._start()
+
+    assert warned and "read-only" in warned[0]
