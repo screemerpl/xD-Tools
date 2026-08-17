@@ -33,6 +33,16 @@ def no_network(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def no_auto_load(monkeypatch):
+    """Choosing a folder now sends it to foobar2000 straight away, so every
+    set_folder() below would otherwise start a worker thread against a real
+    foobar. Yields the real method, for the tests that do want it."""
+    real = FolderRecordDialog._load
+    monkeypatch.setattr(FolderRecordDialog, "_load", lambda self: None)
+    return real
+
+
+@pytest.fixture(autouse=True)
 def no_message_boxes(monkeypatch):
     """A real QMessageBox.exec blocks forever under the offscreen
     platform."""
@@ -83,17 +93,29 @@ def test_picking_a_folder_lists_its_tracks_in_playing_order(qt_app, tmp_path):
 
     shown = [dialog.tree.topLevelItem(i).text(1) for i in range(dialog.tree.topLevelItemCount())]
     assert shown == ["01 A", "02 B", "10 J"]
-    assert dialog.start_btn.isEnabled()
 
 
-def test_nothing_is_sent_to_foobar_just_for_looking(qt_app, tmp_path, monkeypatch):
-    """Browsing must not replace the user's playlist. It is destroyed only
-    once they press Load and Record."""
+def test_choosing_a_folder_loads_it_straight_away(qt_app, tmp_path, monkeypatch):
+    """Picking a folder in this dialog *is* the decision -- asking the user
+    to then press "Load Folder" was asking them to confirm something they
+    had just done."""
+    loads: list = []
+    monkeypatch.setattr(FolderRecordDialog, "_load", lambda self: loads.append(True))
+    dialog = FolderRecordDialog()
+
+    dialog.set_folder(_album(tmp_path / "album", "01 A.flac"))
+
+    assert loads == [True]
+
+
+def test_a_folder_with_nothing_in_it_is_not_sent_anywhere(qt_app, tmp_path, monkeypatch):
     monkeypatch.setattr(
-        foobar, "replace_current_playlist", lambda *a, **k: pytest.fail("playlist touched too early")
+        FolderRecordDialog, "_load", lambda self: pytest.fail("nothing to load")
     )
     dialog = FolderRecordDialog()
-    dialog.set_folder(_album(tmp_path / "album", "01 A.flac"))
+    (tmp_path / "empty").mkdir()
+
+    dialog.set_folder(tmp_path / "empty")
 
 
 def test_a_folder_with_no_audio_cannot_be_recorded(qt_app, tmp_path):
@@ -101,7 +123,7 @@ def test_a_folder_with_no_audio_cannot_be_recorded(qt_app, tmp_path):
     (tmp_path / "empty").mkdir()
     dialog.set_folder(tmp_path / "empty")
 
-    assert dialog.start_btn.isEnabled() is False
+    assert dialog.record_btn.isEnabled() is False
 
 
 def test_the_album_is_guessed_from_the_folder_name(qt_app, tmp_path):
@@ -127,7 +149,6 @@ def test_an_absurd_number_of_tracks_is_flagged_but_not_refused(qt_app, tmp_path)
     # so isVisible() would pass whatever the code did.
     assert not dialog.warning_label.isHidden()
     assert dialog.warning_label.text()
-    assert dialog.start_btn.isEnabled()
 
 
 def test_the_picker_comes_back_to_where_the_last_album_was(qt_app, tmp_path):
@@ -192,8 +213,9 @@ def test_loading_shows_what_foobar_made_of_the_files_without_closing(qt_app, tmp
     shown = [dialog.tree.topLevelItem(i).text(1) for i in range(dialog.tree.topLevelItemCount())]
     assert shown == ["Feel Invincible", "Back From The Dead"]
     assert dialog.result() != QDialog.DialogCode.Accepted, "still open to be looked at"
+    assert dialog.record_btn.isEnabled(), "Record only becomes possible once foobar has them"
 
-    dialog._start()  # the second press
+    dialog._on_record()
 
     assert dialog.result() == QDialog.DialogCode.Accepted
     assert dialog.result_metadata.album == "Unleashed"
@@ -208,7 +230,7 @@ def test_a_cover_chosen_by_hand_survives_the_hand_over(qt_app, tmp_path, monkeyp
     dialog._on_loaded(_tagged_items())
     dialog.cover_label.set_cover(_png())
 
-    dialog._start()
+    dialog._on_record()
 
     assert dialog.result_metadata.cover_art == _png()
 
@@ -223,7 +245,9 @@ def test_a_folder_foobar_could_not_play_does_not_hand_anything_over(qt_app, tmp_
     assert dialog.result() != QDialog.DialogCode.Accepted
 
 
-def test_without_foobars_program_file_nothing_is_loaded(qt_app, tmp_path, monkeypatch, no_message_boxes):
+def test_without_foobars_program_file_nothing_is_loaded(
+    qt_app, tmp_path, monkeypatch, no_message_boxes, no_auto_load
+):
     """Beefweb refuses files outside its configured music folders, so the
     command line is the only way in and its location has to be known."""
     monkeypatch.setattr(app_settings, "foobar_exe", lambda: "")
@@ -231,7 +255,7 @@ def test_without_foobars_program_file_nothing_is_loaded(qt_app, tmp_path, monkey
     dialog = FolderRecordDialog()
     dialog.set_folder(_album(tmp_path / "album", "01 A.flac"))
 
-    dialog._start()
+    no_auto_load(dialog)  # the real _load, which the fixture stubbed out
 
     assert dialog._worker is None
     assert no_message_boxes, "the user has to be told why"
@@ -386,3 +410,36 @@ def test_nothing_at_all_to_search_by_is_not_a_lookup(qt_app, tmp_path):
 
     assert isinstance(metadata, ProjectMetadata)
     assert metadata.cover_art is None
+
+
+def test_a_cover_inside_the_files_is_used_when_the_search_finds_none(qt_app, tmp_path, monkeypatch):
+    """Last resort, and a good one: a folder ripped from somebody's own CDs
+    routinely carries the sleeve, and it is certainly the right one for
+    this release."""
+    monkeypatch.setattr(module, "fetch_into", lambda *a, **k: None)
+    monkeypatch.setattr(module.embedded_cover, "cover_from_files", lambda paths: _png())
+    dialog = FolderRecordDialog()
+    dialog.set_folder(_album(tmp_path / "Skillet - Unleashed", "01 A.flac"))
+
+    metadata = dialog._capture_metadata(_tagged_items())
+
+    assert metadata.cover_art == _png()
+
+
+def test_the_search_still_wins_over_what_is_in_the_files(qt_app, tmp_path, monkeypatch):
+    """Embedded art is whatever the ripper attached -- often a 300px scan;
+    iTunes returns a clean 600x600, which is what a printed label wants."""
+    def fake_fetch(preview, artist, album, track_count=None):
+        preview.set_cover(_png())
+        return None
+
+    monkeypatch.setattr(module, "fetch_into", fake_fetch)
+    monkeypatch.setattr(
+        module.embedded_cover,
+        "cover_from_files",
+        lambda paths: pytest.fail("must not open the files when the search answered"),
+    )
+    dialog = FolderRecordDialog()
+    dialog.set_folder(_album(tmp_path / "Skillet - Unleashed", "01 A.flac"))
+
+    assert dialog._capture_metadata(_tagged_items()).cover_art == _png()

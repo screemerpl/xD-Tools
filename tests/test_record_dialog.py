@@ -526,3 +526,27 @@ def test_artwork_that_came_with_the_metadata_is_shown_straight_away(qt_app, monk
     dialog = RecordDialog("COM_TEST", metadata=given)
 
     assert dialog.cover_label.data == _png()
+
+
+def test_a_cover_inside_the_playlists_own_files_is_the_last_resort(qt_app, monkeypatch, no_hardware):
+    """Reachable because %path% is in the playlist's column set, so this
+    covers an ordinary foobar playlist too, not just a loaded folder."""
+    monkeypatch.setattr(record_module, "fetch_into", lambda *a, **k: None)
+    seen: list = []
+
+    def fake_embedded(paths):
+        seen.extend(paths)
+        return _png()
+
+    monkeypatch.setattr(record_module.embedded_cover, "cover_from_files", fake_embedded)
+    items = [
+        foobar.PlaylistItem.from_columns(
+            [str(n), f"Track {n}", "Artist", "Album", "2024", "200", "", f"/music/{n}.flac"]
+        )
+        for n in range(1, 4)
+    ]
+
+    dialog = _dialog(FakeClient(items), monkeypatch)
+
+    assert dialog.cover_label.data == _png()
+    assert seen == ["/music/1.flac", "/music/2.flac", "/music/3.flac"]

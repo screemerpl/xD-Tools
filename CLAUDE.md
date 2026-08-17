@@ -45,6 +45,7 @@ src/mdtools/
   cdrip.py                  audio CD: drives, TOC, disc ids, rip plan, cdparanoia/flac (no Qt UI)
   musicbrainz.py            identifying a CD from its TOC alone -- a CD carries no text (no Qt UI)
   audio_folder.py           which files in a folder are the album, and in what order (no Qt)
+  embedded_cover.py         the cover art inside a FLAC file, as a last resort (no Qt)
   mixtape_cover.py          draws a cover for a compilation, which by definition has none
   user_paths.py             where every file dialog starts: Documents/MiniDiscProjects, Pictures
   auto_layout.py            places cover art on a disc label and the logo on its slider (no Qt UI beyond items)
@@ -89,7 +90,7 @@ assets/
   img/                      bundled asset gallery (currently just the MDTools logo) -- see gallery.py
 bin/
   win64/                    bundled cdparanoia + flac + their DLLs -- see cdrip.py and its ATTRIBUTION.md
-tests/          890+ tests, all offscreen via QT_QPA_PLATFORM=offscreen
+tests/          910+ tests, all offscreen via QT_QPA_PLATFORM=offscreen
 doc/            the built user manual (PDF x3) + its generated screenshots -- see doc/README.md
 scripts/
   build_windows.ps1 / build_linux.sh   PyInstaller onedir build
@@ -1837,6 +1838,31 @@ carries are the same everywhere and none of them are obvious.
   Artists" returns an unrelated record's sleeve; callers branch on
   `is_compilation()` first and draw one with `mixtape_cover` instead.
 
+**`mdtools/embedded_cover.py` is the last resort behind the search: the
+picture inside the files themselves.** A folder of FLACs ripped from
+somebody's own CDs routinely carries the sleeve, and it is certainly the
+right one for *this* release where a search result is a guess about it --
+but it is still the fallback, on purpose: embedded art is whatever the
+ripper attached (often a 300px scan, sometimes a photo of the disc) while
+iTunes returns a clean 600x600, which is what a printed label wants. Both
+`FolderRecordDialog._fetch_cover` and `RecordDialog._ensure_cover` try it
+only when `fetch_into` came back empty; the latter reaches the files
+through `PlaylistItem.path`, so an ordinary foobar playlist gets it too,
+not just a loaded folder.
+
+**It parses FLAC's PICTURE block directly -- no tag library.** A page of
+struct unpacking against a format frozen since 2007 is a smaller thing to
+own than a dependency, the same call already made for the MusicBrainz disc
+id. Front cover (type 3) wins over any other picture, and the 32x32 file
+icons (types 1 and 2) are never used. **ID3v2's APIC frame is deliberately
+not attempted** -- three frame layouts, unsynchronisation and optional
+compression -- so an MP3 folder simply reports no embedded art rather than
+being read badly. `test_embedded_cover.py` checks the parser against
+hand-built blocks *and* against a file written by the bundled `flac.exe`
+with `--picture=`, because a fixture written from the specification can
+agree with itself perfectly and still misread what the real encoder
+produces.
+
 **`RecordDialog` deliberately has no worker thread**, unlike the upload it
 hands off to. Every step here is either instantaneous (one localhost HTTP
 call, one infrared frame) or a `QTimer` poll; the genuinely long part --
@@ -2149,13 +2175,19 @@ already carries artwork; `_offer_titling` now reuses `result_metadata` rather
 than rebuilding from the playlist, which would have thrown the correction
 away at the last step.
 
-**It takes two presses, not one -- Load Folder, then Record.** The first
-version loaded and accepted in the same click, so the dialog vanished the
-instant it had anything to show. What it has to show is the point: which
-album the tags turned out to describe, the artwork it will be labelled
-with, and the titles foobar read out of the files. Cancelling after the
-load leaves the playlist replaced and nothing recorded, which is exactly
-what the CD flow does too.
+**Choosing a folder loads it; the only button is Record.** Two earlier
+shapes were both wrong. The first loaded and accepted in the same click, so
+the dialog vanished the instant it had anything to show -- and what it has
+to show is the point: which album the tags turned out to describe, the
+artwork it will be labelled with, and the titles foobar read out of the
+files. The second put a "Load Folder" button in front of that, which the
+user rejected in one sentence: picking a folder in this dialog *is* the
+decision, so asking them to then press a button was asking them to confirm
+something they had already done. `set_folder()` therefore calls `_load()`,
+Record stays disabled until foobar has actually taken the files, and the
+status line says up front that browsing will replace the playlist.
+Cancelling after the load leaves the playlist replaced and nothing
+recorded, exactly as the CD flow does.
 
 **The load runs on a `QThread`, unlike everything else in this dialog.**
 `add_files_via_cli` and `wait_for_item_count` have a 30 second timeout each,

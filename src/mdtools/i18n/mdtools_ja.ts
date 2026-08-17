@@ -446,8 +446,8 @@ Eject now to make it permanent?</source>
     <name>FolderRecordDialog</name>
     <message>
         <location filename="../panels/folder_record_dialog.py" line="105"/>
-        <location filename="../panels/folder_record_dialog.py" line="308"/>
-        <location filename="../panels/folder_record_dialog.py" line="322"/>
+        <location filename="../panels/folder_record_dialog.py" line="316"/>
+        <location filename="../panels/folder_record_dialog.py" line="330"/>
         <source>Record Folder to MiniDisc</source>
         <translation>フォルダーをMiniDiscに録音</translation>
     </message>
@@ -488,66 +488,63 @@ Eject now to make it permanent?</source>
         <translation>トラックは表示された順、つまりファイル名の順に録音されます。タイトルはファイル自身のタグから読み取り、タイトルタグのないファイルはファイル名で録音されます。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="167"/>
         <source>Choose the folder holding the album.</source>
-        <translation>アルバムが入っているフォルダーを選んでください。</translation>
+        <translation type="vanished">アルバムが入っているフォルダーを選んでください。</translation>
     </message>
     <message>
         <source>Load and Record</source>
         <translation type="vanished">読み込んで録音</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="172"/>
         <source>Load Folder</source>
-        <translation>フォルダーを読み込む</translation>
+        <translation type="vanished">フォルダーを読み込む</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="176"/>
+        <location filename="../panels/folder_record_dialog.py" line="181"/>
         <source>Cancel</source>
         <translation>キャンセル</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="187"/>
+        <location filename="../panels/folder_record_dialog.py" line="192"/>
         <source>Folder</source>
         <translation>フォルダー</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="191"/>
+        <location filename="../panels/folder_record_dialog.py" line="196"/>
         <source>Browse...</source>
         <translation>参照...</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="198"/>
+        <location filename="../panels/folder_record_dialog.py" line="203"/>
         <source>Choose Album Folder</source>
         <translation>アルバムのフォルダーを選択</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="224"/>
+        <location filename="../panels/folder_record_dialog.py" line="235"/>
         <source>No audio files in that folder. Choose the one the tracks are actually in.</source>
         <translation>そのフォルダーには音声ファイルがありません。トラックが実際に入っているフォルダーを選んでください。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="238"/>
         <source>{count} audio files. Loading them into foobar2000 will replace its current playlist.</source>
-        <translation>音声ファイル {count} 個。foobar2000に読み込むと、現在のプレイリストが置き換えられます。</translation>
+        <translation type="vanished">音声ファイル {count} 個。foobar2000に読み込むと、現在のプレイリストが置き換えられます。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="258"/>
+        <location filename="../panels/folder_record_dialog.py" line="265"/>
         <source>That is {count} tracks -- far more than a MiniDisc holds. Check that this is one album&apos;s folder and not a whole library.</source>
         <translation>トラックが {count} 個あり、MiniDiscに収まる量をはるかに超えています。ライブラリ全体ではなく、1枚のアルバムのフォルダーかどうか確認してください。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="288"/>
+        <location filename="../panels/folder_record_dialog.py" line="296"/>
         <source>Loading the tracks into foobar2000...</source>
         <translation>トラックをfoobar2000に読み込んでいます...</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="310"/>
+        <location filename="../panels/folder_record_dialog.py" line="318"/>
         <source>foobar2000 could not be found. The tracks are loaded into it through its own program file, so its location has to be set in Window &gt; Settings...</source>
         <translation>foobar2000が見つかりません。トラックはfoobar2000の実行ファイル経由で読み込まれるため、その場所をウィンドウ &gt; 設定... で指定してください。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="324"/>
+        <location filename="../panels/folder_record_dialog.py" line="332"/>
         <source>Could not reach foobar2000: {error}
 
 It must be running with the Beefweb Remote Control component (foo_beefweb) enabled.</source>
@@ -556,37 +553,42 @@ It must be running with the Beefweb Remote Control component (foo_beefweb) enabl
 foobar2000が起動し、Beefweb Remote Control (foo_beefweb) コンポーネントが有効になっている必要があります。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="343"/>
+        <location filename="../panels/folder_record_dialog.py" line="350"/>
         <source>Could not load the tracks: {error}</source>
         <translation>トラックを読み込めませんでした: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="349"/>
+        <location filename="../panels/folder_record_dialog.py" line="356"/>
         <source>foobar2000 accepted no tracks from that folder -- none of them could be played.</source>
         <translation>foobar2000はそのフォルダーのトラックを1つも受け付けませんでした。どれも再生できません。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="355"/>
+        <location filename="../panels/folder_record_dialog.py" line="177"/>
         <source>Record</source>
         <translation>録音</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="357"/>
+        <location filename="../panels/folder_record_dialog.py" line="168"/>
+        <source>Choose the folder holding the album. It replaces foobar2000&apos;s current playlist.</source>
+        <translation>アルバムが入っているフォルダーを選んでください。foobar2000の現在のプレイリストが置き換えられます。</translation>
+    </message>
+    <message>
+        <location filename="../panels/folder_record_dialog.py" line="364"/>
         <source>Loaded into foobar2000. Check the album below, then record.</source>
         <translation>foobar2000に読み込みました。下のアルバム情報を確認してから録音してください。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="383"/>
+        <location filename="../panels/folder_record_dialog.py" line="390"/>
         <source>This runs {total}, longer than the {limit} an MD holds in SP mode. Set the deck to LP2 first, or the recording will be cut short.</source>
         <translation>これは {total} で、SPモードのMDに収まる {limit} を超えています。デッキをLP2に設定してください。そうしないと録音が途中で切れます。</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="446"/>
+        <location filename="../panels/folder_record_dialog.py" line="453"/>
         <source>Looking up cover art...</source>
         <translation>カバーアートを検索中...</translation>
     </message>
     <message>
-        <location filename="../panels/folder_record_dialog.py" line="475"/>
+        <location filename="../panels/folder_record_dialog.py" line="488"/>
         <source>Waiting for foobar2000 to finish...</source>
         <translation>foobar2000の処理が終わるのを待っています...</translation>
     </message>
@@ -1896,35 +1898,35 @@ It will be recorded to the disc in this order, then titled from these names.</so
 この順序でディスクに録音し、これらの名前でタイトルを付けます。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="296"/>
+        <location filename="../panels/record_dialog.py" line="302"/>
         <source>This is longer than the {limit} an MD holds in SP mode. Set the deck to LP2 first, or the recording will be cut short.</source>
         <translation>SPモードのMDに収まる {limit} を超えています。デッキをLP2に設定してください。そうしないと録音が途中で切れます。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="311"/>
-        <location filename="../panels/record_dialog.py" line="383"/>
+        <location filename="../panels/record_dialog.py" line="317"/>
+        <location filename="../panels/record_dialog.py" line="389"/>
         <source>foobar2000: {error}</source>
         <translation>foobar2000: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="324"/>
+        <location filename="../panels/record_dialog.py" line="330"/>
         <source>Stop</source>
         <translation>停止</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="327"/>
+        <location filename="../panels/record_dialog.py" line="333"/>
         <source>Recording started -- waiting for the first track...</source>
         <translation>録音を開始しました。最初のトラックを待っています...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="335"/>
-        <location filename="../panels/record_dialog.py" line="362"/>
-        <location filename="../panels/record_dialog.py" line="510"/>
+        <location filename="../panels/record_dialog.py" line="341"/>
+        <location filename="../panels/record_dialog.py" line="368"/>
+        <location filename="../panels/record_dialog.py" line="516"/>
         <source>Record to MiniDisc</source>
         <translation>MiniDiscに録音</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="337"/>
+        <location filename="../panels/record_dialog.py" line="343"/>
         <source>Recording replaces whatever is on the disc, and nothing about it can be undone.
 
 Make sure the right disc is loaded and its write-protect tab is open, then continue.</source>
@@ -1933,13 +1935,13 @@ Make sure the right disc is loaded and its write-protect tab is open, then conti
 正しいディスクが入っていること、書き込み禁止タブが開いていることを確認してから続行してください。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="355"/>
-        <location filename="../panels/record_dialog.py" line="534"/>
+        <location filename="../panels/record_dialog.py" line="361"/>
+        <location filename="../panels/record_dialog.py" line="540"/>
         <source>MDRem: {error}</source>
         <translation>MDRem: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="364"/>
+        <location filename="../panels/record_dialog.py" line="370"/>
         <source>The deck was told to start recording.
 
 Is it now showing record-pause (REC lit, paused)?</source>
@@ -1948,33 +1950,33 @@ Is it now showing record-pause (REC lit, paused)?</source>
 録音一時停止の状態になっていますか (REC点灯、一時停止)?</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="372"/>
+        <location filename="../panels/record_dialog.py" line="378"/>
         <source>Cancelled -- the deck was not recording.</source>
         <translation>中止しました。デッキは録音していませんでした。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="391"/>
+        <location filename="../panels/record_dialog.py" line="397"/>
         <source>Lost contact with foobar2000: {error}</source>
         <translation>foobar2000との通信が切れました: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="431"/>
+        <location filename="../panels/record_dialog.py" line="437"/>
         <source>Recording {index} of {count}: {title} -- {elapsed} of {total}</source>
         <translation>録音中 {index}/{count}: {title} — {elapsed} / {total}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="446"/>
-        <location filename="../panels/record_dialog.py" line="549"/>
+        <location filename="../panels/record_dialog.py" line="452"/>
+        <location filename="../panels/record_dialog.py" line="555"/>
         <source>Close</source>
         <translation>閉じる</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="453"/>
+        <location filename="../panels/record_dialog.py" line="459"/>
         <source>Playback stopped at track {reached} of {count}, so the disc is incomplete. Titling it now would name tracks that were never recorded.</source>
         <translation>再生が {count} 曲中 {reached} 曲目で停止したため、ディスクは不完全です。ここでタイトルを付けると、録音されていないトラックに名前を付けることになります。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="460"/>
+        <location filename="../panels/record_dialog.py" line="466"/>
         <source>Recording finished. The titles can be written now.</source>
         <translation>録音が完了しました。タイトルを書き込めます。</translation>
     </message>
@@ -1983,12 +1985,12 @@ Is it now showing record-pause (REC lit, paused)?</source>
         <translation type="vanished">カバーアートを検索中...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="511"/>
+        <location filename="../panels/record_dialog.py" line="517"/>
         <source>Write the album and track titles onto the disc now?</source>
         <translation>アルバム名とトラック名を今すぐディスクに書き込みますか?</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="528"/>
+        <location filename="../panels/record_dialog.py" line="534"/>
         <source>MDRem: not connected</source>
         <translation>MDRem: 未接続</translation>
     </message>

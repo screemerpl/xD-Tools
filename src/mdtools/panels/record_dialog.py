@@ -49,7 +49,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from mdtools import foobar, mdrem, mixtape_cover
+from mdtools import embedded_cover, foobar, mdrem, mixtape_cover
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
 from mdtools.project import ProjectMetadata, Track
@@ -287,6 +287,12 @@ class RecordDialog(QDialog):
         )
         if chosen is not None and not self.year_spin.value() and chosen.year:
             self.year_spin.setValue(chosen.year)
+        if not self.cover_label.data:
+            # Last resort: the sleeve the files themselves carry. Reachable
+            # here because %path% is in the playlist's column set, so this
+            # covers a plain foobar playlist as well as a loaded folder --
+            # see embedded_cover for why it ranks below the search.
+            self.cover_label.set_cover(embedded_cover.cover_from_files(i.path for i in self._items if i.path))
 
     def _warn_about_length(self, total: int) -> None:
         if total <= DISC_SP_SECONDS:
