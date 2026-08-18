@@ -44,6 +44,17 @@ correctly finds nothing for an album that does not exist). `fetch_into` is
 stood in for per importing module, alongside the serial-port and foobar2000
 stand-ins.
 
+**The Telegram figures need no stand-in at all**, unlike those. Both
+dialogs are inert until an explicit action starts their worker
+(`TelegramChatDialog.start_connecting()`, and `TelegramLoginDialog` only on
+"Send code"), so plain construction opens no socket; `_capture_telegram()`
+then fills the transcript by handing synthetic `ChatMessage`s straight to
+the dialog's own signal handlers -- the real rendering code driven with
+fake data. It also writes two real (empty) `.flac` files into a throwaway
+download folder, because Sort and Record enable themselves from what is
+actually on disk, and without them the figure shows three greyed-out
+buttons the manual points at.
+
 The text lives in `scripts/manual/content_{en,pl,ja}.py` as a list of
 blocks; `build_manual.py` turns those into a `QTextDocument` and paints it
 onto a `QPdfWriter`. No LaTeX, no extra dependencies — everything used is

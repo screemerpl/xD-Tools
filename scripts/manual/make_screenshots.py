@@ -685,6 +685,94 @@ def capture_language(app, code: str) -> None:
 
     save(EraseDiscDialog("COM7"), out / "erase.png")
 
+    _capture_telegram(out, code)
+
+
+# --- the experimental Telegram feature ------------------------------------
+#
+# **Nothing here contacts Telegram**, which is the same rule the rest of this
+# script follows for the serial port, foobar2000 and the cover lookup -- but
+# it needs no stand-in object to achieve it. Both dialogs are inert until an
+# explicit action starts their worker (TelegramChatDialog.start_connecting(),
+# and TelegramLoginDialog only on "Send code"), so plain construction opens no
+# socket at all. The chat transcript is then filled by handing synthetic
+# ChatMessages straight to the dialog's own signal handlers -- the real
+# rendering code, driven with fake data, rather than a mock of the rendering.
+
+_TELEGRAM_CHAT: dict[str, list[str]] = {
+    #        bot greeting, the reply we show as sent, the file it answers with
+    "en": ["Send me an artist and album and I will look it up.", "Aurora Test Signal - Night Ferry"],
+    "pl": ["Podaj wykonawcę i album, a poszukam.", "Aurora Test Signal - Night Ferry"],
+    "ja": ["アーティストとアルバム名を送ってください。", "Aurora Test Signal - Night Ferry"],
+}
+
+# One row, two columns -- ChatMessage.buttons is a label *grid*, not a flat
+# list, since a position in it is what identifies a button to click.
+_TELEGRAM_BUTTONS = [["FLAC (312 MB)", "MP3 320 (98 MB)"]]
+
+
+def _capture_telegram(out: Path, code: str) -> None:
+    from mdtools import app_settings, telegram_bot
+    from mdtools.panels.experimental_settings_dialog import ExperimentalSettingsDialog
+    from mdtools.panels.telegram_chat_dialog import TelegramChatDialog
+    from mdtools.panels.telegram_login_dialog import TelegramLoginDialog
+
+    # A folder of its own rather than the real system temp: the button-state
+    # checks below read it, so controlling exactly what is in it keeps the
+    # figures deterministic. Two real (empty) .flac files, because Sort and
+    # Record enable themselves from what is actually on disk -- without them
+    # the figure would show three greyed-out buttons the manual points at.
+    download_folder = Path(tempfile.mkdtemp(prefix="mdtools-manual-telegram-"))
+    for track in ("01 Harbour Lights.flac", "02 Slow Tide.flac"):
+        (download_folder / track).write_bytes(b"")
+    app_settings.set_experimental_features_enabled(True)
+    app_settings.set_telegram_bot_username("@my_music_bot")
+    app_settings.set_telegram_download_folder(str(download_folder))
+
+    save(ExperimentalSettingsDialog(), out / "experimental-settings.png")
+    save(TelegramLoginDialog("0", "0"), out / "telegram-login.png")
+
+    greeting, reply = _TELEGRAM_CHAT[code]
+    chat = TelegramChatDialog("0", "0", "@my_music_bot", download_folder, None)
+    chat.show()
+    settle(200)
+    # What _on_ready() would normally set once connected.
+    chat._bot_name = "@my_music_bot"
+    chat._session_folder = str(download_folder)
+    chat.status_label.setText(chat.tr("Connected to {name}.").format(name="@my_music_bot"))
+    chat.message_edit.setEnabled(True)
+    chat.send_btn.setEnabled(True)
+    chat.open_folder_btn.setEnabled(True)
+    for button in chat.quick_command_buttons:
+        button.setEnabled(True)
+
+    chat._on_message_received(telegram_bot.ChatMessage(id=1, outgoing=False, text=greeting))
+    chat._on_message_received(telegram_bot.ChatMessage(id=2, outgoing=True, text=reply))
+    chat._on_message_received(
+        telegram_bot.ChatMessage(id=3, outgoing=False, text="Night Ferry", buttons=_TELEGRAM_BUTTONS)
+    )
+    for index, (name, size) in enumerate(
+        [("01 Harbour Lights.flac", 31_400_000), ("02 Slow Tide.flac", 28_900_000)], start=10
+    ):
+        chat._on_message_received(
+            telegram_bot.ChatMessage(id=index, outgoing=False, text="", file_name=name, file_size=size)
+        )
+    # One row mid-download, one already finished -- the two states the queue
+    # spends nearly all its time in.
+    chat._on_download_started(10)
+    chat._on_download_progress(10, 19_800_000, 31_400_000)
+    chat._on_download_started(11)
+    chat._on_download_finished(11, str(download_folder / "02 Slow Tide.flac"))
+    # _on_download_started(10) above left that one "in flight", which
+    # deliberately disables Sort/Record -- clear it so the figure shows their
+    # normal, usable state rather than a transient one.
+    chat._active_downloads.clear()
+    chat._update_sort_button()
+    chat._update_continue_button()
+
+    save(chat, out / "telegram-chat.png", settle_ms=400)
+    close_quietly(chat)
+
 
 def main() -> int:
     app = QApplication(sys.argv)

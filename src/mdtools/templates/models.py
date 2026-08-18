@@ -17,7 +17,7 @@ class DiscTemplate:
     bottom-right and bottom-left corners.
 
     Optionally also includes a second, independent cut shape for the
-    cartridge's write-protect slider label: a slider_width_mm x
+    cartridge's sliding-shutter label: a slider_width_mm x
     slider_height_mm rectangle with its left two corners rounded
     (slider_corner_radius_mm) and right two corners square, placed
     slider_gap_mm to the right of the main disc shape, vertically centered.
@@ -26,7 +26,7 @@ class DiscTemplate:
     shape == "full_label" switches to a completely different outline: a
     plain corner_radius_mm-rounded rectangle covering most of the disc's
     face (chamfer_mm/fillet_mm are then unused), with the cartridge's
-    write-protect slider notch cut out of the right edge instead of placed
+    shutter notch cut out of the right edge instead of placed
     as an adjacent shape. The notch is slider_notch_width_mm x
     slider_notch_height_mm with its left two corners rounded
     (slider_notch_corner_radius_mm), flush against the label's right edge,

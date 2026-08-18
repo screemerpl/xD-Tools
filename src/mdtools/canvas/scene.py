@@ -92,7 +92,7 @@ class DesignScene(QGraphicsScene):
 
     def _build_full_label_outline(self, t: DiscTemplate) -> None:
         """A plain rounded-rect label covering most of the disc's face
-        (shape == "full_label"), with the write-protect slider's notch --
+        (shape == "full_label"), with the sliding shutter's notch --
         plus the channel it travels down through -- cut out of the right
         edge as one continuous shape. See DiscTemplate's docstring for the
         buffer/travel geometry."""

@@ -47,7 +47,8 @@ BOOK = [
                     ["Titling a disc", "An MDRem adapter on a USB port, and a Sony MiniDisc deck it can be "
                                        "aimed at."],
                     ["Recording an album", "The above, plus foobar2000 with the Beefweb component, and a "
-                                           "digital (S/PDIF) cable from the computer to the deck."],
+                                           "digital (S/PDIF) cable from the computer to the deck - or an "
+                                           "analogue one, at a real cost in quality."],
                 ],
             }},
             {"note": "Everything in this manual was worked out against a **Sony MDS-JE480**. Other Sony "
@@ -176,16 +177,22 @@ BOOK = [
                                             "with a 3 mm chamfer on the top-left corner and rounded "
                                             "corners elsewhere."],
                     ["MiniDisc Disc Label (with Slider)", "The same, plus a separate small sticker for "
-                                                          "the write-protect slider."],
+                                                          "the cartridge's sliding shutter."],
                     ["Full disc label", "A label covering the whole 71 x 68 mm face of the cartridge, "
-                                        "inset by a 0.8 mm margin."],
-                    ["Full disc label (with Slider)", "The full face plus the slider sticker, nested into "
-                                                      "the notch it sits on. This is what the automatic "
+                                        "inset by a 0.8 mm margin, with the shutter cut out of it."],
+                    ["Full disc label (with Slider)", "The full face plus the shutter sticker, nested into "
+                                                      "the cutout it sits in. This is what the automatic "
                                                       "layout uses."],
                     ["MiniDisc Cover (J-Card)", "The three-panel insert for the case: front, spine, back."],
                     ["MiniDisc Cover (J-Card + Window)", "The same with a cut-out window."],
                 ],
             }},
+            {"note": "The **shutter** is the sliding panel on the cartridge that keeps dust off the disc - "
+                     "the deck pushes it aside to reach the surface. It is not the write-protect tab, which "
+                     "is a separate small catch on the cartridge's edge and never gets a label. Because the "
+                     "shutter has to keep sliding, the full-face templates cut a channel for its whole "
+                     "travel rather than just its resting position: a label over that channel would jam it "
+                     "shut."},
             {"fig": ("templates", "Templates > Manage Templates.")},
             {"h2": "Verified and unverified"},
             {"p": "A template is marked **Verified** once its dimensions have been checked against a real "
@@ -268,7 +275,7 @@ BOOK = [
                      "first. The metadata itself is left alone."},
             {"h2": "What it builds"},
             {"p": "**The disc label**: the full-face template, the cover art stretched across it and then "
-                  "cropped to the cut outline, and the MiniDisc logo on the write-protect slider sticker. "
+                  "cropped to the cut outline, and the MiniDisc logo on the shutter sticker. "
                   "The insertion-orientation triangle and its label stay on top of the artwork rather "
                   "than being buried under it."},
             {"p": "That mark also **changes colour to suit the cover**: black or white, whichever stays "
@@ -383,7 +390,7 @@ BOOK = [
                   "device replying to a `PING`."},
             {"p": "Three things appear once the checkbox is ticked: **Upload Tracklist** in the "
                   "Metadata dialog, **Remote...** on the startup screen, and the whole **Recording** "
-                  "menu - all three ways of recording a disc, and Erase MiniDisc..."},
+                  "menu - all three ways of recording a disc, Remote Control... and Erase MiniDisc..."},
             {"note": "The foobar2000 address on the same page is deliberately *not* tied to the checkbox - "
                      "reading a playlist needs foobar2000, not the infrared adapter."},
         ],
@@ -392,8 +399,10 @@ BOOK = [
     {
         "title": "The software remote",
         "blocks": [
-            {"p": "**Remote...** on the startup screen opens a stand-in for the deck's own remote control, "
-                  "laid out the way a physical one is."},
+            {"p": "The software remote is a stand-in for the deck's own remote control, laid out the way a "
+                  "physical one is. It opens from either **Remote...** on the startup screen or "
+                  "**Recording > Remote Control...** - the second exists because reaching for the remote "
+                  "should not mean closing the project you are working on."},
             {"fig": ("remote", "The remote window. The status line reports what was sent, not what happened.")},
             {"table": {
                 "head": ["Group", "Keys"],
@@ -489,12 +498,31 @@ BOOK = [
                 "you moved it.",
                 "Connect the computer's **S/PDIF** output - optical or coaxial - to the deck's digital "
                 "input. This carries the audio; the USB link carries only commands.",
+                "Set foobar2000's output to **44.1 kHz, 16-bit, stereo** - see below.",
                 "Load the album into foobar2000's current playlist, in the order you want it on the disc.",
                 "Put a blank or erasable disc in the deck, tab closed, and set the recording mode (SP or "
                 "LP2) **on the deck** - MDTools cannot read or change it.",
                 "Turn **LEVEL-SYNC off** on the deck. See below.",
                 "Aim the adapter at the deck's remote sensor and leave it there.",
             ]},
+            {"h2": "The format going into the deck"},
+            {"p": "A MiniDisc is 44.1 kHz, 16-bit stereo, and the deck's digital input expects to be fed "
+                  "that. Hand it a 96 kHz or 24-bit stream - which is what a modern player happily outputs "
+                  "if the files are high-resolution and nothing is told to convert them - and the deck may "
+                  "simply refuse it, or drop out partway. It cannot tell MDTools that it has, either."},
+            {"p": "So convert on the computer, where it is free to get right: install foobar2000's "
+                  "**Resampler (SoX)** component, add it to the DSP chain and set it to **44100 Hz**, and "
+                  "set the output device to **16-bit stereo**. Files already at 44.1/16 pass through "
+                  "untouched, so this costs nothing on an ordinary CD rip and saves the awkward case."},
+            {"h2": "Analogue instead, if you have to"},
+            {"p": "The deck's **analogue** line inputs work too, and MDTools drives the recording exactly "
+                  "the same way - it presses the deck's keys, which does not depend on how the audio "
+                  "arrives. **The quality is considerably worse**, though, and unavoidably so: the sound "
+                  "leaves the sound card as analogue and is digitised again by the deck, so it picks up "
+                  "two extra conversions and whatever noise the card's output stage adds, before ATRAC has "
+                  "even started. Use S/PDIF whenever the deck has it."},
+            {"p": "Going analogue also means setting the deck's input selector to analogue and its "
+                  "recording level by hand - a digital input has neither to worry about."},
             {"fig": ("record", "The playlist as it will be recorded, in that order.")},
             {"h2": "What the window shows"},
             {"p": "The album, artist and year the disc will be titled with, the cover art it will be "
@@ -510,7 +538,8 @@ BOOK = [
                 "MDTools shows the playlist and its total time, and warns if it will not fit on an "
                 "80-minute disc in SP.",
                 "It sets foobar to play straight through once - no shuffle, no repeat - so the disc "
-                "cannot end up in a different order than the titles.",
+                "cannot end up in a different order than the titles, and sets foobar's own volume to "
+                "-5 dB to leave the deck some headroom.",
                 "It tells the deck to start recording, then **asks you to confirm the deck really is in "
                 "record-pause**. It cannot check, and getting this wrong means playing a whole album into "
                 "a deck that is not recording and finding out forty minutes later.",
@@ -685,6 +714,87 @@ BOOK = [
             {"note": "As with titling, an erase lives in the deck's memory until the disc is ejected. "
                      "MDTools offers to eject afterwards - take it, or the disc keeps its old contents "
                      "should the deck lose power."},
+        ],
+    },
+    # ------------------------------------------------------------------
+    {
+        "title": "Experimental: downloading from a Telegram bot",
+        "blocks": [
+            {"warn": "Everything in this chapter is **experimental** and hidden until you ask for it. It "
+                     "works, but it is newer and less exercised than the rest of the program, and the way "
+                     "it is presented may still change."},
+            {"p": "MDTools can hold a conversation with a Telegram bot **you run yourself**, download the "
+                  "files it sends, and hand the result to Record Folder to MiniDisc - so a download becomes "
+                  "a recorded, titled disc without leaving the program."},
+            {"warn": "This is for a bot you control. Downloading albums from a public bot that "
+                     "redistributes music without the rights holder's permission is not what this is for, "
+                     "and owning the CD does not make it legal - that covers copying your own disc, not "
+                     "taking a copy from a stranger."},
+            {"h2": "Turning it on"},
+            {"p": "**Window > Settings** has a **Show experimental features** checkbox. Tick it and an "
+                  "**Experimental** menu appears in the menu bar; untick it and the menu disappears again. "
+                  "Nothing behind it runs while it is off."},
+            {"fig": ("experimental-settings", "Experimental > Experimental Settings. Experimental features "
+                                             "keep their own settings window."),},
+            {"p": "**Experimental > Experimental Settings...** is where the bot lives. Two fields matter:"},
+            {"ul": [
+                "**Bot username** - the bot you want to talk to, `@something`.",
+                "**Download folder** - where files land. It defaults to a folder under your system "
+                "temporary directory, on the grounds that a download is raw material for a recording "
+                "rather than a music library. Point it anywhere you like.",
+            ]},
+            {"note": "There is no API ID or API Hash to fill in. MDTools carries its own, so signing in is "
+                     "the only step. If a build ever ships without them it says so plainly instead of "
+                     "failing to connect."},
+            {"h2": "Signing in"},
+            {"p": "MDTools signs in as **your own Telegram account**, not as a bot. That is not a design "
+                  "preference: Telegram's Bot API forbids one bot from messaging another, so the only way "
+                  "to talk to your bot the way a person would is to be a person."},
+            {"fig": ("telegram-login", "Sign in to Telegram. Phone number, then the code Telegram sends "
+                                       "you, then a password if you use two-step verification."),},
+            {"p": "**Sign in to Telegram...** asks for your phone number, then the code Telegram sends to "
+                  "your other devices, then - if you have two-step verification on - your password. It is "
+                  "the same sequence the Telegram app itself uses."},
+            {"warn": "The sign-in is saved locally, in `telegram.session` next to MDTools' own settings. "
+                     "That file is equivalent to being logged in to your account: it is not encrypted, and "
+                     "it is not something to copy onto another machine or send to anyone."},
+            {"h2": "The conversation"},
+            {"p": "**Experimental > Download Album from Telegram Bot...** opens a plain chat. It appears "
+                  "only once a sign-in has been saved."},
+            {"fig": ("telegram-chat", "The chat, with the download queue on the right."),},
+            {"p": "Deliberately a plain chat rather than a search box: your bot's commands are yours, and "
+                  "MDTools cannot know them. So it shows whatever the bot sends and lets you drive it - "
+                  "text, its inline buttons, and any file it attaches. **Quick commands** sends `/start` or "
+                  "`/help` with one click, since almost every bot understands those."},
+            {"p": "Two conveniences worth knowing. Whatever the bot writes is **translated underneath the "
+                  "original**, into whichever language MDTools is set to - the original stays, because a "
+                  "translation can be wrong and an exact command or filename is better read as sent. And a "
+                  "bot that edits its own message to build a menu, rather than sending a new one each time, "
+                  "is followed correctly: the message changes in place, as it does on your phone."},
+            {"h2": "The download queue"},
+            {"p": "Files never appear in the conversation - they go to the **queue on the right**, which is "
+                  "the only place a file's name, size, progress and speed are shown. A whole album arriving "
+                  "as twenty attachments would otherwise bury the conversation under twenty near-identical "
+                  "rows."},
+            {"p": "Downloading starts by itself, and at most three files download at once. A failed one "
+                  "gets a **Retry** button rather than disappearing."},
+            {"h2": "From download to disc"},
+            {"p": "Files from every session pile up in the one download folder, so several albums end up "
+                  "side by side. **Sort into Album Folders** separates them: one subfolder per album, named "
+                  "from the tags, with anything untagged grouped by when it arrived."},
+            {"note": "Sorting only ever moves audio files. A cover image the bot sent alongside the tracks, "
+                     "or anything else already in that folder, is left exactly where it is."},
+            {"p": "**Record Downloaded Albums...** then goes to the recording flow. It sorts first, so you "
+                  "cannot accidentally record two albums onto one disc, and asks which album if there is "
+                  "more than one. From there it is the ordinary Record Folder to MiniDisc window described "
+                  "two chapters ago - which is also why this needs the MDRem adapter, even though "
+                  "downloading does not."},
+            {"p": "**Open Download Folder** opens it in your file manager, for a look before recording."},
+            {"p": "Both operations are also on the menu without opening the chat at all, for files "
+                  "downloaded earlier: **Sort Telegram Downloads into Album Folders...** and **Record from "
+                  "Telegram Downloads...**"},
+            {"tip": "Both buttons go quiet while anything is still downloading - sorting or recording "
+                    "half-written files would be worse than waiting."},
         ],
     },
     # ------------------------------------------------------------------

@@ -112,7 +112,7 @@ a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
   fillet on the other three — given directly by the user, `verified: true`.
 - **Disc + slider variant ("MiniDisc Disc Label (with Slider)")**: the same
   disc shape, plus a second, fully independent cut shape for the
-  cartridge's write-protect slider label — 27.5mm x 17.5mm, left two
+  cartridge's sliding dust shutter label — 27.5mm x 17.5mm, left two
   corners rounded (2.5mm radius), right two corners square. Placed
   `slider_gap_mm` (3mm, a layout choice, not a measured spec) to the right
   of the disc, vertically centered — see `DesignScene._build_disc_outline`.
@@ -124,7 +124,7 @@ a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
   a completely different `DiscTemplate` outline — a single plain rounded
   rectangle (`corner_radius_mm`, 4mm) covering most of the disc's face,
   69.4mm x 66.4mm (the MD's own measured 71x68mm size inset by a 0.8mm
-  margin on all sides), with the write-protect slider's notch *cut into*
+  margin on all sides), with the sliding shutter's notch *cut into*
   the right edge instead of placed as a separate adjacent shape (compare to
   the plain slider variant above, which adds a second independent
   `LAYER_CUT` shape rather than subtracting a hole from the first one).
@@ -144,11 +144,35 @@ a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
   (18mm) then extends that already-buffered notch further down by the same
   buffered width (confirmed: "it needs to include a buffer"), forming one
   continuous cutout (see `DesignScene._build_full_label_outline`) — the
-  slot the slider tab travels through as it's slid between locked/unlocked.
+  channel the shutter sweeps through as the deck pushes it open.
   Built via `QPainterPath.subtracted()` (one `LAYER_CUT` shape with a hole
   in it), unlike the additive slider variant, so `template_clip_path()`
   already excludes the notch correctly with no extra union logic needed.
   Dimensions user-confirmed, `verified: true`.
+- **What the "slider" actually is: the cartridge's sliding dust shutter,
+  not the write-protect tab** — corrected by the user while reading the
+  manual ("Slider ten od naklejki nie sluzy do zabezpieczenia przed
+  zapisem a do ochrony przeciwkurzowej"). Everything written here and in
+  the manual had called it a write-protect slider, which is a different
+  part: a small catch on the cartridge's edge that never gets a label.
+  **The geometry was right anyway, and the 18mm `slider_travel_mm` is why**
+  — a write-protect tab has no reason to need clearance swept across the
+  disc's *face*, whereas a shutter does, which is exactly what that
+  measurement was for. So this was purely a naming/explanation error, with
+  nothing to re-measure. Fixed in the manual (all three languages, plus a
+  note there explaining the part and why the channel must clear its whole
+  travel), in `auto_layout.py`/`canvas/scene.py`/`templates/models.py`
+  docstrings, and here. **The field names (`slider_*`,
+  `slider_notch_*`) and the template names ("... (with Slider)") were
+  deliberately left alone**: "slider" on its own is still accurate, and the
+  template names in particular are the *match key*
+  `registry.sync_builtin_templates()` uses (it appends any bundled built-in
+  whose `name` isn't already among the user's), so renaming one would hand
+  every existing install a duplicate template alongside the one they may
+  have customised. Every remaining "write-protect tab"/"write-protected
+  disc" mention — `erase_dialog.py`, `record_dialog.py`,
+  `remote_dialog.py`, and the MDRem erase findings further down — is about
+  the real write-protect catch and is correct as written.
 - **Full disc label + slider variant ("Full disc label (with Slider)")**:
   the same full-label outline (rounded rect + notch cutout) above, plus a
   second, independent `LAYER_CUT` shape for the printable/cuttable slider
@@ -2102,6 +2126,33 @@ convention `prepare_for_recording()`'s own flat keys already use) sets it
 the request returned 204. Deliberately does not touch `isMuted`: a muted
 player staying muted isn't this call's business.
 
+**Nothing in the recording flow depends on how the audio actually reaches
+the deck -- which is why the analogue inputs work with no code at all, and
+why the sample rate is a manual note rather than a check.** MDTools presses
+the deck's keys over infrared and watches foobar2000's playlist; the audio
+path is entirely outside that loop. So recording through the deck's
+*analogue* line inputs needs nothing added or branched on anywhere -- it
+just costs two extra conversions plus whatever the sound card's output
+stage adds, before ATRAC has even started, and makes the deck's input
+selector and recording level the user's problem (a digital input has
+neither). Documented in the manual's "Analogue instead, if you have to",
+deliberately not enforced or detected in code.
+
+The digital path does have one real failure mode, and it is left to the
+manual for the same reason: a MiniDisc is 44.1 kHz/16-bit stereo and the
+deck's digital input expects to be fed exactly that, so a 96 kHz or 24-bit
+stream -- which is what a modern player outputs from hi-res files unless
+something is told to convert them -- can be refused outright or drop out
+partway, with no way for the deck to report either (same one-way-infrared
+limitation as everything else here). The fix belongs in foobar2000:
+Resampler (SoX) in the DSP chain at 44100 Hz, output device at 16-bit
+stereo, which passes an ordinary 44.1/16 CD rip through untouched. **A
+check inside MDTools was considered and rejected**: Beefweb reports the
+*playing file's* sample rate, never the output device's format or what the
+DSP chain does on the way there, so "this file is 96 kHz" would be a false
+alarm for exactly the people who already have the resampler configured
+correctly -- the ones who would see it most often.
+
 **"Record CD to MiniDisc..." (`cdrip.py` + `musicbrainz.py` +
 `panels/cd_rip_dialog.py`) rips an audio CD into foobar2000's playlist and
 then hands over to the flow above, unchanged.** That hand-off is the design:
@@ -3629,7 +3680,7 @@ it is perfectly literal.
   `scripts/manual/make_screenshots.py`, which builds a demo project and
   grabs each dialog rather than anyone capturing them by hand. Two things
   follow. First, a UI change that renames a menu item or moves a control
-  invalidates **forty-eight screenshots** (sixteen figures x three
+  invalidates **fifty-seven screenshots** (nineteen figures x three
   languages), not one -- rerun the generator
   rather than patching a figure. Second, the Polish and Japanese manuals
   show Polish and Japanese screenshots, so the menu names quoted in their
@@ -3637,7 +3688,16 @@ it is perfectly literal.
   editing the translation *and* the manual text. The generator runs in
   `QStandardPaths` test mode and stubs `mdrem.MDRemClient`/
   `foobar.FoobarClient`, so it can safely run while the real app is using
-  the serial port.
+  the serial port. **The Telegram figures need no stub at all** -- both
+  dialogs are inert until an explicit action starts their worker
+  (`TelegramChatDialog.start_connecting()`, and `TelegramLoginDialog` only
+  on "Send code"), so plain construction opens no socket; the chat
+  transcript is then filled by handing synthetic `ChatMessage`s straight to
+  the dialog's own signal handlers, i.e. the real rendering code driven with
+  fake data. `_capture_telegram()` also creates two real (empty) `.flac`
+  files in a throwaway download folder, because Sort/Record enable
+  themselves from what is actually on disk -- without them the figure shows
+  three greyed-out buttons the manual points at.
 - **Adding a new built-in template no longer needs a manual edit of the
   live per-user `templates.json`.** Earlier in this project, every new
   built-in template required hand-editing

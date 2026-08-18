@@ -53,7 +53,8 @@ BOOK = [
                     ["Nadawanie tytułów", "Przystawka MDRem w porcie USB i magnetofon MiniDisc Sony, w "
                                           "który da się nią wycelować."],
                     ["Nagrywanie albumu", "Powyższe oraz foobar2000 z komponentem Beefweb i kabel "
-                                          "cyfrowy (S/PDIF) z komputera do magnetofonu."],
+                                          "cyfrowy (S/PDIF) z komputera do magnetofonu — albo analogowy, "
+                                          "realnym kosztem jakości."],
                 ],
             }},
             {"note": "Wszystko w tej instrukcji zostało ustalone na **Sony MDS-JE480**. Inne magnetofony "
@@ -176,17 +177,23 @@ BOOK = [
                 "rows": [
                     ["MiniDisc Disc Label", "Klasyczna naklejka 37 × 52 mm na front płyty, ze ścięciem 3 "
                                             "mm w lewym górnym narożniku i zaokrągleniami w pozostałych."],
-                    ["MiniDisc Disc Label (with Slider)", "To samo plus osobna mała naklejka na suwak "
-                                                          "zabezpieczenia przed zapisem."],
+                    ["MiniDisc Disc Label (with Slider)", "To samo plus osobna mała naklejka na przesuwną "
+                                                          "osłonę kasety."],
                     ["Full disc label", "Etykieta na całą powierzchnię kasety, 71 × 68 mm pomniejszone o "
-                                        "margines 0,8 mm."],
-                    ["Full disc label (with Slider)", "Cała powierzchnia plus naklejka suwaka, wpasowana "
-                                                      "we wcięcie, na którym leży. Tego używa "
+                                        "margines 0,8 mm, z wyciętą osłoną."],
+                    ["Full disc label (with Slider)", "Cała powierzchnia plus naklejka osłony, wpasowana "
+                                                      "w wycięcie, w którym leży. Tego używa "
                                                       "automatyczne układanie."],
                     ["MiniDisc Cover (J-Card)", "Trzypanelowa wkładka do pudełka: przód, grzbiet, tył."],
                     ["MiniDisc Cover (J-Card + Window)", "To samo z wyciętym okienkiem."],
                 ],
             }},
+            {"note": "**Osłona** to przesuwana klapka na kasecie, która chroni płytę od kurzu — magnetofon "
+                     "odsuwa ją, żeby dostać się do powierzchni. To nie jest suwak zabezpieczenia przed "
+                     "zapisem, który jest osobną małą blokadą na krawędzi kasety i nigdy nie dostaje "
+                     "naklejki. Ponieważ osłona musi się nadal przesuwać, szablony na całą powierzchnię "
+                     "wycinają kanał na cały jej skok, a nie tylko na pozycję spoczynkową: etykieta nad "
+                     "tym kanałem zablokowałaby ją na zamknięte."},
             {"fig": ("templates", "Szablony > Zarządzaj szablonami.")},
             {"h2": "Zweryfikowane i niezweryfikowane"},
             {"p": "Szablon jest oznaczony jako **Zweryfikowany** dopiero wtedy, gdy jego wymiary "
@@ -265,7 +272,7 @@ BOOK = [
                      "potwierdzenie. Same metadane zostają nietknięte."},
             {"h2": "Co powstaje"},
             {"p": "**Etykieta płyty**: szablon na całą powierzchnię, okładka rozciągnięta na nią i "
-                  "przycięta do linii cięcia oraz logo MiniDisc na naklejce suwaka. Trójkąt kierunku "
+                  "przycięta do linii cięcia oraz logo MiniDisc na naklejce osłony. Trójkąt kierunku "
                   "wkładania i jego podpis zostają na wierzchu grafiki, zamiast zniknąć pod nią."},
             {"p": "Ten znak **zmienia też kolor pod okładkę**: na czarny albo biały, zależnie od tego, "
                   "który pozostanie czytelny na górze konkretnej okładki. Zostawiony w domyślnej czerni "
@@ -383,7 +390,7 @@ BOOK = [
                   "`PING`."},
             {"p": "Po zaznaczeniu pola pojawiają się trzy rzeczy: **Wyślij listę utworów** w oknie "
                   "Metadane..., **Pilot...** na ekranie powitalnym oraz całe menu **Nagrywanie** — "
-                  "wszystkie trzy sposoby nagrania płyty i Skasuj MiniDisc..."},
+                  "wszystkie trzy sposoby nagrania płyty, Pilot... i Skasuj MiniDisc..."},
             {"note": "Adres foobar2000 na tej samej stronie celowo *nie* jest powiązany z tym polem — do "
                      "czytania playlisty potrzebny jest foobar2000, a nie przystawka na podczerwień."},
         ],
@@ -392,8 +399,10 @@ BOOK = [
     {
         "title": "Programowy pilot",
         "blocks": [
-            {"p": "**Pilot...** na ekranie powitalnym otwiera zamiennik pilota magnetofonu, ułożony tak "
-                  "jak ten fizyczny."},
+            {"p": "Programowy pilot to zamiennik pilota magnetofonu, ułożony tak jak ten fizyczny. Otwiera "
+                  "się go z **Pilot...** na ekranie powitalnym albo z **Nagrywanie > Pilot...** — to "
+                  "drugie istnieje dlatego, że sięgnięcie po pilota nie powinno wymagać zamykania "
+                  "otwartego projektu."},
             {"fig": ("remote", "Okno pilota. Linia stanu mówi, co wysłano, a nie co się stało.")},
             {"table": {
                 "head": ["Grupa", "Klawisze"],
@@ -489,12 +498,33 @@ BOOK = [
                 "tym, czego MDTools oczekuje; zmień go w Okno > Ustawienia..., jeżeli go przestawiłeś.",
                 "Połącz wyjście **S/PDIF** komputera — optyczne albo koncentryczne — z wejściem cyfrowym "
                 "magnetofonu. To ono niesie dźwięk; USB niesie wyłącznie komendy.",
+                "Ustaw wyjście foobara na **44,1 kHz, 16 bitów, stereo** — patrz niżej.",
                 "Wczytaj album do bieżącej playlisty foobara, w kolejności, jaką chcesz mieć na płycie.",
                 "Włóż czystą albo kasowalną płytę z zamkniętym suwakiem i ustaw tryb nagrywania (SP albo "
                 "LP2) **na magnetofonie** — MDTools nie potrafi go odczytać ani zmienić.",
                 "**Wyłącz LEVEL-SYNC** na magnetofonie. Patrz niżej.",
                 "Wyceluj przystawkę w czujnik magnetofonu i zostaw ją tak.",
             ]},
+            {"h2": "Format wchodzący do magnetofonu"},
+            {"p": "MiniDisc to 44,1 kHz, 16 bitów, stereo, i wejście cyfrowe magnetofonu oczekuje, że tym "
+                  "właśnie zostanie nakarmione. Podaj mu strumień 96 kHz albo 24-bitowy — a to właśnie "
+                  "wystawi współczesny odtwarzacz, jeśli pliki są wysokiej rozdzielczości i nikt nie każe "
+                  "ich przekonwertować — i magnetofon może go po prostu odrzucić albo wypaść w trakcie. "
+                  "I też nie ma jak powiedzieć o tym MDTools."},
+            {"p": "Konwertuj więc na komputerze, gdzie można to zrobić dobrze bez kosztów: zainstaluj w "
+                  "foobar2000 komponent **Resampler (SoX)**, dodaj go do łańcucha DSP i ustaw na "
+                  "**44100 Hz**, a wyjście na **16 bitów stereo**. Pliki już w 44,1/16 przechodzą "
+                  "nietknięte, więc przy zwykłym zripowanym CD nic to nie kosztuje, a ratuje ten "
+                  "niewygodny przypadek."},
+            {"h2": "Analogowo, jeśli trzeba"},
+            {"p": "Wejścia **analogowe** magnetofonu też działają, a MDTools prowadzi nagranie dokładnie "
+                  "tak samo — naciska klawisze magnetofonu, co nie zależy od tego, jak dochodzi dźwięk. "
+                  "**Jakość jest jednak znacznie słabsza**, i to nieuchronnie: dźwięk wychodzi z karty "
+                  "jako analogowy i zostaje ponownie scyfrowany przez magnetofon, więc łapie dwie "
+                  "dodatkowe konwersje i cały szum, jaki dorzuci stopień wyjściowy karty — a to wszystko "
+                  "przed ATRAC-iem. Jeśli magnetofon ma S/PDIF, używaj S/PDIF."},
+            {"p": "Analogowo trzeba też ustawić selektor wejścia magnetofonu na analogowe i poziom "
+                  "nagrywania ręcznie — przy wejściu cyfrowym nie ma ani jednego, ani drugiego."},
             {"fig": ("record", "Playlista w kolejności, w jakiej trafi na płytę.")},
             {"h2": "Co widać w oknie"},
             {"p": "Album, wykonawca i rok, którymi płyta zostanie zatytułowana, okładka, którą "
@@ -510,7 +540,8 @@ BOOK = [
                 "MDTools pokazuje playlistę i jej łączny czas, i ostrzega, jeśli nie zmieści się na "
                 "80-minutowej płycie w SP.",
                 "Ustawia foobara na odtworzenie wszystkiego raz, po kolei — bez losowania i powtarzania — "
-                "żeby płyta nie skończyła w innej kolejności niż tytuły.",
+                "żeby płyta nie skończyła w innej kolejności niż tytuły, oraz ustawia głośność foobara "
+                "na -5 dB, żeby zostawić magnetofonowi zapas.",
                 "Każe magnetofonowi zacząć nagrywanie, po czym **prosi o potwierdzenie, że magnetofon "
                 "naprawdę jest w pauzie nagrywania**. Nie może tego sprawdzić, a pomyłka oznacza "
                 "odegranie całego albumu do magnetofonu, który nie nagrywa, i odkrycie tego czterdzieści "
@@ -691,6 +722,87 @@ BOOK = [
             {"note": "Tak jak przy tytułach, skasowanie żyje w pamięci magnetofonu do chwili "
                      "wysunięcia płyty. MDTools proponuje potem wysunięcie - skorzystaj, bo inaczej "
                      "przy zaniku zasilania płyta zachowa starą zawartość."},
+        ],
+    },
+    # ------------------------------------------------------------------
+    {
+        "title": "Eksperymentalne: pobieranie z bota Telegrama",
+        "blocks": [
+            {"warn": "Wszystko w tym rozdziale jest **eksperymentalne** i ukryte, dopóki samemu się o to "
+                     "nie poprosi. Działa, ale jest nowsze i mniej sprawdzone niż reszta programu, a sposób "
+                     "podania może się jeszcze zmienić."},
+            {"p": "MDTools potrafi rozmawiać z botem Telegrama, **którego prowadzisz sam**, pobrać "
+                  "przysłane pliki i przekazać wynik do Nagrywania z folderu — dzięki czemu pobranie staje "
+                  "się nagraną i zatytułowaną płytą bez wychodzenia z programu."},
+            {"warn": "To jest do bota, którego kontrolujesz. Pobieranie albumów z publicznego bota, który "
+                     "rozpowszechnia muzykę bez zgody uprawnionych, nie jest tym, do czego to służy — a "
+                     "posiadanie płyty CD tego nie legalizuje: to obejmuje kopiowanie własnej płyty, a nie "
+                     "wzięcie kopii od obcej osoby."},
+            {"h2": "Włączanie"},
+            {"p": "W **Okno > Ustawienia** jest pole **Pokaż funkcje eksperymentalne**. Po zaznaczeniu w "
+                  "pasku menu pojawia się menu **Eksperymentalne**; po odznaczeniu znika. Dopóki jest "
+                  "wyłączone, nic za nim nie działa."},
+            {"fig": ("experimental-settings", "Eksperymentalne > Ustawienia eksperymentalne. Funkcje "
+                                             "eksperymentalne mają własne okno ustawień."),},
+            {"p": "**Eksperymentalne > Ustawienia eksperymentalne...** to miejsce bota. Liczą się dwa pola:"},
+            {"ul": [
+                "**Nazwa użytkownika bota** — bot, z którym chcesz rozmawiać, `@coś`.",
+                "**Folder pobierania** — gdzie trafiają pliki. Domyślnie folder w katalogu tymczasowym "
+                "systemu, z założenia, że pobranie jest materiałem do nagrania, a nie kolekcją muzyki. "
+                "Można go ustawić gdziekolwiek.",
+            ]},
+            {"note": "Nie ma tu żadnego API ID ani API Hash do wpisania. MDTools nosi własne, więc "
+                     "jedynym krokiem jest zalogowanie. Gdyby jakaś wersja programu została zbudowana bez "
+                     "nich, powie to wprost, zamiast nie umieć się połączyć."},
+            {"h2": "Logowanie"},
+            {"p": "MDTools loguje się na **Twoje własne konto Telegrama**, nie jako bot. Nie jest to "
+                  "kwestia gustu: Bot API Telegrama zabrania botowi pisać do innego bota, więc jedynym "
+                  "sposobem rozmawiania z własnym botem tak jak człowiek jest być człowiekiem."},
+            {"fig": ("telegram-login", "Logowanie do Telegrama. Numer telefonu, potem kod przysłany przez "
+                                       "Telegram, potem hasło, jeśli używasz weryfikacji dwuetapowej."),},
+            {"p": "**Zaloguj się do Telegrama...** pyta o numer telefonu, potem o kod, który Telegram przysyła "
+                  "na Twoje pozostałe urządzenia, a potem — jeśli masz włączoną weryfikację dwuetapową — o "
+                  "hasło. Dokładnie ta sama kolejność co w samej aplikacji Telegrama."},
+            {"warn": "Zalogowanie jest zapisywane lokalnie, w pliku `telegram.session` obok ustawień "
+                     "MDTools. Ten plik jest równoważny byciu zalogowanym na Twoje konto: nie jest "
+                     "zaszyfrowany i nie jest czymś, co należy kopiować na inny komputer albo komukolwiek "
+                     "wysyłać."},
+            {"h2": "Rozmowa"},
+            {"p": "**Eksperymentalne > Pobierz album z bota Telegram...** otwiera zwykły czat. Pojawia się "
+                  "dopiero wtedy, gdy zalogowanie zostało zapisane."},
+            {"fig": ("telegram-chat", "Czat, z kolejką pobierań po prawej."),},
+            {"p": "Celowo zwykły czat, a nie pole wyszukiwania: komendy Twojego bota są Twoje i MDTools nie "
+                  "może ich znać. Pokazuje więc to, co bot przysyła, i pozwala go obsługiwać — tekst, jego "
+                  "przyciski inline i każdy dołączony plik. **Szybkie komendy** wysyłają `/start` albo "
+                  "`/help` jednym kliknięciem, bo rozumie je niemal każdy bot."},
+            {"p": "Dwie wygody warte uwagi. To, co pisze bot, jest **tłumaczone pod oryginałem**, na język "
+                  "ustawiony w MDTools — oryginał zostaje, bo tłumaczenie może być błędne, a dokładną "
+                  "komendę czy nazwę pliku lepiej czytać tak, jak przyszła. A bot, który buduje menu, "
+                  "podmieniając własną wiadomość zamiast wysyłać nową, jest obsługiwany poprawnie: "
+                  "wiadomość zmienia się na miejscu, tak jak na telefonie."},
+            {"h2": "Kolejka pobierań"},
+            {"p": "Pliki nigdy nie pojawiają się w rozmowie — idą do **kolejki po prawej**, która jest "
+                  "jedynym miejscem, gdzie widać nazwę pliku, rozmiar, postęp i prędkość. Cały album "
+                  "przychodzący jako dwadzieścia załączników zasypałby inaczej rozmowę dwudziestoma niemal "
+                  "identycznymi wierszami."},
+            {"p": "Pobieranie startuje samo, a naraz pobierają się najwyżej trzy pliki. Ten, który się nie "
+                  "udał, dostaje przycisk **Ponów**, a nie znika."},
+            {"h2": "Od pobrania do płyty"},
+            {"p": "Pliki ze wszystkich sesji zbierają się w jednym folderze pobierań, więc kilka albumów "
+                  "leży obok siebie. **Posortuj na foldery albumów** je rozdziela: jeden podfolder na album, "
+                  "nazwany na podstawie tagów, a to, co bez tagów, grupowane według czasu przyjścia."},
+            {"note": "Sortowanie rusza wyłącznie pliki audio. Okładka przysłana przez bota razem z "
+                     "utworami — i cokolwiek innego, co już leży w tym folderze — zostaje dokładnie tam, "
+                     "gdzie było."},
+            {"p": "**Nagraj pobrane albumy...** przechodzi dalej do nagrywania. Najpierw sortuje, żeby "
+                  "nie dało się przypadkiem nagrać dwóch albumów na jednej płycie, i pyta który album, "
+                  "jeśli jest więcej niż jeden. Dalej jest to zwykłe okno Nagrywania z folderu opisane dwa "
+                  "rozdziały wcześniej — dlatego to wymaga przystawki MDRem, choć samo pobieranie nie."},
+            {"p": "**Otwórz folder pobierania** otwiera go w menedżerze plików, żeby zajrzeć przed nagraniem."},
+            {"p": "Obie operacje są też w menu, bez otwierania czatu, dla plików pobranych wcześniej: "
+                  "**Posortuj pobrane pliki z Telegrama na foldery albumów...** i **Nagraj z pobranych plików Telegrama...**"},
+            {"tip": "Oba przyciski milkną, dopóki cokolwiek się pobiera — sortowanie albo nagrywanie "
+                    "niedopisanych plików byłoby gorsze niż poczekanie."},
         ],
     },
     # ------------------------------------------------------------------
