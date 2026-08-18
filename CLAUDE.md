@@ -104,7 +104,8 @@ scripts/
 ## Domain model
 
 A **Project** = exactly one Disc Label page + one Cover/J-Card page + metadata
-(album/artist/year/tracks) + a project-wide default text style, switchable via
+(album/artist/year/tracks) + a project-wide default text style + the physical
+**medium** it is for (`Project.medium`, `MEDIUM_MD` / `MEDIUM_CD`), switchable via
 a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
 (images embedded as base64 PNG, not file paths).
 
@@ -198,6 +199,50 @@ a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
   rounded-rect (1mm radius) cutout on the *right* side, 10.3mm from the
   right fold line and 3.45mm from the bottom. User-confirmed against their
   physical case, `verified: true`.
+- **CD-R support: the medium is a project-level choice, not a per-page one.**
+  `Project.medium` is picked once in `NewDesignDialog` (a combo above the two
+  template pickers) and decides which templates that dialog and Templates >
+  "Change Template for This Page..." offer at all -- `DiscTemplate.medium` /
+  `CoverTemplate.medium` carry the same value, defaulting to `"md"` so every
+  template and every `.mdproj` written before CD support existed stays a
+  MiniDisc one (that is the truth about them, not a fallback). A project holds
+  exactly one disc page and one cover page, so an unfiltered picker would let
+  a J-card onto a CD project -- two pages describing different physical
+  objects, with nothing to notice it until something got cut.
+- **CD disc label (`shape == "cd_label"`)**: a plain annulus -- one circle with
+  the spindle hole `subtracted()` out of it, the same single-cut-shape-with-a-
+  hole approach `full_label` uses for its shutter notch (and *not* the additive
+  two-shapes approach the slider variant uses), so `template_clip_path()`
+  refuses to print into the hole with no extra handling anywhere.
+  `outer_diameter_mm` / `hole_diameter_mm` define it; `width_mm`/`height_mm` are
+  kept equal to the outer diameter so everything that reasons about a
+  template's physical footprint (printing, copy packing,
+  `crop_to_template_bounds()`) keeps working untouched. Every `slider_*` field
+  is meaningless here -- a CD has no cartridge -- and the Template Manager
+  hides those rows for this shape. `seed_disc_defaults()` also returns early
+  for a CD medium: the "▲ INSERT THIS END" mark says which end of a *cartridge*
+  goes into the deck, and a disc dropped onto a spindle has no such end.
+- **Where the CD dimensions came from, and the correction they carried.** The
+  user delegated the measuring ("to mozesz sobie znalezc sam w internecie"), so
+  unlike every MiniDisc template here these start from industry sources rather
+  than their own ruler, and are `verified: false` until they cut one. Full-size
+  CD labels are 118mm outer (4.65"), standard-hub hole 41mm. **A slim jewel
+  case takes only a front insert, 120 x 120mm -- not 124 x 124, and it has no
+  tray card at all**: 124mm is the height of the case body, not of the paper
+  (which sits under tabs), and the back of a slim case is the bare plastic
+  tray, with no pocket and no spine. So the track list gets a *folded* insert
+  instead -- "CD Slim Case Insert (Folded, 2 Panels)", 242 x 120mm with one
+  fold at 121mm: right panel is the cover, left panel the track list, folded
+  once and read through the clear back of the case. That maps straight onto
+  the existing `fold_offsets_mm` machinery, so it needed no new page-count
+  concept (a project still has exactly two pages).
+- **The automatic layout refuses a CD project rather than half-working on it**
+  (`app_window._auto_layout_blocked_for_cd()`, checked both by the Tools panel
+  button -- before its destructive confirmation -- and by
+  `_auto_layout_project()` as a backstop). Both halves of that layout target
+  templates *by name* (`FULL_LABEL_TEMPLATE`, `JCARD_TEMPLATE`), so running it
+  on a CD project would not lay out its pages: it would quietly replace them
+  with MiniDisc shapes. The CD equivalent is a separate layout, not yet built.
 - Built-in templates can be edited but not deleted.
 - **New built-in templates reach existing installs via
   `registry.sync_builtin_templates()`, called once from `main()` on every

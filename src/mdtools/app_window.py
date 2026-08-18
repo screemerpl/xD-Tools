@@ -58,6 +58,8 @@ from mdtools.panels.startup_dialog import StartupDialog
 from mdtools.panels.telegram_chat_dialog import TelegramChatDialog, pick_album_folder
 from mdtools.panels.tool_panel import ToolPanel
 from mdtools.project import (
+    MEDIUM_CD,
+    MEDIUM_MD,
     PAGE_COVER,
     PAGE_DISC,
     GrayscaleAdjustment,
@@ -668,16 +670,25 @@ class MainWindow(QMainWindow):
                 return False
             disc_template = dialog.selected_disc_template
             cover_template = dialog.selected_cover_template
+            medium = dialog.selected_medium
             if disc_template is None or cover_template is None:
                 return False
         else:
             from mdtools.templates import registry
 
             templates = registry.load_templates()
-            if not templates["disc"] or not templates["cover"]:
+            # The unprompted fallback (a cancelled startup screen, or a
+            # first launch with nothing chosen) stays on MiniDisc: it is
+            # what this app defaulted to before CD-R support existed, and
+            # picking a medium for the user out of template file order
+            # would be arbitrary.
+            medium = MEDIUM_MD
+            discs = [t for t in templates["disc"] if getattr(t, "medium", MEDIUM_MD) == medium]
+            covers = [t for t in templates["cover"] if getattr(t, "medium", MEDIUM_MD) == medium]
+            if not discs or not covers:
                 return False
-            disc_template = templates["disc"][0]
-            cover_template = templates["cover"][0]
+            disc_template = discs[0]
+            cover_template = covers[0]
 
         disc_scene = DesignScene(disc_template)
         self._populate_new_scene(disc_scene, disc_template, PAGE_DISC)
@@ -689,6 +700,7 @@ class MainWindow(QMainWindow):
         self.project = Project(
             metadata=ProjectMetadata(),
             pages={PAGE_DISC: disc_scene, PAGE_COVER: cover_scene},
+            medium=medium,
         )
         self._reset_undo_stack()
         self.properties_panel.set_default_text_style(self.project.default_text_style)
@@ -730,7 +742,13 @@ class MainWindow(QMainWindow):
         from mdtools.templates import registry
 
         kind = "disc" if self.current_page == PAGE_DISC else "cover"
-        templates = registry.load_templates()[kind]
+        # Only this project's own medium: a CD project has no use for a
+        # J-card and swapping one in would describe a case it does not have.
+        templates = [
+            t
+            for t in registry.load_templates()[kind]
+            if getattr(t, "medium", MEDIUM_MD) == self.project.medium
+        ]
         if not templates:
             return
         names = [template.name for template in templates]
@@ -1569,7 +1587,7 @@ class MainWindow(QMainWindow):
         down in real time; here it is a single click on a toolbar button,
         where wiping a page the user had been working on would be a nasty
         surprise."""
-        if self.project is None:
+        if self.project is None or self._auto_layout_blocked_for_cd():
             return
         metadata = self.project.metadata
         if not metadata.album and not metadata.artist:
@@ -1646,6 +1664,25 @@ class MainWindow(QMainWindow):
 
         return next((t for t in registry.load_templates()[kind] if t.name == name), None)
 
+    def _auto_layout_blocked_for_cd(self) -> bool:
+        """True (having said so) when the automatic layout cannot run on
+        this project because it is a CD one.
+
+        Both halves of the layout target templates named for MiniDisc parts
+        (the full-face label with its shutter sticker, the J-card), so
+        running it here would not lay the pages out -- it would quietly turn
+        a CD project into a MiniDisc one. The CD equivalent is a separate
+        layout; until it exists, refusing is the honest outcome.
+        """
+        if self.project is None or self.project.medium != MEDIUM_CD:
+            return False
+        QMessageBox.information(
+            self,
+            self.tr("Auto-Layout"),
+            self.tr("Automatic layout is not available for CD projects yet."),
+        )
+        return True
+
     def _auto_layout_project(self, metadata: ProjectMetadata) -> None:
         """Turns an album into a first draft of both pages: the disc label
         and the J-card.
@@ -1657,6 +1694,8 @@ class MainWindow(QMainWindow):
         panel button, which is a single click out of nowhere, does confirm.
         """
         if self.project is None or not metadata.cover_art:
+            return
+        if self._auto_layout_blocked_for_cd():
             return
         self._auto_layout_cover(metadata)
         self._auto_layout_disc_label(metadata)

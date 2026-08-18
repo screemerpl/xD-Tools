@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from mdtools.project import MEDIUM_CD, MEDIUM_MD
 from mdtools.templates import registry
 from mdtools.templates.models import CoverTemplate, DiscTemplate
 
@@ -127,6 +128,20 @@ class TemplateManagerDialog(QDialog):
         name_edit.textChanged.connect(lambda v: (setattr(template, "name", v), self._relabel(row, kind, v)))
         form.addRow(self.tr("Name"), name_edit)
 
+        # Which medium's File > New offers this template at all. Selected by
+        # data rather than index for the same reason the shape combo below
+        # is: setting the index fires the change signal, so a lookup that
+        # missed would rewrite the value it was meant to display.
+        medium_combo = QComboBox()
+        medium_combo.addItem(self.tr("MiniDisc"), MEDIUM_MD)
+        medium_combo.addItem(self.tr("CD-R"), MEDIUM_CD)
+        medium_index = medium_combo.findData(template.medium)
+        medium_combo.setCurrentIndex(medium_index if medium_index >= 0 else 0)
+        medium_combo.currentIndexChanged.connect(
+            lambda index: setattr(template, "medium", medium_combo.itemData(index))
+        )
+        form.addRow(self.tr("Medium"), medium_combo)
+
         if template.items:
             form.addRow(
                 self.tr("Layers"),
@@ -153,7 +168,14 @@ class TemplateManagerDialog(QDialog):
             shape_combo = QComboBox()
             shape_combo.addItem(self.tr("Sticker (chamfer + fillet)"), "sticker")
             shape_combo.addItem(self.tr("Full disc label (rounded rect + slider notch)"), "full_label")
-            shape_combo.setCurrentIndex(0 if template.shape == "sticker" else 1)
+            shape_combo.addItem(self.tr("CD disc label (circle + spindle hole)"), "cd_label")
+            # Selected by data, never by index: picking "whatever isn't
+            # sticker" would land a cd_label template on the full_label entry
+            # and -- because setting the index fires currentIndexChanged --
+            # rewrite its shape to match, turning a CD label into a MiniDisc
+            # one just by opening this dialog.
+            shape_index = shape_combo.findData(template.shape)
+            shape_combo.setCurrentIndex(shape_index if shape_index >= 0 else 0)
             form.addRow(self.tr("Shape"), shape_combo)
 
             chamfer = spin(template.chamfer_mm, maximum=20.0)
@@ -208,18 +230,32 @@ class TemplateManagerDialog(QDialog):
             travel.valueChanged.connect(lambda v: setattr(template, "slider_travel_mm", v))
             form.addRow(self.tr("Slider travel channel length"), travel)
 
+            outer_diameter = spin(template.outer_diameter_mm, maximum=200.0)
+            outer_diameter.valueChanged.connect(lambda v: setattr(template, "outer_diameter_mm", v))
+            form.addRow(self.tr("Outer diameter (CD label)"), outer_diameter)
+
+            hole_diameter = spin(template.hole_diameter_mm, maximum=200.0)
+            hole_diameter.valueChanged.connect(lambda v: setattr(template, "hole_diameter_mm", v))
+            form.addRow(self.tr("Spindle hole diameter (0 = none)"), hole_diameter)
+
             # slider_w/h/r are shared: for "sticker" they size the shape
             # placed beside the disc; for "full_label" they size the shape
             # nested inside the notch -- so they stay visible either way.
             sticker_rows = [chamfer, fillet, slider_gap]
             full_label_rows = [full_label_radius, notch_w, notch_h, notch_r, notch_top, notch_buffer, travel]
+            cd_rows = [outer_diameter, hole_diameter]
+            # A CD has no cartridge, so nothing about a slider applies to it.
+            slider_rows = [slider_w, slider_h, slider_r]
 
             def update_shape_visibility(shape: str) -> None:
-                is_sticker = shape == "sticker"
                 for row_widget in sticker_rows:
-                    form.setRowVisible(row_widget, is_sticker)
+                    form.setRowVisible(row_widget, shape == "sticker")
                 for row_widget in full_label_rows:
-                    form.setRowVisible(row_widget, not is_sticker)
+                    form.setRowVisible(row_widget, shape == "full_label")
+                for row_widget in cd_rows:
+                    form.setRowVisible(row_widget, shape == "cd_label")
+                for row_widget in slider_rows:
+                    form.setRowVisible(row_widget, shape != "cd_label")
 
             def on_shape_changed(index: int) -> None:
                 shape = shape_combo.itemData(index)
