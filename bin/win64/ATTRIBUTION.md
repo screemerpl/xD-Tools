@@ -78,6 +78,33 @@ Windows, and is what the cdrtfe project ships.
 - Licence: GPL-3.0-or-later with the Cygwin linking exception (this predates
   Cygwin's move to LGPL-3.0 in 2.5.2). Upstream: <https://cygwin.com/>.
 
+## SoX
+
+SoX 14.4.2, the Sound eXchange resampler. A CD holds 44.1 kHz / 16-bit
+stereo and nothing else; `flac.exe` cannot resample, so this is what turns
+an ordinary 48 kHz / 24-bit download into something that can be written.
+
+ffmpeg was the first choice and was measured rather than assumed: its
+Windows builds are ~128 MB of DLLs (`avcodec` alone 68 MB, past the size
+GitHub warns about), against 6 MB for SoX, which does the one thing needed.
+The cost is breadth -- **this package cannot read MP3**. The format is in
+SoX's own list, but decoding one needs `libmad-0.dll` loaded at runtime and
+the official package does not ship it (confirmed by running it: writing an
+MP3 fails with "Unable to load LAME encoder library"). Dropping a 32-bit
+`libmad-0.dll` in beside `sox.exe` would enable it with no code change.
+
+- Upstream: <https://sox.sourceforge.net/>
+- Binaries taken from the official Windows package,
+  <https://sourceforge.net/projects/sox/files/sox/14.4.2/sox-14.4.2-win32.zip>
+  (SHA-256 `8072cc147cf1a3b3713b8b97d6844bb9389e211ab9e1101e432193fad6ae6662`)
+  -- `sox.exe` and the DLLs beside it (`libsox-3`, `libflac-8`, `libogg-0`,
+  `libvorbis*`, `libwavpack-1`, `libid3tag-0`, `libpng16-16`, `zlib1`,
+  `libgomp-1`, `libgcc_s_sjlj-1`, `libssp-0`, `libwinpthread-1`).
+  `wget.exe` and the PDF manuals from that package are deliberately not
+  bundled.
+- Licence: GPL-2.0-or-later (`sox.exe`); `libsox` itself is
+  LGPL-2.1-or-later.
+
 ## Source code
 
 Every GPL and CDDL tool here has its complete corresponding source published

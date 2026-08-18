@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
-from mdtools import app_settings, cdburn, foobar
+from mdtools import app_settings, cdburn, decode, foobar
 from mdtools.app_window import MainWindow
 from mdtools.panels.burn_dialog import BurnDialog, _BurnWorker
 from mdtools.project import MEDIUM_CD, MEDIUM_MD
@@ -46,13 +46,26 @@ def burnable(monkeypatch):
 # -- what the dialog shows before anything is written --------------------
 
 
-def test_each_track_gets_a_verdict_before_the_button(qt_app, tmp_path, burnable):
+def test_each_track_gets_a_verdict_before_the_button(qt_app, tmp_path, burnable, monkeypatch):
+    """With no resampler around, a hi-res track is a wall; the button has
+    to say so rather than let a disc be spent finding out."""
+    monkeypatch.setattr(decode, "can_convert", lambda: False)
     sources = _sources(tmp_path, 1) + [(_write_wav(tmp_path / "hi.wav", rate=48000), "Hi-res", "A")]
     dialog = BurnDialog(sources, album="Album", artist="Artist")
 
     assert dialog.table.item(0, 3).text() == "OK"
     assert "44100" in dialog.table.item(1, 3).text()
     assert dialog.burn_button.isEnabled() is False, "a disc that cannot be written must not offer to be"
+
+
+def test_a_track_that_will_be_converted_says_so_without_blocking_the_burn(qt_app, tmp_path, burnable, monkeypatch):
+    monkeypatch.setattr(decode, "can_convert", lambda: True)
+    sources = _sources(tmp_path, 1) + [(_write_wav(tmp_path / "hi.wav", rate=48000), "Hi-res", "A")]
+
+    dialog = BurnDialog(sources, album="Album", artist="Artist")
+
+    assert "converted" in dialog.table.item(1, 3).text()
+    assert dialog.burn_button.isEnabled() is True
 
 
 def test_the_summary_shows_the_length_against_the_disc(qt_app, tmp_path, burnable):

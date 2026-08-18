@@ -137,16 +137,26 @@ def test_a_flac_is_decoded_by_the_real_bundled_tool(tmp_path):
         assert out.readframes(out.getnframes()) == original.readframes(original.getnframes())
 
 
-def test_a_file_that_is_not_red_book_is_refused_before_anything_runs(tmp_path):
+def test_a_file_that_is_not_red_book_goes_through_the_resampler(tmp_path):
+    """It used to be refused outright here. That was right while nothing
+    could resample; with SoX bundled, refusing an ordinary 48 kHz download
+    would be refusing the common case."""
+    launched = []
     source = _write_wav(tmp_path / "hires.wav", rate=48000)
 
-    def fail_if_run(*args, **kwargs):
-        raise AssertionError("nothing should be launched for a file that cannot go on a CD as it is")
+    def record(command, **kwargs):
+        launched.append(command)
 
-    with pytest.raises(decode.DecodeError) as error:
-        decode.to_wav(source, tmp_path / "out.wav", run=fail_if_run)
+        class Result:
+            returncode = 0
+            stdout = stderr = ""
 
-    assert "48000" in str(error.value)
+        (tmp_path / "out.wav").write_bytes(b"")
+        return Result()
+
+    decode.to_wav(source, tmp_path / "out.wav", run=record)
+
+    assert launched and "rate" in launched[0]
 
 
 def test_a_failed_decode_reports_the_tools_own_first_line(tmp_path):
@@ -170,3 +180,98 @@ def test_the_decode_command_overwrites_quietly(tmp_path):
     assert command[:4] == ["flac", "-d", "-f", "-s"]
     assert str(tmp_path / "out.wav") in command
     assert str(tmp_path / "in.flac") == command[-1]
+
+
+# -- resampling with SoX -------------------------------------------------
+
+
+def _sox_or_skip():
+    if decode.sox_path() is None:
+        pytest.skip("SoX is not bundled on this platform")
+
+
+def test_a_hi_res_flac_is_converted_rather_than_refused(tmp_path):
+    """The case that started this: a 48 kHz / 24-bit album, which is what
+    a modern download normally is."""
+    _sox_or_skip()
+    wav = tmp_path / "hires.wav"
+    with wave.open(str(wav), "wb") as handle:
+        handle.setnchannels(2)
+        handle.setsampwidth(3)
+        handle.setframerate(48000)
+        handle.writeframes(bytes(48000 * 2 * 3 * 2))
+    flac = _encode_flac(wav, tmp_path / "hires.flac")
+    assert decode.analyze(flac).is_red_book is False
+
+    out = decode.to_wav(flac, tmp_path / "out.wav")
+
+    properties = decode.analyze(out)
+    assert properties.is_red_book is True
+    # two seconds in, two seconds out -- a resampler that dropped or
+    # invented audio would show up here before it showed up on a disc
+    assert properties.duration_seconds == pytest.approx(2.0, abs=0.01)
+
+
+def test_a_file_that_is_already_red_book_is_not_run_through_the_resampler(tmp_path):
+    _sox_or_skip()
+    source = _write_wav(tmp_path / "ok.wav")
+
+    def fail_if_run(*args, **kwargs):
+        raise AssertionError("nothing to convert")
+
+    decode.to_wav(source, tmp_path / "out.wav", run=fail_if_run)
+
+
+def test_without_sox_a_hi_res_file_is_refused_and_says_why(tmp_path, monkeypatch):
+    monkeypatch.setattr(decode, "sox_path", lambda: None)
+    source = _write_wav(tmp_path / "hires.wav", rate=48000)
+
+    with pytest.raises(decode.DecodeError) as error:
+        decode.to_wav(source, tmp_path / "out.wav")
+
+    assert "48000" in str(error.value)
+    assert "SoX" in str(error.value)
+
+
+def test_the_convert_command_resamples_dithers_and_sets_the_depth():
+    command = decode.convert_command("sox", tmp_pathlike("in.flac"), tmp_pathlike("out.wav"))
+
+    assert command[0] == "sox"
+    assert command[command.index("-b") + 1] == "16"
+    assert command[command.index("-c") + 1] == "2"
+    # effects come after the output file -- SoX's own argument order
+    assert command[-4:] == ["rate", "-v", "44100", "dither"]
+
+
+def tmp_pathlike(name):
+    from pathlib import Path
+
+    return Path(name)
+
+
+def test_a_format_sox_reads_but_this_module_cannot_parse_itself(tmp_path):
+    """Ogg Vorbis has no header this project knows how to read, so its
+    length comes from SoX -- and the length is what decides how much of the
+    disc a track takes."""
+    _sox_or_skip()
+    ogg = tmp_path / "tone.ogg"
+    subprocess.run(
+        [decode.sox_path(), "-n", "-r", "44100", "-c", "2", str(ogg), "synth", "3", "sine", "440"],
+        capture_output=True,
+        check=True,
+    )
+
+    properties = decode.analyze(ogg)
+
+    assert properties.sample_rate == 44100
+    assert properties.channels == 2
+    assert properties.duration_seconds == pytest.approx(3.0, abs=0.05)
+
+
+def test_mp3_is_not_offered_because_this_build_of_sox_cannot_read_one():
+    """Its format list says mp3, but decoding needs libmad loaded at
+    runtime and the official package does not ship it -- promising it here
+    would turn a clear "unsupported" into a failure half way through a
+    burn."""
+    assert ".mp3" not in decode.CONVERTIBLE_SUFFIXES
+    assert decode.is_supported("album.mp3") is False

@@ -85,7 +85,10 @@ def test_a_track_costs_whole_sectors_even_when_it_does_not_fill_the_last_one(tmp
     assert plan.tracks[0].sectors == int(exact) + (1 if exact % 1 else 0)
 
 
-def test_a_hi_res_track_is_a_problem_naming_that_track(tmp_path):
+def test_a_hi_res_track_is_a_problem_naming_that_track(tmp_path, monkeypatch):
+    # with no resampler available; with one it becomes a note instead, see
+    # further down
+    monkeypatch.setattr(decode, "can_convert", lambda: False)
     sources = _sources(tmp_path, 2)
     sources.append((_write_wav(tmp_path / "hi.wav", rate=48000), "Hi-res", "Artist"))
 
@@ -119,9 +122,10 @@ def test_an_unreadable_file_becomes_a_problem_rather_than_an_exception(tmp_path)
     assert plan.tracks[1].sectors == 0
 
 
-def test_every_problem_is_collected_not_just_the_first(tmp_path):
+def test_every_problem_is_collected_not_just_the_first(tmp_path, monkeypatch):
     """The dialog shows them all at once: stopping at the first would make
     fixing an album a matter of one failed attempt per bad file."""
+    monkeypatch.setattr(decode, "can_convert", lambda: False)
     sources = [
         (_write_wav(tmp_path / "short.wav", seconds=1), "Short", "A"),
         (_write_wav(tmp_path / "hi.wav", rate=48000), "Hi", "A"),
@@ -260,7 +264,11 @@ def test_preparing_wavs_names_them_in_disc_order(tmp_path):
 
 
 def test_preparing_wavs_stops_at_the_first_failure(tmp_path):
-    sources = _sources(tmp_path, 1) + [(_write_wav(tmp_path / "hi.wav", rate=48000), "Hi", "A")]
+    """A file nothing can read, rather than one that merely needs
+    resampling -- that one is converted now."""
+    broken = tmp_path / "broken.wav"
+    broken.write_bytes(b"RIFFjunk")
+    sources = _sources(tmp_path, 1) + [(broken, "Broken", "A")]
     plan = cdburn.build_burn_plan(sources)
 
     with pytest.raises(cdburn.BurnError):
@@ -602,3 +610,39 @@ def test_the_lines_around_the_progress_lines_are_not_mistaken_for_progress():
     text = "Starting new track at sector: 1500\nTrack 01: Total bytes read/written: 3528000/3528000\n"
 
     assert cdburn.parse_progress(text) is None
+
+
+# -- a wrong sample rate: a problem, or a step on the way? ---------------
+
+
+def test_a_hi_res_track_is_only_a_problem_when_nothing_can_resample(tmp_path, monkeypatch):
+    monkeypatch.setattr(decode, "can_convert", lambda: False)
+    sources = [(_write_wav(tmp_path / "hi.wav", rate=48000), "Hi-res", "A")]
+
+    plan = cdburn.build_burn_plan(sources)
+
+    assert [p.code for p in plan.problems] == [cdburn.NOT_RED_BOOK]
+    assert plan.can_burn is False
+
+
+def test_with_a_resampler_the_same_track_is_a_note_and_the_disc_can_still_be_burned(tmp_path, monkeypatch):
+    """The whole point of bundling SoX: a 48 kHz / 24-bit album is what a
+    download normally is, and it is converted on the way to the disc."""
+    monkeypatch.setattr(decode, "can_convert", lambda: True)
+    sources = [(_write_wav(tmp_path / "hi.wav", rate=48000), "Hi-res", "A")]
+
+    plan = cdburn.build_burn_plan(sources)
+
+    assert plan.problems == []
+    assert plan.can_burn is True
+    assert [note.code for note in plan.notes_for(1)] == [cdburn.RESAMPLED]
+    assert "48000" in plan.notes_for(1)[0].detail
+
+
+def test_a_note_never_disables_the_burn_button(tmp_path, monkeypatch):
+    monkeypatch.setattr(decode, "can_convert", lambda: True)
+    sources = _sources(tmp_path, 1) + [(_write_wav(tmp_path / "hi.wav", rate=48000), "Hi", "A")]
+
+    plan = cdburn.build_burn_plan(sources)
+
+    assert plan.notes and plan.can_burn is True

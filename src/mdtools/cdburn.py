@@ -101,6 +101,8 @@ UNREADABLE = "unreadable"
 TOO_MANY_TRACKS = "too_many_tracks"
 TOO_LONG_FOR_DISC = "too_long_for_disc"
 NO_TRACKS = "no_tracks"
+# Not a problem: something that will be dealt with on the way to the disc.
+RESAMPLED = "resampled"
 
 
 class BurnError(Exception):
@@ -152,6 +154,10 @@ class BurnPlan:
     artist: str
     tracks: list[BurnTrack] = field(default_factory=list)
     problems: list[Problem] = field(default_factory=list)
+    # Things worth saying that do not stop the burn -- a track that will be
+    # resampled on its way to the disc. Kept apart from `problems` because
+    # can_burn hangs on that list, and a note must never disable the button.
+    notes: list[Problem] = field(default_factory=list)
     capacity_sectors: int = DEFAULT_CAPACITY_SECTORS
 
     @property
@@ -168,6 +174,9 @@ class BurnPlan:
 
     def problems_for(self, track_number: int) -> list[Problem]:
         return [problem for problem in self.problems if problem.track_number == track_number]
+
+    def notes_for(self, track_number: int) -> list[Problem]:
+        return [note for note in self.notes if note.track_number == track_number]
 
 
 def build_burn_plan(
@@ -201,13 +210,17 @@ def build_burn_plan(
         if properties is None:
             continue
         if not properties.is_red_book:
-            plan.problems.append(
-                Problem(
-                    NOT_RED_BOOK,
-                    number,
-                    f"{properties.sample_rate} Hz / {properties.bits_per_sample}-bit / {properties.channels}ch",
-                )
+            detail = (
+                f"{properties.sample_rate} Hz / {properties.bits_per_sample}-bit / {properties.channels}ch"
             )
+            # With a resampler available this is a step on the way, not a
+            # reason to refuse: the file is converted before it is written.
+            # Without one, nothing here can fix it and the disc would get
+            # audio at the wrong rate.
+            if decode.can_convert():
+                plan.notes.append(Problem(RESAMPLED, number, detail))
+            else:
+                plan.problems.append(Problem(NOT_RED_BOOK, number, detail))
         if track.sectors < MIN_TRACK_SECTORS:
             # Red Book's own minimum: a shorter track is not a small track,
             # it is a disc some players refuse.

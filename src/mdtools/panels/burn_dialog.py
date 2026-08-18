@@ -22,9 +22,9 @@ is writing leaves a disc that is neither blank nor finished and cannot be
 rewritten, so that one asks first -- the same reasoning behind the erase
 dialog asking what the deck's display says rather than assuming.
 
-"Simulate" is a real cdrdao dry run: the whole sequence, laser off. It is
-the only way to rehearse a burn without spending a disc, so it is offered
-directly rather than buried.
+"Simulate" is a real cdrecord dry run (-dummy): the whole sequence with the
+laser off. It is the only way to rehearse a burn without spending a disc, so
+it is offered directly rather than buried.
 """
 
 from __future__ import annotations
@@ -52,8 +52,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mdtools import app_settings, cdburn, cdrip
-from mdtools.panels.cover_preview import CoverPreview
+from mdtools import app_settings, cdburn, cdrip, embedded_cover, mixtape_cover
+from mdtools.panels.cover_preview import CoverPreview, fetch_into
 from mdtools.project import ProjectMetadata, Track
 
 # Decoding is a small fraction of a burn in wall-clock terms, but it is the
@@ -69,9 +69,9 @@ def _mmss(seconds: float) -> str:
 
 
 class _BurnWorker(QThread):
-    """Decodes the album, writes the toc, and hands both to cdrdao.
+    """Decodes the album, writes its CD-Text, and hands both to cdrecord.
 
-    On its own thread for the same reason the rip worker is: cdrdao holds
+    On its own thread for the same reason the rip worker is: cdrecord holds
     the drive for minutes at a time, and nothing about that should be
     happening on the thread painting the window.
     """
@@ -105,7 +105,7 @@ class _BurnWorker(QThread):
 
     def cancel(self) -> None:
         """Takes effect between decoded tracks, or within a poll interval
-        once cdrdao is running. What that *means* differs sharply between
+        once cdrecord is running. What that *means* differs sharply between
         those two stages -- see the dialog, which is where the user is
         warned."""
         self._cancelled = True
@@ -185,7 +185,7 @@ class BurnDialog(QDialog):
         layout.addWidget(self._build_tracks_table())
         layout.addWidget(self._build_disc_box())
 
-        # Two labels, not one: a missing cdrdao must not hide what the plan
+        # Two labels, not one: a missing cdrecord must not hide what the plan
         # says about the album -- fixing a hi-res track and installing a
         # tool are separate jobs, and the user may well do them in either
         # order.
@@ -218,6 +218,7 @@ class BurnDialog(QDialog):
         self._refresh_drives()
         self._check_tools()
         self._rebuild_plan()
+        self._ensure_cover()
 
     # -- construction ----------------------------------------------------
 
@@ -286,6 +287,36 @@ class BurnDialog(QDialog):
         self.eject_check.setChecked(True)
         form.addRow("", self.eject_check)
         return box
+
+    def _ensure_cover(self) -> None:
+        """Finds the artwork now, while the album's name can still be
+        corrected.
+
+        The same order RecordDialog uses, and for the same reasons: a search
+        first, because iTunes returns a clean 600x600 that a printed label
+        wants, then whatever the files themselves carry, which is certainly
+        the right record but often a small scan. A compilation is never
+        searched for -- "Various Artists" returns some unrelated sleeve --
+        and gets one drawn from its own track list instead.
+
+        This was missing entirely at first: the burn flow went straight from
+        a folder to the dialog, so the cover box sat empty even for files
+        that had one, and the album reached the label with no artwork.
+        """
+        if self.cover_preview.data:
+            return
+        metadata = self.metadata()
+        if metadata.is_compilation():
+            self.cover_preview.set_cover(mixtape_cover.render_cover(metadata))
+            return
+
+        chosen = fetch_into(
+            self.cover_preview, self.artist_edit.text(), self.album_edit.text(), len(self._sources)
+        )
+        if chosen is not None and not self.year_edit.text().strip() and chosen.year:
+            self.year_edit.setText(str(chosen.year))
+        if not self.cover_preview.data:
+            self.cover_preview.set_cover(embedded_cover.cover_from_files(path for path, _t, _a in self._sources))
 
     # -- drives and tools -------------------------------------------------
 
@@ -372,10 +403,10 @@ class BurnDialog(QDialog):
         self.burn_button.setEnabled(plan.can_burn and not cdburn.missing_tools())
 
     def _status_for(self, plan: cdburn.BurnPlan, track_number: int) -> str:
-        problems = plan.problems_for(track_number)
-        if not problems:
+        entries = plan.problems_for(track_number) + plan.notes_for(track_number)
+        if not entries:
             return self.tr("OK")
-        return "; ".join(self._describe(problem) for problem in problems)
+        return "; ".join(self._describe(entry) for entry in entries)
 
     def _describe(self, problem: cdburn.Problem) -> str:
         """Turns a plan's problem code into a sentence.
@@ -384,6 +415,8 @@ class BurnDialog(QDialog):
         here, where there is a tr() to do it with."""
         if problem.code == cdburn.NOT_RED_BOOK:
             return self.tr("{format} -- a CD needs 44100 Hz / 16-bit / stereo").format(format=problem.detail)
+        if problem.code == cdburn.RESAMPLED:
+            return self.tr("{format} -- will be converted to 44100 Hz / 16-bit").format(format=problem.detail)
         if problem.code == cdburn.TOO_SHORT:
             return self.tr("shorter than the 4 seconds a CD track must be ({length})").format(
                 length=problem.detail
@@ -577,7 +610,7 @@ class BurnDialog(QDialog):
 
     def closeEvent(self, event) -> None:
         """The window's X goes through the same question as Close, so the
-        dialog can never be torn down while cdrdao still holds the drive."""
+        dialog can never be torn down while cdrecord still holds the drive."""
         if self._worker is not None:
             event.ignore()
             self.reject()
