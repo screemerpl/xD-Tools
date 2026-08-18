@@ -43,6 +43,8 @@ src/mdtools/
   mdrem.py                  MDRem IR adapter: serial protocol, transliteration, upload plan (no Qt UI)
   foobar.py                 foobar2000 via its Beefweb REST API *and* its command line (no Qt UI)
   cdrip.py                  audio CD: drives, TOC, disc ids, rip plan, cdparanoia/flac (no Qt UI)
+  decode.py                 what an audio file is, and Red Book PCM out of it (no Qt)
+  cdburn.py                 audio CD-R: burn plan, .toc + CD-Text, cdrdao (no Qt UI)
   musicbrainz.py            identifying a CD from its TOC alone -- a CD carries no text (no Qt UI)
   audio_folder.py           which files in a folder are the album, and in what order (no Qt)
   embedded_cover.py         the cover art inside a FLAC file, as a last resort (no Qt)
@@ -2376,6 +2378,67 @@ this feature exists for. If it ever needs to be faster, the lever is `-Z`
 (disable paranoia) -- which trades away exactly the thing that made ripping
 preferable to letting foobar play the disc live, so it should be a visible
 choice, never a quiet default.
+
+**Burning an audio CD-R (`decode.py` + `cdburn.py`) is the same
+plan-then-execute split as ripping, and the planning half is where every
+decision lives.** `build_burn_plan()` needs no drive, no QApplication and no
+files beyond the ones being burned; it returns every reason a disc cannot be
+written *attached to the plan* rather than raised, because the dialog has to
+show them all at once, next to the tracks they are about -- stopping at the
+first bad file would make fixing an album a matter of one failed attempt per
+problem. Those reasons are **codes, not sentences** (`NOT_RED_BOOK`,
+`TOO_SHORT`, `TOO_LONG_FOR_DISC`, ...), for the same reason
+`decode.AudioProperties.mismatches()` returns bare field names: the wording
+has to be translated and neither module has any Qt in it.
+
+**Reading a file's properties is deliberately separate from decoding it.** A
+CD-R holds 44.1kHz/16-bit stereo and nothing else, and the bundled `flac.exe`
+cannot resample -- so a 96kHz or 24-bit source is *reported per track before
+the disc is committed*, never silently converted. This is the same truth as
+the manual's note about feeding the MiniDisc deck's digital input, except
+here it can actually be checked in advance, because the files are on disk
+rather than streaming past. `decode._ensure_pcm()` is the single place a
+bundled ffmpeg would slot in if MP3/M4A support is ever wanted; every caller
+above it already thinks only in terms of "a path to Red Book WAV".
+
+**CD-Text goes through `mdrem.transliterate()` -- the MiniDisc titler's own
+function.** The spec allows ISO-8859-1 (and MS-JIS), but what a given player
+does with either is a guess, and that function's contract is already exactly
+the one wanted: strip to ASCII and *report* what had no equivalent instead of
+dropping it silently. A Japanese title therefore comes back empty with its
+characters listed, before the disc is written rather than after -- the same
+promise `MDRemUploadDialog` makes about a title going onto a MiniDisc.
+
+**The `.toc` file names bare WAV filenames, never paths**, and is written
+into the same directory as those WAVs. A Windows path inside a quoted string
+in a format that uses backslash as its own escape is a trap with no upside;
+keeping the toc beside its audio removes the problem rather than escaping it.
+
+**`burn()` mirrors `cdrip.rip_track()` exactly** -- child output to a *file*
+rather than a pipe (an undrained pipe blocks the child; reading it line by
+line makes cancelling depend on a line arriving), poll the clock, keep the
+log on failure and delete it on success. **The one thing that is not the same
+is what cancelling costs**: stopping a rip leaves nothing anywhere, while
+stopping a burn leaves a disc that is neither blank nor finished and a CD-R
+cannot be rewritten. `burn()` still does what it is told immediately -- the
+warning belongs to the dialog. `simulate=True` (cdrdao's `--simulate`) is a
+real dry run and exists at this level, not only in the UI, because a wasted
+CD-R is this feature's version of a bad cut.
+
+**Two things in `cdburn.py` are openly assumptions until they have been run
+against a real burner, and are labelled as such at each site**: the spelling
+cdrdao wants for a device on Windows, and the exact shape of its progress
+output. This is the lesson cd-paranoia already taught this project (it writes
+to stderr, success included; `-Q` exits 0 even with no drive at all) applied
+in advance -- so `list_burners()` asks cdrdao itself for device names instead
+of constructing them, `parse_disc_info()` treats an unrecognised field as
+"unknown" rather than an error, and `parse_progress()` returning None means
+"no progress information", never a failure. A burn that finishes correctly
+with a motionless progress bar is a cosmetic problem; one that stops because
+the output read differently would be a wasted disc. **`cdrdao` itself is not
+bundled yet** -- `bin/win64` gains it (plus an ATTRIBUTION.md entry; it is
+GPL) once it has been tried on the real drive, and `build_windows.ps1` needs
+no change, since it already `--add-data`s that whole folder.
 
 **The Project menu became "Recording", and the metadata editor moved out of
 it onto the Tools panel.** The menu held the one dialog used while *designing

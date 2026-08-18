@@ -54,10 +54,12 @@ _MAX_PICTURE_BYTES = 32 * 1024 * 1024
 _MAX_TAG_BYTES = 1024 * 1024
 
 
-def _iter_flac_blocks(path: Path | str, wanted_types: set[int], max_bytes: int) -> Iterator[tuple[int, bytes]]:
+def iter_flac_blocks(path: Path | str, wanted_types: set[int], max_bytes: int) -> Iterator[tuple[int, bytes]]:
     """Every metadata block whose type is in `wanted_types`, as (type, raw
-    bytes) -- shared by flac_pictures() and flac_tags() so the actual
-    binary walk (magic check, block header, length) exists exactly once.
+    bytes) -- shared by flac_pictures(), flac_tags() and decode.flac_properties()
+    so the actual binary walk (magic check, block header, length) exists
+    exactly once. Public for that third caller: it lives in another module,
+    and a second copy of this walk is exactly what it must not become.
 
     Anything not in `wanted_types` is skipped via seek, never read into
     memory; a *wanted* block longer than `max_bytes` is skipped the same
@@ -93,7 +95,7 @@ def _iter_flac_blocks(path: Path | str, wanted_types: set[int], max_bytes: int) 
 def flac_pictures(path: Path | str) -> list[tuple[int, bytes]]:
     """Every PICTURE block in a FLAC file, as (picture type, bytes)."""
     found: list[tuple[int, bytes]] = []
-    for _, body in _iter_flac_blocks(path, {_PICTURE_BLOCK}, _MAX_PICTURE_BYTES):
+    for _, body in iter_flac_blocks(path, {_PICTURE_BLOCK}, _MAX_PICTURE_BYTES):
         picture = _parse_picture(body)
         if picture is not None:
             found.append(picture)
@@ -130,7 +132,7 @@ def flac_tags(path: Path | str) -> dict[str, str]:
     Used by album_sort.py to group a folder of downloaded tracks by their
     own ALBUM tag -- the same "read the file directly, no tag library"
     approach this module already takes for cover art."""
-    for _, body in _iter_flac_blocks(path, {_VORBIS_COMMENT_BLOCK}, _MAX_TAG_BYTES):
+    for _, body in iter_flac_blocks(path, {_VORBIS_COMMENT_BLOCK}, _MAX_TAG_BYTES):
         return _parse_vorbis_comments(body)
     return {}
 

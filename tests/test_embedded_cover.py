@@ -221,7 +221,7 @@ def test_tags_are_found_after_other_blocks(tmp_path):
 
 
 def test_reading_tags_does_not_disturb_reading_pictures_from_the_same_file(tmp_path):
-    """Both walk the same block structure via the shared _iter_flac_blocks
+    """Both walk the same block structure via the shared iter_flac_blocks
     -- a regression here would likely mean one broke the other."""
     picture_body = _picture_block(b"SLEEVE")
     tag_body = _vorbis_comment_block({"ALBUM": "Lost Souls"})
