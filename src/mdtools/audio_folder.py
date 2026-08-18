@@ -8,11 +8,20 @@ existing record flow can do the rest.
 
 Two things it deliberately does not do:
 
-**It never reads a tag.** There is no tag library in this project and adding
-one for this would be a dependency for something foobar2000 already does
-perfectly -- the files go into the playlist first, and every title, artist,
-album and length is then read back out of foobar through Beefweb. So this
-module only ever decides *which* files and in *what order*.
+**The recording path never reads a tag.** There is no tag library in this
+project and adding one for that would be a dependency for something
+foobar2000 already does perfectly -- the files go into the playlist first,
+and every title, artist, album and length is then read back out of foobar
+through Beefweb. `list_audio_files()` therefore only ever decides *which*
+files and in *what order*.
+
+`album_from_folder()`, added for burning a CD-R, is the exception and needs
+to be: a burn hands the files straight to cdrdao, so foobar is not in the
+loop at all and there is nothing else to ask what a track is called. It
+reads FLAC's own comment block through embedded_cover.flac_tags() -- the
+parser this project already owns, no library -- and falls back to the
+filename for anything else. That is the whole difference: not a change of
+mind about tags, but a path where no player is involved.
 
 **It never renames, moves or rewrites anything.** These are the user's own
 music files, not the disposable rip folder cdrip.py owns.
@@ -30,7 +39,11 @@ this, never the other way round.
 from __future__ import annotations
 
 import re
+from collections import Counter
+from dataclasses import dataclass
 from pathlib import Path
+
+from mdtools.embedded_cover import flac_tags
 
 # What foobar2000 plays out of the box, plus the common lossless oddities.
 # A generous list rather than a strict one: a file it turns out not to
@@ -134,6 +147,91 @@ def guess_from_folder_name(name: str) -> tuple[str, str, int | None]:
             return "", right, year or int(left)
         return left, right, year
     return "", text, year
+
+
+@dataclass(frozen=True)
+class FolderTrack:
+    """One file, with whatever the file itself says it is called."""
+
+    path: Path
+    title: str
+    artist: str
+
+
+@dataclass(frozen=True)
+class FolderAlbum:
+    """A folder read as an album: its files in disc order, plus the album's
+    own name, artist and year where the files carry them.
+
+    Deliberately built without foobar2000, unlike the recording flows: a CD
+    burn works from the files directly, so making it wait on a running
+    player would be asking for a dependency the job does not have. FLAC
+    tags are read the same way album_sort.py reads them, and anything
+    untagged (a WAV, an MP3 stripped of tags) falls back to the filename
+    stem -- a disc of blank track names is a worse outcome than a filename.
+    """
+
+    tracks: list[FolderTrack]
+    album: str
+    artist: str
+    year: int | None
+
+
+def album_from_folder(folder: Path | str) -> FolderAlbum:
+    """Everything a burn needs to know about a folder of audio files.
+
+    The album/artist/year fall back to guess_from_folder_name(), the same
+    source FolderRecordDialog prefills its fields from -- and, as there,
+    tags beat the folder name whenever the files carry them.
+    """
+    folder = Path(folder)
+    paths = list_audio_files(folder)
+
+    tracks: list[FolderTrack] = []
+    albums: list[str] = []
+    artists: list[str] = []
+    years: list[str] = []
+    for path in paths:
+        tags = flac_tags(path) if path.suffix.lower() == ".flac" else {}
+        tracks.append(
+            FolderTrack(
+                path=path,
+                title=tags.get("TITLE", "").strip() or path.stem,
+                artist=(tags.get("ARTIST", "") or tags.get("ALBUMARTIST", "")).strip(),
+            )
+        )
+        if tags.get("ALBUM", "").strip():
+            albums.append(tags["ALBUM"].strip())
+        credited = (tags.get("ALBUMARTIST", "") or tags.get("ARTIST", "")).strip()
+        if credited:
+            artists.append(credited)
+        if tags.get("DATE", "").strip():
+            years.append(tags["DATE"].strip())
+
+    guessed_artist, guessed_album, guessed_year = guess_from_folder_name(folder.name)
+    return FolderAlbum(
+        tracks=tracks,
+        # weighed only against the files that actually carry the tag: counting
+        # untagged files as votes against would strip the name off a
+        # half-tagged record (the same rule foobar.album_title() follows)
+        album=_commonest(albums) or guessed_album,
+        artist=_commonest(artists) or guessed_artist,
+        year=_year_from(_commonest(years)) or guessed_year,
+    )
+
+
+def _commonest(values: list[str]) -> str:
+    """The value most of the files agree on -- so one guest-credited track
+    cannot rename the album (see album_sort._group_display_name, which
+    solves the same problem for folder names)."""
+    if not values:
+        return ""
+    return Counter(values).most_common(1)[0][0]
+
+
+def _year_from(value: str) -> int | None:
+    match = re.search(r"(\d{4})", value or "")
+    return int(match.group(1)) if match else None
 
 
 def total_bytes(paths: list[Path]) -> int:

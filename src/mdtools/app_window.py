@@ -41,6 +41,9 @@ from mdtools.panels.asset_gallery_dialog import AssetGalleryDialog
 from mdtools.panels.cd_rip_dialog import CdRipDialog
 from mdtools.panels.erase_dialog import EraseDiscDialog
 from mdtools.panels.experimental_settings_dialog import ExperimentalSettingsDialog
+from mdtools import foobar
+from mdtools.audio_folder import album_from_folder
+from mdtools.panels.burn_dialog import BurnDialog
 from mdtools.panels.folder_record_dialog import FolderRecordDialog
 from mdtools.panels import icons
 from mdtools.panels.grayscale_export_dialog import GrayscaleExportDialog
@@ -326,6 +329,14 @@ class MainWindow(QMainWindow):
         )
         self.record_action = recording_menu.addAction(
             self.tr("Record to MiniDisc from foobar2000..."), self._record_from_foobar
+        )
+        recording_menu.addSeparator()
+        # Burning needs no infrared adapter -- it is the drive's own job --
+        # so unlike everything above, these two are never hidden by
+        # _sync_mdrem_actions().
+        recording_menu.addAction(self.tr("Burn Audio CD from Folder..."), self._burn_cd_from_folder)
+        recording_menu.addAction(
+            self.tr("Burn Audio CD from foobar2000..."), self._burn_cd_from_foobar
         )
         recording_menu.addSeparator()
         # Erasing is not recording, but it is what you do to a disc you are
@@ -1535,6 +1546,96 @@ class MainWindow(QMainWindow):
         if folder.exec() != QDialog.DialogCode.Accepted:
             return
         self._run_record_dialog(port, metadata=folder.result_metadata)
+
+    # -- burning a CD-R ---------------------------------------------------
+
+    def _burn_cd_from_folder(self) -> None:
+        """Recording > Burn Audio CD from Folder...
+
+        No adapter, no foobar2000, no playlist: a burn hands the files
+        straight to cdrdao, so a folder is all this needs -- which is why
+        audio_folder.album_from_folder() reads the FLAC tags itself instead
+        of routing through a player the way the recording flows do.
+        """
+        # Same starting point as Record Folder to MiniDisc...: back where
+        # the last album came from, since the next one is very likely a
+        # sibling of it.
+        remembered = app_settings.music_folder()
+        start = remembered if remembered and Path(remembered).is_dir() else user_paths.music_start_path()
+        folder = QFileDialog.getExistingDirectory(self, self.tr("Choose Album Folder"), start)
+        if not folder:
+            return
+        album = album_from_folder(Path(folder))
+        if not album.tracks:
+            QMessageBox.warning(
+                self,
+                self.tr("Burn Audio CD"),
+                self.tr("There are no audio files in that folder."),
+            )
+            return
+        self._run_burn_dialog(
+            [(track.path, track.title, track.artist) for track in album.tracks],
+            album=album.album,
+            artist=album.artist,
+            year=album.year,
+        )
+
+    def _burn_cd_from_foobar(self) -> None:
+        """Recording > Burn Audio CD from foobar2000...
+
+        Only the playlist's *paths* are wanted here -- the burn reads the
+        files itself -- but the titles come back with them, and they are
+        the ones the user has already curated, so they are used as they
+        are (the same reasoning record_dialog.py gives for titling from the
+        playlist rather than from a lookup).
+        """
+        client = foobar.FoobarClient(app_settings.foobar_url())
+        try:
+            playlist = client.current_playlist()
+            items = client.playlist_items(playlist.id) if playlist else []
+        except foobar.FoobarError as exc:
+            QMessageBox.warning(self, self.tr("Burn Audio CD"), str(exc))
+            return
+
+        sources = [(Path(item.path), item.display_title(), item.artist) for item in items if item.path]
+        if not sources:
+            QMessageBox.warning(
+                self,
+                self.tr("Burn Audio CD"),
+                self.tr("foobar2000's playlist is empty, or its files are not reachable from here."),
+            )
+            return
+        metadata = foobar.metadata_from_playlist(items)
+        self._run_burn_dialog(
+            sources, album=metadata.album, artist=metadata.artist, year=metadata.year
+        )
+
+    def _run_burn_dialog(self, sources, *, album: str, artist: str, year) -> None:
+        """Shows the burn dialog and, if a disc was written, offers what was
+        written to the open project.
+
+        Offered rather than applied: unlike the post-recording layout (which
+        follows a flow the user has already confirmed several times over),
+        this can be reached with any project open, including one that has
+        nothing to do with the disc just burned.
+        """
+        dialog = BurnDialog(sources, album=album, artist=artist, year=year, parent=self)
+        if dialog.exec() != BurnDialog.DialogCode.Accepted or dialog.result_metadata is None:
+            return
+        if self.project is None or self.project.medium != MEDIUM_CD:
+            return
+
+        answer = QMessageBox.question(
+            self,
+            self.tr("Burn Audio CD"),
+            self.tr("Put this album's details into the open project, ready to design its label?"),
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Ok,
+        )
+        if answer != QMessageBox.StandardButton.Ok:
+            return
+        self.project.metadata = dialog.result_metadata
+        self._mark_dirty()
 
     def _erase_disc(self) -> None:
         """Recording > Erase MiniDisc... -- clears the disc in the deck.

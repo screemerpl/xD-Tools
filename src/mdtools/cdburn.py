@@ -276,19 +276,32 @@ def wav_name_for(number: int) -> str:
     return f"{number:02d}.wav"
 
 
-def prepare_wavs(plan: BurnPlan, directory: Path | str, *, on_progress=None, run=subprocess.run) -> list[str]:
+def prepare_wavs(
+    plan: BurnPlan,
+    directory: Path | str,
+    *,
+    on_progress=None,
+    should_cancel=None,
+    run=subprocess.run,
+) -> list[str]:
     """Decodes every track into `directory` as Red Book WAV, in disc order.
 
     Returns the bare filenames, ready for `toc_text()`. Raises BurnError on
     the first failure: unlike planning, there is nothing useful to do with
     a half-decoded album, and the plan has already reported everything that
     could be known in advance.
+
+    Cancelling takes effect between tracks, and here that costs nothing --
+    no disc has been touched yet, only a scratch folder. (Compare `burn()`,
+    where stopping ruins the CD-R.)
     """
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
 
     names: list[str] = []
     for number, track in enumerate(plan.tracks, start=1):
+        if should_cancel is not None and should_cancel():
+            raise BurnCancelled()
         name = wav_name_for(number)
         try:
             decode.to_wav(track.source, directory / name, run=run)

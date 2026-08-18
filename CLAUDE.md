@@ -81,6 +81,7 @@ src/mdtools/
     cd_rip_dialog.py            Recording > Record CD to MiniDisc: read TOC, identify, rip, fill playlist, hand off
     cover_preview.py            the cover thumbnail that is also the button for replacing it, plus its lookup
     folder_record_dialog.py     Recording > Record Folder to MiniDisc: a folder of files into that playlist instead
+    burn_dialog.py              Recording > Burn Audio CD: the plan, the verdicts, and cdrdao behind a worker
     erase_dialog.py             Recording > Erase MiniDisc: a guided, ask-the-user-what-you-see erase
     about_dialog.py             Help > About MDTools
     asset_gallery_dialog.py     Insert Asset: pick one of the bundled gallery images
@@ -2439,6 +2440,55 @@ the output read differently would be a wasted disc. **`cdrdao` itself is not
 bundled yet** -- `bin/win64` gains it (plus an ATTRIBUTION.md entry; it is
 GPL) once it has been tried on the real drive, and `build_windows.ps1` needs
 no change, since it already `--add-data`s that whole folder.
+
+**`BurnDialog` is `RecordDialog`'s sibling, and the two differences are
+both consequences of the disc being one-shot.** Same editable
+album/artist/year, same clickable cover, same editable Title/Artist columns,
+same rule that what is on screen when the button is pressed is what gets
+written (`track_sources()` reads the *widgets*, never the list it was
+constructed with). But: **everything knowable is shown before the button** --
+per-track verdicts for anything that is not Red Book or is shorter than the
+standard's four seconds, the album's length against the disc's, and every
+character CD-Text will have to drop -- because a CD-R cannot be edited after
+the fact the way a MiniDisc's TOC can, so "find out on playback" is not a
+place to learn any of it. And **stopping is offered but never quietly**:
+cancelling during the decode stage costs a scratch folder, cancelling while
+the laser is writing leaves a disc that is neither blank nor finished, so
+`reject()` asks in those words first. It still never calls `worker.wait()`
+on the GUI thread -- the rule the MDRem upload dialog established the hard
+way. "Simulate" (cdrdao's own `--simulate`) is offered directly rather than
+buried: it is the only way to rehearse a burn without spending a disc.
+
+**The tool warning and the plan summary are two labels, deliberately.** A
+missing cdrdao must not hide what the plan says about the album -- installing
+a tool and re-encoding a hi-res track are separate jobs, and the user may do
+them in either order.
+
+**Burning is not gated behind `mdrem_enabled()`**, unlike every other entry
+in the Recording menu: it needs the drive, not the infrared adapter. The two
+entries (`_burn_cd_from_folder`, `_burn_cd_from_foobar`) both end in
+`_run_burn_dialog()`, which after a successful burn *offers* the album to
+the open project rather than applying it -- this is reachable with any
+project open, including one that has nothing to do with the disc just
+written, so unlike the post-recording layout (which follows a flow already
+confirmed several times over) it asks, and it does nothing at all unless the
+open project is a CD one.
+
+**`audio_folder.album_from_folder()` is the one place in this project that
+reads tags without foobar2000, and the module's own docstring used to swear
+it never would.** That rule was written for the *recording* path, where the
+files go into foobar's playlist first and every title comes back out of
+Beefweb -- foobar has to read them to play them, so adding a tag library for
+that would have been a dependency for nothing. A burn has no player in the
+loop at all: the files go straight to cdrdao, so there is nothing else to
+ask what a track is called. It reads FLAC's comment block through
+`embedded_cover.flac_tags()` (the parser this project already owns) and
+falls back to the filename stem for anything else -- a disc of blank track
+names being a worse outcome than one named after its files. Album, artist
+and year are decided by majority vote over the files that actually carry the
+tag, so one guest-credited track cannot rename the record (the same rule
+`foobar.album_title()` and `album_sort._group_display_name()` already
+follow), falling back to `guess_from_folder_name()`.
 
 **The Project menu became "Recording", and the metadata editor moved out of
 it onto the Tools panel.** The menu held the one dialog used while *designing
