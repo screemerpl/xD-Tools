@@ -1,12 +1,13 @@
 # Bundled command line tools (Windows, x86-64)
 
-MDTools ships these to read and encode audio CDs (Project > Record CD to
-MiniDisc...). They are unmodified upstream binaries, executed as separate
-programs via `subprocess` -- see `src/mdtools/cdrip.py`, which locates them
-through `tools_dir()`.
+MDTools ships these to read and encode audio CDs (Recording > Record CD to
+MiniDisc...) and to write them (Recording > Burn Audio CD...). They are
+unmodified upstream binaries, executed as separate programs via
+`subprocess` -- see `src/mdtools/cdrip.py` and `src/mdtools/cdburn.py`,
+which locate them through `cdrip.tools_dir()`.
 
-Nothing is bundled for Linux: both tools are packaged by every distribution,
-and `cdrip.find_tool()` falls through to `PATH` there.
+Nothing is bundled for Linux: all three tools are packaged by every
+distribution, and `cdrip.find_tool()` falls through to `PATH` there.
 
 ## cd-paranoia (libcdio-paranoia)
 
@@ -44,8 +45,44 @@ flac 1.5.0, the reference FLAC encoder from Xiph.Org.
 - Licence: the `flac` command line tool is GPL-2.0-or-later; `libFLAC` is
   BSD-3-Clause.
 
+## cdrecord (cdrtools)
+
+cdrecord 3.02a10, built 2021-07-23 for Windows (a Cygwin build -- hence
+`cygwin1.dll` below). Writes the audio CD-R, disc-at-once, with CD-Text.
+
+cdrdao was the first choice for this and was abandoned for a plain reason:
+it has no maintained Windows build. Its last official win32 package is
+1.1.5 from around 2004, Cygwin- and ASPI-based, in an OldFiles folder, and
+upstream's own Windows instructions are stale. cdrtools is still built for
+Windows, and is what the cdrtfe project ships.
+
+- Upstream: <https://sourceforge.net/projects/cdrtools/> (Joerg Schilling)
+- Binary taken from the cdrtfe project's own tools folder, which is where
+  current Windows builds of cdrtools are published:
+  <https://sourceforge.net/projects/cdrtfe/files/tools/binaries/cdrtools/>
+  - `cdrtools-3.02a10-bin-win32.rar`
+    (SHA-256 `4d6b68e50e26f5826a6b6286a927570457178257d4005f5c5bd8615593f58d02`)
+    -- `cdrecord.exe`
+    (SHA-256 `4586c7f68ff97b6d0323e761971311e16e54663d946d9c6de0584e6de28d3505`)
+- Licence: CDDL-1.0 (cdrecord itself; other cdrtools components are GPL).
+
+### Its runtime dependency
+
+- `cygwin1.dll` -- Cygwin 2.3.1, the POSIX compatibility layer this build of
+  cdrecord links against. Taken from the same place,
+  <https://sourceforge.net/projects/cdrtfe/files/tools/binaries/cygwin/>,
+  `cygwin1.dll_2.3.1.rar`
+  (SHA-256 `8dbe90f7050ae53f6eda19cc4a4a6e1057903a763ecee189f69bfa0f09db05eb`),
+  giving `cygwin1.dll`
+  (SHA-256 `4f7a2e8c5d627cd053850a57fa266271ef6bce01d127d89c222ec3d8db159a47`).
+- Licence: GPL-3.0-or-later with the Cygwin linking exception (this predates
+  Cygwin's move to LGPL-3.0 in 2.5.2). Upstream: <https://cygwin.com/>.
+
 ## Source code
 
-Both GPL tools' complete corresponding source is published by their upstream
-projects at the addresses above, and by MSYS2 alongside the binary packages
-listed here. Neither binary has been modified.
+Every GPL and CDDL tool here has its complete corresponding source published
+by its upstream project at the addresses above, and by MSYS2 (for the
+libcdio and flac packages) alongside the binaries listed. cdrtools' source
+is on its SourceForge project page and mirrored in the same cdrtfe tools
+folder the binary came from, under `tools/source/cdrtools`. No binary here
+has been modified.

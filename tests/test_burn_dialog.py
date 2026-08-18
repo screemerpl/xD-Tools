@@ -35,8 +35,8 @@ def _sources(tmp_path, count=2, **kwargs):
 
 @pytest.fixture
 def burnable(monkeypatch):
-    """A machine that has cdrdao and a burner, which this one does not."""
-    monkeypatch.setattr(cdburn, "cdrdao_path", lambda: "cdrdao")
+    """A machine with cdrecord and a burner in it."""
+    monkeypatch.setattr(cdburn, "cdrecord_path", lambda: "cdrecord")
     monkeypatch.setattr(cdburn, "missing_tools", lambda: [])
     monkeypatch.setattr(
         cdburn, "list_burners", lambda: [cdburn.Burner(device="1,0,0", description="ASUS BW-16D1HT")]
@@ -71,12 +71,12 @@ def test_characters_cd_text_cannot_carry_are_named_up_front(qt_app, tmp_path, bu
 
 
 def test_a_missing_tool_does_not_hide_what_the_plan_says(qt_app, tmp_path, monkeypatch):
-    monkeypatch.setattr(cdburn, "missing_tools", lambda: ["cdrdao"])
+    monkeypatch.setattr(cdburn, "missing_tools", lambda: ["cdrecord"])
     monkeypatch.setattr(cdburn, "list_burners", lambda: [])
 
     dialog = BurnDialog(_sources(tmp_path, 2), album="Album", artist="Artist")
 
-    assert "cdrdao" in dialog.tools_label.text()
+    assert "cdrecord" in dialog.tools_label.text()
     assert "80:00" in dialog.summary_label.text()
     assert dialog.burn_button.isEnabled() is False
 
@@ -92,7 +92,8 @@ def test_an_edited_title_is_what_reaches_the_disc(qt_app, tmp_path, burnable):
     plan = dialog.build_plan()
 
     assert plan.tracks[0].title == "Corrected Title"
-    assert 'TITLE "Corrected Title"' in cdburn.toc_text(plan, ["01.wav", "02.wav"])
+    # and it is what cdrecord will read out of the .inf file as CD-Text
+    assert "Tracktitle=\t'Corrected Title'" in cdburn.inf_text(plan, 1)
     assert dialog.metadata().tracks[0].artist == "Corrected Artist"
 
 
@@ -176,7 +177,7 @@ def test_the_worker_decodes_then_writes_then_reports_success(qt_app, tmp_path, m
     monkeypatch.setattr(
         cdburn, "prepare_wavs", lambda plan, directory, **kwargs: (calls.append("decode"), ["01.wav"])[1]
     )
-    monkeypatch.setattr(cdburn, "write_toc", lambda plan, directory, names: tmp_path / "disc.toc")
+    monkeypatch.setattr(cdburn, "write_inf_files", lambda plan, directory: ["01.inf"])
     monkeypatch.setattr(cdburn, "burn", lambda *args, **kwargs: calls.append("burn"))
 
     worker = _BurnWorker(_plan(tmp_path), "1,0,0", tmp_path, speed=8, simulate=False, eject=True)
@@ -192,7 +193,7 @@ def test_the_worker_decodes_then_writes_then_reports_success(qt_app, tmp_path, m
 
 def test_the_worker_reports_a_failure_rather_than_raising(qt_app, tmp_path, monkeypatch):
     monkeypatch.setattr(cdburn, "prepare_wavs", lambda *a, **k: ["01.wav"])
-    monkeypatch.setattr(cdburn, "write_toc", lambda *a, **k: tmp_path / "disc.toc")
+    monkeypatch.setattr(cdburn, "write_inf_files", lambda *a, **k: ["01.inf"])
 
     def fail(*args, **kwargs):
         raise cdburn.BurnError("Cannot open SCSI device")

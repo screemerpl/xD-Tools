@@ -2,12 +2,13 @@
 
 Everything here runs without a burner: the planning half needs nothing at
 all, and `burn()` is driven through a fake process that writes into the
-same log file the real one would. What cannot be faked -- the spelling
-cdrdao wants for a Windows device, and the exact wording of its progress
-output -- is marked as an assumption in cdburn.py itself and has to be
-pinned against real hardware; the tests here cover the parsers being
-tolerant when it does not match, which is the part that decides whether a
-surprise costs a disc.
+same log file the real one would.
+
+Two fixtures below are *real* output, captured from the bundled
+cdrecord 3.02a10 on a machine with an HL-DT-ST DVDRAM GP20N attached --
+the same reason test_cdrip.py keeps `REAL_TOC_OUTPUT`: a hand-written
+sample can agree with the parser perfectly and still not match what the
+binary actually prints.
 """
 
 import wave
@@ -15,6 +16,33 @@ import wave
 import pytest
 
 from mdtools import cdburn, decode
+
+# `cdrecord -scanbus`, verbatim (stdout; the privilege warnings it also
+# prints go to stderr).
+REAL_SCANBUS_OUTPUT = """Cdrecord-ProDVD-ProBD-Clone 3.02a10 2021/07/23 (i686-pc-cygwin) Copyright (C) 1995-2019 Joerg Schilling
+Using libscg version 'schily-0.9'.
+scsibus0:
+\t0,0,0\t  0) 'HL-DT-ST' 'DVDRAM GP20N    ' '1.02' Removable CD-ROM
+\t0,1,0\t  1) *
+\t0,2,0\t  2) *
+\t0,3,0\t  3) *
+\t0,4,0\t  4) *
+\t0,5,0\t  5) *
+\t0,6,0\t  6) *
+\t0,7,0\t  7) HOST ADAPTOR
+"""
+
+# `cdrecord dev=0,0,0 -minfo` with nothing in the drive: exit status 255.
+REAL_NO_DISC_OUTPUT = """cdrecord: Input/output error. test unit ready: scsi sendcmd: no error
+CDB:  00 00 00 00 00 00
+status: 0x2 (CHECK CONDITION)
+Sense Bytes: 70 00 02 00 00 00 00 0E 00 00 00 00 3A 01 00 00 00 00
+Sense Key: 0x2 Not Ready, Segment 0
+Sense Code: 0x3A Qual 0x01 (medium not present - tray closed) Fru 0x0
+Sense flags: Blk 0 (not valid)
+cmd finished after 0.000s timeout 40s
+cdrecord: No disk / Wrong disk!
+"""
 
 
 def _write_wav(path, *, seconds=10.0, rate=44100, bits=16, channels=2):
@@ -132,14 +160,14 @@ def test_an_empty_plan_cannot_be_burned(tmp_path):
 # -- CD-Text -------------------------------------------------------------
 
 
-def test_cd_text_strips_accents_the_way_the_minidisc_titles_do(tmp_path):
+def test_cd_text_strips_accents_the_way_the_minidisc_titles_do():
     result = cdburn.cd_text("Zażółć gęślą jaźń")
 
     assert result.text == "Zazolc gesla jazn"
     assert result.dropped == []
 
 
-def test_cd_text_reports_what_it_could_not_carry(tmp_path):
+def test_cd_text_reports_what_it_could_not_carry():
     """A Japanese title comes back empty -- which the user needs to see
     before the disc is written, not after."""
     result = cdburn.cd_text("君の名は")
@@ -148,48 +176,77 @@ def test_cd_text_reports_what_it_could_not_carry(tmp_path):
     assert result.dropped
 
 
-# -- the toc file --------------------------------------------------------
+# -- the *.inf files cdrecord reads CD-Text from -------------------------
 
 
-def test_the_toc_describes_the_disc_and_every_track(tmp_path):
+def test_each_track_gets_an_inf_file_beside_its_wav(tmp_path):
     plan = cdburn.build_burn_plan(_sources(tmp_path, 2), album="Album", artist="Artist")
-    names = [cdburn.wav_name_for(1), cdburn.wav_name_for(2)]
+    out = tmp_path / "burn"
+    out.mkdir()
 
-    toc = cdburn.toc_text(plan, names)
+    names = cdburn.write_inf_files(plan, out)
 
-    assert toc.startswith("CD_DA")
-    assert toc.count("TRACK AUDIO") == 2
-    assert 'TITLE "Album"' in toc
-    assert 'PERFORMER "Artist"' in toc
-    assert 'TITLE "Track 1"' in toc
-    assert 'FILE "01.wav" 0' in toc
-
-
-def test_the_toc_refers_to_bare_filenames_so_there_is_no_path_to_escape(tmp_path):
-    plan = cdburn.build_burn_plan(_sources(tmp_path, 1))
-
-    toc = cdburn.toc_text(plan, [cdburn.wav_name_for(1)])
-
-    assert "\\" not in toc, "a Windows path in a format that escapes with backslash is a trap"
-    assert str(tmp_path) not in toc
+    assert names == ["01.inf", "02.inf"]
+    # cdrecord matches an .inf to its audio file by the shared prefix, so
+    # these two namings must stay in step
+    assert [cdburn.wav_name_for(1), cdburn.wav_name_for(2)] == ["01.wav", "02.wav"]
+    assert (out / "01.inf").exists()
 
 
-def test_a_quote_in_a_title_is_escaped(tmp_path):
-    source = _write_wav(tmp_path / "a.wav")
-    plan = cdburn.build_burn_plan([(source, 'The "Best" Song', "A")], album="A", artist="B")
+def test_the_inf_file_carries_the_album_and_the_track(tmp_path):
+    plan = cdburn.build_burn_plan(
+        [(_write_wav(tmp_path / "a.wav"), "Feel Invincible", "Skillet")],
+        album="Unleashed",
+        artist="Skillet",
+    )
 
-    toc = cdburn.toc_text(plan, ["01.wav"])
+    text = cdburn.inf_text(plan, 1)
 
-    assert r'TITLE "The \"Best\" Song"' in toc
+    assert "Albumtitle=\t'Unleashed'" in text
+    assert "Albumperformer=\t'Skillet'" in text
+    assert "Tracktitle=\t'Feel Invincible'" in text
+    assert "Performer=\t'Skillet'" in text
+    assert "Tracknumber=\t1" in text
 
 
-def test_the_toc_file_lands_beside_the_wavs(tmp_path):
-    plan = cdburn.build_burn_plan(_sources(tmp_path, 1))
+def test_a_track_with_no_artist_of_its_own_is_credited_to_the_album(tmp_path):
+    plan = cdburn.build_burn_plan(
+        [(_write_wav(tmp_path / "a.wav"), "Song", "")], album="Album", artist="Skillet"
+    )
 
-    path = cdburn.write_toc(plan, tmp_path, ["01.wav"])
+    assert "Performer=\t'Skillet'" in cdburn.inf_text(plan, 1)
 
-    assert path.parent == tmp_path
-    assert path.read_text(encoding="ascii").startswith("CD_DA")
+
+def test_an_apostrophe_inside_a_title_is_left_alone(tmp_path):
+    """cdrecord's own rule: the value runs from the first quote on the line
+    to the last, and needs no escaping in between. Escaping it would put a
+    backslash on the disc."""
+    plan = cdburn.build_burn_plan(
+        [(_write_wav(tmp_path / "a.wav"), "Rock 'n' Roll", "A")], album="Album", artist="A"
+    )
+
+    assert "Tracktitle=\t'Rock 'n' Roll'" in cdburn.inf_text(plan, 1)
+
+
+def test_a_trailing_apostrophe_is_dropped_rather_than_escaped(tmp_path):
+    """One at the very end would swallow the closing quote, and there is no
+    escape sequence to reach for."""
+    plan = cdburn.build_burn_plan(
+        [(_write_wav(tmp_path / "a.wav"), "Nothin'", "A")], album="Album", artist="A"
+    )
+
+    assert "Tracktitle=\t'Nothin'" in cdburn.inf_text(plan, 1)
+    assert "Nothin''" not in cdburn.inf_text(plan, 1)
+
+
+def test_a_japanese_title_reaches_the_inf_file_empty_rather_than_broken(tmp_path):
+    plan = cdburn.build_burn_plan(
+        [(_write_wav(tmp_path / "a.wav"), "君の名は", "A")], album="Album", artist="A"
+    )
+
+    text = cdburn.inf_text(plan, 1)
+    assert "Tracktitle=\t''" in text
+    text.encode("ascii")  # must not raise: CD-Text carries nothing else
 
 
 def test_preparing_wavs_names_them_in_disc_order(tmp_path):
@@ -210,98 +267,123 @@ def test_preparing_wavs_stops_at_the_first_failure(tmp_path):
         cdburn.prepare_wavs(plan, tmp_path / "burn")
 
 
-# -- talking to cdrdao ---------------------------------------------------
+# -- talking to cdrecord -------------------------------------------------
 
 
-def test_scanbus_output_is_read_for_device_names():
-    text = (
-        "cdrdao version 1.2.3 - (C) Andreas Mueller\n"
-        "0,1,0 : HL-DT-ST, DVDRAM GP60NB60, 1.00\n"
-        "1,0,0 : ASUS, BW-16D1HT, 3.02\n"
-    )
+def test_the_real_scanbus_output_yields_exactly_the_one_drive():
+    burners = cdburn.parse_scanbus(REAL_SCANBUS_OUTPUT)
 
-    burners = cdburn.parse_scanbus(text)
-
-    assert [b.device for b in burners] == ["0,1,0", "1,0,0"]
-    assert "DVDRAM" in burners[0].description
-    assert burners[1].display().startswith("1,0,0 - ")
+    assert [b.device for b in burners] == ["0,0,0"]
+    assert burners[0].description == "HL-DT-ST DVDRAM GP20N 1.02"
+    assert burners[0].display() == "0,0,0 - HL-DT-ST DVDRAM GP20N 1.02"
 
 
-def test_a_drive_letter_is_accepted_as_a_device_too():
-    """Windows builds have been seen spelling devices both ways, and which
-    one this cdrdao uses is exactly what is not being assumed."""
-    assert [b.device for b in cdburn.parse_scanbus("D: : SOME, DRIVE, 1.0")] == ["D:"]
+def test_empty_slots_and_the_host_adaptor_are_not_drives():
+    """Every scsibus line looks like a device; seven of the nine in the real
+    output are not one."""
+    text = "\t0,1,0\t  1) *\n\t0,7,0\t  7) HOST ADAPTOR\n"
+
+    assert cdburn.parse_scanbus(text) == []
 
 
-def test_scanbus_noise_is_not_mistaken_for_a_drive():
-    assert cdburn.parse_scanbus("cdrdao version 1.2.3\nUsing libscg version 'schily-0.9'\n") == []
+def test_scanbus_banner_lines_are_not_mistaken_for_a_drive():
+    assert cdburn.parse_scanbus("Using libscg version 'schily-0.9'.\nscsibus0:\n") == []
 
 
-def test_disc_info_reads_blank_and_capacity():
-    text = "CD-RW                : no\nCD-R empty           : yes\nTotal Capacity       : 79:59:74\n"
+def test_an_empty_drive_is_read_as_having_no_disc():
+    """Captured from the bundled binary with the tray closed and empty --
+    it also exits 255, but the message is what this reads."""
+    info = cdburn.parse_disc_info(REAL_NO_DISC_OUTPUT)
 
-    info = cdburn.parse_disc_info(text)
-
-    assert info.empty is True
-    assert info.usable is True
-    assert info.capacity_sectors == (79 * 60 + 59) * 75 + 74
-
-
-def test_an_unrecognised_disc_info_is_unknown_rather_than_an_error():
-    info = cdburn.parse_disc_info("something else entirely")
-
-    assert info.empty is False
-    assert info.capacity_sectors is None
-
-
-def test_a_written_disc_is_not_usable_for_a_fresh_burn():
-    info = cdburn.parse_disc_info("CD-R empty : no\n")
-
+    assert info.present is False
     assert info.usable is False
 
 
-def test_the_burn_command_carries_speed_and_the_toc(tmp_path):
-    command = cdburn.burn_command("cdrdao", "1,0,0", tmp_path / "disc.toc", speed=4)
+def test_a_blank_disc_reports_its_capacity():
+    text = "Mounted media type: CD-R\ndisk status: empty\nATIP start of lead out: 359849 (79:57/74)\n"
 
-    assert command[:2] == ["cdrdao", "write"]
-    assert "--device" in command and "1,0,0" in command
-    assert command[command.index("--speed") + 1] == "4"
-    assert command[-1] == str(tmp_path / "disc.toc")
-    assert "--simulate" not in command
+    info = cdburn.parse_disc_info(text)
 
-
-def test_simulating_is_a_flag_on_the_same_command(tmp_path):
-    command = cdburn.burn_command("cdrdao", "1,0,0", tmp_path / "disc.toc", simulate=True, eject=False)
-
-    assert "--simulate" in command
-    assert "--eject" not in command
+    assert info.present is True
+    assert info.empty is True
+    assert info.usable is True
+    assert info.capacity_sectors == 359849
 
 
-def test_progress_is_read_from_the_latest_line_only():
-    assert cdburn.parse_progress("Wrote 10 of 100 MB\nWrote 60 of 100 MB\n") == pytest.approx(0.6)
+def test_a_disc_that_already_holds_something_is_not_usable():
+    info = cdburn.parse_disc_info("Mounted media type: CD-R\ndisk status: complete\n")
+
+    assert info.present is True
+    assert info.usable is False
+
+
+def test_unrecognised_disc_info_does_not_block_a_burn():
+    """The drive is the last word; refusing on the strength of a line that
+    read differently would be worse than letting the burn report itself."""
+    info = cdburn.parse_disc_info("something else entirely")
+
+    assert info.present is True
+    assert info.usable is True
+    assert info.capacity_sectors is None
+
+
+def test_the_burn_command_writes_disc_at_once_audio_with_cd_text():
+    command = cdburn.burn_command("cdrecord", "0,0,0", ["01.wav", "02.wav"], speed=4)
+
+    assert command[0] == "cdrecord"
+    assert "dev=0,0,0" in command
+    assert "speed=4" in command
+    # -dao is the mode CD-Text is written in; -text -useinfo is what makes
+    # cdrecord read the .inf beside each track
+    for flag in ("-dao", "-audio", "-pad", "-text", "-useinfo"):
+        assert flag in command
+    assert command[-2:] == ["01.wav", "02.wav"]
+    assert "-dummy" not in command
+
+
+def test_simulating_is_a_flag_on_the_same_command():
+    command = cdburn.burn_command("cdrecord", "0,0,0", ["01.wav"], simulate=True, eject=False)
+
+    assert "-dummy" in command
+    assert "-eject" not in command
+
+
+def test_progress_is_read_from_the_latest_track_line():
+    text = "Track 01:   10 of   45 MB written (fifo 100%) [buf  97%]  8.0x.\n"
+
+    assert cdburn.parse_progress(text) == pytest.approx(10 / 45)
+
+
+def test_progress_across_the_disc_counts_the_tracks_already_written():
+    """cdrecord counts within a track; the bar is about the disc."""
+    text = "Track 02:   5 of   10 MB written\n"
+
+    assert cdburn.parse_progress(text, [10.0, 10.0]) == pytest.approx(0.75)
 
 
 def test_unrecognised_output_means_no_progress_information_not_a_failure():
     """A burn that finishes correctly with a motionless bar is a cosmetic
     problem; one that stops because the output read differently would be a
     wasted disc."""
-    assert cdburn.parse_progress("Starting write at speed 4...") is None
+    assert cdburn.parse_progress("Starting new track at sector: 0") is None
     assert cdburn.parse_progress("") is None
+
+
+def test_track_sizes_come_from_the_plan(tmp_path):
+    plan = cdburn.build_burn_plan(_sources(tmp_path, 2))
+
+    sizes = cdburn.track_megabytes(plan)
+
+    assert len(sizes) == 2
+    # 10 seconds of Red Book audio is a little over 1.7 MB
+    assert sizes[0] == pytest.approx(1.76, abs=0.05)
 
 
 # -- driving the burn ----------------------------------------------------
 
 
-@pytest.fixture
-def pretend_cdrdao_exists(monkeypatch):
-    """There is no cdrdao on this machine yet (the binary is bundled once it
-    has been tried against a real burner), and these tests are about the
-    driving loop rather than about finding the tool."""
-    monkeypatch.setattr(cdburn, "cdrdao_path", lambda: "cdrdao")
-
-
 class _FakeProcess:
-    """A cdrdao that writes the given chunks into the log, one per poll."""
+    """A cdrecord that writes the given chunks into the log, one per poll."""
 
     def __init__(self, chunks, returncode=0, never_ends=False):
         self._chunks = list(chunks)
@@ -309,10 +391,12 @@ class _FakeProcess:
         self._never_ends = never_ends
         self.killed = False
         self.log = None
+        self.cwd = None
 
-    def __call__(self, command, stdout=None, stderr=None, creationflags=0):
+    def __call__(self, command, stdout=None, stderr=None, cwd=None, creationflags=0):
         self.command = command
         self.log = stdout
+        self.cwd = cwd
         return self
 
     def poll(self):
@@ -335,47 +419,82 @@ class _FakeProcess:
         return self._returncode
 
 
-def test_a_successful_burn_reports_progress_and_removes_its_log(tmp_path, pretend_cdrdao_exists):
-    toc = tmp_path / "disc.toc"
-    toc.write_text("CD_DA\n", encoding="ascii")
-    process = _FakeProcess(["Wrote 25 of 100 MB\n", "Wrote 100 of 100 MB\n"])
+@pytest.fixture
+def cdrecord_at(monkeypatch):
+    monkeypatch.setattr(cdburn, "cdrecord_path", lambda: "cdrecord")
+
+
+def test_a_successful_burn_reports_progress_and_removes_its_log(tmp_path, cdrecord_at):
+    process = _FakeProcess(
+        ["Track 01:   1 of   10 MB written\n", "Track 01:   10 of   10 MB written\n"]
+    )
     seen = []
 
     cdburn.burn(
-        "1,0,0",
-        toc,
+        "0,0,0",
+        tmp_path,
+        ["01.wav"],
+        megabytes=[10.0],
         on_progress=seen.append,
         popen=process,
         sleep=lambda _s: None,
     )
 
     assert seen[-1] == 1.0
-    assert max(seen) == 1.0 and any(0 < value < 1 for value in seen)
-    assert not (tmp_path / "disc.log").exists()
+    assert any(0 < value < 1 for value in seen)
+    assert not (tmp_path / "burn.log").exists()
 
 
-def test_a_failed_burn_keeps_its_log_and_reports_the_reason(tmp_path, pretend_cdrdao_exists):
-    toc = tmp_path / "disc.toc"
-    toc.write_text("CD_DA\n", encoding="ascii")
-    process = _FakeProcess(["Wrote 10 of 100 MB\n", "ERROR: Cannot open SCSI device\n"], returncode=1)
+def test_the_burner_runs_in_the_folder_holding_the_audio(tmp_path, cdrecord_at):
+    """It is given bare filenames: the bundled Windows build is a Cygwin
+    one, and each .inf has to sit beside its WAV regardless."""
+    process = _FakeProcess([])
+
+    cdburn.burn("0,0,0", tmp_path, ["01.wav", "02.wav"], popen=process, sleep=lambda _s: None)
+
+    assert process.cwd == str(tmp_path)
+    assert process.command[-2:] == ["01.wav", "02.wav"]
+
+
+def test_a_failed_burn_keeps_its_log_and_reports_the_reason(tmp_path, cdrecord_at):
+    process = _FakeProcess(
+        ["Track 01:   1 of   10 MB written\n", "cdrecord: Cannot open SCSI driver.\n"], returncode=1
+    )
 
     with pytest.raises(cdburn.BurnError) as error:
-        cdburn.burn("1,0,0", toc, popen=process, sleep=lambda _s: None)
+        cdburn.burn("0,0,0", tmp_path, ["01.wav"], popen=process, sleep=lambda _s: None)
 
-    assert "Cannot open SCSI device" in str(error.value)
+    assert "Cannot open SCSI driver" in str(error.value)
     # the only account of what went wrong on a disc nothing can read back
-    assert (tmp_path / "disc.log").exists()
+    assert (tmp_path / "burn.log").exists()
 
 
-def test_cancelling_kills_the_burner(tmp_path, pretend_cdrdao_exists):
-    toc = tmp_path / "disc.toc"
-    toc.write_text("CD_DA\n", encoding="ascii")
-    process = _FakeProcess(["Wrote 1 of 100 MB\n"], never_ends=True)
+def test_the_privilege_warnings_are_not_reported_as_the_failure(tmp_path, cdrecord_at):
+    """cdrecord prints six of those on every run on this machine, where it
+    nonetheless talks to the drive perfectly well -- blaming one of them
+    would send the user chasing a permissions problem they do not have."""
+    process = _FakeProcess(
+        [
+            "cdrecord: Cannot load media.\n",
+            "cdrecord: Insufficient 'device' privileges. You may not be able to send all needed SCSI commands\n",
+        ],
+        returncode=1,
+    )
+
+    with pytest.raises(cdburn.BurnError) as error:
+        cdburn.burn("0,0,0", tmp_path, ["01.wav"], popen=process, sleep=lambda _s: None)
+
+    assert "Cannot load media" in str(error.value)
+
+
+def test_cancelling_kills_the_burner(tmp_path, cdrecord_at):
+    process = _FakeProcess(["Track 01:   1 of  10 MB written\n"], never_ends=True)
 
     with pytest.raises(cdburn.BurnCancelled):
         cdburn.burn(
-            "1,0,0",
-            toc,
+            "0,0,0",
+            tmp_path,
+            ["01.wav"],
             should_cancel=lambda: True,
             popen=process,
             sleep=lambda _s: None,
@@ -385,15 +504,101 @@ def test_cancelling_kills_the_burner(tmp_path, pretend_cdrdao_exists):
 
 
 def test_burning_without_the_tool_says_which_tool(monkeypatch, tmp_path):
-    monkeypatch.setattr(cdburn, "cdrdao_path", lambda: None)
+    monkeypatch.setattr(cdburn, "cdrecord_path", lambda: None)
 
     with pytest.raises(cdburn.BurnError) as error:
-        cdburn.burn("1,0,0", tmp_path / "disc.toc")
+        cdburn.burn("0,0,0", tmp_path, ["01.wav"])
 
-    assert "cdrdao" in str(error.value)
+    assert "cdrecord" in str(error.value)
 
 
-def test_missing_tools_names_cdrdao_when_it_is_absent(monkeypatch):
-    monkeypatch.setattr(cdburn, "cdrdao_path", lambda: None)
+def test_missing_tools_names_cdrecord_when_it_is_absent(monkeypatch):
+    monkeypatch.setattr(cdburn, "cdrecord_path", lambda: None)
 
-    assert "cdrdao" in cdburn.missing_tools()
+    assert "cdrecord" in cdburn.missing_tools()
+
+
+# -- the bundled binary itself -------------------------------------------
+
+
+def test_the_bundled_cdrecord_runs_and_identifies_itself():
+    """The same rigour as test_cdrip.py's bundled-encoder tests: a binary
+    that is present but will not start is worse than one that is missing,
+    because everything above it looks fine until a disc is at stake."""
+    import subprocess
+
+    tool = cdburn.cdrecord_path()
+    if tool is None:
+        pytest.skip("cdrecord is not bundled on this platform")
+
+    result = subprocess.run([tool, "-version"], capture_output=True, text=True)
+
+    assert result.returncode == 0
+    assert "Cdrecord" in result.stdout
+
+
+def test_only_the_burn_command_can_eject_a_disc():
+    """Found by running a dry run with -eject: cdrecord opens the tray even
+    when the run fails. On an inspection command that would mean looking at
+    the drive spat the disc out."""
+    assert "-eject" not in cdburn.scan_command("cdrecord")
+    assert "-eject" not in cdburn.disc_info_command("cdrecord", "0,0,0")
+    assert "-eject" in cdburn.burn_command("cdrecord", "0,0,0", ["01.wav"], eject=True)
+
+
+# `cdrecord dev=0,0,0 -minfo` with a blank CD-R in the drive, exit 0.
+REAL_BLANK_DISC_OUTPUT = """Mounted media class:      CD
+Mounted media type:       CD-R
+Disk Is not erasable
+data type:                standard
+disk status:              empty
+session status:           empty
+first track:              1
+last start of lead in: -11634
+last start of lead out: 359846
+Track  Sess Type   Start Addr End Addr   Size
+==============================================
+    1     1 Blank  0          359843     359844
+Next writable address:              0
+Remaining writable size:            359844
+"""
+
+# From a real `-dummy` run of the burn command this module builds. Note the
+# first line of each track carries no fifo/buf suffix at all.
+REAL_PROGRESS_OUTPUT = """Starting new track at sector: 0
+Track 01:    0 of    3 MB written.
+Track 01:    1 of    3 MB written (fifo 100%)   9.7x.
+Track 01:    2 of    3 MB written (fifo 100%) [buf  90%]  10.3x.
+Track 01: Total bytes read/written: 3528000/3528000 (1500 sectors).
+Starting new track at sector: 1500
+Track 02:    1 of    3 MB written (fifo 100%)   9.7x.
+"""
+
+
+def test_a_real_blank_disc_reports_itself_empty_and_writable():
+    info = cdburn.parse_disc_info(REAL_BLANK_DISC_OUTPUT)
+
+    assert info.present is True
+    assert info.empty is True
+    assert info.usable is True
+    # what the drive says can actually be written, not the lead-out address
+    # two sectors above it
+    assert info.capacity_sectors == 359844
+
+
+def test_capacity_falls_back_to_the_lead_out_when_nothing_better_is_offered():
+    info = cdburn.parse_disc_info("disk status: empty\nlast start of lead out: 359846\n")
+
+    assert info.capacity_sectors == 359846
+
+
+def test_the_real_progress_output_is_read_as_a_fraction_of_the_disc():
+    """Two 3 MB tracks: the last line seen is track 2 at 1 of 3 MB, so four
+    of the disc's six megabytes are done."""
+    assert cdburn.parse_progress(REAL_PROGRESS_OUTPUT, [3.0, 3.0]) == pytest.approx(4 / 6)
+
+
+def test_the_lines_around_the_progress_lines_are_not_mistaken_for_progress():
+    text = "Starting new track at sector: 1500\nTrack 01: Total bytes read/written: 3528000/3528000\n"
+
+    assert cdburn.parse_progress(text) is None

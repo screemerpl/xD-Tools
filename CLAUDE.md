@@ -44,7 +44,7 @@ src/mdtools/
   foobar.py                 foobar2000 via its Beefweb REST API *and* its command line (no Qt UI)
   cdrip.py                  audio CD: drives, TOC, disc ids, rip plan, cdparanoia/flac (no Qt UI)
   decode.py                 what an audio file is, and Red Book PCM out of it (no Qt)
-  cdburn.py                 audio CD-R: burn plan, .toc + CD-Text, cdrdao (no Qt UI)
+  cdburn.py                 audio CD-R: burn plan, *.inf CD-Text, cdrecord (no Qt UI)
   musicbrainz.py            identifying a CD from its TOC alone -- a CD carries no text (no Qt UI)
   audio_folder.py           which files in a folder are the album, and in what order (no Qt)
   embedded_cover.py         the cover art inside a FLAC file, as a last resort (no Qt)
@@ -2410,10 +2410,50 @@ dropping it silently. A Japanese title therefore comes back empty with its
 characters listed, before the disc is written rather than after -- the same
 promise `MDRemUploadDialog` makes about a title going onto a MiniDisc.
 
-**The `.toc` file names bare WAV filenames, never paths**, and is written
-into the same directory as those WAVs. A Windows path inside a quoted string
-in a format that uses backslash as its own escape is a trap with no upside;
-keeping the toc beside its audio removes the problem rather than escaping it.
+**The burner is cdrecord, not cdrdao, and that was forced rather than
+chosen.** cdrdao's `.toc` file is a nicer fit for describing a whole disc,
+but it has no maintained Windows build: the last official win32 package is
+1.1.5 from around 2004 (Cygwin + ASPI, in an OldFiles folder), and
+upstream's Windows instructions are stale. cdrecord (cdrtools 3.02a10) is
+still built for Windows -- the cdrtfe project publishes those builds -- does
+disc-at-once audio with CD-Text, and is packaged by every Linux
+distribution, so one tool covers both platforms. See
+`bin/win64/ATTRIBUTION.md` for provenance and licence (CDDL, plus GPL
+`cygwin1.dll`: that build is a Cygwin one).
+
+**CD-Text goes in through a `*.inf` file beside each WAV** (`-text
+-useinfo`), whose field names come from cdrecord's own manual page shipped
+in that same package, not from guesswork. Two rules that manual states and
+`_inf_quote()` follows: a value runs from the *first* single quote on the
+line to the *last*, and **needs no escaping in between** -- so an apostrophe
+inside a title must be left alone (escaping it would put a backslash on the
+disc), while one at the very end has to be dropped, since there is no escape
+sequence to reach for. Filenames stay bare and cdrecord runs with the work
+folder as its working directory: the Windows build is a Cygwin one, so
+handing it native paths invites translation surprises for nothing, and each
+`.inf` has to sit beside its WAV regardless.
+
+**What was established by running the bundled binary, not read anywhere.**
+The same discipline cd-paranoia's own surprises taught this project:
+- `-scanbus` prints the device list on **stdout** while its warnings go to
+  stderr, and two thirds of the lines it prints are not drives (`*` for an
+  empty slot, plus a `HOST ADAPTOR` entry).
+- The six **"Insufficient privileges" warnings are noise**: `-checkdrive`
+  still talked to the drive, and a `-eject` run physically opened the tray.
+  The drive obeys cdrecord with no elevation. Reporting one of those lines
+  as the reason a burn failed would send the user chasing a permissions
+  problem they do not have, which is what `_NOISE` in `_last_useful_line()`
+  is for.
+- An empty drive answers `-minfo` with "medium not present" and exits 255.
+- **`-eject` opens the tray even when the run fails** -- seen on a dry run
+  that stopped at "No disk". So it belongs only on the burn command;
+  `scan_command()` and `disc_info_command()` must never carry it, or merely
+  looking at the drive would spit the disc out.
+The real output of the first two is checked in as fixtures in
+`test_cdburn.py` (`REAL_SCANBUS_OUTPUT`, `REAL_NO_DISC_OUTPUT`), the same
+reason `test_cdrip.py` keeps `REAL_TOC_OUTPUT`. **Still an assumption**,
+marked at its own site: the shape of the progress line during an actual
+write.
 
 **`burn()` mirrors `cdrip.rip_track()` exactly** -- child output to a *file*
 rather than a pipe (an undrained pipe blocks the child; reading it line by
@@ -2426,20 +2466,16 @@ warning belongs to the dialog. `simulate=True` (cdrdao's `--simulate`) is a
 real dry run and exists at this level, not only in the UI, because a wasted
 CD-R is this feature's version of a bad cut.
 
-**Two things in `cdburn.py` are openly assumptions until they have been run
-against a real burner, and are labelled as such at each site**: the spelling
-cdrdao wants for a device on Windows, and the exact shape of its progress
-output. This is the lesson cd-paranoia already taught this project (it writes
-to stderr, success included; `-Q` exits 0 even with no drive at all) applied
-in advance -- so `list_burners()` asks cdrdao itself for device names instead
-of constructing them, `parse_disc_info()` treats an unrecognised field as
-"unknown" rather than an error, and `parse_progress()` returning None means
-"no progress information", never a failure. A burn that finishes correctly
-with a motionless progress bar is a cosmetic problem; one that stops because
-the output read differently would be a wasted disc. **`cdrdao` itself is not
-bundled yet** -- `bin/win64` gains it (plus an ATTRIBUTION.md entry; it is
-GPL) once it has been tried on the real drive, and `build_windows.ps1` needs
-no change, since it already `--add-data`s that whole folder.
+**Everything that cannot be verified without a disc degrades to "unknown",
+never to an error.** `list_burners()` asks cdrecord itself for device names
+instead of constructing them (`0,0,0` is scsibus,target,lun as libscg
+numbers them -- not derivable from a drive letter), `parse_disc_info()`
+treats an unrecognised field as unknown and lets the burn try anyway, and
+`parse_progress()` returning None means "no progress information", never a
+failure. A burn that finishes correctly with a motionless progress bar is a
+cosmetic problem; one that stops because the output read differently would
+be a wasted disc. `build_windows.ps1` needed no change for the new binaries
+-- it already `--add-data`s the whole `bin/win64` folder.
 
 **`BurnDialog` is `RecordDialog`'s sibling, and the two differences are
 both consequences of the disc being one-shot.** Same editable

@@ -119,15 +119,19 @@ class _BurnWorker(QThread):
                 on_progress=lambda fraction: self._emit(fraction * _DECODE_SHARE),
                 should_cancel=lambda: self._cancelled,
             )
-            toc_path = cdburn.write_toc(self._plan, self._work_dir, names)
+            # The CD-Text, one file per track, beside the audio it belongs
+            # to -- which is how cdrecord finds it.
+            cdburn.write_inf_files(self._plan, self._work_dir)
 
             self.stage.emit("burn")
             cdburn.burn(
                 self._device,
-                toc_path,
+                self._work_dir,
+                names,
                 speed=self._speed,
                 simulate=self._simulate,
                 eject=self._eject,
+                megabytes=cdburn.track_megabytes(self._plan),
                 on_progress=lambda fraction: self._emit(
                     _DECODE_SHARE + fraction * (1.0 - _DECODE_SHARE)
                 ),
