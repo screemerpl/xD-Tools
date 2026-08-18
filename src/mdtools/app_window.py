@@ -43,6 +43,7 @@ from mdtools.panels.erase_dialog import EraseDiscDialog
 from mdtools.panels.experimental_settings_dialog import ExperimentalSettingsDialog
 from mdtools import foobar
 from mdtools.audio_folder import album_from_folder
+from mdtools.cd_layout import CdLayoutError, build_disc_label, build_insert
 from mdtools.panels.burn_dialog import BurnDialog
 from mdtools.panels.folder_record_dialog import FolderRecordDialog
 from mdtools.panels import icons
@@ -79,6 +80,10 @@ from mdtools.templates.template_dialog import TemplateManagerDialog
 # window variant would cut a hole through the cover artwork).
 FULL_LABEL_TEMPLATE = "Full disc label (with Slider)"
 JCARD_TEMPLATE = "MiniDisc Cover (J-Card)"
+# The CD equivalents. The folded insert rather than the flat front, because
+# it is the one with somewhere to put a track list.
+CD_LABEL_TEMPLATE = "CD Disc Label (Standard Hub)"
+CD_INSERT_TEMPLATE = "CD Slim Case Insert (Folded, 2 Panels)"
 
 
 class MainWindow(QMainWindow):
@@ -1688,7 +1693,7 @@ class MainWindow(QMainWindow):
         down in real time; here it is a single click on a toolbar button,
         where wiping a page the user had been working on would be a nasty
         surprise."""
-        if self.project is None or self._auto_layout_blocked_for_cd():
+        if self.project is None:
             return
         metadata = self.project.metadata
         if not metadata.album and not metadata.artist:
@@ -1765,25 +1770,6 @@ class MainWindow(QMainWindow):
 
         return next((t for t in registry.load_templates()[kind] if t.name == name), None)
 
-    def _auto_layout_blocked_for_cd(self) -> bool:
-        """True (having said so) when the automatic layout cannot run on
-        this project because it is a CD one.
-
-        Both halves of the layout target templates named for MiniDisc parts
-        (the full-face label with its shutter sticker, the J-card), so
-        running it here would not lay the pages out -- it would quietly turn
-        a CD project into a MiniDisc one. The CD equivalent is a separate
-        layout; until it exists, refusing is the honest outcome.
-        """
-        if self.project is None or self.project.medium != MEDIUM_CD:
-            return False
-        QMessageBox.information(
-            self,
-            self.tr("Auto-Layout"),
-            self.tr("Automatic layout is not available for CD projects yet."),
-        )
-        return True
-
     def _auto_layout_project(self, metadata: ProjectMetadata) -> None:
         """Turns an album into a first draft of both pages: the disc label
         and the J-card.
@@ -1796,7 +1782,9 @@ class MainWindow(QMainWindow):
         """
         if self.project is None or not metadata.cover_art:
             return
-        if self._auto_layout_blocked_for_cd():
+        if self.project.medium == MEDIUM_CD:
+            self._auto_layout_cd_insert(metadata)
+            self._auto_layout_cd_disc_label(metadata)
             return
         self._auto_layout_cover(metadata)
         self._auto_layout_disc_label(metadata)
@@ -1862,6 +1850,62 @@ class MainWindow(QMainWindow):
         self.undo_stack.beginMacro(self.tr("Lay Out J-Card"))
         for item in card.items:
             self.undo_stack.push(AddItemCommand(scene, item, self.tr("J-Card")))
+        self.undo_stack.endMacro()
+
+    def _auto_layout_cd_disc_label(self, metadata: ProjectMetadata) -> None:
+        """The ring: the cover lightened across the whole face, the album's
+        details in the bands clear of the hub, and the Digital Audio mark.
+
+        Same shape as _auto_layout_disc_label, including the trip through
+        Clip Layers at the end -- the artwork is deliberately oversized so
+        it covers the disc, and that is what trims it back to the ring (and
+        cuts the spindle hole out of it).
+        """
+        template = self._template_named("disc", CD_LABEL_TEMPLATE)
+        if template is None:
+            return
+
+        # Clip Layers works on the *current* page.
+        self.page_combo.setCurrentIndex(self.page_combo.findData(PAGE_DISC))
+        self.apply_template(PAGE_DISC, template)
+        scene = self.project.pages[PAGE_DISC]
+
+        logo_path = gallery.gallery_dir() / "cd_digital_audio.png"
+        try:
+            items = build_disc_label(scene, metadata, str(logo_path) if logo_path.exists() else None)
+        except CdLayoutError:
+            return
+
+        self.undo_stack.beginMacro(self.tr("Lay Out Disc Label"))
+        for item in items:
+            self.undo_stack.push(AddItemCommand(scene, item, self.tr("Disc Label")))
+        self.undo_stack.endMacro()
+
+        self._clip_layers()
+
+    def _auto_layout_cd_insert(self, metadata: ProjectMetadata) -> None:
+        """The folded slim-case insert: cover on the right panel, track list
+        on the left.
+
+        Not run through Clip Layers, for the same reason the J-card is not:
+        nothing overhangs, and clipping would rasterise a track list that is
+        still worth editing.
+        """
+        template = self._template_named("cover", CD_INSERT_TEMPLATE)
+        if template is None:
+            return
+
+        self.apply_template(PAGE_COVER, template)
+        scene = self.project.pages[PAGE_COVER]
+
+        try:
+            items = build_insert(scene, metadata)
+        except CdLayoutError:
+            return
+
+        self.undo_stack.beginMacro(self.tr("Lay Out Case Insert"))
+        for item in items:
+            self.undo_stack.push(AddItemCommand(scene, item, self.tr("Case Insert")))
         self.undo_stack.endMacro()
 
     def _edit_metadata(self) -> None:

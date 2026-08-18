@@ -309,60 +309,87 @@ def place_spine(
 
 
 def place_back(
-    scene: DesignScene, panel: QRectF, metadata: ProjectMetadata, background: str, accent: str
+    scene: DesignScene,
+    panel: QRectF,
+    metadata: ProjectMetadata,
+    background: str,
+    accent: str,
+    *,
+    turned: bool = True,
+    heading_scale: float = 1.0,
 ) -> list[QGraphicsItem]:
     """The back of the case: the cover's dominant colour, a heading, a rule
     in the accent colour, the numbered track list, and the running time.
 
-    Everything is turned a quarter turn, like the front -- the card goes
-    into the case that way round, so a track list left upright reads
-    sideways. Laid out here in *reading* coordinates (x along the 73mm
-    side), with _place_turned doing the conversion.
+    On a J-card everything is turned a quarter turn, like the front -- the
+    card goes into the case that way round, so a track list left upright
+    reads sideways. It is laid out here in *reading* coordinates (x along
+    the 73mm side), with _place_turned doing the conversion.
+
+    `turned=False` lays the same panel out upright, for a CD slim case
+    insert, which is read the way it is printed. Only the mapping from
+    reading coordinates to the panel changes: the heading, the rule, the
+    two-column threshold and the centring of the list in its leftover space
+    are the same job either way, and keeping them in one function is what
+    stops the two cards drifting apart.
+
+    `heading_scale` multiplies the heading, rule and footer bands, which
+    are millimetre constants chosen for a J-card's own narrow panel. A CD
+    slim case insert is twice as wide, and at 1.0 its heading came out
+    looking lost above a full-height track list -- so the caller says how
+    much bigger its panel is rather than this growing a second set of
+    constants.
 
     The heading and rule exist because a bare list of tracks on a flat
     colour looked unfinished -- they give the panel something to be
     anchored by, and use the accent that is otherwise only on the spine."""
     added: list[QGraphicsItem] = [_filled_rect(scene, panel, background)]
     ink = readable_text_colour(background)
-    width, height = reading_size(panel)
+    width, height = reading_size(panel) if turned else (panel.width(), panel.height())
     pad = mm_to_px(BACK_PADDING_MM)
     content_width = width - 2 * pad
     cursor = pad
 
+    def put(item: QGraphicsItem, x: float, y: float) -> None:
+        if turned:
+            _place_turned(item, panel, x=x, y=y, clockwise=True)
+        else:
+            _move_top_left_to(item, QPointF(panel.left() + x, panel.top() + y))
+
     def place(item: QGraphicsItem | None, span_mm: float) -> None:
         nonlocal cursor
         if item is not None:
-            _place_turned(item, panel, x=pad, y=cursor, clockwise=True)
+            put(item, pad, cursor)
             added.append(item)
         cursor += mm_to_px(span_mm)
 
     artist = _text(
         scene,
         metadata.artist.strip(),
-        QRectF(0, 0, content_width, mm_to_px(BACK_TITLE_MM)),
+        QRectF(0, 0, content_width, mm_to_px(BACK_TITLE_MM * heading_scale)),
         accent,
         wrap=False,
         bold=True,
     )
-    place(artist, BACK_TITLE_MM if artist is not None else 0)
+    place(artist, BACK_TITLE_MM * heading_scale if artist is not None else 0)
 
     album = _text(
         scene,
         metadata.album.strip(),
-        QRectF(0, 0, content_width, mm_to_px(BACK_SUBTITLE_MM)),
+        QRectF(0, 0, content_width, mm_to_px(BACK_SUBTITLE_MM * heading_scale)),
         ink,
         wrap=False,
     )
-    place(album, BACK_SUBTITLE_MM + BACK_GAP_MM if album is not None else 0)
+    place(album, (BACK_SUBTITLE_MM + BACK_GAP_MM) * heading_scale if album is not None else 0)
 
     if artist is not None or album is not None:
-        rule = _filled_rect(scene, QRectF(0, 0, content_width, mm_to_px(BACK_RULE_MM)), accent)
-        place(rule, BACK_RULE_MM + BACK_GAP_MM)
+        rule = _filled_rect(scene, QRectF(0, 0, content_width, mm_to_px(BACK_RULE_MM * heading_scale)), accent)
+        place(rule, (BACK_RULE_MM + BACK_GAP_MM) * heading_scale)
 
     footer_text = " · ".join(
         part for part in (str(metadata.year) if metadata.year else "", total_running_time(metadata)) if part
     )
-    footer_span = BACK_FOOTER_MM + BACK_GAP_MM if footer_text else 0.0
+    footer_span = (BACK_FOOTER_MM + BACK_GAP_MM) * heading_scale if footer_text else 0.0
     tracks_height = height - pad - cursor - mm_to_px(footer_span)
 
     if metadata.tracks and tracks_height > mm_to_px(6):
@@ -381,7 +408,7 @@ def place_back(
             top = cursor + max(0.0, (tracks_height - tallest) / 2)
             for index, item in enumerate(columns):
                 if item is not None:
-                    _place_turned(item, panel, x=pad + index * (column_width + gap), y=top, clockwise=True)
+                    put(item, pad + index * (column_width + gap), top)
                     added.append(item)
         else:
             item = _text(
@@ -392,16 +419,16 @@ def place_back(
             )
             if item is not None:
                 top = cursor + max(0.0, (tracks_height - item.boundingRect().height()) / 2)
-                _place_turned(item, panel, x=pad, y=top, clockwise=True)
+                put(item, pad, top)
                 added.append(item)
         cursor += tracks_height
 
     if footer_text:
         footer = _text(
-            scene, footer_text, QRectF(0, 0, content_width, mm_to_px(BACK_FOOTER_MM)), accent, wrap=False
+            scene, footer_text, QRectF(0, 0, content_width, mm_to_px(BACK_FOOTER_MM * heading_scale)), accent, wrap=False
         )
         if footer is not None:
-            _place_turned(footer, panel, x=pad, y=height - pad - mm_to_px(BACK_FOOTER_MM), clockwise=True)
+            put(footer, pad, height - pad - mm_to_px(BACK_FOOTER_MM * heading_scale))
             added.append(footer)
     return added
 

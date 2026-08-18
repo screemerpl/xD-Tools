@@ -52,6 +52,7 @@ src/mdtools/
   user_paths.py             where every file dialog starts: Documents/MiniDiscProjects, Pictures
   auto_layout.py            places cover art on a disc label and the logo on its slider (no Qt UI beyond items)
   jcard_layout.py           builds the three J-card panels: front cover, spine band, track list (no Qt UI)
+  cd_layout.py              the CD ring and the folded slim-case insert (no Qt UI)
   palette.py                background/accent/text colours pulled out of a cover image (Pillow, no Qt)
   i18n/
     __init__.py               language setting persistence + QTranslator install
@@ -239,13 +240,12 @@ a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
   once and read through the clear back of the case. That maps straight onto
   the existing `fold_offsets_mm` machinery, so it needed no new page-count
   concept (a project still has exactly two pages).
-- **The automatic layout refuses a CD project rather than half-working on it**
-  (`app_window._auto_layout_blocked_for_cd()`, checked both by the Tools panel
-  button -- before its destructive confirmation -- and by
-  `_auto_layout_project()` as a backstop). Both halves of that layout target
-  templates *by name* (`FULL_LABEL_TEMPLATE`, `JCARD_TEMPLATE`), so running it
-  on a CD project would not lay out its pages: it would quietly replace them
-  with MiniDisc shapes. The CD equivalent is a separate layout, not yet built.
+- **The automatic layout branches on the medium** (`_auto_layout_project()`):
+  a MiniDisc project gets the full-face label and the J-card, a CD project
+  gets `_auto_layout_cd_disc_label()` and `_auto_layout_cd_insert()`. Both
+  halves of each target templates *by name*, so the branch is not cosmetic --
+  running the MiniDisc layout on a CD project would replace its pages with
+  MiniDisc shapes rather than laying them out.
 - Built-in templates can be edited but not deleted.
 - **New built-in templates reach existing installs via
   `registry.sync_builtin_templates()`, called once from `main()` on every
@@ -2962,6 +2962,69 @@ the disc label. Nothing on it overhangs by more than a pen width (and
 export clips to the cut path anyway), while clipping would rasterise the
 panel blocks and the track list -- turning text still worth editing into a
 flat image.
+
+**`cd_layout.py` lays out a CD project's two pages, and leans on the
+MiniDisc layouts rather than restating them.** `auto_layout.place_cover_on_label()`
+already scales artwork to cover a cut shape (deliberately overshooting, since
+Clip Layers is what trims it), and `jcard_layout.place_back()` already builds
+a track-list panel out of the cover's own colours. What is genuinely
+different is physical, and each difference is one decision:
+
+- **The disc is a ring.** Nothing can be printed across the hub, so text
+  lives in bands above and below it, each only as wide as the circle is at
+  that height -- `_chord_rect()` takes the chord at whichever band edge is
+  *further* from the centre, since using the nearer one would push text past
+  the cut line. `test_a_band_never_reaches_outside_the_circle` checks the
+  corners against the radius rather than trusting an inset.
+- **The label's artwork is lightened** (`lighten()`, Pillow, blend towards
+  white) rather than having a translucent white rectangle laid over it: the
+  result is one ordinary image layer that can be moved or replaced, not two
+  layers whose stacking order quietly matters. It is the same problem
+  `recolour_insertion_mark()` solves for a MiniDisc, at a scale where
+  recolouring the text is not enough.
+- **The accent is scored against white, not against the sleeve's dominant
+  colour** -- because white is what it will be read on once the artwork
+  underneath has been lightened. Scoring it the J-card's way picked a pale
+  yellow: correct against dark navy, invisible on the label.
+- **The insert is read upright**, unlike a J-card, which goes into its case a
+  quarter turn round. That is the only reason `place_back()` grew a `turned`
+  flag instead of this module getting a second copy of the panel logic. It
+  also grew `heading_scale`, because those heading bands are millimetre
+  constants chosen for a J-card's narrow panel, and a slim-case insert is
+  twice as wide -- at 1.0 the heading looked lost above a full-height track
+  list.
+- **Which panel is which follows from the fold**: crease in the middle, left
+  half folded behind the right, so the right half faces out at the front and
+  the left half through the clear back of the tray. Both stay upright --
+  folding about a vertical crease and then reading the other side flips
+  left-right twice, which cancels.
+
+**Two bugs here were found by looking at the render, not by reading the
+code, and they share one cause.** An item scaled by `set_item_scale()`
+carries a transform anchored at its own centre, so `pos()` is *not* its
+visible top-left. Placing by `pos()` put the Digital Audio mark half off the
+disc -- where Clip Layers removed it outright as being outside the cut shape,
+so it did not look misplaced, it was simply absent -- and left the insert's
+cover floating in the middle of its panel with white either side. Everything
+in this module now positions by the item's real footprint
+(`item.mapToScene(item.boundingRect()).boundingRect()`), the same technique
+`auto_layout._move_centre_to()` documents, and the tests assert on where
+items *land*.
+
+**The "Compact Disc Digital Audio" mark is a real asset, not a drawing.** An
+attempt to draw it from memory produced something that plainly was not the
+logo (reported in one sentence: "to twoje logo w ogole nie przypomina
+oryginalu"). It now comes from Wikimedia Commons' `CDDAlogo.svg`, downloaded
+unmodified -- SHA-1 verified against what Commons publishes -- with
+provenance, the public-domain-as-a-text-logo status and the trademark note in
+`assets/img/ATTRIBUTION.md`. `scripts/make_cd_logo.py` renders it to the PNG
+the app actually loads, because `gallery.py` lists raster files only and
+`QPixmap` cannot be relied on to read SVG in a frozen build (the same
+reasoning `panels/icons.py` gives for going through `QSvgRenderer`). **That
+script must not be run under `QT_QPA_PLATFORM=offscreen`** if it ever draws
+text again: PySide6 ships no fonts and offscreen finds no system font
+directory, so text comes out as empty boxes -- which is exactly how the first
+version rendered.
 
 **Unsaved work is guarded by a plain `_dirty` flag, not
 `QUndoStack.isClean()`.** Metadata edits, template changes and the automatic
