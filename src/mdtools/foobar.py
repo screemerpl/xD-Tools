@@ -257,6 +257,17 @@ class FoobarClient:
         {"options": {...}} body."""
         self._request("/api/player", body={"playbackMode": 0, "stopAfterCurrentTrack": False})
 
+    def set_volume(self, db: float) -> None:
+        """Sets foobar's output volume, in dB -- confirmed live against a
+        running foobar2000 2.25.10/foo_beefweb 0.10: GET /api/player's own
+        "volume" object reports {"isMuted", "max": 0.0, "min": -100.0,
+        "type": "db", "value"}, and POSTing a flat {"volume": db} body (same
+        convention as prepare_for_recording()'s own flat keys) updates
+        "value" to exactly that, read back and verified. Does not touch
+        isMuted -- a muted player staying muted is not this call's
+        business."""
+        self._request("/api/player", body={"volume": db})
+
 
 # --- putting files into foobar ----------------------------------------
 #

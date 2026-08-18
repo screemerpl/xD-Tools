@@ -346,7 +346,7 @@ choose one)</source>
 <context>
     <name>DesignView</name>
     <message>
-        <location filename="../canvas/view.py" line="305"/>
+        <location filename="../canvas/view.py" line="314"/>
         <source>Move</source>
         <translation>Przesunięcie</translation>
     </message>
@@ -440,6 +440,121 @@ Wysunąć teraz, żeby to utrwalić?</translation>
         <location filename="../panels/erase_dialog.py" line="272"/>
         <source>MDRem: not connected</source>
         <translation>MDRem: brak połączenia</translation>
+    </message>
+</context>
+<context>
+    <name>ExperimentalSettingsDialog</name>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="51"/>
+        <source>Experimental Settings</source>
+        <translation>Ustawienia eksperymentalne</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="57"/>
+        <source>Settings for in-development features shown only while &quot;Show experimental features&quot; is enabled in Window &gt; Settings.</source>
+        <translation>Ustawienia funkcji w trakcie rozwoju, widoczne tylko gdy w Window &gt; Settings włączono &quot;Pokaż funkcje eksperymentalne&quot;.</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="77"/>
+        <source>Telegram bot</source>
+        <translation>Bot Telegram</translation>
+    </message>
+    <message>
+        <source>This feature needs your own, free Telegram API credentials -- unrelated to your bot&apos;s own token. Get them at &lt;a href=&quot;https://my.telegram.org&quot;&gt;my.telegram.org&lt;/a&gt;: sign in with your phone number, open &quot;API Development Tools&quot;, and create an app (any name and platform work) to get the API ID and API Hash below.</source>
+        <translation type="vanished">Ta funkcja wymaga własnych, darmowych danych dostępowych do API Telegrama -- niezwiązanych z tokenem Twojego bota. Zdobądź je na stronie &lt;a href=&quot;https://my.telegram.org&quot;&gt;my.telegram.org&lt;/a&gt;: zaloguj się numerem telefonu, otwórz &quot;API Development Tools&quot; i utwórz aplikację (dowolna nazwa i platforma są w porządku), aby uzyskać API ID i API Hash poniżej.</translation>
+    </message>
+    <message>
+        <source>The &quot;App api_id&quot; field my.telegram.org gave your app.</source>
+        <translation type="vanished">Pole &quot;App api_id&quot; nadane Twojej aplikacji przez my.telegram.org.</translation>
+    </message>
+    <message>
+        <source>API ID</source>
+        <translation type="vanished">API ID</translation>
+    </message>
+    <message>
+        <source>The &quot;App api_hash&quot; field my.telegram.org gave your app.</source>
+        <translation type="vanished">Pole &quot;App api_hash&quot; nadane Twojej aplikacji przez my.telegram.org.</translation>
+    </message>
+    <message>
+        <source>MDTools already comes with its own API ID/Hash, so these are filled in and ready to use -- you don&apos;t need to get your own. If you&apos;d rather sign in through your own registered app instead, get credentials at &lt;a href=&quot;https://my.telegram.org&quot;&gt;my.telegram.org&lt;/a&gt;: sign in with your phone number, open &quot;API Development Tools&quot;, and create an app (any name and platform work) to get an API ID and API Hash to replace these with.</source>
+        <translation type="vanished">MDTools ma już wbudowane własne API ID/Hash, więc te pola są już wypełnione i gotowe do użycia -- nie musisz zdobywać własnych. Jeśli wolisz zalogować się przez własną zarejestrowaną aplikację, zdobądź dane logowania na &lt;a href=&quot;https://my.telegram.org&quot;&gt;my.telegram.org&lt;/a&gt;: zaloguj się numerem telefonu, otwórz &quot;API Development Tools&quot; i utwórz aplikację (dowolna nazwa i platforma), aby uzyskać API ID i API Hash, którymi możesz zastąpić te wartości.</translation>
+    </message>
+    <message>
+        <source>MDTools&apos; own by default. The &quot;App api_id&quot; field my.telegram.org gave your app, if you&apos;d rather use your own.</source>
+        <translation type="vanished">Domyślnie własne MDTools. Pole &quot;App api_id&quot;, które my.telegram.org nadało Twojej aplikacji, jeśli wolisz użyć własnego.</translation>
+    </message>
+    <message>
+        <source>MDTools&apos; own by default. The &quot;App api_hash&quot; field my.telegram.org gave your app, if you&apos;d rather use your own.</source>
+        <translation type="vanished">Domyślnie własne MDTools. Pole &quot;App api_hash&quot;, które my.telegram.org nadało Twojej aplikacji, jeśli wolisz użyć własnego.</translation>
+    </message>
+    <message>
+        <source>API Hash</source>
+        <translation type="vanished">API Hash</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="91"/>
+        <source>Bot username</source>
+        <translation>Nazwa użytkownika bota</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="95"/>
+        <source>Where an album downloaded from the bot is saved before being recorded.</source>
+        <translation>Gdzie zapisywany jest album pobrany od bota, zanim zostanie nagrany.</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="97"/>
+        <source>Browse...</source>
+        <translation>Przeglądaj...</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="99"/>
+        <location filename="../panels/experimental_settings_dialog.py" line="126"/>
+        <location filename="../panels/experimental_settings_dialog.py" line="166"/>
+        <source>Download folder</source>
+        <translation>Folder pobierania</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="102"/>
+        <source>Status</source>
+        <translation>Status</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="105"/>
+        <source>Sign in to Telegram...</source>
+        <translation>Zaloguj się do Telegrama...</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="115"/>
+        <source>A saved sign-in exists locally.</source>
+        <translation>Lokalnie zapisane jest logowanie.</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="117"/>
+        <source>Not signed in yet.</source>
+        <translation>Jeszcze niezalogowano.</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="140"/>
+        <source>Sign in to Telegram</source>
+        <translation>Zaloguj się do Telegrama</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="141"/>
+        <source>No Telegram API credentials are configured.</source>
+        <translation>Nie skonfigurowano danych dostępowych API Telegrama.</translation>
+    </message>
+    <message>
+        <source>Enter the API ID and API Hash first (from my.telegram.org).</source>
+        <translation type="vanished">Najpierw podaj API ID i API Hash (z my.telegram.org).</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="168"/>
+        <source>That folder could not be created: {error}
+
+The setting has been saved anyway, but a download cannot be saved there until it exists.</source>
+        <translation>Nie udało się utworzyć tego folderu: {error}
+
+Ustawienie zostało mimo to zapisane, ale pobieranie nie może być tam zapisane, dopóki folder nie istnieje.</translation>
     </message>
 </context>
 <context>
@@ -647,12 +762,12 @@ Musi być uruchomiony i mieć włączony komponent Beefweb Remote Control (foo_b
 <context>
     <name>MDRem</name>
     <message>
-        <location filename="../mdrem.py" line="343"/>
+        <location filename="../mdrem.py" line="379"/>
         <source>Disc title</source>
         <translation>Tytuł płyty</translation>
     </message>
     <message>
-        <location filename="../mdrem.py" line="359"/>
+        <location filename="../mdrem.py" line="395"/>
         <source>Track {n}</source>
         <translation>Utwór {n}</translation>
     </message>
@@ -794,197 +909,197 @@ Wysunąć teraz, żeby zapisać je trwale?</translation>
         <translation type="vanished">MDTools - Projektant etykiet MiniDisc</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="127"/>
+        <location filename="../app_window.py" line="144"/>
         <source>Page</source>
         <translation>Strona</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="128"/>
+        <location filename="../app_window.py" line="145"/>
         <source>Editing:</source>
         <translation>Edycja:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="130"/>
+        <location filename="../app_window.py" line="147"/>
         <source>Disc Label</source>
         <translation>Etykieta płyty</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="131"/>
+        <location filename="../app_window.py" line="148"/>
         <source>Cover / J-Card</source>
         <translation>Okładka / J-Card</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="136"/>
+        <location filename="../app_window.py" line="153"/>
         <source>Zoom</source>
         <translation>Powiększenie</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="141"/>
-        <location filename="../app_window.py" line="326"/>
+        <location filename="../app_window.py" line="158"/>
+        <location filename="../app_window.py" line="350"/>
         <source>Zoom Out</source>
         <translation>Pomniejsz</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="144"/>
-        <location filename="../app_window.py" line="325"/>
+        <location filename="../app_window.py" line="161"/>
+        <location filename="../app_window.py" line="349"/>
         <source>Zoom In</source>
         <translation>Powiększ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="145"/>
+        <location filename="../app_window.py" line="162"/>
         <source>100%</source>
         <translation>100%</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="146"/>
+        <location filename="../app_window.py" line="163"/>
         <source>Fit</source>
         <translation>Dopasuj</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="149"/>
+        <location filename="../app_window.py" line="166"/>
         <source>Grayscale</source>
         <translation>Skala szarości</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="152"/>
+        <location filename="../app_window.py" line="169"/>
         <source>Temporarily preview the canvas in grayscale -- view only, click again to restore color</source>
         <translation>Tymczasowy podgląd widoku w skali szarości -- tylko podgląd, kliknij ponownie, aby przywrócić kolor</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="167"/>
+        <location filename="../app_window.py" line="184"/>
         <source>Grayscale preview/export brightness</source>
         <translation>Jasność podglądu/eksportu w skali szarości</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="173"/>
+        <location filename="../app_window.py" line="190"/>
         <source>Grayscale preview/export contrast</source>
         <translation>Kontrast podglądu/eksportu w skali szarości</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="177"/>
+        <location filename="../app_window.py" line="194"/>
         <source>Brightness:</source>
         <translation>Jasność:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="179"/>
+        <location filename="../app_window.py" line="196"/>
         <source>Contrast:</source>
         <translation>Kontrast:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="211"/>
+        <location filename="../app_window.py" line="228"/>
         <source>Tools</source>
         <translation>Narzędzia</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="231"/>
+        <location filename="../app_window.py" line="248"/>
         <source>Properties</source>
         <translation>Właściwości</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="241"/>
+        <location filename="../app_window.py" line="258"/>
         <source>Layers</source>
         <translation>Warstwy</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="251"/>
+        <location filename="../app_window.py" line="268"/>
         <source>&amp;File</source>
         <translation>&amp;Plik</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="252"/>
+        <location filename="../app_window.py" line="269"/>
         <source>New...</source>
         <translation>Nowy...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="253"/>
+        <location filename="../app_window.py" line="270"/>
         <source>Open Project...</source>
         <translation>Otwórz projekt...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="254"/>
+        <location filename="../app_window.py" line="271"/>
         <source>Open Recent</source>
         <translation>Otwórz ostatnie</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="256"/>
+        <location filename="../app_window.py" line="273"/>
         <source>Save</source>
         <translation>Zapisz</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="257"/>
+        <location filename="../app_window.py" line="274"/>
         <source>Save As...</source>
         <translation>Zapisz jako...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="259"/>
+        <location filename="../app_window.py" line="276"/>
         <source>Import Metadata from Project...</source>
         <translation>Importuj metadane z projektu...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="261"/>
+        <location filename="../app_window.py" line="278"/>
         <source>Export Cut SVG...</source>
         <translation>Eksportuj cięcie SVG...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="262"/>
+        <location filename="../app_window.py" line="279"/>
         <source>Export Print PNG...</source>
         <translation>Eksportuj wydruk PNG...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="263"/>
+        <location filename="../app_window.py" line="280"/>
         <source>Export Print PNG (Grayscale)...</source>
         <translation>Eksportuj wydruk PNG (skala szarości)...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="265"/>
+        <location filename="../app_window.py" line="282"/>
         <source>Print...</source>
         <translation>Drukuj...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="271"/>
+        <location filename="../app_window.py" line="288"/>
         <source>Close Project</source>
         <translation>Zamknij projekt</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="274"/>
+        <location filename="../app_window.py" line="291"/>
         <source>Exit</source>
         <translation>Zakończ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="276"/>
+        <location filename="../app_window.py" line="293"/>
         <source>&amp;Edit</source>
         <translation>&amp;Edycja</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="277"/>
+        <location filename="../app_window.py" line="294"/>
         <source>&amp;Undo</source>
         <translation>&amp;Cofnij</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="280"/>
+        <location filename="../app_window.py" line="297"/>
         <source>&amp;Redo</source>
         <translation>&amp;Ponów</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="284"/>
-        <location filename="../app_window.py" line="827"/>
+        <location filename="../app_window.py" line="301"/>
+        <location filename="../app_window.py" line="890"/>
         <source>Cut</source>
         <translation>Wytnij</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="285"/>
+        <location filename="../app_window.py" line="302"/>
         <source>Copy</source>
         <translation>Kopiuj</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="286"/>
-        <location filename="../app_window.py" line="835"/>
-        <location filename="../app_window.py" line="838"/>
+        <location filename="../app_window.py" line="303"/>
+        <location filename="../app_window.py" line="898"/>
+        <location filename="../app_window.py" line="901"/>
         <source>Paste</source>
         <translation>Wklej</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="291"/>
+        <location filename="../app_window.py" line="308"/>
         <source>Delete</source>
         <translation>Usuń</translation>
     </message>
@@ -997,82 +1112,112 @@ Wysunąć teraz, żeby zapisać je trwale?</translation>
         <translation type="vanished">Metadane...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="309"/>
+        <location filename="../app_window.py" line="326"/>
         <source>Record to MiniDisc from foobar2000...</source>
         <translation>Nagraj na MiniDisc z foobar2000...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="303"/>
+        <location filename="../app_window.py" line="320"/>
         <source>Record CD to MiniDisc...</source>
         <translation>Nagraj CD na MiniDisc...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="299"/>
+        <location filename="../app_window.py" line="316"/>
         <source>&amp;Recording</source>
         <translation>&amp;Nagrywanie</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="306"/>
+        <location filename="../app_window.py" line="323"/>
         <source>Record Folder to MiniDisc...</source>
         <translation>Nagraj folder na MiniDisc...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="316"/>
+        <location filename="../app_window.py" line="333"/>
         <source>Erase MiniDisc...</source>
         <translation>Skasuj MiniDisc...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="320"/>
+        <location filename="../app_window.py" line="340"/>
+        <source>Remote Control...</source>
+        <translation>Pilot...</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="344"/>
         <source>&amp;Templates</source>
         <translation>&amp;Szablony</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="321"/>
+        <location filename="../app_window.py" line="345"/>
         <source>Manage Templates...</source>
         <translation>Zarządzaj szablonami...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="322"/>
+        <location filename="../app_window.py" line="346"/>
         <source>Change Template for This Page...</source>
         <translation>Zmień szablon tej strony...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="324"/>
+        <location filename="../app_window.py" line="348"/>
         <source>&amp;View</source>
         <translation>&amp;Widok</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="327"/>
+        <location filename="../app_window.py" line="351"/>
         <source>Fit to Window</source>
         <translation>Dopasuj do okna</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="337"/>
+        <location filename="../app_window.py" line="364"/>
+        <source>Experi&amp;mental</source>
+        <translation>&amp;Eksperymentalne</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="366"/>
+        <source>Experimental Settings...</source>
+        <translation>Ustawienia eksperymentalne...</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="373"/>
+        <source>Download Album from Telegram Bot...</source>
+        <translation>Pobierz album z bota Telegram...</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="383"/>
+        <source>Sort Telegram Downloads into Album Folders...</source>
+        <translation>Posortuj pobrane pliki z Telegrama na foldery albumów...</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="386"/>
+        <source>Record from Telegram Downloads...</source>
+        <translation>Nagraj z pobranych plików Telegrama...</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="390"/>
         <source>&amp;Window</source>
         <translation>&amp;Okno</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="338"/>
+        <location filename="../app_window.py" line="391"/>
         <source>Settings...</source>
         <translation>Ustawienia...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="340"/>
+        <location filename="../app_window.py" line="393"/>
         <source>&amp;Help</source>
         <translation>&amp;Pomoc</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="342"/>
+        <location filename="../app_window.py" line="395"/>
         <source>About MDTools...</source>
         <translation>O programie MDTools...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="397"/>
+        <location filename="../app_window.py" line="450"/>
         <source>Unsaved Changes</source>
         <translation>Niezapisane zmiany</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="398"/>
+        <location filename="../app_window.py" line="451"/>
         <source>This project has changes that have not been saved.
 
 Save them before continuing?</source>
@@ -1081,23 +1226,23 @@ Save them before continuing?</source>
 Zapisać je przed kontynuowaniem?</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="497"/>
+        <location filename="../app_window.py" line="550"/>
         <source>&apos;{name}&apos; has unverified placeholder dimensions -- measure your physical media/case and correct it in Templates &gt; Manage Templates before cutting anything for real.</source>
         <translation>Szablon &apos;{name}&apos; ma niezweryfikowane wymiary zastępcze -- zmierz swój fizyczny nośnik/pudełko i popraw go w Szablony &gt; Zarządzaj szablonami, zanim wytniesz cokolwiek naprawdę.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="677"/>
-        <location filename="../app_window.py" line="691"/>
+        <location filename="../app_window.py" line="740"/>
+        <location filename="../app_window.py" line="754"/>
         <source>Change Template</source>
         <translation>Zmiana szablonu</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="678"/>
+        <location filename="../app_window.py" line="741"/>
         <source>Template for this page:</source>
         <translation>Szablon dla tej strony:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="693"/>
+        <location filename="../app_window.py" line="756"/>
         <source>Changing the template clears this page: every layer on it is removed, and the undo history is reset.
 
 The other page and the project&apos;s metadata are left alone.</source>
@@ -1106,164 +1251,189 @@ The other page and the project&apos;s metadata are left alone.</source>
 Druga strona i metadane projektu pozostają nietknięte.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="758"/>
+        <location filename="../app_window.py" line="821"/>
         <source>Add Text</source>
         <translation>Dodaj tekst</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="765"/>
+        <location filename="../app_window.py" line="828"/>
         <source>Add Rectangle</source>
         <translation>Dodaj prostokąt</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="772"/>
-        <location filename="../app_window.py" line="852"/>
+        <location filename="../app_window.py" line="835"/>
+        <location filename="../app_window.py" line="915"/>
         <source>Delete Layer</source>
         <translation>Usuń warstwę</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="801"/>
-        <location filename="../app_window.py" line="808"/>
+        <location filename="../app_window.py" line="864"/>
+        <location filename="../app_window.py" line="871"/>
         <source>Rename Layer</source>
         <translation>Zmień nazwę warstwy</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="801"/>
+        <location filename="../app_window.py" line="864"/>
         <source>Layer name:</source>
         <translation>Nazwa warstwy:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="870"/>
-        <location filename="../app_window.py" line="881"/>
-        <location filename="../app_window.py" line="891"/>
+        <location filename="../app_window.py" line="933"/>
+        <location filename="../app_window.py" line="944"/>
+        <location filename="../app_window.py" line="954"/>
         <source>Insert Metadata Text</source>
         <translation>Wstaw tekst z metadanych</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="900"/>
-        <location filename="../app_window.py" line="906"/>
+        <location filename="../app_window.py" line="963"/>
+        <location filename="../app_window.py" line="969"/>
         <source>Add Image</source>
         <translation>Dodaj obraz</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="900"/>
+        <location filename="../app_window.py" line="963"/>
         <source>Images (*.png *.jpg *.jpeg *.bmp)</source>
         <translation>Obrazy (*.png *.jpg *.jpeg *.bmp)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="918"/>
+        <location filename="../app_window.py" line="981"/>
         <source>Insert Asset</source>
         <translation>Wstaw zasób</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="929"/>
+        <location filename="../app_window.py" line="992"/>
         <source>Clip Layers</source>
         <translation>Przycinaj warstwy</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="932"/>
+        <location filename="../app_window.py" line="995"/>
         <source>Clip Image</source>
         <translation>Przycięcie obrazu</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="950"/>
+        <location filename="../app_window.py" line="1013"/>
         <source>Bake Layers</source>
         <translation>Spłaszcz warstwy</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="962"/>
+        <location filename="../app_window.py" line="1025"/>
         <source>Import Metadata from Project</source>
         <translation>Importuj metadane z projektu</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="971"/>
+        <location filename="../app_window.py" line="1034"/>
         <source>Import Metadata</source>
         <translation>Importuj metadane</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="971"/>
+        <location filename="../app_window.py" line="1034"/>
         <source>Could not read project:
 {error}</source>
         <translation>Nie można odczytać projektu:
 {error}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="974"/>
+        <location filename="../app_window.py" line="1037"/>
         <source>Imported metadata from {path}</source>
         <translation>Zaimportowano metadane z {path}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="978"/>
-        <location filename="../app_window.py" line="996"/>
+        <location filename="../app_window.py" line="1041"/>
+        <location filename="../app_window.py" line="1059"/>
         <source>Open Project</source>
         <translation>Otwórz projekt</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="996"/>
+        <location filename="../app_window.py" line="1059"/>
         <source>Could not open project:
 {error}</source>
         <translation>Nie można otworzyć projektu:
 {error}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1013"/>
+        <location filename="../app_window.py" line="1076"/>
         <source>(No Recent Projects)</source>
         <translation>(Brak ostatnich projektów)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1033"/>
-        <location filename="../app_window.py" line="1054"/>
+        <location filename="../app_window.py" line="1096"/>
+        <location filename="../app_window.py" line="1117"/>
         <source>Saved {path}</source>
         <translation>Zapisano {path}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1044"/>
+        <location filename="../app_window.py" line="1107"/>
         <source>Save Project As</source>
         <translation>Zapisz projekt jako</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1062"/>
+        <location filename="../app_window.py" line="1125"/>
         <source>Export Cut SVG</source>
         <translation>Eksportuj cięcie SVG</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1062"/>
+        <location filename="../app_window.py" line="1125"/>
         <source>SVG (*.svg)</source>
         <translation>SVG (*.svg)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1067"/>
+        <location filename="../app_window.py" line="1130"/>
         <source>Exported cut outline to {path}</source>
         <translation>Wyeksportowano kontur cięcia do {path}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1102"/>
+        <location filename="../app_window.py" line="1165"/>
         <source>Export Print PNG (Grayscale)</source>
         <translation>Eksportuj wydruk PNG (skala szarości)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1218"/>
+        <location filename="../app_window.py" line="1269"/>
+        <location filename="../app_window.py" line="1276"/>
+        <source>Download Album from Telegram Bot</source>
+        <translation>Pobierz album z bota Telegram</translation>
+    </message>
+    <message>
+        <source>Set the API ID, API Hash and bot username first, in Experimental &gt; Experimental Settings...</source>
+        <translation type="vanished">Najpierw ustaw API ID, API Hash i nazwę użytkownika bota w Experimental &gt; Experimental Settings...</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1323"/>
+        <location filename="../app_window.py" line="1327"/>
+        <source>Sort into Album Folders</source>
+        <translation>Posortuj na foldery albumów</translation>
+    </message>
+    <message>
+        <source>Only one album was detected -- nothing to sort.</source>
+        <translation type="vanished">Wykryto tylko jeden album -- nie ma czego sortować.</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1328"/>
+        <source>Sorted into {count} album folders.</source>
+        <translation>Posortowano na {count} folderów albumów.</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1412"/>
         <source>Restart Now</source>
         <translation>Uruchom ponownie teraz</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1219"/>
+        <location filename="../app_window.py" line="1413"/>
         <source>Later</source>
         <translation>Później</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1351"/>
-        <location filename="../app_window.py" line="1361"/>
+        <location filename="../app_window.py" line="1578"/>
+        <location filename="../app_window.py" line="1588"/>
         <source>Auto-Layout Disc Label</source>
         <translation>Ułóż etykietę płyty automatycznie</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1352"/>
+        <location filename="../app_window.py" line="1579"/>
         <source>Fill in the album and artist in the Tools panel&apos;s Metadata... first.</source>
         <translation>Uzupełnij najpierw album i wykonawcę w Metadanych... na panelu narzędzi.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1363"/>
+        <location filename="../app_window.py" line="1590"/>
         <source>No cover art could be found for this album, and the layout is built around it. Add an image yourself, or fetch one with the Metadata dialog&apos;s lookup.</source>
         <translation>Nie udało się znaleźć okładki dla tego albumu, a cały układ jest na niej oparty. Dodaj obraz samodzielnie albo pobierz okładkę wyszukiwarką w oknie Metadane...</translation>
     </message>
@@ -1276,12 +1446,12 @@ Druga strona i metadane projektu pozostają nietknięte.</translation>
         <translation type="vanished">Nie udało się znaleźć okładki dla tego albumu, a cały układ jest na niej oparty. Dodaj obraz samodzielnie albo pobierz okładkę wyszukiwarką w Projekt &gt; Metadane...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1371"/>
+        <location filename="../app_window.py" line="1598"/>
         <source>Auto-Layout</source>
         <translation>Układ automatyczny</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1373"/>
+        <location filename="../app_window.py" line="1600"/>
         <source>This replaces everything on both pages -- the disc label and the J-card -- and resets the undo history.
 
 The project&apos;s metadata is left alone.</source>
@@ -1290,12 +1460,12 @@ The project&apos;s metadata is left alone.</source>
 Metadane projektu pozostaną nietknięte.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1495"/>
+        <location filename="../app_window.py" line="1722"/>
         <source>Lay Out J-Card</source>
         <translation>Ułożenie okładki J-card</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1497"/>
+        <location filename="../app_window.py" line="1724"/>
         <source>J-Card</source>
         <translation>Okładka J-card</translation>
     </message>
@@ -1308,74 +1478,94 @@ The cover page and the project&apos;s metadata are left alone.</source>
 Strona okładki i metadane projektu pozostaną nietknięte.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1456"/>
+        <location filename="../app_window.py" line="1683"/>
         <source>Lay Out Disc Label</source>
         <translation>Ułożenie etykiety płyty</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1465"/>
+        <location filename="../app_window.py" line="1692"/>
         <source>Cover Art</source>
         <translation>Okładka</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1469"/>
+        <location filename="../app_window.py" line="1696"/>
         <source>MiniDisc Logo</source>
         <translation>Logo MiniDisc</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1074"/>
+        <location filename="../app_window.py" line="1137"/>
         <source>Export Print PNG</source>
         <translation>Eksportuj wydruk PNG</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="82"/>
+        <location filename="../app_window.py" line="85"/>
         <source>MDTools - MiniDisc Studio</source>
         <translation>MDTools - Studio MiniDisc</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1074"/>
-        <location filename="../app_window.py" line="1102"/>
+        <location filename="../app_window.py" line="1137"/>
+        <location filename="../app_window.py" line="1165"/>
         <source>PNG (*.png)</source>
         <translation>PNG (*.png)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1079"/>
-        <location filename="../app_window.py" line="1107"/>
+        <location filename="../app_window.py" line="1142"/>
+        <location filename="../app_window.py" line="1170"/>
         <source>Exported print artwork to {path}</source>
         <translation>Wyeksportowano grafikę do druku do {path}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1122"/>
+        <location filename="../app_window.py" line="1185"/>
         <source>MDTools Project (*.mdproj)</source>
         <translation>Projekt MDTools (*.mdproj)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1167"/>
+        <location filename="../app_window.py" line="1270"/>
+        <source>Set the bot username first, in Experimental &gt; Experimental Settings...</source>
+        <translation>Najpierw ustaw nazwę użytkownika bota w Experimental &gt; Experimental Settings...</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1278"/>
+        <source>This build has no Telegram API credentials. Register an app at my.telegram.org and add its API ID and API Hash to settings.ini to sign in.</source>
+        <translation>Ta wersja nie ma danych dostępowych API Telegrama. Zarejestruj aplikację na my.telegram.org i dodaj jej API ID oraz API Hash do settings.ini, aby móc się zalogować.</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1320"/>
+        <source>These tracks all belong to one album -- there is nothing to separate.</source>
+        <translation>Wszystkie te utwory należą do jednego albumu -- nie ma czego rozdzielać.</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1322"/>
+        <source>Everything is already sorted into album folders.</source>
+        <translation>Wszystko jest już posortowane na foldery albumów.</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1361"/>
         <source>Save as Template</source>
         <translation>Zapisz jako szablon</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1167"/>
+        <location filename="../app_window.py" line="1361"/>
         <source>Template name:</source>
         <translation>Nazwa szablonu:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1186"/>
+        <location filename="../app_window.py" line="1380"/>
         <source>Saved template &apos;{name}&apos;</source>
         <translation>Zapisano szablon &apos;{name}&apos;</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1195"/>
+        <location filename="../app_window.py" line="1389"/>
         <source>Language</source>
         <translation>Język</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1214"/>
+        <location filename="../app_window.py" line="1408"/>
         <source>Language Changed</source>
         <translation>Zmieniono język</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1215"/>
+        <location filename="../app_window.py" line="1409"/>
         <source>Restart MDTools for the new language to take full effect.</source>
         <translation>Uruchom ponownie MDTools, aby nowy język w pełni obowiązywał.</translation>
     </message>
@@ -1816,68 +2006,68 @@ choose one)</source>
 <context>
     <name>RecordDialog</name>
     <message>
-        <location filename="../panels/record_dialog.py" line="100"/>
+        <location filename="../panels/record_dialog.py" line="108"/>
         <source>Record to MiniDisc from foobar2000</source>
         <translation>Nagrywanie na MiniDisc z foobar2000</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="136"/>
-        <location filename="../panels/record_dialog.py" line="148"/>
+        <location filename="../panels/record_dialog.py" line="144"/>
+        <location filename="../panels/record_dialog.py" line="156"/>
         <source>Artist</source>
         <translation>Wykonawca</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="137"/>
+        <location filename="../panels/record_dialog.py" line="145"/>
         <source>Album</source>
         <translation>Album</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="138"/>
+        <location filename="../panels/record_dialog.py" line="146"/>
         <source>Year</source>
         <translation>Rok</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="148"/>
+        <location filename="../panels/record_dialog.py" line="156"/>
         <source>#</source>
         <translation>#</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="148"/>
+        <location filename="../panels/record_dialog.py" line="156"/>
         <source>Title</source>
         <translation>Tytuł</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="148"/>
+        <location filename="../panels/record_dialog.py" line="156"/>
         <source>Length</source>
         <translation>Czas</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="154"/>
+        <location filename="../panels/record_dialog.py" line="162"/>
         <source>Everything above and in the Title column can be edited, and is what gets written onto the disc. Fill the Artist column in only on a compilation, where each track has its own.</source>
         <translation>Wszystko powyżej oraz kolumnę Tytuł można edytować — to właśnie trafia na płytę. Kolumnę Wykonawca wypełnij tylko przy składance, gdzie każdy utwór ma swojego.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="161"/>
+        <location filename="../panels/record_dialog.py" line="169"/>
         <source>Mark tracks through the adapter</source>
         <translation>Znaczniki ścieżek przez przystawkę</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="165"/>
+        <location filename="../panels/record_dialog.py" line="173"/>
         <source>Sends a track mark at each track change instead of relying on the deck hearing a gap. This is the only thing that splits a gapless album correctly -- but turn LEVEL-SYNC off on the deck when using it, or both will mark the same boundary and leave a stray sliver of a track between them.</source>
         <translation>Wysyła znacznik ścieżki przy każdej zmianie utworu, zamiast polegać na tym, że magnetofon usłyszy przerwę. Tylko to poprawnie dzieli album grany bezprzerwowo — ale wyłącz wtedy LEVEL-SYNC w magnetofonie, inaczej oba oznaczą tę samą granicę i zostanie między nimi szczątkowa ścieżka.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="190"/>
+        <location filename="../panels/record_dialog.py" line="198"/>
         <source>Start Recording</source>
         <translation>Rozpocznij nagrywanie</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="193"/>
+        <location filename="../panels/record_dialog.py" line="201"/>
         <source>Cancel</source>
         <translation>Anuluj</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="214"/>
+        <location filename="../panels/record_dialog.py" line="222"/>
         <source>Could not reach foobar2000: {error}
 
 It must be running with the Beefweb Remote Control component (foo_beefweb) enabled.</source>
@@ -1886,47 +2076,47 @@ It must be running with the Beefweb Remote Control component (foo_beefweb) enabl
 Musi być uruchomiony i mieć włączony komponent Beefweb Remote Control (foo_beefweb).</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="222"/>
+        <location filename="../panels/record_dialog.py" line="230"/>
         <source>foobar2000&apos;s current playlist is empty -- load the album first.</source>
         <translation>Bieżąca playlista w foobar2000 jest pusta — wczytaj najpierw album.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="235"/>
+        <location filename="../panels/record_dialog.py" line="243"/>
         <source>Playlist &quot;{playlist}&quot; -- {count} tracks, {total} total.
 It will be recorded to the disc in this order, then titled from these names.</source>
         <translation>Playlista „{playlist}&quot; — utworów: {count}, łącznie {total}.
 Zostaną nagrane na płytę w tej kolejności, a potem nazwane według tych tytułów.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="302"/>
+        <location filename="../panels/record_dialog.py" line="310"/>
         <source>This is longer than the {limit} an MD holds in SP mode. Set the deck to LP2 first, or the recording will be cut short.</source>
         <translation>To więcej niż {limit}, które mieści płyta w trybie SP. Ustaw magnetofon na LP2, inaczej nagranie zostanie urwane.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="317"/>
-        <location filename="../panels/record_dialog.py" line="389"/>
+        <location filename="../panels/record_dialog.py" line="326"/>
+        <location filename="../panels/record_dialog.py" line="398"/>
         <source>foobar2000: {error}</source>
         <translation>foobar2000: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="330"/>
+        <location filename="../panels/record_dialog.py" line="339"/>
         <source>Stop</source>
         <translation>Zatrzymaj</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="333"/>
+        <location filename="../panels/record_dialog.py" line="342"/>
         <source>Recording started -- waiting for the first track...</source>
         <translation>Nagrywanie rozpoczęte — czekam na pierwszy utwór...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="341"/>
-        <location filename="../panels/record_dialog.py" line="368"/>
-        <location filename="../panels/record_dialog.py" line="516"/>
+        <location filename="../panels/record_dialog.py" line="350"/>
+        <location filename="../panels/record_dialog.py" line="377"/>
+        <location filename="../panels/record_dialog.py" line="525"/>
         <source>Record to MiniDisc</source>
         <translation>Nagrywanie na MiniDisc</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="343"/>
+        <location filename="../panels/record_dialog.py" line="352"/>
         <source>Recording replaces whatever is on the disc, and nothing about it can be undone.
 
 Make sure the right disc is loaded and its write-protect tab is open, then continue.</source>
@@ -1935,13 +2125,13 @@ Make sure the right disc is loaded and its write-protect tab is open, then conti
 Upewnij się, że włożona jest właściwa płyta, a blokada zapisu jest otwarta, i kontynuuj.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="361"/>
-        <location filename="../panels/record_dialog.py" line="540"/>
+        <location filename="../panels/record_dialog.py" line="370"/>
+        <location filename="../panels/record_dialog.py" line="549"/>
         <source>MDRem: {error}</source>
         <translation>MDRem: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="370"/>
+        <location filename="../panels/record_dialog.py" line="379"/>
         <source>The deck was told to start recording.
 
 Is it now showing record-pause (REC lit, paused)?</source>
@@ -1950,33 +2140,33 @@ Is it now showing record-pause (REC lit, paused)?</source>
 Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="378"/>
+        <location filename="../panels/record_dialog.py" line="387"/>
         <source>Cancelled -- the deck was not recording.</source>
         <translation>Anulowano — magnetofon nie nagrywał.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="397"/>
+        <location filename="../panels/record_dialog.py" line="406"/>
         <source>Lost contact with foobar2000: {error}</source>
         <translation>Utracono łączność z foobar2000: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="437"/>
+        <location filename="../panels/record_dialog.py" line="446"/>
         <source>Recording {index} of {count}: {title} -- {elapsed} of {total}</source>
         <translation>Nagrywanie {index} z {count}: {title} — {elapsed} z {total}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="452"/>
-        <location filename="../panels/record_dialog.py" line="555"/>
+        <location filename="../panels/record_dialog.py" line="461"/>
+        <location filename="../panels/record_dialog.py" line="564"/>
         <source>Close</source>
         <translation>Zamknij</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="459"/>
+        <location filename="../panels/record_dialog.py" line="468"/>
         <source>Playback stopped at track {reached} of {count}, so the disc is incomplete. Titling it now would name tracks that were never recorded.</source>
         <translation>Odtwarzanie zatrzymało się na utworze {reached} z {count}, więc płyta jest niekompletna. Nazwanie jej teraz oznaczałoby tytuły dla utworów, które nie zostały nagrane.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="466"/>
+        <location filename="../panels/record_dialog.py" line="475"/>
         <source>Recording finished. The titles can be written now.</source>
         <translation>Nagrywanie zakończone. Można teraz zapisać tytuły.</translation>
     </message>
@@ -1985,12 +2175,12 @@ Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
         <translation type="vanished">Szukam okładki...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="517"/>
+        <location filename="../panels/record_dialog.py" line="526"/>
         <source>Write the album and track titles onto the disc now?</source>
         <translation>Zapisać teraz tytuł albumu i nazwy utworów na płycie?</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="534"/>
+        <location filename="../panels/record_dialog.py" line="543"/>
         <source>MDRem: not connected</source>
         <translation>MDRem: brak połączenia</translation>
     </message>
@@ -2111,12 +2301,22 @@ Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
         <translation>DPI spłaszczania warstw</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="96"/>
+        <location filename="../panels/settings_dialog.py" line="97"/>
         <source>Restore Defaults</source>
         <translation>Przywróć domyślne</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="110"/>
+        <location filename="../panels/settings_dialog.py" line="112"/>
+        <source>Show experimental features</source>
+        <translation>Pokaż funkcje eksperymentalne</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="115"/>
+        <source>Shows in-development features that aren&apos;t finished yet.</source>
+        <translation>Pokazuje funkcje w trakcie rozwoju, które nie są jeszcze ukończone.</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="124"/>
         <source>Enable MDRem IR remote adapter</source>
         <translation>Włącz przystawkę MDRem (pilot na podczerwień)</translation>
     </message>
@@ -2125,91 +2325,91 @@ Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
         <translation type="vanished">Dodaje „Wyślij listę utworów” w Projekt &gt; Metadane... oraz okno pilota na ekranie startowym, do zapisywania tytułów na samej płycie MiniDisc przez podczerwień.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="114"/>
+        <location filename="../panels/settings_dialog.py" line="128"/>
         <source>Adds Upload Tracklist to the Metadata dialog, the Recording menu&apos;s entries, and a Remote window to the startup screen, for writing titles onto the MiniDisc itself over infrared.</source>
         <translation>Dodaje „Wyślij listę utworów” w oknie Metadane..., pozycje menu Nagrywanie oraz okno pilota na ekranie startowym, do zapisywania tytułów na samej płycie MiniDisc przez podczerwień.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="123"/>
+        <location filename="../panels/settings_dialog.py" line="137"/>
         <source>Serial port the MDRem adapter is connected to.</source>
         <translation>Port szeregowy, do którego podłączona jest przystawka MDRem.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="125"/>
+        <location filename="../panels/settings_dialog.py" line="139"/>
         <source>Detect</source>
         <translation>Wykryj</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="128"/>
+        <location filename="../panels/settings_dialog.py" line="142"/>
         <source>Asks every serial port whether an MDRem adapter answers on it. The board&apos;s USB ID is shared with its own bootloader and other boards, so it can only be identified by replying.</source>
         <translation>Odpytuje każdy port szeregowy, czy odpowiada na nim przystawka MDRem. Identyfikator USB płytki jest wspólny z jej własnym bootloaderem i innymi płytkami, więc rozpoznać ją można wyłącznie po odpowiedzi.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="140"/>
+        <location filename="../panels/settings_dialog.py" line="154"/>
         <source>MDRem port</source>
         <translation>Port MDRem</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="145"/>
+        <location filename="../panels/settings_dialog.py" line="159"/>
         <source>Where foobar2000&apos;s Beefweb Remote Control component listens, used by Record to MiniDisc. Change it only if you moved Beefweb off its default port.</source>
         <translation>Adres, pod którym nasłuchuje komponent Beefweb Remote Control w foobar2000, używany przez nagrywanie na MiniDisc. Zmieniaj tylko, jeśli przeniosłeś Beefweb na inny port.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="149"/>
+        <location filename="../panels/settings_dialog.py" line="163"/>
         <source>foobar2000 (Beefweb) URL</source>
         <translation>Adres foobar2000 (Beefweb)</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="166"/>
+        <location filename="../panels/settings_dialog.py" line="180"/>
         <source>foobar2000&apos;s own program file. Ripped CD tracks are loaded through it rather than through Beefweb, which refuses files outside the music folders configured in foobar itself.</source>
         <translation>Plik programu foobar2000. Zgrane ścieżki CD są ładowane przez niego, a nie przez Beefweb, który odrzuca pliki spoza folderów muzycznych skonfigurowanych w samym foobarze.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="170"/>
-        <location filename="../panels/settings_dialog.py" line="181"/>
+        <location filename="../panels/settings_dialog.py" line="184"/>
+        <location filename="../panels/settings_dialog.py" line="195"/>
         <source>Browse...</source>
         <translation>Przeglądaj...</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="172"/>
-        <location filename="../panels/settings_dialog.py" line="187"/>
+        <location filename="../panels/settings_dialog.py" line="186"/>
+        <location filename="../panels/settings_dialog.py" line="201"/>
         <source>foobar2000 program</source>
         <translation>Program foobar2000</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="177"/>
+        <location filename="../panels/settings_dialog.py" line="191"/>
         <source>Where a ripped CD is written. One album is a few hundred megabytes; earlier rips are deleted when the next one starts, not when a recording ends, so they stay playable in the meantime.</source>
         <translation>Gdzie zapisywana jest zgrana płyta. Jeden album to kilkaset megabajtów; wcześniejsze zgrania są kasowane przy rozpoczęciu następnego, a nie po zakończeniu nagrywania, więc do tego czasu można je odtwarzać.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="183"/>
-        <location filename="../panels/settings_dialog.py" line="208"/>
-        <location filename="../panels/settings_dialog.py" line="292"/>
+        <location filename="../panels/settings_dialog.py" line="197"/>
+        <location filename="../panels/settings_dialog.py" line="222"/>
+        <location filename="../panels/settings_dialog.py" line="307"/>
         <source>CD rip folder</source>
         <translation>Folder zgrywania CD</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="187"/>
+        <location filename="../panels/settings_dialog.py" line="201"/>
         <source>Programs (*.exe);;All files (*)</source>
         <translation>Programy (*.exe);;Wszystkie pliki (*)</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="226"/>
+        <location filename="../panels/settings_dialog.py" line="240"/>
         <source>{port} (not connected)</source>
         <translation>{port} (niepodłączony)</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="251"/>
+        <location filename="../panels/settings_dialog.py" line="265"/>
         <source>Detect MDRem</source>
         <translation>Wykrywanie MDRem</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="252"/>
+        <location filename="../panels/settings_dialog.py" line="266"/>
         <source>No MDRem adapter answered on any serial port. Check that it is plugged in.</source>
         <translation>Żadna przystawka MDRem nie odpowiedziała na żadnym porcie szeregowym. Sprawdź, czy jest podłączona.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="294"/>
+        <location filename="../panels/settings_dialog.py" line="309"/>
         <source>That folder could not be created: {error}
 
 The setting has been saved anyway, but a CD cannot be ripped there until it exists.</source>
@@ -2269,6 +2469,259 @@ Ustawienie i tak zostało zapisane, ale dopóki folder nie istnieje, nie da się
         <location filename="../panels/startup_dialog.py" line="105"/>
         <source>MDTools Project (*.mdproj)</source>
         <translation>Projekt MDTools (*.mdproj)</translation>
+    </message>
+</context>
+<context>
+    <name>TelegramChatDialog</name>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="527"/>
+        <source>Telegram Bot</source>
+        <translation>Bot Telegram</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="562"/>
+        <source>Connecting...</source>
+        <translation>Łączenie...</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="620"/>
+        <source>Quick commands:</source>
+        <translation>Szybkie komendy:</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="636"/>
+        <source>Send</source>
+        <translation>Wyślij</translation>
+    </message>
+    <message>
+        <source>Continue to Record Folder...</source>
+        <translation type="vanished">Przejdź do Record Folder...</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="925"/>
+        <source>Enable the MDRem adapter in Window &gt; Settings to record.</source>
+        <translation>Włącz adapter MDRem w Window &gt; Settings, aby nagrywać.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="662"/>
+        <source>Close</source>
+        <translation>Zamknij</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="595"/>
+        <source>Downloads</source>
+        <translation>Pobierania</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="646"/>
+        <source>Open Download Folder</source>
+        <translation>Otwórz folder pobierania</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="650"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="971"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="975"/>
+        <source>Sort into Album Folders</source>
+        <translation>Posortuj na foldery albumów</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="658"/>
+        <source>Record Downloaded Albums...</source>
+        <translation>Nagraj pobrane albumy...</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="693"/>
+        <source>The Telegram API ID must be a number.</source>
+        <translation>Telegram API ID musi być liczbą.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="717"/>
+        <source>Connected to {name}.</source>
+        <translation>Połączono z {name}.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="730"/>
+        <source>Not signed in to Telegram.</source>
+        <translation>Niezalogowano do Telegrama.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="731"/>
+        <source>Sign in...</source>
+        <translation>Zaloguj się...</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="741"/>
+        <source>Could not connect: {error}</source>
+        <translation>Nie udało się połączyć: {error}</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="822"/>
+        <source>Could not send: {error}</source>
+        <translation>Nie udało się wysłać: {error}</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="829"/>
+        <source>Could not do that: {error}</source>
+        <translation>Nie udało się tego wykonać: {error}</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="904"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="929"/>
+        <source>Wait for the current download(s) to finish first.</source>
+        <translation>Poczekaj, aż bieżące pobieranie się zakończy.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="907"/>
+        <source>Nothing is waiting to be sorted.</source>
+        <translation>Nie ma nic do posortowania.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="932"/>
+        <source>Download at least one file first.</source>
+        <translation>Najpierw pobierz co najmniej jeden plik.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="968"/>
+        <source>These tracks all belong to one album -- there is nothing to separate.</source>
+        <translation>Wszystkie te utwory należą do jednego albumu -- nie ma czego rozdzielać.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="970"/>
+        <source>Everything is already sorted into album folders.</source>
+        <translation>Wszystko jest już posortowane na foldery albumów.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="127"/>
+        <source>Choose Album</source>
+        <translation>Wybierz album</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="128"/>
+        <source>More than one album was downloaded -- which one do you want to record?</source>
+        <translation>Pobrano więcej niż jeden album -- który chcesz nagrać?</translation>
+    </message>
+    <message>
+        <source>Only one album was detected -- nothing to sort.</source>
+        <translation type="vanished">Wykryto tylko jeden album -- nie ma czego sortować.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="976"/>
+        <source>Sorted into {count} album folders.</source>
+        <translation>Posortowano na {count} folderów albumów.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="1015"/>
+        <source>Disconnecting...</source>
+        <translation>Rozłączanie...</translation>
+    </message>
+</context>
+<context>
+    <name>TelegramLoginDialog</name>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="161"/>
+        <source>Sign in to Telegram</source>
+        <translation>Zaloguj się do Telegrama</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="173"/>
+        <source>MDTools needs to sign in as your own Telegram account to talk to your bot -- Telegram does not let one bot message another directly.</source>
+        <translation>MDTools musi zalogować się na Twoje własne konto Telegram, aby porozmawiać z Twoim botem -- Telegram nie pozwala, by jeden bot wysyłał wiadomości bezpośrednio do innego bota.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="183"/>
+        <source>Phone number</source>
+        <translation>Numer telefonu</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="186"/>
+        <source>Code</source>
+        <translation>Kod</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="190"/>
+        <source>Password</source>
+        <translation>Hasło</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="200"/>
+        <location filename="../panels/telegram_login_dialog.py" line="216"/>
+        <source>Send Code</source>
+        <translation>Wyślij kod</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="203"/>
+        <source>Cancel</source>
+        <translation>Anuluj</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="216"/>
+        <source>Verify</source>
+        <translation>Zweryfikuj</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="231"/>
+        <location filename="../panels/telegram_login_dialog.py" line="235"/>
+        <source>Verifying...</source>
+        <translation>Weryfikowanie...</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="241"/>
+        <source>Enter a phone number first.</source>
+        <translation>Najpierw podaj numer telefonu.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="245"/>
+        <source>Set the Telegram API ID and API Hash first (from my.telegram.org).</source>
+        <translation>Najpierw ustaw Telegram API ID i API Hash (z my.telegram.org).</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="251"/>
+        <source>The Telegram API ID must be a number.</source>
+        <translation>Telegram API ID musi być liczbą.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="256"/>
+        <source>Requesting a code from Telegram...</source>
+        <translation>Żądanie kodu od Telegrama...</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="270"/>
+        <source>Enter the code Telegram just sent you.</source>
+        <translation>Podaj kod, który właśnie wysłał Ci Telegram.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="275"/>
+        <source>This account has two-factor authentication -- enter its password.</source>
+        <translation>To konto ma włączoną weryfikację dwuetapową -- podaj jego hasło.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="280"/>
+        <source>Close</source>
+        <translation>Zamknij</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="282"/>
+        <source>Already signed in as {name}.</source>
+        <translation>Już zalogowano jako {name}.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="284"/>
+        <source>Signed in as {name}.</source>
+        <translation>Zalogowano jako {name}.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="290"/>
+        <source>Sign-in failed: {error}
+
+You can try again.</source>
+        <translation>Logowanie nie powiodło się: {error}
+
+Możesz spróbować ponownie.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="308"/>
+        <source>Stopping...</source>
+        <translation>Zatrzymywanie...</translation>
     </message>
 </context>
 <context>
@@ -2592,6 +3045,74 @@ Ustawienie i tak zostało zapisane, ale dopóki folder nie istnieje, nie da się
     </message>
 </context>
 <context>
+    <name>_DownloadQueueItem</name>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="472"/>
+        <source>Queued</source>
+        <translation>W kolejce</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="475"/>
+        <source>Retry</source>
+        <translation>Ponów</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="487"/>
+        <source>Downloading...</source>
+        <translation>Pobieranie...</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="507"/>
+        <source>Downloading... ({speed}/s)</source>
+        <translation>Pobieranie... ({speed}/s)</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="511"/>
+        <source>Saved</source>
+        <translation>Zapisano</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="514"/>
+        <source>Failed: {error}</source>
+        <translation>Niepowodzenie: {error}</translation>
+    </message>
+</context>
+<context>
+    <name>_MessageWidget</name>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="382"/>
+        <source>You</source>
+        <translation>Ty</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="407"/>
+        <source>Loading image...</source>
+        <translation>Wczytywanie obrazu...</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation type="vanished">Pobierz</translation>
+    </message>
+    <message>
+        <source>Saved</source>
+        <translation type="vanished">Zapisano</translation>
+    </message>
+    <message>
+        <source>Failed: {error}</source>
+        <translation type="vanished">Niepowodzenie: {error}</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="426"/>
+        <source>Could not display image</source>
+        <translation>Nie udało się wyświetlić obrazu</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="435"/>
+        <source>Translated: {text}</source>
+        <translation>Tłumaczenie: {text}</translation>
+    </message>
+</context>
+<context>
     <name>_PrintDialogBase</name>
     <message>
         <location filename="../panels/print_dialog.py" line="186"/>
@@ -2655,6 +3176,17 @@ Ustawienie i tak zostało zapisane, ale dopóki folder nie istnieje, nie da się
         <location filename="../panels/print_dialog.py" line="353"/>
         <source>PDF (*.pdf)</source>
         <translation>PDF (*.pdf)</translation>
+    </message>
+</context>
+<context>
+    <name>parent</name>
+    <message>
+        <source>Choose Album</source>
+        <translation type="obsolete">Wybierz album</translation>
+    </message>
+    <message>
+        <source>More than one album was downloaded -- which one do you want to record?</source>
+        <translation type="obsolete">Pobrano więcej niż jeden album -- który chcesz nagrać?</translation>
     </message>
 </context>
 </TS>

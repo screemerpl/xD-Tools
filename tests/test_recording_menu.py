@@ -220,3 +220,66 @@ def test_the_folders_metadata_is_carried_into_the_recording(qt_app, isolated_set
     _window()._record_folder()
 
     assert handed == [captured]
+
+
+# --- _record_folder_dialog(initial_folder=...) -- the Telegram bot hand-off --
+
+
+def test_a_given_initial_folder_is_preseeded_via_set_folder(qt_app, isolated_settings, monkeypatch, tmp_path):
+    """The Telegram bot chat dialog already knows the folder it downloaded
+    into -- it must not be asked to browse for something it already has."""
+    app_settings.set_mdrem_enabled(True)
+    monkeypatch.setattr(app_module, "resolve_port", lambda *a, **k: "COM7")
+    seeded: list = []
+
+    class _FakeFolderDialog:
+        result_metadata = None
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def set_folder(self, folder):
+            seeded.append(folder)
+
+        def exec(self):
+            return QDialog.DialogCode.Accepted
+
+    class _FakeRecord:
+        result_metadata = None
+
+        def __init__(self, port, url, parent=None, metadata=None):
+            pass
+
+        def exec(self):
+            return QDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(app_module, "FolderRecordDialog", _FakeFolderDialog)
+    monkeypatch.setattr(app_module, "RecordDialog", _FakeRecord)
+
+    _window()._record_folder_dialog(tmp_path)
+
+    assert seeded == [tmp_path]
+
+
+def test_the_plain_menu_entry_has_nothing_to_preseed(qt_app, isolated_settings, monkeypatch):
+    """_record_folder() -- the menu path -- must behave exactly as before
+    this refactor: no folder known in advance, so set_folder() is never
+    called at all."""
+    app_settings.set_mdrem_enabled(True)
+    monkeypatch.setattr(app_module, "resolve_port", lambda *a, **k: "COM7")
+
+    class _FakeFolderDialog:
+        result_metadata = None
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def set_folder(self, folder):
+            pytest.fail("the plain menu entry has nothing to pre-seed")
+
+        def exec(self):
+            return QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(app_module, "FolderRecordDialog", _FakeFolderDialog)
+
+    _window()._record_folder()

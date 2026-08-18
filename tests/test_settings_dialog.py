@@ -52,6 +52,35 @@ def test_restore_defaults_resets_the_fields_without_saving(qt_app):
     assert app_settings.screen_dpi() == 200.0
 
 
+# --- experimental features flag --------------------------------------------
+
+
+def test_experimental_checkbox_seeds_from_current_setting(qt_app):
+    app_settings.set_experimental_features_enabled(True)
+
+    assert SettingsDialog().experimental_check.isChecked() is True
+
+
+def test_accepting_saves_the_experimental_checkbox(qt_app):
+    app_settings.set_experimental_features_enabled(False)
+    dialog = SettingsDialog()
+    dialog.experimental_check.setChecked(True)
+
+    dialog._on_accept()
+
+    assert app_settings.experimental_features_enabled() is True
+
+
+def test_cancelling_does_not_save_the_experimental_checkbox(qt_app):
+    app_settings.set_experimental_features_enabled(False)
+    dialog = SettingsDialog()
+    dialog.experimental_check.setChecked(True)
+
+    dialog.reject()
+
+    assert app_settings.experimental_features_enabled() is False
+
+
 def test_window_menu_settings_action_opens_the_dialog(qt_app, monkeypatch):
     import mdtools.app_window as app_window_module
 

@@ -88,6 +88,15 @@ class DesignView(QGraphicsView):
             | QPainter.RenderHint.TextAntialiasing
             | QPainter.RenderHint.SmoothPixmapTransform
         )
+        # The canvas represents physical, printed material -- "physical
+        # accuracy is load-bearing" per this project's own top-level rule
+        # -- so it stays a plain white workspace regardless of the app's
+        # own theme (see mdtools.theme's dark palette), the same way a page
+        # in a real design tool stays white even inside a dark UI chrome.
+        # Without this, the template outline (make_template_outline() sets
+        # NoBrush -- it's a line, not a filled shape) would show whatever
+        # the ambient palette happens to be behind it.
+        self.setBackgroundBrush(QBrush(QColor("white")))
         self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         # MinimalViewportUpdate (the default) only repaints the scene-tracked

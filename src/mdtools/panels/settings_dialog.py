@@ -91,6 +91,7 @@ class SettingsDialog(QDialog):
         )
         layout.addRow(self.tr("Bake DPI"), self.bake_dpi_spin)
 
+        self._build_experimental_row(layout)
         self._build_mdrem_rows(layout)
 
         restore_btn = QPushButton(self.tr("Restore Defaults"))
@@ -101,6 +102,19 @@ class SettingsDialog(QDialog):
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addRow(buttons)
+
+    def _build_experimental_row(self, layout: QFormLayout) -> None:
+        """Gates work-in-progress features that aren't ready for everyone --
+        currently just the (empty, for now) Experimental menu. Kept separate
+        from the MDRem checkbox below: that one gates hardware support,
+        this one gates in-development software features, and the two have
+        nothing to do with each other."""
+        self.experimental_check = QCheckBox(self.tr("Show experimental features"))
+        self.experimental_check.setChecked(app_settings.experimental_features_enabled())
+        self.experimental_check.setToolTip(
+            self.tr("Shows in-development features that aren't finished yet.")
+        )
+        layout.addRow(self.experimental_check)
 
     def _build_mdrem_rows(self, layout: QFormLayout) -> None:
         """MDRem is the RP2040 IR adapter that writes titles onto the disc
@@ -267,6 +281,7 @@ class SettingsDialog(QDialog):
         app_settings.set_screen_dpi(self.screen_dpi_spin.value())
         app_settings.set_default_export_dpi(self.export_dpi_spin.value())
         app_settings.set_bake_dpi(self.bake_dpi_spin.value())
+        app_settings.set_experimental_features_enabled(self.experimental_check.isChecked())
         app_settings.set_mdrem_enabled(self.mdrem_check.isChecked())
         app_settings.set_mdrem_port(self.selected_port())
         app_settings.set_foobar_url(self.foobar_url_edit.text())

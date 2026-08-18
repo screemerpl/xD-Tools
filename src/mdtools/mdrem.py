@@ -62,6 +62,29 @@ TITLE_TIMEOUT_MS = 180_000
 # in milliseconds.
 DETECT_TIMEOUT_MS = 700
 
+# waitForBytesWritten()/waitForReadyRead() are never handed a whole
+# remaining budget in one call -- capped to this many ms and retried in a
+# loop instead. Reported directly as the whole window looking frozen while
+# a title was being written: a title write's wait can legitimately run for
+# most of TITLE_TIMEOUT_MS (180 s) waiting on the deck's reply, and a
+# Python QThread.run() override calling into a wrapped Qt blocking method
+# is not guaranteed to release the GIL for that call's own duration --
+# PySide/Shiboken sometimes does not, a known, occasionally-buggy behavior,
+# not something this codebase can verify or rely on for QtSerialPort
+# specifically. If the GIL is held for the call's whole duration, every
+# other Python thread -- including the GUI thread's own event loop, and so
+# every Python-level repaint/slot in the app, not just this dialog -- is
+# starved for exactly as long. Capping each individual wait to
+# _POLL_CHUNK_MS bounds the worst case to one chunk regardless of whether
+# the GIL is actually released underneath: a single blocked call that
+# short is imperceptible either way, where 180 s is not. This does not
+# change the overall per-command timeout (still governed by `deadline`
+# below) or when cancel() can take effect (still only between whole
+# commands, never mid-exchange -- interrupting a title write partway would
+# leave the deck's own firmware mid-edit, a protocol concern this chunking
+# has nothing to do with).
+_POLL_CHUNK_MS = 200
+
 # The firmware's key table stops at TRACK25.
 MAX_TRACK = 25
 
@@ -194,8 +217,7 @@ class MDRemClient:
         timeout = self.timeout_ms if timeout_ms is None else timeout_ms
         self._port.clear()
         self._port.write((text + "\n").encode("ascii", errors="replace"))
-        if not self._port.waitForBytesWritten(self.timeout_ms):
-            raise MDRemError(f"timed out sending {text!r}")
+        self._wait_for_bytes_written(self.timeout_ms, text)
 
         deadline = time.monotonic() + timeout / 1000.0
         info: list[str] = []
@@ -207,11 +229,25 @@ class MDRemClient:
                 raise MDRemError(f"{text!r} -> {line}")
             info.append(line)
 
+    def _wait_for_bytes_written(self, timeout_ms: int, sent: str) -> None:
+        """Same chunked-polling shape as _read_line() below, for the same
+        reason -- see _POLL_CHUNK_MS's own comment. A short command write is
+        normally sub-millisecond, so this rarely loops more than once in
+        practice; it exists for the same worst-case guarantee, not because
+        writes are usually slow."""
+        deadline = time.monotonic() + timeout_ms / 1000.0
+        while self._port.bytesToWrite() > 0:
+            remaining_ms = int((deadline - time.monotonic()) * 1000)
+            if remaining_ms <= 0:
+                raise MDRemError(f"timed out sending {sent!r}")
+            self._port.waitForBytesWritten(min(remaining_ms, _POLL_CHUNK_MS))
+
     def _read_line(self, deadline: float, sent: str) -> str:
         while not self._port.canReadLine():
             remaining_ms = int((deadline - time.monotonic()) * 1000)
-            if remaining_ms <= 0 or not self._port.waitForReadyRead(remaining_ms):
+            if remaining_ms <= 0:
                 raise MDRemError(f"no reply to {sent!r}")
+            self._port.waitForReadyRead(min(remaining_ms, _POLL_CHUNK_MS))
         return bytes(self._port.readLine()).decode("ascii", errors="replace").strip()
 
 

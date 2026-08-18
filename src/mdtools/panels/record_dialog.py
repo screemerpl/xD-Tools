@@ -67,6 +67,14 @@ LEAD_IN_MS = 1500
 # sees a new track, so a slower poll pushes the mark further into it.
 POLL_MS = 250
 
+# Applied to foobar2000's own output volume at the start of every recording
+# (see _start() below) -- a layout choice, not a measured spec, the same
+# kind of deliberate headroom-below-0dB margin as any other digital transfer
+# leaves before recording, explicit user request. Set through
+# FoobarClient.set_volume(), confirmed live against a running foobar2000/
+# foo_beefweb.
+RECORDING_VOLUME_DB = -5.0
+
 # RECORD pressed *during* recording adds a track mark -- established on an
 # MDS-JE480 by recording, sending it mid-way, and finding two tracks.
 TRACK_MARK_KEY = "SEND RECORD"
@@ -312,6 +320,7 @@ class RecordDialog(QDialog):
             return
         try:
             self._client.prepare_for_recording()
+            self._client.set_volume(RECORDING_VOLUME_DB)
             self._client.stop()
         except foobar.FoobarError as exc:
             self._fail(self.tr("foobar2000: {error}").format(error=exc))

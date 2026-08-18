@@ -223,7 +223,14 @@ and `layers_panel.py`'s module-level `_label_for()` -- in
 source, just needs `-extensions py`) does purely static, literal-string
 scanning: `tr()`/`translate()` calls MUST have the literal string directly in
 the call, never through an indirection like a custom `_()` wrapper or a
-variable, or lupdate won't see it. **Every language listed in
+variable, or lupdate won't see it. **The flip side of that same rule, easy
+to miss because the string argument right next to it looks perfectly
+literal: the `tr()` *call itself* also can't be nested inside an f-string's
+`{...}` interpolation** (`f"<b>{self.tr('x')}</b>"`) -- lupdate sees zero
+occurrences, not merely an unfinished one; call `tr()` on its own line
+first and interpolate the *result* instead. Found the hard way twice (see
+the Telegram bot integration notes below) -- grep for `f["'].*\{self\.tr\(`
+after adding a heading/label built this way. **Every language listed in
 `i18n.AVAILABLE_LANGUAGES` needs this redone** (currently `pl` and `ja`) --
 regenerating after adding/changing translatable strings, per language:
 ```
@@ -1277,6 +1284,64 @@ rather than risk the toolbar's default/inherited style silently hiding
 the text once every action actually has an icon. See
 `test_view_zoom.py`'s `test_zoom_toolbar_actions_all_have_a_non_null_icon`.
 
+**`mdtools/theme.py` (`apply_theme()`, called once from `main.py` right
+after `QApplication` construction) replaces Qt's per-OS default look with a
+modern, flat, dark theme -- explicit user request, in two stages.** The
+first version was Fusion (already inside PySide6, zero new dependency)
+plus a hand-set `QPalette` -- flatter and more uniform than each OS's
+native style on its own, dark with a blue (`#2a82da`, KDE Breeze's own
+accent) `Highlight`/`Link` colour. Explicit follow-up ("this does not look
+very nice") asked for more polish than a bare palette can express --
+rounded corners, hover/pressed states, focus rings -- so `theme.py` grew a
+second layer, a hand-written QSS stylesheet (`_build_stylesheet()`)
+layered on top via `app.setStyleSheet(...)`, while keeping the palette
+(`_build_palette()`) as the fallback every widget still uses for whatever
+the stylesheet doesn't touch (`QMessageBox`, native file dialogs,
+disabled-state colours, text selection). **Kvantum was asked for
+explicitly and rejected**: it's a Linux/X11-only Qt style engine needing a
+compiled system-level plugin (via qt5ct/qt6ct), which cannot be bundled
+into a PyInstaller Windows build at all -- MDTools' primary target -- and
+would need the user's own machine to have it installed system-wide even on
+the Linux build. A pip-installable theme package (e.g. PyQtDarkTheme/
+qt-material) was offered as a third option and passed over for the same
+zero-extra-dependency reasoning the palette-only version was chosen for
+originally.
+
+**Every colour is a module-level constant used by *both* layers, so the
+palette and the stylesheet can never quietly disagree about what "the
+accent" is.** `_ACCENT`/`_WINDOW`/`_BASE`/etc. are plain hex strings (not
+pre-built `QColor`s -- see the standing "never construct a Qt GUI type at
+module import time" rule) interpolated directly into the QSS f-string and
+also fed to `QColor(...)` for the palette's `Highlight`/`Link` roles;
+`test_the_stylesheet_and_the_palette_agree_on_the_accent_colour` pins this
+down directly rather than trusting it by inspection.
+
+**Every QSS rule targets a specific, named widget type -- never a blanket
+`QWidget`/`QAbstractScrollArea`/`QGraphicsView` selector.** The disc/cover
+design canvas (`canvas/view.py`'s `DesignView`) already sets its own
+explicit white `backgroundBrush` regardless of the app palette, added
+pre-emptively when the palette-only dark theme first landed, since a
+physical label design has to stay legible against white the way it will
+actually print, not whatever colour this theme happens to be -- a blanket
+background rule in the new stylesheet would fight that exact protection.
+`test_the_stylesheet_never_sets_a_blanket_widget_background` guards this
+by parsing every selector line out of `_build_stylesheet()`'s own output
+and asserting none of them starts with one of those three names, rather
+than trusting every future edit to remember the rule by convention alone.
+
+**`scripts/manual/make_screenshots.py` needed the exact same
+`theme.apply_theme(app)` call `main.py` makes, or the manual's screenshots
+would silently keep showing Qt's old default light theme forever.** It
+builds its own `QApplication` rather than importing `main()`, so the two
+never shared this call automatically -- caught only because the
+screenshots were being regenerated for an unrelated reason (a Telegram
+dialog change) right after the Fusion/palette theme first landed, not
+from any test (there is no way to compare a generated PNG against "what
+the real running app currently looks like" in an automated test). See
+`doc/README.md`'s own "Two things worth knowing before editing" section,
+which documents this pitfall directly so it's remembered the next time
+`main.py` gains another app-wide, purely visual setup step.
+
 **Window icon: the existing MiniDisc logo (`assets/img/mdlogo.png`,
 600×600), reused rather than a separate small asset.** Qt scales it down
 as needed for the title bar/taskbar/alt-tab -- no need to pre-generate
@@ -1750,6 +1815,56 @@ is m:ss rather than whole minutes for the same class of reason: rounding to
 minutes hid the erase checkbox's effect entirely on a short track list,
 where both answers land inside the same minute.
 
+**A second, deeper "looks frozen" report -- this time the whole window, not
+just the progress bar -- turned out to be a real GIL-starvation bug in
+`MDRemClient.command()`, not a progress-reporting cosmetic.** `_UploadWorker`
+already runs on its own `QThread` (see above), which is the architecturally
+correct fix for keeping a blocking `QSerialPort` call off the GUI thread --
+but `_read_line()` used to hand `waitForReadyRead()` the *entire* remaining
+budget in one call, up to the whole 180 s `TITLE_TIMEOUT_MS` while waiting
+on the deck's reply to a title write. A Python `QThread.run()` override
+calling into a wrapped Qt blocking method is not guaranteed to release the
+GIL for that call's own duration -- PySide/Shiboken sometimes does not, a
+known, occasionally-buggy behavior with real reports against exactly this
+shape of code (a custom `QThread` subclass making a long blocking call),
+and not something verifiable from this codebase alone for `QtSerialPort`
+specifically. If the GIL isn't released, every other Python thread --
+including the GUI thread's own event loop, and so every Python-level
+repaint/slot in the *entire app*, not just this dialog -- is starved for
+exactly as long as that one wait call runs, which reads precisely as "the
+whole window is frozen" rather than "this dialog's progress bar isn't
+moving."
+
+The fix, in `mdrem.py`: both `_read_line()`'s `waitForReadyRead()` and the
+new `_wait_for_bytes_written()` helper now poll in a loop, each individual
+call capped to `_POLL_CHUNK_MS` (200 ms) rather than ever being given the
+full remaining deadline at once. This bounds the *worst case* to one chunk
+regardless of whether the GIL is actually released underneath -- a single
+blocked call that short is imperceptible either way, where 180 s is not.
+The overall per-command timeout is unchanged (still governed by the same
+`deadline`/`time.monotonic()` arithmetic as before, just checked more
+often), and so is when `cancel()` can take effect -- still only between
+whole commands, never mid-exchange, since interrupting a title write
+partway would leave the deck's own firmware mid-edit, a protocol concern
+this chunking has nothing to do with and does not change.
+
+**No existing test exercised this code path at all** -- every prior MDRem
+test (`test_mdrem_ui.py`, `test_record_dialog.py`, `test_erase_dialog.py`)
+fakes the *whole* `MDRemClient` with a plain Python stand-in, never
+touching `command()`'s/`_read_line()`'s real internals against anything
+resembling `QSerialPort`. `test_mdrem.py` gained a `_FakePort` (mimicking
+just the `QSerialPort` surface `MDRemClient` actually touches, including
+its nested `DataBits`/`Parity`/`StopBits`/`FlowControl`/`OpenModeFlag`
+enums, since `mdrem.py` references those off the module-level `QSerialPort`
+name directly, not off an instance) plus a `_FakeClock` that replaces
+`time.monotonic()` so a 180 s deadline can be exercised without a slow
+test. `queue_line(line, deliver_after=N)` lets a test force a reply to only
+"arrive" after N polls, which is what
+`test_a_slow_reply_is_polled_in_bounded_chunks_not_one_long_wait` uses to
+assert directly on `len(port.readyread_calls)` and that every individual
+call was `<= _POLL_CHUNK_MS` -- the actual regression this whole fix is
+about, not just "does a normal exchange still work."
+
 **"Erase existing titles first" maps to the firmware's `TIMING COUNT`,
 and is worth roughly half the total time.** The firmware overshoots the
 old title's length on purpose (it cannot read the deck back), so clearing
@@ -1791,6 +1906,22 @@ press, since opening is far slower than sending. Its Recording group is
 kept visually apart from the transport keys on purpose -- on a physical
 remote Record is a deliberate reach, and a mouse makes stray clicks much
 easier than a thumb does.
+
+**Recording > "Remote Control..." reaches the exact same `RemoteDialog`
+from inside an already-open project, not just the startup screen --
+reported directly.** Before this, using the remote while a project was
+open meant closing that project first (back to the startup screen, the
+only place it was reachable), for a dialog that has nothing to do with
+which label is being designed -- the same "not recording, but the same
+deck/adapter" reasoning `_erase_disc()` already established for Erase
+MiniDisc, right next to it in the menu. `_open_remote_control()` is the
+same three-line shape as `_erase_disc()`: `resolve_port()`, bail if
+`None`, construct and `exec()` the dialog. `remote_action` is gated by
+`_sync_mdrem_actions()` exactly like the other MDRem entries (hidden
+rather than disabled, same "there is nothing it could usefully do without
+the adapter" convention) -- the startup screen's own Remote button is
+unaffected and still exists, this is a second, independent entry point to
+the same dialog, not a replacement.
 
 **"Record to MiniDisc from foobar2000..." (`foobar.py` +
 `panels/record_dialog.py`) records an album from foobar2000 onto a
@@ -1954,6 +2085,22 @@ track times are known up front, so `DISC_SP_SECONDS` (80 min) turns "the
 recording got cut off at minute 80" into a warning beforehand. It only ever
 warns -- which recording mode the deck is in (SP/LP2/LP4) can neither be
 read nor set through the key table, so it is not MDTools' decision to make.
+
+**Every recording backs foobar2000's own output volume off to
+`RECORDING_VOLUME_DB` (-5.0dB) first, via a new `FoobarClient.set_volume()`
+-- explicit user request, headroom against clipping on the digital
+transfer.** `_start()` calls it right alongside `prepare_for_recording()`/
+`stop()`, before `_arm_deck()` -- so this applies uniformly to every
+"record via foobar" entry point (plain foobar record, the CD-rip hand-off,
+the folder-record hand-off), since they all share this one `RecordDialog`.
+Confirmed live, not just from documentation (the same rigor this module's
+own header already holds itself to): `GET /api/player`'s own `"volume"`
+object reports `{"isMuted", "max": 0.0, "min": -100.0, "type": "db",
+"value"}`, and `POST /api/player` with a flat `{"volume": db}` body (same
+convention `prepare_for_recording()`'s own flat keys already use) sets it
+-- read back afterward to confirm the value actually landed, not just that
+the request returned 204. Deliberately does not touch `isMuted`: a muted
+player staying muted isn't this call's business.
 
 **"Record CD to MiniDisc..." (`cdrip.py` + `musicbrainz.py` +
 `panels/cd_rip_dialog.py`) rips an audio CD into foobar2000's playlist and
@@ -2613,16 +2760,681 @@ Three details that are load-bearing here:
   changes a second time.
 - **The loop is a loop on purpose.** Backing out of the template picker
   means "not that one", so it returns to the startup screen rather than
-  quitting. `_run_startup_flow()` (launch) deliberately does *not* loop -- it
-  falls back to `_new_design(prompt=False)`, which is what the startup tests
-  pin down, and looping there would spin forever against a monkeypatched
-  always-Reject picker.
+  quitting. `_run_startup_flow()` (launch) deliberately does *not* loop --
+  see `startup_cancelled` below for what a direct Cancel/close of the
+  *first* `StartupDialog` now means there instead; choosing "New Project..."
+  and then backing out of the *template picker* still falls back to
+  `_new_design(prompt=False)`, which is what the startup tests pin down,
+  and looping on that specific sub-case would spin forever against a
+  monkeypatched always-Reject picker.
+
+**`self.startup_cancelled` -- Cancel/close on the very first `StartupDialog`
+now means "quit", not "silently start an untitled project anyway".**
+Reported directly as making the button useless: the original behaviour let
+`_run_startup_flow()` return `False` for *any* reason (the dialog itself
+rejected, a chosen recent project failing to load, the template picker
+being cancelled after choosing "New Project..."), and `__init__` treated
+every one of those identically -- fall back to `_new_design(prompt=False)`
+and show the main window regardless of what was actually clicked. Only the
+*first* case is really "I want out" (the same thing Cancel already means
+when `_return_to_startup()`'s own loop is showing this dialog again after a
+project closes -- see above); the other two are more local cancellations
+that should keep their original fallback behaviour. `_run_startup_flow()`
+now sets `startup_cancelled = True` itself, but *only* in the branch where
+`StartupDialog.exec()` itself doesn't return `Accepted` -- `__init__`'s own
+`elif not self._run_startup_flow() and not self.startup_cancelled:` is what
+keeps the other two `False`-returning cases falling back to a fresh default
+project exactly as before. `main.py` checks the flag *before* ever calling
+`window.show()`:
+```python
+window = MainWindow()
+if window.startup_cancelled:
+    return 0
+window.show()
+```
+so a cancelled first launch never paints a window at all, rather than
+flashing one open only to immediately quit. Regression coverage:
+`test_startup_dialog.py`'s
+`test_cancelling_the_startup_dialog_outright_means_quit_not_a_blank_project`
+(the actual bug) alongside
+`test_cancelling_new_project_after_choosing_new_falls_back_to_default_templates`
+(now also asserting `startup_cancelled is False`, pinning down that the
+*other* cancellation path is unaffected).
 - **`show_startup_dialog=False` now also means "closing just closes".**
   Every test constructs `MainWindow` that way, and they would all stall on a
   modal dialog with nothing to answer it. File > Exit sets `_quitting` for
   the same reason, and clears it again if the close is refused -- otherwise
   a cancelled Exit would leave the window primed to quit silently on the
   next close.
+
+**Experimental features live behind their own menu, their own settings
+dialog, and one flag -- Window > Settings' "Show experimental features"
+checkbox (`app_settings.experimental_features_enabled()`).** With it off,
+`app_window.py`'s `self.experimental_menu` (built once at startup, an empty
+menu until a feature lands in it) is hidden via `menuAction().setVisible()`
+-- a `QMenu` has no `setVisible()` of its own, `menuAction()` is the actual
+`QAction` placing it on the menu bar, and hiding *that* is what hides the
+whole menu. `_sync_experimental_menu()` re-reads the flag both at menu-build
+time and after Window > Settings closes, same "built once, needs an
+explicit re-sync" reasoning as `_sync_mdrem_actions()`. Explicit user
+decision: whatever settings an experimental feature needs get their own
+dialog (`panels/experimental_settings_dialog.py`'s `ExperimentalSettingsDialog`,
+reached from an "Experimental Settings..." entry inside the menu itself, so
+it needs no separate gating -- the entry only exists while the menu does)
+rather than rows bolted onto the main `SettingsDialog`, so the stable
+dialog never carries half-finished feature configuration and a second
+experimental feature later gets its own section in the same dialog instead
+of either one accumulating unrelated checkboxes.
+
+**Telegram bot integration (`telegram_bot.py` + `panels/telegram_login_dialog.py`
++ `panels/experimental_settings_dialog.py`) -- Phase 1 only: account
+settings and sign-in, no search/download yet.** The intended feature is
+searching/downloading an album from a Telegram bot the *user runs
+themselves*, then handing the files to the existing Record Folder to
+MiniDisc flow exactly like any other folder of files. **Explicitly
+declined, discussed and refused outright**: any integration with public
+bots that redistribute copyrighted albums without authorization (e.g.
+`@HiFiAudioBot`) -- downloading from those is receiving an infringing copy
+regardless of whether the user separately owns the physical media, which is
+legally distinct from ripping your own disc (see the CD-ripping features
+above). This plan and the code it produced are for a bot the user controls.
+
+**Why a real user login, not a bot token.** Telegram's Bot API forbids one
+bot from messaging another bot -- MDTools can't send a search command to
+the user's bot as a bot itself and get a reply. To talk to a bot the way a
+person would in the Telegram app, this has to sign in as an actual
+Telegram *user account* (phone number + code, optionally a 2FA password)
+over the MTProto client protocol, via **Telethon** (pure Python, asyncio,
+no required C extension, so it stays easy to freeze with PyInstaller).
+That needs its own API ID/API Hash pair from https://my.telegram.org -- a
+credential for the application acting as a client, completely unrelated to
+whatever bot token the user's own bot uses internally; MDTools never needs
+the bot's token at all.
+
+**MDTools' builds carry their own registered API ID/Hash, but it is
+**injected at build time and never written into the source tree** --
+`app_settings._bundled_telegram_credentials()`.** Explicit user request in
+two stages: first "hardcode it so nobody has to go get their own", then
+"can it be stored securely in the exe". The honest answer to the second is
+**no, and no tooling changes that**: the value must be reconstructed in
+plaintext to be sent to Telegram, so any build carrying it yields it to
+`strings`, a debugger, or a look at the handshake. Obfuscation would be a
+speed bump presented as security, so it was offered as such and not chosen.
+What build-time injection *does* solve is the one exposure that is genuinely
+irreversible: this repo has a public remote, and a credential in git history
+survives a rewrite (forks, caches). So the credentials live outside version
+control, and the resolution order is:
+
+1. the per-user override in `settings.ini` (`set_telegram_api_id()`/
+   `set_telegram_api_hash()`) -- an explicit user choice always wins;
+2. `MDTOOLS_TELEGRAM_API_ID`/`_HASH` in the environment (CI, or a dev who
+   would rather not keep a file);
+3. `mdtools/_build_credentials.py`, which `scripts/build_windows.ps1`/
+   `build_linux.sh` generate from those same variables before running
+   PyInstaller, and which is **gitignored** -- keeping one locally is also
+   how a dev-mode run gets working credentials. Both scripts leave an
+   existing untracked file alone when the variables are unset, so a local
+   dev setup is never clobbered by a build, and warn (rather than fail) when
+   there is neither.
+
+**Missing credentials are a supported state, not an error.** A build made
+without them simply cannot sign in until the user supplies their own, which
+is what `ExperimentalSettingsDialog._sign_in()`'s guard and
+`app_window._open_telegram_bot_chat()`'s second check both say explicitly --
+the latter reports a missing bot username and missing credentials
+*separately*, since they fail for unrelated reasons and have different
+fixes, and telling someone to "set the bot username" when the credentials
+are what is missing would send them to a field that is already correct.
+`test_the_credentials_are_not_hardcoded_anywhere_in_the_source_tree` is the
+regression guard for the property that actually matters: it scans the
+package for a bare 32-hex-digit literal (the shape of an api_hash) and fails
+if one is committed. Worth keeping in mind that none of this makes the
+credentials a *secret* -- an API ID/Hash identifies the *application* to
+Telegram's MTProto API, not the end user; the genuinely sensitive per-user
+artefact is the Telethon session at `telegram_session_path()`, and the real
+risk from a leaked app id is Telegram rate-limiting or banning it, which the
+per-user override above is the escape hatch for. `_open_telegram_bot_chat()`'s own
+precondition check narrowed accordingly: API ID/Hash are effectively
+always set now, so in practice only a missing bot username still trips it
+-- the guard message was updated to say so rather than continuing to
+mention two credentials that can no longer actually be missing.
+
+**`ExperimentalSettingsDialog` shows no API ID/Hash rows at all** --
+follow-up report ("wciaz w eksperymentalnych ustawieniach widze parametery
+API"). Pre-filling two credential boxes with values the user neither
+obtained nor needs to know about only invited the question of what they
+were for, so both `QLineEdit`s and the my.telegram.org instructions block
+are gone; the dialog now starts straight at Bot username. `_sign_in()`
+reads `app_settings.telegram_api_id()`/`telegram_api_hash()` directly
+instead of from fields, and `_on_accept()` no longer writes them, so a
+hand-edited override in `settings.ini` survives pressing OK (guarded by
+`test_accepting_leaves_the_api_credentials_untouched`). The empty-credential
+guard in `_sign_in()` stays even though the UI can no longer produce that
+state -- it is reachable only by deliberately blanking the keys in
+`settings.ini`, which is exactly the case worth keeping a clear message
+for. Where they live, for reference: the built-in pair in
+`app_settings.py` (source, and so the frozen `.exe`), the optional
+override under `telegram_api_id`/`telegram_api_hash` in
+`%LOCALAPPDATA%/MDTools/settings.ini`, and the separate Telethon session
+database at `telegram_session_path()` (`telegram.session`, beside that
+same ini).
+
+**`_LoginWorker` (in `telegram_login_dialog.py`) needs a persistent asyncio
+event loop, unlike every other `QThread` in this codebase.** Every existing
+worker (`_UploadWorker`/`_RipWorker`/`_LoadWorker`) does one bounded job in
+`run()` and finishes. This one can't: Telethon's `sign_in()` needs the
+*same* `TelegramClient` instance that called `send_code_request()` (the
+phone-code-hash is cached on the instance, not the session file) --
+disconnecting and reconnecting between "code sent" and "code entered" would
+silently trigger a second, wasted code request and risk the user typing a
+now-stale code. So `run()` starts its own event loop and keeps it alive
+across however long the user takes to read an SMS and type it in (and,
+for a 2FA account, a password after that). The GUI thread hands a
+code/password into the coroutine blocked on `await queue.get()` via
+`loop.call_soon_threadsafe(queue.put_nowait, value)` -- the standard way to
+cross an asyncio loop's thread boundary. `submit_code()`/`submit_password()`/
+`cancel()` all wait on a `threading.Event` (`_ready`) before scheduling,
+guarding the narrow startup race between `QThread.start()` returning and
+`run()` actually creating the loop/queues -- in practice unreachable by a
+human, but real in a fast test calling these back to back. `cancel()`
+follows `MDRemUploadDialog`'s rule: it only takes effect at the next point
+the flow is waiting on a queue, not mid network call, and `reject()` never
+calls `worker.wait()` on the GUI thread (that's what froze the MDRem upload
+dialog for real once already) -- it asks the worker to stop and returns
+immediately, and `_on_worker_finished` closes the dialog once the thread
+actually exits.
+
+**`TelegramBotClient` (in `telegram_bot.py`) takes a client object as a
+constructor parameter rather than building one itself** -- dependency
+injection, so its whole request-code/submit-code/2FA-password/signed-in
+state machine is unit-tested against a `FakeTelethonClient` test double
+(`tests/test_telegram_bot.py`) with no real network or Telegram account
+involved, and `telegram_login_dialog.py`'s own tests can substitute the
+same fake via `create_telethon_client()` (the *only* place that imports and
+constructs the real `telethon.TelegramClient`) to drive the real `QThread`
+end to end. Every Telethon exception is translated into one `TelegramError`
+at this boundary -- `SessionPasswordNeededError` from `submit_code()` is
+deliberately *not* treated as an error (it returns
+`SignInResult.PASSWORD_REQUIRED`; 2FA is normal, expected behaviour, not a
+failure).
+
+**`app_settings.telegram_session_path()` is derived from `_settings()
+.fileName()`'s own parent, not recomputed independently via a second call
+to the underlying `AppConfigLocation` lookup.** The autouse
+`_isolated_app_settings` conftest fixture isolates every setting in this
+module by monkeypatching `_settings()` alone; a path computed any other way
+would silently point at the real per-user config directory even under that
+isolation, both in tests and by design (this file is Telethon's session
+database, equivalent to a live login to the user's real account -- it
+belongs beside `settings.ini`, never touched by any cleanup routine, never
+embedded in a `.mdproj`, and worth calling out plainly: API ID/Hash and this
+session are stored/kept in plain-text/unencrypted form, same as every other
+credential-shaped setting in this app -- there's no secret-storage
+mechanism anywhere in this codebase).
+
+**Phase 2 -- the actual chat dialog (`panels/telegram_chat_dialog.py`) --
+is built.** A generic mini-chat with the bot: shows whatever it sends
+(text, inline buttons, a file attachment), lets the user reply, downloads
+any file offered, and hands the download folder to
+`FolderRecordDialog` exactly like a folder picked by hand -- reached from
+Experimental > "Download Album from Telegram Bot...".
+
+**`telegram_bot.py` gained a `ChatMessage` dataclass and five more
+`TelegramBotClient` methods (`resolve_bot`, `send_text`, `start_watching`,
+`click`, `download`), all following the same boundary rule as Phase 1's
+sign-in methods: nothing outside this module ever touches a raw Telethon
+object.** `TelegramBotClient` now caches every message it has sent or seen
+in a `dict[id, RawMessage]` (`_remember()`), because `click()`/`download()`
+need the *raw* message back (their own `.click()`/`.download_media()` do
+the real work) while everything above this module only ever holds a plain
+integer id. `send_text()` runs its result through the exact same
+`_remember()`/`ChatMessage` path an incoming message does, so the dialog
+renders our own sent messages and the bot's replies through one code path,
+not two. Verified against the installed Telethon (1.44.0) directly rather
+than trusted from memory: `message.out` is a real instance attribute set
+in `Message.__init__` but invisible to `dir()`; `message.buttons` is
+`list[list[MessageButton]]` or `None`; `message.file` is a `File` (`.name`/
+`.size`) or `None`; `download_media(file=an_existing_directory, ...)`
+picks the message's own suggested filename inside it (checked via
+`os.path.isdir` internally -- the caller is responsible for that directory
+already existing, same "create it, then use it" rule as
+`cdrip.ensure_folder()`).
+
+**`_ChatWorker` extends `_LoginWorker`'s persistent-event-loop pattern from
+a one-shot exchange to a *running conversation*.** Same shape (event loop
+created in `run()`, client constructed inside it), but instead of finishing
+after one exchange it loops for as long as the dialog is open, dispatching
+between two `asyncio.Queue`s: incoming bot messages (fed by Telethon's own
+`events.NewMessage(chats=entity, incoming=True)` handler -- delivered *on
+the worker's own loop/thread*, so no `call_soon_threadsafe` needed for that
+direction) and outgoing commands from the GUI thread (send text / click a
+button / download a file), which *does* need it, via the same
+`_ready.wait()` guard + `loop.call_soon_threadsafe(queue.put_nowait, ...)`
+shape `_LoginWorker.submit_code()` already established.
+
+**The single costliest lesson of this phase: a `QThread` that loops
+forever (unlike every one-shot worker elsewhere in this codebase) turns
+"forgot to mock the client in one test" into a silent, output-less process
+crash, not a normal test failure.** `TelegramChatDialog` originally started
+its worker straight from `__init__` (auto-connect on open). A test that
+substitutes a fake `_worker` object to check `reject()`/`accept()`'s own
+shutdown logic (mirroring `test_mdrem_ui.py`'s `BusyWorker` pattern) still
+lets construction start a *real* `_ChatWorker` first -- and because that
+worker is parented to the dialog (`parent=self`), Qt keeps its C++ object
+alive via the parent/child tree regardless of the Python attribute being
+reassigned to the fake. Without a mocked client, that orphaned real worker
+tries to connect to actual Telegram servers with fake credentials in the
+background; and because `_ChatWorker.run()` never returns on its own (no
+`_flow()` exit condition short of `cancel()`), it is still "running" when
+Python's garbage collector eventually collects the now-unreferenced dialog
+sometime later -- at which point **Qt aborts the whole process with
+`qFatal()`, not a Python exception**, which is why this showed up as pytest
+silently producing zero output and exiting, not a traceback. Two fixes,
+both worth keeping in mind for *any* future persistent-loop worker in this
+codebase:
+- `start_connecting()` is a separate, explicit method, never called from
+  `__init__` -- plain construction of `TelegramChatDialog` is now always
+  inert (no thread, no network), so any test that just wants to inspect
+  initial widget state can't trip over this by accident.
+  `app_window._open_telegram_bot_chat()` calls it explicitly, right after
+  construction and before `exec()`.
+- Every test that *does* call `start_connecting()` must stop the worker
+  again (`dialog.reject()`, then pump the Qt event loop until
+  `dialog._worker is None`) before the test function returns -- see
+  `test_telegram_chat_dialog.py`'s `_shutdown()` helper, called from every
+  end-to-end test's `finally` block, and its module docstring for the full
+  story. `_LoginWorker`-based tests never needed this because that worker
+  finishes on its own after one exchange; anything shaped like
+  `_ChatWorker` (loops until cancelled) always will.
+
+**Both `accept()` and `reject()` need the same graceful-shutdown treatment
+on `TelegramChatDialog`, unlike `TelegramLoginDialog` (which only ever
+needed it on `reject()`).** The login dialog's worker finishes on its own
+once signed in, so closing it via "Close" after success never has a live
+worker to stop. The chat worker never finishes on its own -- both
+"Record Downloaded Albums..." (`accept()`) and "Close" (`reject()`) can be
+clicked while it's still happily looping, so both are routed through one
+shared `_close_with(finish)` that cancels the worker and defers calling
+`finish` (`super().accept`/`super().reject`) until `_on_worker_finished`
+confirms the thread actually exited -- never `worker.wait()` on the GUI
+thread, same rule as everywhere else this pattern appears.
+
+**The hand-off to Record Folder to MiniDisc reuses `FolderRecordDialog`
+completely unchanged, via a new optional parameter on the existing
+recording entry point.** `_record_folder()` (the plain menu action) split
+into a thin, zero-argument wrapper and `_record_folder_dialog(initial_folder:
+Path | None = None)`, which calls `FolderRecordDialog.set_folder()` (already
+public, already what the interactive Browse button itself calls) before
+`exec()` when a folder is already known -- skipping the browse step
+entirely rather than duplicating any of `FolderRecordDialog`'s own
+tag-reading/cover-lookup/metadata-reconciliation logic. **The zero-arg
+wrapper is not just tidiness**: `menu.addAction(text, callback)` connects
+`QAction.triggered`'s `checked: bool` straight through to a Python
+callable's positional parameters when the callable's signature allows one,
+so wiring the menu directly to `_record_folder_dialog` would have handed
+`initial_folder=True/False` on every click -- a real, easy-to-miss
+PySide/Qt signal-connection gotcha, not a hypothetical one; see the note
+in "PySide6/Qt gotchas" below. Still gated on `app_settings.mdrem_enabled()`
+exactly like the plain menu entry, since the actual recording step still
+needs the adapter regardless of where the folder came from -- the "Continue
+to Record Folder..." button is disabled (with a tooltip) rather than hidden
+when it's off, since unlike a menu action it has no `_sync_mdrem_actions()`
+equivalent to hide it dynamically.
+
+**Two follow-ups landed after real usage: a bot's photo wasn't showing at
+all, and messages stayed in whatever language the bot wrote them in.**
+
+**A Telegram *photo* (sent through the picture picker) has no filename
+attribute at all -- reported as "images aren't visible" in the chat
+dialog.** `File.name` looks for a `DocumentAttributeFilename`, which only
+a real `Document` carries, so a photo's `ChatMessage.file_name`/`file_size`
+stayed `None` -- meaning it fell through *both* the buttons branch and the
+file/Download branch in `_MessageWidget`, rendering as nothing at all.
+`ChatMessage.is_photo` (from `bool(message.photo)`, a real Telethon
+attribute distinct from `.document`) is its own flag rather than being
+inferred from a missing filename, precisely so nothing downstream has to
+know that distinction exists. `TelegramBotClient.download_bytes()` (new,
+alongside `download()`) uses Telethon's `file=bytes` sentinel for an
+in-memory download -- confirmed via source read (`file is bytes` checked
+throughout `telethon/client/downloads.py`) -- since a preview's whole point
+is being seen immediately, not saved to disk first. `_ChatWorker` triggers
+this automatically (fire-and-forget, via `asyncio.ensure_future` on its own
+loop -- not awaited, and a failure is silently skipped, same "a missing
+preview isn't worth interrupting the chat over" rule the rest of this
+dialog already follows) the moment a photo message arrives, and
+`_MessageWidget.set_photo()` scales it down to `_PHOTO_MAX_WIDTH` (320px)
+if wider before displaying it.
+
+**Automatic translation (`mdtools/translate.py`) -- explicit user request,
+not something inferred.** Every incoming (never outgoing) bot text message
+is translated into whatever `mdtools.i18n.current_language()` currently is
+and shown as a second, italic line underneath the original -- which is
+never replaced, since a translation can be wrong and the original may carry
+information (an exact command, a filename) a translation would obscure.
+**MyMemory** (mymemory.translated.net), not Google Translate's unofficial
+endpoint (what the popular `googletrans` package scrapes) -- explicitly
+chosen over it after being asked, for the same reason `metadata_lookup.py`
+picked the iTunes Search API over anything needing sign-up: a genuinely
+free, *documented* public API needing no key at all, rather than an
+undocumented, unsupported scrape that could break or start refusing
+requests without notice (a real tradeoff, not just caution -- MyMemory's
+quality is noticeably rougher on some inputs, confirmed by hand against the
+live API: "Hello, how are you?" came back completely untranslated because
+its top corpus match happened to be a bad one, while realistic
+bot-style sentences translated correctly). MyMemory's `langpair` **requires
+an explicit source** -- `autodetect|<target>` works, a blank/omitted source
+is rejected outright with a 403, confirmed against the live service, not
+assumed from docs.
+
+**Translation runs through `loop.run_in_executor(None, ...)`, not a direct
+`await`, because `mdtools.translate.translate()` is a plain blocking
+`urllib.request` call (same shape as `metadata_lookup.py`'s own), and
+`_ChatWorker`'s event loop has to keep dispatching other incoming
+messages/clicks/downloads while a translation is in flight.** That module
+doesn't know or care it's being called from inside an asyncio loop --
+exactly the same "this module doesn't assume async; the caller keeps it
+off the loop" split already established between `mdtools.telegram_bot`
+(genuinely async, Telethon-native) and everything else's blocking-call
+convention elsewhere in this codebase.
+
+**Two more follow-ups from real usage: the transcript didn't auto-scroll,
+and clicking a button surfaced a raw, alarming-looking Telegram error.**
+
+**Auto-scroll is wired to `QScrollBar.rangeChanged`, not a
+`QTimer.singleShot(0, ...)` after inserting a widget.** The first version
+did the latter and was reported as "the window doesn't scroll down on its
+own" -- a 0ms timer and Qt's own layout recomputation for the
+just-inserted widget aren't ordered relative to each other, so the scroll
+could fire *before* the transcript's real new size (and so its real new
+scrollbar maximum) existed, silently scrolling to the *previous* bottom
+and leaving the newest message off-screen. `rangeChanged(min, max)` only
+ever fires once the scrollable range has actually changed to reflect the
+new content, which is the standard, correct Qt idiom for "always follow a
+growing scroll area" -- connected once in `__init__`, so it also covers a
+widget growing *after* being added (e.g. a photo preview finishing load),
+not just a brand new message.
+
+**Clicking an inline button surfaced Telethon's raw `DataInvalidError`
+("Encrypted data invalid") -- confirmed, by reading Telethon's own
+`Message.click()`/`MessageButton.click()` source, that this is a genuine
+Telegram *server-side* rejection (RPC error `DATA_INVALID`) of that
+button's `callback_data`, not a client-side bug.** `message.click(i, j)`
+is `self._buttons[i][j].click()`, and `self._buttons` is the *exact same*
+list object the public `.buttons` property returns -- i.e. the row/col
+`_MessageWidget` renders and what `TelegramBotClient.click()` later
+indexes into can never disagree, so there is no off-by-one/stale-index bug
+to find here. The alarming stock wording is just Telegram's own published
+description for that error code, not a description of what actually went
+wrong (nothing about MTProto session security is implicated).
+`telegram_bot._describe()` translates `DataInvalidError` specifically into
+a message that says roughly that, instead of the raw RPC text -- the same
+"translate the handful of failures a user is actually likely to hit"
+pattern the other known errors there already follow. **The actual root
+cause turned out to be a real gap in this codebase, found from the user's
+own follow-up report -- see immediately below.**
+
+**`start_watching()` only ever listened for brand new messages
+(`events.NewMessage`), never edits to a message already sent
+(`events.MessageEdited`) -- and plenty of bots build a "menu" by editing
+one message's text/buttons in place (Telegram's own
+editMessageText/editMessageReplyMarkup) as the user navigates, rather than
+sending a fresh message every step.** Reported as "the buttons don't do
+anything in MDTools, but the bot clearly does something (visible on my
+phone)" -- and this is also the real explanation for the `DataInvalidError`
+right above, not just a coincidental second bug: once the bot edits its
+message, Telegram invalidates the *old* button's `callback_data`
+server-side, but MDTools' local cache (`TelegramBotClient._messages`) never
+saw the edit and kept serving the stale pre-edit object -- so a click sent
+the now-invalid old data, which the server correctly rejected. Two
+mechanical facts made the fix small: `events.MessageEdited` is a *subclass*
+of `events.NewMessage` (confirmed via its MRO) sharing the same `.message`
+shape, so `start_watching()`'s existing single handler function covers both
+event types with one extra `add_event_handler()` registration; and routing
+an edit through the same `_remember()` the new-message path already uses
+*overwrites* that id's cache entry with the freshly edited object for
+free, which is what actually fixes the click -- no separate "handle an
+edit" branch needed in `TelegramBotClient` at all. The dialog-side fix
+(`_on_message_received`, `panels/telegram_chat_dialog.py`) does need its
+own branch, though: Telegram keeps a message's id across an edit, so the
+same id arriving again means "replace this widget's content in its
+current position", not "append a new widget at the bottom" -- appending
+would have both left the transcript showing a wrong, stale duplicate *and*
+reordered the conversation as though an edit were a brand new message.
+
+**A quick-commands row (`/start`, `/help`) sends through the exact same
+`worker.send_text()` the free-text box uses** -- so a one-click shortcut
+for the two near-universal bot commands shows up in the transcript
+identically to anything typed by hand, no special-cased rendering path.
+
+**Album sorting (`album_sort.py` + "Sort into Album Folders" +
+`embedded_cover.flac_tags()`), a "Record Downloaded Albums..." picker for
+more than one downloaded album, and an "Open Download Folder" button --
+from real usage downloading multiple albums in one chat session.**
+`embedded_cover.py` gained `flac_tags()` (reads the `VORBIS_COMMENT`
+block) alongside its existing `flac_pictures()`, sharing a new
+`_iter_flac_blocks()` generator so the two never duplicate the actual
+binary walk. **Load-bearing detail, easy to get wrong by analogy with
+`PICTURE`'s block**: `VORBIS_COMMENT`'s own internal lengths are
+little-endian (Ogg Vorbis's own comment format, carried as-is inside an
+otherwise big-endian FLAC metadata block) -- confirmed against the bundled
+`flac.exe`'s real output, not just the written spec, same rigor
+`flac_pictures()`'s own real-encoder test already applied.
+`album_sort.sort_downloads()` groups a session folder's flat files by
+`ALBUM` tag first (decided with the user over other options -- reliable
+regardless of arrival order, but only for tagged FLACs), falling back to
+*arrival batches* (`batches_from_arrival_order()`: files that arrived as
+one unbroken run of file-messages, no other kind of message in between)
+for anything untagged -- so non-FLAC files and untagged FLACs still get
+grouped, at the cost of being wrong if a bot interleaves a status message
+between two tracks of the same album. Returns `[]` and moves nothing at
+one group or fewer, which is also what makes a second click, or a
+single-album session, a safe no-op with no special-casing needed at the
+call site. Folder names go through `cdrip.sanitize_filename()`, not
+`user_paths`'s copy -- the latter imports QtCore, which would break this
+module's own no-Qt rule, the same reasoning `cdrip.py`'s own copy of that
+function already documents.
+
+**Sorting has to work *incrementally*, and the "a single album needs no
+folder of its own" guard originally broke exactly that -- reported
+directly: two albums were already sorted into folders, a third was
+downloaded, and sorting again said "nothing to sort".** Since downloads
+accumulate in one folder across every session (see the per-session-folder
+note below), "some albums already in subfolders, one album's worth of new
+tracks still loose in the root" is the *normal* state after the first
+sort -- not a reason to skip the move. `_create_folders_and_move()`'s
+`len(groups) <= 1` early return fired unconditionally, so that third
+album's files stayed flat while `pick_album_folder()` offered only the two
+pre-existing subfolders: the newest album was both unsorted *and*
+unrecordable, with the UI claiming everything was fine. The guard is now
+`len(groups) <= 1 and not has_album_subfolders(root)` -- one album alone in
+a still-unsorted folder genuinely needs no nesting, but once anything has
+been sorted, a lone new group is the opposite case. `sort_downloads()`/
+`sort_folder()`'s own `len(flat_files) < 2` fast paths had the identical
+flaw (a one-track album arriving into an already-sorted folder was stranded
+before grouping even ran) and are now just `if not flat_files`, leaving the
+real decision to `_create_folders_and_move()`. **Idempotency never depended
+on either guard**: both callers only look at files still sitting directly in
+`root`, so anything already moved into a subfolder is simply invisible to a
+repeat call -- which is what
+`test_sorting_an_already_sorted_folder_with_nothing_new_is_still_a_no_op`
+pins down alongside the three tests for the bug itself.
+
+**Grouping keys strictly on the ALBUM tag, never on artist+album --
+reported directly: a featured-artist credit on one track ("Skillet, Lacey
+Sturm") landed in its own folder, apart from the rest of the same record
+tagged plainly "Skillet".** The original version keyed each file's group
+by its own `f"{artist} - {album}"`, so any per-track ARTIST variance --
+which is exactly what a guest feature is -- produced two different dict
+keys for what both files agree is one album. Fixed the same way
+`ProjectMetadata.is_compilation()`/`foobar.album_artist()` already handle
+this same class of problem elsewhere in this codebase: the album's
+*identity* comes from the ALBUM tag alone (grouping), and the artist half
+of the folder's *name* is decided afterward, from every track in that
+group, not from whichever track happened to be read first
+(`_group_display_name()`, `Counter.most_common()` over every ARTIST value
+seen in the group -- a single collab credit is normally the minority
+value, so it loses the vote rather than forking the folder).
+`read_album_tag()` also now prefers an ALBUMARTIST tag over ARTIST when a
+file has one, same "the album's own credited performer, not whoever's on
+this one track" reasoning `foobar.album_artist()` uses -- but that alone
+isn't sufficient, since plenty of real-world downloaded files simply have
+no ALBUMARTIST tag at all, only a per-track ARTIST that varies on a
+collab, which is why the majority-vote fallback still has to exist even
+with the ALBUMARTIST preference in place.
+
+**"Record Downloaded Albums..." used to look permanently disabled with
+no explanation -- reported directly.** `_update_continue_button()` is now
+the single place deciding both its enabled state and its tooltip, called
+from both `_on_ready()` (so the reason is visible the moment the dialog
+connects, not just after the first download) and `_on_download_finished()`
+-- adapter-off takes priority over nothing-downloaded-yet, since fixing
+the latter wouldn't help until the former is also fixed. `_on_continue_clicked()`
+only asks *which* album (`QInputDialog.getItem()`) when the session folder
+actually holds more than one subfolder -- zero or exactly one is already
+handled correctly by `audio_folder.list_audio_files()`'s own existing
+"recurse only if nothing sits directly in the folder" rule, so there is
+nothing else to change for those cases. **It now also calls
+`album_sort.sort_downloads()` itself, unconditionally, right before that
+check** -- reported directly ("czy ten przycisk automatycznie sortuje
+albumy w folderze przed otwarciem okna nagrywania?"). Before this,
+clicking straight through to record without first pressing "Sort into
+Album Folders" by hand left a multi-album session's files still flat, so
+`pick_album_folder()` saw zero subfolders and silently handed back the
+whole mixed folder as a single "album" -- mixing every downloaded album's
+tracks into one recording with no warning at all. Safe to call
+unconditionally because `sort_downloads()` is already idempotent and a
+no-op for a single album (`_create_folders_and_move()`'s `len(groups) <=
+1` guard) -- there is nothing to special-case at the call site for "only
+one album" or "already sorted".
+
+**`pick_album_folder()`'s two strings were using `parent.tr(...)`, which
+is wrong for a plain module-level function -- found only by testing it,
+not by inspection.** `QObject.tr()` resolves its translation *context* from
+the object's own runtime class (confirmed by installing a translator with
+two candidate contexts and reading back which one actually won: calling
+`parent.tr(...)` where `parent` is a `TelegramChatDialog` instance
+resolves under context `"TelegramChatDialog"`, never the literal `"parent"`
+identifier `pyside6-lupdate`'s static scan records it under). That
+mismatch means a translation supplied under whatever context lupdate
+happened to invent would never actually be found at runtime -- and it
+would only have gotten worse once `app_window.py`'s "Record from Telegram
+Downloads..." action (added later, see below) reused this same helper from
+`MainWindow`, since the same two source strings would then need looking up
+under a *third*, different context depending on which class happened to
+call it. Fixed by
+switching to `QCoreApplication.translate("TelegramChatDialog", "...")` --
+a fixed, explicit context, exactly the pattern this codebase's own i18n
+notes already establish for a translatable string in a plain module-level
+function (see project.py's `metadata_menu_entries()` and
+layers_panel.py's module-level `_label_for()`). Re-running
+`pyside6-lupdate` after the fix confirmed it: the two strings' existing
+Polish/Japanese translations carried over automatically onto the new,
+correct `TelegramChatDialog` context via lupdate's own same-text
+heuristic, and the old `parent`-context entries were marked obsolete.
+
+**"Sort into Album Folders" and "Record Downloaded Albums..." are also
+disabled for as long as *any* download is still in flight, not just
+whenever nothing has finished yet.** Reported directly. `self._active_downloads:
+set[int]` tracks every message id between `download_started` and
+`download_finished`/`download_failed` (added/discarded in
+`_on_download_started`/`_on_download_finished`/`_on_download_failed`, which
+now all call both `_update_sort_button()` and `_update_continue_button()`).
+Both buttons check it first -- sorting mid-download could act on a folder
+about to gain one more file the sort call already missed, and recording
+mid-download risks starting a MiniDisc recording one track short of the
+album that's still arriving. `_active_downloads` is discarded on failure
+too, not just success, so one failed download doesn't permanently wedge
+either button disabled for the rest of the session -- a retry (which goes
+through the same `download_started`/`finished`/`failed` signals as an
+original download, since `_on_download_requested` calls the same
+`_worker.download_file()` -> `_run_download()` path) re-adds and
+re-clears it exactly the same way.
+
+**Downloads no longer land in a fresh, timestamped subfolder per chat
+session -- explicit user request.** `_flow()` used to build `session_folder`
+as `self._download_root / f"telegram-{datetime.now():%Y%m%d-%H%M%S}"`; it
+is now just `self._download_root` (the one folder configured in
+Experimental Settings) directly, `mkdir(parents=True, exist_ok=True)`'d in
+place. Every chat session's downloads now accumulate in the same physical
+folder instead of scattering across a new one every time the dialog is
+reopened, which is what makes "Sort into Album Folders" (and the two new
+standalone Experimental actions below) actually useful across sessions
+rather than only within whichever one happens to still be open. The
+`session_folder`/`_session_folder` name stayed as-is throughout the file
+despite no longer being session-*scoped* on disk -- it is still correctly
+"the folder this dialog instance is working with", and renaming it
+everywhere (queue items, download tracking, the Open Download Folder
+button, every test) was judged not worth the diff for what is now purely a
+naming nuance, not a behavioural one.
+
+**Two new Experimental menu actions reach the same operations without ever
+opening the bot chat at all -- reported directly as missing.**
+`app_window._sort_telegram_downloads()` ("Sort Telegram Downloads into
+Album Folders...") and `_record_from_telegram_downloads()` ("Record from
+Telegram Downloads...") both act on `Path(app_settings.telegram_download_folder())`
+directly, `mkdir(parents=True, exist_ok=True)`'d the same "created on
+demand, at the moment it's needed" way `cdrip.ensure_folder()`/
+`user_paths.projects_dir()` already are -- there is nothing to sort in a
+folder that doesn't exist yet, but no reason to fail over that either.
+Neither is gated behind `telegram_chat_action`'s local-session-file check
+(`_sync_experimental_menu()`) -- sorting or recording what has already
+been downloaded needs no bot connection or sign-in at all, only files
+already on disk. `_sort_telegram_downloads()` calls `album_sort.sort_folder()`
+(the standalone, tag-only sibling of `sort_downloads()` -- no chat, so no
+`message_order`/arrival-batch fallback to lean on) and reports the result
+via the same `QMessageBox.information()` wording `TelegramChatDialog._sort_downloads()`
+already uses. `_record_from_telegram_downloads()` sorts first too, silently
+-- same reasoning as `_on_continue_clicked()`'s own auto-sort fix above: a
+folder still holding more than one album's worth of files flat would
+otherwise be handed to `pick_album_folder()` (imported from
+`telegram_chat_dialog.py`, the exact module-level helper the "Choose
+Album" i18n-context fix above was written in anticipation of this reuse)
+as if it were a single album -- then calls `self._record_folder_dialog(folder)`,
+the same hand-off `_open_telegram_bot_chat()` already uses.
+
+**A file attachment renders *only* in a download queue panel on the right
+(`_DownloadQueueItem`, in a `QSplitter` beside the transcript) -- never in
+the transcript itself, and downloads at most `_MAX_CONCURRENT_DOWNLOADS`
+(3) at once, both by explicit request after the transcript got buried under
+one row per track of a whole album.** `_ChatWorker._run_download()` now
+opens with `async with self._download_semaphore:` (an `asyncio.Semaphore`,
+created in `run()` alongside the worker's other asyncio primitives for the
+same "must belong to this thread's own loop" reason those already are) --
+everything past that line only runs once a slot is actually free, and
+`download_started` (new signal) fires right after acquiring it, which is
+what tells a queue row to move from "Queued" to "Downloading". Speed is
+derived from consecutive `download_progress` callbacks
+(`_DownloadQueueItem.set_progress()`), not reported by Telethon directly,
+and throttled to recompute at most every `_SPEED_UPDATE_INTERVAL_S` (0.5s)
+-- a raw per-callback delta is noisy (a tiny byte count over a tiny time
+slice). `_MessageWidget` lost its entire file-row branch (Download
+button, progress bar, status label) to `_DownloadQueueItem`; `_on_message_received()`
+now branches on `message.file_name` *before* building any transcript
+widget at all, routing to a new `_on_file_message()` instead -- but
+arrival-order bookkeeping (`self._message_order`) still has to happen
+unconditionally either way, since `album_sort.batches_from_arrival_order()`
+needs every message's position, file or not.
+
+**`pyside6-lupdate`'s static scanner does not see a `self.tr(...)` call
+nested inside an f-string's `{...}` interpolation at all -- not a partial
+miss, a silent zero-scan.** Found by actually grepping the compiled `.ts`
+for a string this session had *just* added
+(`f"<b>{self.tr('Downloads')}</b>"`) and finding it completely absent, not
+merely unfinished -- which is what led to checking every other f-string-
+wrapped `tr()` call in the codebase and finding a second, **pre-existing**
+one (`experimental_settings_dialog.py`'s "Telegram bot" section header,
+sitting untranslated since Phase 1 without ever showing up as a missing
+string in any `lupdate` run's own summary count, since it was never seen
+as a translatable string to begin with). Both fixed the same way: call
+`self.tr(...)` on its own line first, assign the *result* into the
+f-string, never the `tr()` call itself. Grep for `f["'].*\{self\.tr\(` to
+check for a regression -- this codebase's own existing i18n workflow docs
+already say "the literal string directly in the call, never through an
+indirection like ... a variable", which covers the *string argument*
+losing its indirection; this is the narrower, easier-to-miss flip side of
+that same rule -- the *call itself* also can't be indirected through
+nesting inside an f-string, even though the string argument right next to
+it is perfectly literal.
 
 ## PySide6/Qt gotchas hit in this codebase
 
@@ -2637,6 +3449,22 @@ Three details that are load-bearing here:
   scope, the scene gets garbage collected out from under the view
   (`RuntimeError: Internal C++ object (...) already deleted`). Always keep
   the scene itself alive alongside the view.
+- **A `QThread` whose C++ object gets garbage collected while `isRunning()`
+  is still True aborts the whole process with `qFatal()` -- no Python
+  traceback, just silent process death.** Only a real risk for a worker
+  that loops indefinitely rather than finishing on its own (e.g.
+  `telegram_chat_dialog.py`'s `_ChatWorker`, which runs until `cancel()`'d,
+  unlike every one-shot worker elsewhere in this codebase) -- being parented
+  to a dialog (`parent=self`) keeps the C++ object alive via Qt's own
+  object tree regardless of whatever a Python variable currently points at,
+  so even reassigning `dialog._worker` to something else doesn't stop an
+  earlier real worker from still running in the background until the
+  dialog itself is destroyed. See the Telegram bot integration notes above
+  for the full incident (a missing test mock let this happen for real) and
+  the two-part fix: never auto-start a persistent-loop worker from
+  `__init__` (so plain construction stays inert), and every test that does
+  start one must stop it again (cancel + wait for the thread to actually
+  exit) before the test function returns.
 - **`QFormLayout` field `setVisible(False)` does NOT hide the row's
   label.** Use `form.setRowVisible(widget, visible)` (Qt 6.4+) so label+field
   hide together.
@@ -2698,6 +3526,18 @@ Three details that are load-bearing here:
   dialog methods with bool out-params — verify the actual return order for
   the specific PySide6 version in use (drive the real dialog via
   `QTimer.singleShot` auto-accept and print the raw tuple).
+- **`menu.addAction(text, callback)` (and `QAction.triggered.connect(callback)`
+  generally) passes `QAction.triggered`'s `checked: bool` straight through
+  to `callback` if its signature accepts a positional argument there --
+  including an *optional* one.** A callback like `def _record_folder_dialog
+  (self, initial_folder: Path | None = None)` connected directly to a menu
+  action would silently receive `initial_folder=True`/`False` on every
+  click, not the intended default of `None` -- Qt/PySide's signal-slot
+  introspection matches arity, it does not know an optional parameter was
+  meant to stay unset. `app_window.py`'s `_record_folder()` is a thin,
+  zero-argument wrapper kept specifically so the menu never connects
+  directly to the parameterized `_record_folder_dialog()` -- see the
+  Telegram bot integration notes above for where this was caught.
 - **A modal `QMessageBox`/dialog `.exec()` blocks forever under
   `QT_QPA_PLATFORM=offscreen`** with no user to click OK. Always monkeypatch
   it out (e.g. `monkeypatch.setattr(SomeModule.QMessageBox, "information",

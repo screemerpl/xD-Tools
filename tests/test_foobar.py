@@ -190,6 +190,15 @@ def test_preparing_to_record_forces_straight_through_once():
     assert body == {"playbackMode": 0, "stopAfterCurrentTrack": False}
 
 
+def test_set_volume_posts_a_flat_body():
+    sent: list = []
+    _client({}, sent).set_volume(-5.0)
+
+    path, body = sent[0]
+    assert path == "/api/player"
+    assert body == {"volume": -5.0}
+
+
 def test_play_targets_a_specific_playlist_item():
     sent: list = []
     _client({}, sent).play("p1", 0)

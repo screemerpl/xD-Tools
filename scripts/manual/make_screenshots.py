@@ -693,8 +693,13 @@ def main() -> int:
     # in a throwaway folder instead of the user's real configuration.
     QStandardPaths.setTestModeEnabled(True)
 
-    from mdtools import foobar, mdrem
+    from mdtools import foobar, mdrem, theme
     from mdtools.templates import registry
+
+    # Matches main.py exactly -- otherwise these screenshots would keep
+    # showing Qt's old default light theme while the real app has looked
+    # like this (Fusion + a dark palette) since it was added.
+    theme.apply_theme(app)
 
     registry.sync_builtin_templates()
 

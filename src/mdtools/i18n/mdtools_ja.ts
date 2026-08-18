@@ -346,7 +346,7 @@ choose one)</source>
 <context>
     <name>DesignView</name>
     <message>
-        <location filename="../canvas/view.py" line="305"/>
+        <location filename="../canvas/view.py" line="314"/>
         <source>Move</source>
         <translation>移動</translation>
     </message>
@@ -440,6 +440,121 @@ Eject now to make it permanent?</source>
         <location filename="../panels/erase_dialog.py" line="272"/>
         <source>MDRem: not connected</source>
         <translation>MDRem: 接続されていません</translation>
+    </message>
+</context>
+<context>
+    <name>ExperimentalSettingsDialog</name>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="51"/>
+        <source>Experimental Settings</source>
+        <translation>実験的機能の設定</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="57"/>
+        <source>Settings for in-development features shown only while &quot;Show experimental features&quot; is enabled in Window &gt; Settings.</source>
+        <translation>開発中の機能の設定です。Window &gt; Settings で「実験的機能を表示」が有効な場合のみ表示されます。</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="77"/>
+        <source>Telegram bot</source>
+        <translation>Telegram ボット</translation>
+    </message>
+    <message>
+        <source>This feature needs your own, free Telegram API credentials -- unrelated to your bot&apos;s own token. Get them at &lt;a href=&quot;https://my.telegram.org&quot;&gt;my.telegram.org&lt;/a&gt;: sign in with your phone number, open &quot;API Development Tools&quot;, and create an app (any name and platform work) to get the API ID and API Hash below.</source>
+        <translation type="vanished">この機能には、あなた自身の無料の Telegram API 認証情報が必要です -- あなたのボット自体のトークンとは別のものです。&lt;a href=&quot;https://my.telegram.org&quot;&gt;my.telegram.org&lt;/a&gt; で取得してください。電話番号でログインし、「API Development Tools」を開き、アプリを作成すると（名前やプラットフォームは何でも構いません）、下記の API ID と API Hash が得られます。</translation>
+    </message>
+    <message>
+        <source>The &quot;App api_id&quot; field my.telegram.org gave your app.</source>
+        <translation type="vanished">my.telegram.org があなたのアプリに割り当てた「App api_id」の値です。</translation>
+    </message>
+    <message>
+        <source>API ID</source>
+        <translation type="vanished">API ID</translation>
+    </message>
+    <message>
+        <source>The &quot;App api_hash&quot; field my.telegram.org gave your app.</source>
+        <translation type="vanished">my.telegram.org があなたのアプリに割り当てた「App api_hash」の値です。</translation>
+    </message>
+    <message>
+        <source>MDTools already comes with its own API ID/Hash, so these are filled in and ready to use -- you don&apos;t need to get your own. If you&apos;d rather sign in through your own registered app instead, get credentials at &lt;a href=&quot;https://my.telegram.org&quot;&gt;my.telegram.org&lt;/a&gt;: sign in with your phone number, open &quot;API Development Tools&quot;, and create an app (any name and platform work) to get an API ID and API Hash to replace these with.</source>
+        <translation type="vanished">MDToolsには独自のAPI IDとAPI Hashが最初から組み込まれているため、これらの欄はすでに入力済みで、そのまま使用できます -- 自分で取得する必要はありません。代わりに自分で登録したアプリでサインインしたい場合は、&lt;a href=&quot;https://my.telegram.org&quot;&gt;my.telegram.org&lt;/a&gt;で認証情報を取得してください。電話番号でサインインし、「API Development Tools」を開いて、アプリを作成すると(名前とプラットフォームは何でも構いません)、これらを置き換えるためのAPI IDとAPI Hashが取得できます。</translation>
+    </message>
+    <message>
+        <source>MDTools&apos; own by default. The &quot;App api_id&quot; field my.telegram.org gave your app, if you&apos;d rather use your own.</source>
+        <translation type="vanished">デフォルトではMDTools独自のものです。自分のものを使いたい場合は、my.telegram.orgがアプリに発行した「App api_id」欄の値です。</translation>
+    </message>
+    <message>
+        <source>MDTools&apos; own by default. The &quot;App api_hash&quot; field my.telegram.org gave your app, if you&apos;d rather use your own.</source>
+        <translation type="vanished">デフォルトではMDTools独自のものです。自分のものを使いたい場合は、my.telegram.orgがアプリに発行した「App api_hash」欄の値です。</translation>
+    </message>
+    <message>
+        <source>API Hash</source>
+        <translation type="vanished">API Hash</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="91"/>
+        <source>Bot username</source>
+        <translation>ボットのユーザー名</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="95"/>
+        <source>Where an album downloaded from the bot is saved before being recorded.</source>
+        <translation>ボットからダウンロードしたアルバムを、録音前に保存する場所です。</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="97"/>
+        <source>Browse...</source>
+        <translation>参照...</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="99"/>
+        <location filename="../panels/experimental_settings_dialog.py" line="126"/>
+        <location filename="../panels/experimental_settings_dialog.py" line="166"/>
+        <source>Download folder</source>
+        <translation>ダウンロードフォルダ</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="102"/>
+        <source>Status</source>
+        <translation>ステータス</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="105"/>
+        <source>Sign in to Telegram...</source>
+        <translation>Telegram にサインイン...</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="115"/>
+        <source>A saved sign-in exists locally.</source>
+        <translation>ローカルに保存されたサインイン情報があります。</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="117"/>
+        <source>Not signed in yet.</source>
+        <translation>まだサインインしていません。</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="140"/>
+        <source>Sign in to Telegram</source>
+        <translation>Telegram にサインイン</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="141"/>
+        <source>No Telegram API credentials are configured.</source>
+        <translation>Telegram APIの認証情報が設定されていません。</translation>
+    </message>
+    <message>
+        <source>Enter the API ID and API Hash first (from my.telegram.org).</source>
+        <translation type="vanished">先に API ID と API Hash を入力してください（my.telegram.org から取得）。</translation>
+    </message>
+    <message>
+        <location filename="../panels/experimental_settings_dialog.py" line="168"/>
+        <source>That folder could not be created: {error}
+
+The setting has been saved anyway, but a download cannot be saved there until it exists.</source>
+        <translation>そのフォルダを作成できませんでした: {error}
+
+設定は保存されましたが、フォルダが存在するまでダウンロードをそこに保存できません。</translation>
     </message>
 </context>
 <context>
@@ -647,12 +762,12 @@ foobar2000が起動し、Beefweb Remote Control (foo_beefweb) コンポーネン
 <context>
     <name>MDRem</name>
     <message>
-        <location filename="../mdrem.py" line="343"/>
+        <location filename="../mdrem.py" line="379"/>
         <source>Disc title</source>
         <translation>ディスクタイトル</translation>
     </message>
     <message>
-        <location filename="../mdrem.py" line="359"/>
+        <location filename="../mdrem.py" line="395"/>
         <source>Track {n}</source>
         <translation>トラック {n}</translation>
     </message>
@@ -794,197 +909,197 @@ Eject now to write them permanently?</source>
         <translation type="vanished">MDTools - MiniDiscラベルデザイナー</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="127"/>
+        <location filename="../app_window.py" line="144"/>
         <source>Page</source>
         <translation>ページ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="128"/>
+        <location filename="../app_window.py" line="145"/>
         <source>Editing:</source>
         <translation>編集中:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="130"/>
+        <location filename="../app_window.py" line="147"/>
         <source>Disc Label</source>
         <translation>ディスクラベル</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="131"/>
+        <location filename="../app_window.py" line="148"/>
         <source>Cover / J-Card</source>
         <translation>カバー / Jカード</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="136"/>
+        <location filename="../app_window.py" line="153"/>
         <source>Zoom</source>
         <translation>ズーム</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="141"/>
-        <location filename="../app_window.py" line="326"/>
+        <location filename="../app_window.py" line="158"/>
+        <location filename="../app_window.py" line="350"/>
         <source>Zoom Out</source>
         <translation>縮小</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="144"/>
-        <location filename="../app_window.py" line="325"/>
+        <location filename="../app_window.py" line="161"/>
+        <location filename="../app_window.py" line="349"/>
         <source>Zoom In</source>
         <translation>拡大</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="145"/>
+        <location filename="../app_window.py" line="162"/>
         <source>100%</source>
         <translation>100%</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="146"/>
+        <location filename="../app_window.py" line="163"/>
         <source>Fit</source>
         <translation>全体表示</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="149"/>
+        <location filename="../app_window.py" line="166"/>
         <source>Grayscale</source>
         <translation>グレースケール</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="152"/>
+        <location filename="../app_window.py" line="169"/>
         <source>Temporarily preview the canvas in grayscale -- view only, click again to restore color</source>
         <translation>キャンバスを一時的にグレースケールで表示します（表示のみ、もう一度クリックするとカラーに戻ります）</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="167"/>
+        <location filename="../app_window.py" line="184"/>
         <source>Grayscale preview/export brightness</source>
         <translation>グレースケール表示・書き出しの明るさ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="173"/>
+        <location filename="../app_window.py" line="190"/>
         <source>Grayscale preview/export contrast</source>
         <translation>グレースケール表示・書き出しのコントラスト</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="177"/>
+        <location filename="../app_window.py" line="194"/>
         <source>Brightness:</source>
         <translation>明るさ:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="179"/>
+        <location filename="../app_window.py" line="196"/>
         <source>Contrast:</source>
         <translation>コントラスト:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="211"/>
+        <location filename="../app_window.py" line="228"/>
         <source>Tools</source>
         <translation>ツール</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="231"/>
+        <location filename="../app_window.py" line="248"/>
         <source>Properties</source>
         <translation>プロパティ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="241"/>
+        <location filename="../app_window.py" line="258"/>
         <source>Layers</source>
         <translation>レイヤー</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="251"/>
+        <location filename="../app_window.py" line="268"/>
         <source>&amp;File</source>
         <translation>&amp;ファイル</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="252"/>
+        <location filename="../app_window.py" line="269"/>
         <source>New...</source>
         <translation>新規...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="253"/>
+        <location filename="../app_window.py" line="270"/>
         <source>Open Project...</source>
         <translation>プロジェクトを開く...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="254"/>
+        <location filename="../app_window.py" line="271"/>
         <source>Open Recent</source>
         <translation>最近使用したプロジェクトを開く</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="256"/>
+        <location filename="../app_window.py" line="273"/>
         <source>Save</source>
         <translation>保存</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="257"/>
+        <location filename="../app_window.py" line="274"/>
         <source>Save As...</source>
         <translation>名前を付けて保存...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="259"/>
+        <location filename="../app_window.py" line="276"/>
         <source>Import Metadata from Project...</source>
         <translation>プロジェクトからメタデータを読み込む...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="261"/>
+        <location filename="../app_window.py" line="278"/>
         <source>Export Cut SVG...</source>
         <translation>カット用SVGを書き出す...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="262"/>
+        <location filename="../app_window.py" line="279"/>
         <source>Export Print PNG...</source>
         <translation>印刷用PNGを書き出す...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="263"/>
+        <location filename="../app_window.py" line="280"/>
         <source>Export Print PNG (Grayscale)...</source>
         <translation>印刷用PNGを書き出す（グレースケール）...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="265"/>
+        <location filename="../app_window.py" line="282"/>
         <source>Print...</source>
         <translation>印刷...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="271"/>
+        <location filename="../app_window.py" line="288"/>
         <source>Close Project</source>
         <translation>プロジェクトを閉じる</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="274"/>
+        <location filename="../app_window.py" line="291"/>
         <source>Exit</source>
         <translation>終了</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="276"/>
+        <location filename="../app_window.py" line="293"/>
         <source>&amp;Edit</source>
         <translation>&amp;編集</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="277"/>
+        <location filename="../app_window.py" line="294"/>
         <source>&amp;Undo</source>
         <translation>&amp;元に戻す</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="280"/>
+        <location filename="../app_window.py" line="297"/>
         <source>&amp;Redo</source>
         <translation>&amp;やり直す</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="284"/>
-        <location filename="../app_window.py" line="827"/>
+        <location filename="../app_window.py" line="301"/>
+        <location filename="../app_window.py" line="890"/>
         <source>Cut</source>
         <translation>切り取り</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="285"/>
+        <location filename="../app_window.py" line="302"/>
         <source>Copy</source>
         <translation>コピー</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="286"/>
-        <location filename="../app_window.py" line="835"/>
-        <location filename="../app_window.py" line="838"/>
+        <location filename="../app_window.py" line="303"/>
+        <location filename="../app_window.py" line="898"/>
+        <location filename="../app_window.py" line="901"/>
         <source>Paste</source>
         <translation>貼り付け</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="291"/>
+        <location filename="../app_window.py" line="308"/>
         <source>Delete</source>
         <translation>削除</translation>
     </message>
@@ -997,82 +1112,112 @@ Eject now to write them permanently?</source>
         <translation type="vanished">メタデータ...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="309"/>
+        <location filename="../app_window.py" line="326"/>
         <source>Record to MiniDisc from foobar2000...</source>
         <translation>foobar2000からMiniDiscに録音...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="303"/>
+        <location filename="../app_window.py" line="320"/>
         <source>Record CD to MiniDisc...</source>
         <translation>CDをMiniDiscに録音...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="299"/>
+        <location filename="../app_window.py" line="316"/>
         <source>&amp;Recording</source>
         <translation>&amp;録音</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="306"/>
+        <location filename="../app_window.py" line="323"/>
         <source>Record Folder to MiniDisc...</source>
         <translation>フォルダーをMiniDiscに録音...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="316"/>
+        <location filename="../app_window.py" line="333"/>
         <source>Erase MiniDisc...</source>
         <translation>MiniDiscを消去...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="320"/>
+        <location filename="../app_window.py" line="340"/>
+        <source>Remote Control...</source>
+        <translation>リモコン...</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="344"/>
         <source>&amp;Templates</source>
         <translation>&amp;テンプレート</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="321"/>
+        <location filename="../app_window.py" line="345"/>
         <source>Manage Templates...</source>
         <translation>テンプレートを管理...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="322"/>
+        <location filename="../app_window.py" line="346"/>
         <source>Change Template for This Page...</source>
         <translation>このページのテンプレートを変更...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="324"/>
+        <location filename="../app_window.py" line="348"/>
         <source>&amp;View</source>
         <translation>&amp;表示</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="327"/>
+        <location filename="../app_window.py" line="351"/>
         <source>Fit to Window</source>
         <translation>ウィンドウに合わせる</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="337"/>
+        <location filename="../app_window.py" line="364"/>
+        <source>Experi&amp;mental</source>
+        <translation>&amp;実験的機能</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="366"/>
+        <source>Experimental Settings...</source>
+        <translation>実験的機能の設定...</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="373"/>
+        <source>Download Album from Telegram Bot...</source>
+        <translation>Telegram ボットからアルバムをダウンロード...</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="383"/>
+        <source>Sort Telegram Downloads into Album Folders...</source>
+        <translation>Telegramのダウンロードをアルバムフォルダに振り分け...</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="386"/>
+        <source>Record from Telegram Downloads...</source>
+        <translation>Telegramのダウンロードから録音...</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="390"/>
         <source>&amp;Window</source>
         <translation>&amp;ウィンドウ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="338"/>
+        <location filename="../app_window.py" line="391"/>
         <source>Settings...</source>
         <translation>設定...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="340"/>
+        <location filename="../app_window.py" line="393"/>
         <source>&amp;Help</source>
         <translation>&amp;ヘルプ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="342"/>
+        <location filename="../app_window.py" line="395"/>
         <source>About MDTools...</source>
         <translation>MDToolsについて...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="397"/>
+        <location filename="../app_window.py" line="450"/>
         <source>Unsaved Changes</source>
         <translation>未保存の変更</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="398"/>
+        <location filename="../app_window.py" line="451"/>
         <source>This project has changes that have not been saved.
 
 Save them before continuing?</source>
@@ -1081,23 +1226,23 @@ Save them before continuing?</source>
 続ける前に保存しますか?</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="497"/>
+        <location filename="../app_window.py" line="550"/>
         <source>&apos;{name}&apos; has unverified placeholder dimensions -- measure your physical media/case and correct it in Templates &gt; Manage Templates before cutting anything for real.</source>
         <translation>「{name}」は未確認の仮の寸法です。実際にカットする前に、実物のメディア/ケースを測定し、テンプレート &gt; テンプレートを管理で修正してください。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="677"/>
-        <location filename="../app_window.py" line="691"/>
+        <location filename="../app_window.py" line="740"/>
+        <location filename="../app_window.py" line="754"/>
         <source>Change Template</source>
         <translation>テンプレートの変更</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="678"/>
+        <location filename="../app_window.py" line="741"/>
         <source>Template for this page:</source>
         <translation>このページのテンプレート:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="693"/>
+        <location filename="../app_window.py" line="756"/>
         <source>Changing the template clears this page: every layer on it is removed, and the undo history is reset.
 
 The other page and the project&apos;s metadata are left alone.</source>
@@ -1106,164 +1251,189 @@ The other page and the project&apos;s metadata are left alone.</source>
 もう一方のページとプロジェクトのメタデータはそのまま残ります。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="758"/>
+        <location filename="../app_window.py" line="821"/>
         <source>Add Text</source>
         <translation>テキストを追加</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="765"/>
+        <location filename="../app_window.py" line="828"/>
         <source>Add Rectangle</source>
         <translation>長方形を追加</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="772"/>
-        <location filename="../app_window.py" line="852"/>
+        <location filename="../app_window.py" line="835"/>
+        <location filename="../app_window.py" line="915"/>
         <source>Delete Layer</source>
         <translation>レイヤーを削除</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="801"/>
-        <location filename="../app_window.py" line="808"/>
+        <location filename="../app_window.py" line="864"/>
+        <location filename="../app_window.py" line="871"/>
         <source>Rename Layer</source>
         <translation>レイヤー名を変更</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="801"/>
+        <location filename="../app_window.py" line="864"/>
         <source>Layer name:</source>
         <translation>レイヤー名:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="870"/>
-        <location filename="../app_window.py" line="881"/>
-        <location filename="../app_window.py" line="891"/>
+        <location filename="../app_window.py" line="933"/>
+        <location filename="../app_window.py" line="944"/>
+        <location filename="../app_window.py" line="954"/>
         <source>Insert Metadata Text</source>
         <translation>メタデータのテキストを挿入</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="900"/>
-        <location filename="../app_window.py" line="906"/>
+        <location filename="../app_window.py" line="963"/>
+        <location filename="../app_window.py" line="969"/>
         <source>Add Image</source>
         <translation>画像を追加</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="900"/>
+        <location filename="../app_window.py" line="963"/>
         <source>Images (*.png *.jpg *.jpeg *.bmp)</source>
         <translation>画像 (*.png *.jpg *.jpeg *.bmp)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="918"/>
+        <location filename="../app_window.py" line="981"/>
         <source>Insert Asset</source>
         <translation>アセットを挿入</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="929"/>
+        <location filename="../app_window.py" line="992"/>
         <source>Clip Layers</source>
         <translation>レイヤーを切り取る</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="932"/>
+        <location filename="../app_window.py" line="995"/>
         <source>Clip Image</source>
         <translation>画像を切り取る</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="950"/>
+        <location filename="../app_window.py" line="1013"/>
         <source>Bake Layers</source>
         <translation>レイヤーを統合</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="962"/>
+        <location filename="../app_window.py" line="1025"/>
         <source>Import Metadata from Project</source>
         <translation>プロジェクトからメタデータを読み込む</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="971"/>
+        <location filename="../app_window.py" line="1034"/>
         <source>Import Metadata</source>
         <translation>メタデータを読み込む</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="971"/>
+        <location filename="../app_window.py" line="1034"/>
         <source>Could not read project:
 {error}</source>
         <translation>プロジェクトを読み込めませんでした:
 {error}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="974"/>
+        <location filename="../app_window.py" line="1037"/>
         <source>Imported metadata from {path}</source>
         <translation>{path} からメタデータを読み込みました</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="978"/>
-        <location filename="../app_window.py" line="996"/>
+        <location filename="../app_window.py" line="1041"/>
+        <location filename="../app_window.py" line="1059"/>
         <source>Open Project</source>
         <translation>プロジェクトを開く</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="996"/>
+        <location filename="../app_window.py" line="1059"/>
         <source>Could not open project:
 {error}</source>
         <translation>プロジェクトを開けませんでした:
 {error}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1013"/>
+        <location filename="../app_window.py" line="1076"/>
         <source>(No Recent Projects)</source>
         <translation>(最近使用したプロジェクトはありません)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1033"/>
-        <location filename="../app_window.py" line="1054"/>
+        <location filename="../app_window.py" line="1096"/>
+        <location filename="../app_window.py" line="1117"/>
         <source>Saved {path}</source>
         <translation>{path} を保存しました</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1044"/>
+        <location filename="../app_window.py" line="1107"/>
         <source>Save Project As</source>
         <translation>プロジェクトに名前を付けて保存</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1062"/>
+        <location filename="../app_window.py" line="1125"/>
         <source>Export Cut SVG</source>
         <translation>カット用SVGを書き出す</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1062"/>
+        <location filename="../app_window.py" line="1125"/>
         <source>SVG (*.svg)</source>
         <translation>SVG (*.svg)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1067"/>
+        <location filename="../app_window.py" line="1130"/>
         <source>Exported cut outline to {path}</source>
         <translation>カットの輪郭を {path} に書き出しました</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1102"/>
+        <location filename="../app_window.py" line="1165"/>
         <source>Export Print PNG (Grayscale)</source>
         <translation>印刷用PNGを書き出す（グレースケール）</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1218"/>
+        <location filename="../app_window.py" line="1269"/>
+        <location filename="../app_window.py" line="1276"/>
+        <source>Download Album from Telegram Bot</source>
+        <translation>Telegram ボットからアルバムをダウンロード</translation>
+    </message>
+    <message>
+        <source>Set the API ID, API Hash and bot username first, in Experimental &gt; Experimental Settings...</source>
+        <translation type="vanished">先に Experimental &gt; Experimental Settings... で API ID、API Hash、ボットのユーザー名を設定してください。</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1323"/>
+        <location filename="../app_window.py" line="1327"/>
+        <source>Sort into Album Folders</source>
+        <translation>アルバムフォルダに振り分け</translation>
+    </message>
+    <message>
+        <source>Only one album was detected -- nothing to sort.</source>
+        <translation type="vanished">アルバムは1つしか検出されませんでした -- 振り分ける必要はありません。</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1328"/>
+        <source>Sorted into {count} album folders.</source>
+        <translation>{count} 個のアルバムフォルダに振り分けました。</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1412"/>
         <source>Restart Now</source>
         <translation>今すぐ再起動</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1219"/>
+        <location filename="../app_window.py" line="1413"/>
         <source>Later</source>
         <translation>後で</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1351"/>
-        <location filename="../app_window.py" line="1361"/>
+        <location filename="../app_window.py" line="1578"/>
+        <location filename="../app_window.py" line="1588"/>
         <source>Auto-Layout Disc Label</source>
         <translation>ディスクラベルを自動配置</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1352"/>
+        <location filename="../app_window.py" line="1579"/>
         <source>Fill in the album and artist in the Tools panel&apos;s Metadata... first.</source>
         <translation>先にツールパネルのメタデータ... でアルバム名とアーティストを入力してください。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1363"/>
+        <location filename="../app_window.py" line="1590"/>
         <source>No cover art could be found for this album, and the layout is built around it. Add an image yourself, or fetch one with the Metadata dialog&apos;s lookup.</source>
         <translation>このアルバムのカバーアートが見つかりませんでした。この配置はカバーアートを前提にしています。画像を自分で追加するか、メタデータ画面の検索で取得してください。</translation>
     </message>
@@ -1276,12 +1446,12 @@ The other page and the project&apos;s metadata are left alone.</source>
         <translation type="vanished">このアルバムのカバーアートが見つかりませんでした。この配置はカバーアートを前提にしています。画像を自分で追加するか、プロジェクト &gt; メタデータ... の検索で取得してください。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1371"/>
+        <location filename="../app_window.py" line="1598"/>
         <source>Auto-Layout</source>
         <translation>自動配置</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1373"/>
+        <location filename="../app_window.py" line="1600"/>
         <source>This replaces everything on both pages -- the disc label and the J-card -- and resets the undo history.
 
 The project&apos;s metadata is left alone.</source>
@@ -1290,12 +1460,12 @@ The project&apos;s metadata is left alone.</source>
 プロジェクトのメタデータはそのまま残ります。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1495"/>
+        <location filename="../app_window.py" line="1722"/>
         <source>Lay Out J-Card</source>
         <translation>Jカードの配置</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1497"/>
+        <location filename="../app_window.py" line="1724"/>
         <source>J-Card</source>
         <translation>Jカード</translation>
     </message>
@@ -1308,74 +1478,94 @@ The cover page and the project&apos;s metadata are left alone.</source>
 カバーページとプロジェクトのメタデータはそのまま残ります。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1456"/>
+        <location filename="../app_window.py" line="1683"/>
         <source>Lay Out Disc Label</source>
         <translation>ディスクラベルの配置</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1465"/>
+        <location filename="../app_window.py" line="1692"/>
         <source>Cover Art</source>
         <translation>カバーアート</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1469"/>
+        <location filename="../app_window.py" line="1696"/>
         <source>MiniDisc Logo</source>
         <translation>MiniDiscロゴ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1074"/>
+        <location filename="../app_window.py" line="1137"/>
         <source>Export Print PNG</source>
         <translation>印刷用PNGを書き出す</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="82"/>
+        <location filename="../app_window.py" line="85"/>
         <source>MDTools - MiniDisc Studio</source>
         <translation>MDTools - MiniDiscスタジオ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1074"/>
-        <location filename="../app_window.py" line="1102"/>
+        <location filename="../app_window.py" line="1137"/>
+        <location filename="../app_window.py" line="1165"/>
         <source>PNG (*.png)</source>
         <translation>PNG (*.png)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1079"/>
-        <location filename="../app_window.py" line="1107"/>
+        <location filename="../app_window.py" line="1142"/>
+        <location filename="../app_window.py" line="1170"/>
         <source>Exported print artwork to {path}</source>
         <translation>印刷用アートワークを {path} に書き出しました</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1122"/>
+        <location filename="../app_window.py" line="1185"/>
         <source>MDTools Project (*.mdproj)</source>
         <translation>MDToolsプロジェクト (*.mdproj)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1167"/>
+        <location filename="../app_window.py" line="1270"/>
+        <source>Set the bot username first, in Experimental &gt; Experimental Settings...</source>
+        <translation>Experimental &gt; Experimental Settings...でまずボットのユーザー名を設定してください。</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1278"/>
+        <source>This build has no Telegram API credentials. Register an app at my.telegram.org and add its API ID and API Hash to settings.ini to sign in.</source>
+        <translation>このビルドにはTelegram APIの認証情報が含まれていません。my.telegram.orgでアプリを登録し、そのAPI IDとAPI Hashをsettings.iniに追加するとサインインできます。</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1320"/>
+        <source>These tracks all belong to one album -- there is nothing to separate.</source>
+        <translation>これらのトラックはすべて同じアルバムのものです -- 分ける必要はありません。</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1322"/>
+        <source>Everything is already sorted into album folders.</source>
+        <translation>すべてすでにアルバムフォルダに振り分けられています。</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1361"/>
         <source>Save as Template</source>
         <translation>テンプレートとして保存</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1167"/>
+        <location filename="../app_window.py" line="1361"/>
         <source>Template name:</source>
         <translation>テンプレート名:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1186"/>
+        <location filename="../app_window.py" line="1380"/>
         <source>Saved template &apos;{name}&apos;</source>
         <translation>テンプレート「{name}」を保存しました</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1195"/>
+        <location filename="../app_window.py" line="1389"/>
         <source>Language</source>
         <translation>言語</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1214"/>
+        <location filename="../app_window.py" line="1408"/>
         <source>Language Changed</source>
         <translation>言語を変更しました</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1215"/>
+        <location filename="../app_window.py" line="1409"/>
         <source>Restart MDTools for the new language to take full effect.</source>
         <translation>新しい言語を完全に反映するには、MDToolsを再起動してください。</translation>
     </message>
@@ -1816,68 +2006,68 @@ choose one)</source>
 <context>
     <name>RecordDialog</name>
     <message>
-        <location filename="../panels/record_dialog.py" line="100"/>
+        <location filename="../panels/record_dialog.py" line="108"/>
         <source>Record to MiniDisc from foobar2000</source>
         <translation>foobar2000からMiniDiscに録音</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="136"/>
-        <location filename="../panels/record_dialog.py" line="148"/>
+        <location filename="../panels/record_dialog.py" line="144"/>
+        <location filename="../panels/record_dialog.py" line="156"/>
         <source>Artist</source>
         <translation>アーティスト</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="137"/>
+        <location filename="../panels/record_dialog.py" line="145"/>
         <source>Album</source>
         <translation>アルバム</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="138"/>
+        <location filename="../panels/record_dialog.py" line="146"/>
         <source>Year</source>
         <translation>年</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="148"/>
+        <location filename="../panels/record_dialog.py" line="156"/>
         <source>#</source>
         <translation>#</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="148"/>
+        <location filename="../panels/record_dialog.py" line="156"/>
         <source>Title</source>
         <translation>タイトル</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="148"/>
+        <location filename="../panels/record_dialog.py" line="156"/>
         <source>Length</source>
         <translation>長さ</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="154"/>
+        <location filename="../panels/record_dialog.py" line="162"/>
         <source>Everything above and in the Title column can be edited, and is what gets written onto the disc. Fill the Artist column in only on a compilation, where each track has its own.</source>
         <translation>上の項目とタイトル列は編集でき、その内容がディスクに書き込まれます。アーティスト列は、曲ごとに演奏者が違うコンピレーションのときだけ埋めてください。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="161"/>
+        <location filename="../panels/record_dialog.py" line="169"/>
         <source>Mark tracks through the adapter</source>
         <translation>アダプターでトラックマークを付ける</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="165"/>
+        <location filename="../panels/record_dialog.py" line="173"/>
         <source>Sends a track mark at each track change instead of relying on the deck hearing a gap. This is the only thing that splits a gapless album correctly -- but turn LEVEL-SYNC off on the deck when using it, or both will mark the same boundary and leave a stray sliver of a track between them.</source>
         <translation>デッキが無音を検出するのに頼らず、トラックが変わるたびにトラックマークを送信します。ギャップレスのアルバムを正しく分割できるのはこれだけです。ただし使用時はデッキのLEVEL-SYNCをオフにしてください。そうしないと両方が同じ境界にマークを付け、その間に極端に短いトラックが残ります。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="190"/>
+        <location filename="../panels/record_dialog.py" line="198"/>
         <source>Start Recording</source>
         <translation>録音を開始</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="193"/>
+        <location filename="../panels/record_dialog.py" line="201"/>
         <source>Cancel</source>
         <translation>キャンセル</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="214"/>
+        <location filename="../panels/record_dialog.py" line="222"/>
         <source>Could not reach foobar2000: {error}
 
 It must be running with the Beefweb Remote Control component (foo_beefweb) enabled.</source>
@@ -1886,47 +2076,47 @@ It must be running with the Beefweb Remote Control component (foo_beefweb) enabl
 foobar2000が起動し、Beefweb Remote Control (foo_beefweb) コンポーネントが有効になっている必要があります。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="222"/>
+        <location filename="../panels/record_dialog.py" line="230"/>
         <source>foobar2000&apos;s current playlist is empty -- load the album first.</source>
         <translation>foobar2000の現在のプレイリストが空です。先にアルバムを読み込んでください。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="235"/>
+        <location filename="../panels/record_dialog.py" line="243"/>
         <source>Playlist &quot;{playlist}&quot; -- {count} tracks, {total} total.
 It will be recorded to the disc in this order, then titled from these names.</source>
         <translation>プレイリスト「{playlist}」— {count} トラック、合計 {total}。
 この順序でディスクに録音し、これらの名前でタイトルを付けます。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="302"/>
+        <location filename="../panels/record_dialog.py" line="310"/>
         <source>This is longer than the {limit} an MD holds in SP mode. Set the deck to LP2 first, or the recording will be cut short.</source>
         <translation>SPモードのMDに収まる {limit} を超えています。デッキをLP2に設定してください。そうしないと録音が途中で切れます。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="317"/>
-        <location filename="../panels/record_dialog.py" line="389"/>
+        <location filename="../panels/record_dialog.py" line="326"/>
+        <location filename="../panels/record_dialog.py" line="398"/>
         <source>foobar2000: {error}</source>
         <translation>foobar2000: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="330"/>
+        <location filename="../panels/record_dialog.py" line="339"/>
         <source>Stop</source>
         <translation>停止</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="333"/>
+        <location filename="../panels/record_dialog.py" line="342"/>
         <source>Recording started -- waiting for the first track...</source>
         <translation>録音を開始しました。最初のトラックを待っています...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="341"/>
-        <location filename="../panels/record_dialog.py" line="368"/>
-        <location filename="../panels/record_dialog.py" line="516"/>
+        <location filename="../panels/record_dialog.py" line="350"/>
+        <location filename="../panels/record_dialog.py" line="377"/>
+        <location filename="../panels/record_dialog.py" line="525"/>
         <source>Record to MiniDisc</source>
         <translation>MiniDiscに録音</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="343"/>
+        <location filename="../panels/record_dialog.py" line="352"/>
         <source>Recording replaces whatever is on the disc, and nothing about it can be undone.
 
 Make sure the right disc is loaded and its write-protect tab is open, then continue.</source>
@@ -1935,13 +2125,13 @@ Make sure the right disc is loaded and its write-protect tab is open, then conti
 正しいディスクが入っていること、書き込み禁止タブが開いていることを確認してから続行してください。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="361"/>
-        <location filename="../panels/record_dialog.py" line="540"/>
+        <location filename="../panels/record_dialog.py" line="370"/>
+        <location filename="../panels/record_dialog.py" line="549"/>
         <source>MDRem: {error}</source>
         <translation>MDRem: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="370"/>
+        <location filename="../panels/record_dialog.py" line="379"/>
         <source>The deck was told to start recording.
 
 Is it now showing record-pause (REC lit, paused)?</source>
@@ -1950,33 +2140,33 @@ Is it now showing record-pause (REC lit, paused)?</source>
 録音一時停止の状態になっていますか (REC点灯、一時停止)?</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="378"/>
+        <location filename="../panels/record_dialog.py" line="387"/>
         <source>Cancelled -- the deck was not recording.</source>
         <translation>中止しました。デッキは録音していませんでした。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="397"/>
+        <location filename="../panels/record_dialog.py" line="406"/>
         <source>Lost contact with foobar2000: {error}</source>
         <translation>foobar2000との通信が切れました: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="437"/>
+        <location filename="../panels/record_dialog.py" line="446"/>
         <source>Recording {index} of {count}: {title} -- {elapsed} of {total}</source>
         <translation>録音中 {index}/{count}: {title} — {elapsed} / {total}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="452"/>
-        <location filename="../panels/record_dialog.py" line="555"/>
+        <location filename="../panels/record_dialog.py" line="461"/>
+        <location filename="../panels/record_dialog.py" line="564"/>
         <source>Close</source>
         <translation>閉じる</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="459"/>
+        <location filename="../panels/record_dialog.py" line="468"/>
         <source>Playback stopped at track {reached} of {count}, so the disc is incomplete. Titling it now would name tracks that were never recorded.</source>
         <translation>再生が {count} 曲中 {reached} 曲目で停止したため、ディスクは不完全です。ここでタイトルを付けると、録音されていないトラックに名前を付けることになります。</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="466"/>
+        <location filename="../panels/record_dialog.py" line="475"/>
         <source>Recording finished. The titles can be written now.</source>
         <translation>録音が完了しました。タイトルを書き込めます。</translation>
     </message>
@@ -1985,12 +2175,12 @@ Is it now showing record-pause (REC lit, paused)?</source>
         <translation type="vanished">カバーアートを検索中...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="517"/>
+        <location filename="../panels/record_dialog.py" line="526"/>
         <source>Write the album and track titles onto the disc now?</source>
         <translation>アルバム名とトラック名を今すぐディスクに書き込みますか?</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="534"/>
+        <location filename="../panels/record_dialog.py" line="543"/>
         <source>MDRem: not connected</source>
         <translation>MDRem: 未接続</translation>
     </message>
@@ -2111,12 +2301,22 @@ Is it now showing record-pause (REC lit, paused)?</source>
         <translation>統合DPI</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="96"/>
+        <location filename="../panels/settings_dialog.py" line="97"/>
         <source>Restore Defaults</source>
         <translation>既定値に戻す</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="110"/>
+        <location filename="../panels/settings_dialog.py" line="112"/>
+        <source>Show experimental features</source>
+        <translation>実験的機能を表示</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="115"/>
+        <source>Shows in-development features that aren&apos;t finished yet.</source>
+        <translation>まだ完成していない開発中の機能を表示します。</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="124"/>
         <source>Enable MDRem IR remote adapter</source>
         <translation>MDRem赤外線リモコンアダプターを有効にする</translation>
     </message>
@@ -2125,91 +2325,91 @@ Is it now showing record-pause (REC lit, paused)?</source>
         <translation type="vanished">プロジェクト &gt; メタデータ... に「トラックリストを転送」を、起動画面にリモコンウィンドウを追加します。赤外線でMiniDisc本体にタイトルを書き込むための機能です。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="114"/>
+        <location filename="../panels/settings_dialog.py" line="128"/>
         <source>Adds Upload Tracklist to the Metadata dialog, the Recording menu&apos;s entries, and a Remote window to the startup screen, for writing titles onto the MiniDisc itself over infrared.</source>
         <translation>メタデータ画面に「トラックリストを転送」を、録音メニューの各項目を、起動画面にリモコンウィンドウを追加します。赤外線でMiniDisc本体にタイトルを書き込むための機能です。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="123"/>
+        <location filename="../panels/settings_dialog.py" line="137"/>
         <source>Serial port the MDRem adapter is connected to.</source>
         <translation>MDRemアダプターが接続されているシリアルポート。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="125"/>
+        <location filename="../panels/settings_dialog.py" line="139"/>
         <source>Detect</source>
         <translation>検出</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="128"/>
+        <location filename="../panels/settings_dialog.py" line="142"/>
         <source>Asks every serial port whether an MDRem adapter answers on it. The board&apos;s USB ID is shared with its own bootloader and other boards, so it can only be identified by replying.</source>
         <translation>各シリアルポートにMDRemアダプターが応答するか問い合わせます。基板のUSB IDはブートローダーや他の基板と共通のため、応答によってのみ識別できます。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="140"/>
+        <location filename="../panels/settings_dialog.py" line="154"/>
         <source>MDRem port</source>
         <translation>MDRemポート</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="145"/>
+        <location filename="../panels/settings_dialog.py" line="159"/>
         <source>Where foobar2000&apos;s Beefweb Remote Control component listens, used by Record to MiniDisc. Change it only if you moved Beefweb off its default port.</source>
         <translation>MiniDiscへの録音で使用する、foobar2000のBeefweb Remote Controlコンポーネントの待ち受けアドレス。Beefwebを既定のポートから変更した場合のみ変更してください。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="149"/>
+        <location filename="../panels/settings_dialog.py" line="163"/>
         <source>foobar2000 (Beefweb) URL</source>
         <translation>foobar2000 (Beefweb) のアドレス</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="166"/>
+        <location filename="../panels/settings_dialog.py" line="180"/>
         <source>foobar2000&apos;s own program file. Ripped CD tracks are loaded through it rather than through Beefweb, which refuses files outside the music folders configured in foobar itself.</source>
         <translation>foobar2000の実行ファイル。取り込んだCDトラックはBeefwebではなくこれを介して読み込まれます。Beefwebはfoobar2000側で設定された音楽フォルダー以外のファイルを拒否するためです。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="170"/>
-        <location filename="../panels/settings_dialog.py" line="181"/>
+        <location filename="../panels/settings_dialog.py" line="184"/>
+        <location filename="../panels/settings_dialog.py" line="195"/>
         <source>Browse...</source>
         <translation>参照...</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="172"/>
-        <location filename="../panels/settings_dialog.py" line="187"/>
+        <location filename="../panels/settings_dialog.py" line="186"/>
+        <location filename="../panels/settings_dialog.py" line="201"/>
         <source>foobar2000 program</source>
         <translation>foobar2000の実行ファイル</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="177"/>
+        <location filename="../panels/settings_dialog.py" line="191"/>
         <source>Where a ripped CD is written. One album is a few hundred megabytes; earlier rips are deleted when the next one starts, not when a recording ends, so they stay playable in the meantime.</source>
         <translation>取り込んだCDの保存先。1枚で数百MBになります。以前の取り込みは録音の終了時ではなく次の取り込みの開始時に削除されるため、それまでは再生できます。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="183"/>
-        <location filename="../panels/settings_dialog.py" line="208"/>
-        <location filename="../panels/settings_dialog.py" line="292"/>
+        <location filename="../panels/settings_dialog.py" line="197"/>
+        <location filename="../panels/settings_dialog.py" line="222"/>
+        <location filename="../panels/settings_dialog.py" line="307"/>
         <source>CD rip folder</source>
         <translation>CD取り込みフォルダー</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="187"/>
+        <location filename="../panels/settings_dialog.py" line="201"/>
         <source>Programs (*.exe);;All files (*)</source>
         <translation>プログラム (*.exe);;すべてのファイル (*)</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="226"/>
+        <location filename="../panels/settings_dialog.py" line="240"/>
         <source>{port} (not connected)</source>
         <translation>{port} (未接続)</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="251"/>
+        <location filename="../panels/settings_dialog.py" line="265"/>
         <source>Detect MDRem</source>
         <translation>MDRemの検出</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="252"/>
+        <location filename="../panels/settings_dialog.py" line="266"/>
         <source>No MDRem adapter answered on any serial port. Check that it is plugged in.</source>
         <translation>どのシリアルポートでもMDRemアダプターが応答しませんでした。接続を確認してください。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="294"/>
+        <location filename="../panels/settings_dialog.py" line="309"/>
         <source>That folder could not be created: {error}
 
 The setting has been saved anyway, but a CD cannot be ripped there until it exists.</source>
@@ -2269,6 +2469,259 @@ The setting has been saved anyway, but a CD cannot be ripped there until it exis
         <location filename="../panels/startup_dialog.py" line="105"/>
         <source>MDTools Project (*.mdproj)</source>
         <translation>MDToolsプロジェクト (*.mdproj)</translation>
+    </message>
+</context>
+<context>
+    <name>TelegramChatDialog</name>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="527"/>
+        <source>Telegram Bot</source>
+        <translation>Telegram ボット</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="562"/>
+        <source>Connecting...</source>
+        <translation>接続中...</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="620"/>
+        <source>Quick commands:</source>
+        <translation>クイックコマンド:</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="636"/>
+        <source>Send</source>
+        <translation>送信</translation>
+    </message>
+    <message>
+        <source>Continue to Record Folder...</source>
+        <translation type="vanished">Record Folder に進む...</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="925"/>
+        <source>Enable the MDRem adapter in Window &gt; Settings to record.</source>
+        <translation>録音するには Window &gt; Settings で MDRem アダプターを有効にしてください。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="662"/>
+        <source>Close</source>
+        <translation>閉じる</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="595"/>
+        <source>Downloads</source>
+        <translation>ダウンロード</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="646"/>
+        <source>Open Download Folder</source>
+        <translation>ダウンロードフォルダを開く</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="650"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="971"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="975"/>
+        <source>Sort into Album Folders</source>
+        <translation>アルバムフォルダに振り分け</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="658"/>
+        <source>Record Downloaded Albums...</source>
+        <translation>ダウンロードしたアルバムを録音...</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="693"/>
+        <source>The Telegram API ID must be a number.</source>
+        <translation>Telegram の API ID は数値である必要があります。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="717"/>
+        <source>Connected to {name}.</source>
+        <translation>{name} に接続しました。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="730"/>
+        <source>Not signed in to Telegram.</source>
+        <translation>Telegram にサインインしていません。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="731"/>
+        <source>Sign in...</source>
+        <translation>サインイン...</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="741"/>
+        <source>Could not connect: {error}</source>
+        <translation>接続できませんでした: {error}</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="822"/>
+        <source>Could not send: {error}</source>
+        <translation>送信できませんでした: {error}</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="829"/>
+        <source>Could not do that: {error}</source>
+        <translation>それを実行できませんでした: {error}</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="904"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="929"/>
+        <source>Wait for the current download(s) to finish first.</source>
+        <translation>現在のダウンロードが終わるまでお待ちください。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="907"/>
+        <source>Nothing is waiting to be sorted.</source>
+        <translation>振り分けを待っているファイルはありません。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="932"/>
+        <source>Download at least one file first.</source>
+        <translation>先に少なくとも1つのファイルをダウンロードしてください。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="968"/>
+        <source>These tracks all belong to one album -- there is nothing to separate.</source>
+        <translation>これらのトラックはすべて同じアルバムのものです -- 分ける必要はありません。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="970"/>
+        <source>Everything is already sorted into album folders.</source>
+        <translation>すべてすでにアルバムフォルダに振り分けられています。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="127"/>
+        <source>Choose Album</source>
+        <translation>アルバムを選択</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="128"/>
+        <source>More than one album was downloaded -- which one do you want to record?</source>
+        <translation>複数のアルバムがダウンロードされました -- どちらを録音しますか？</translation>
+    </message>
+    <message>
+        <source>Only one album was detected -- nothing to sort.</source>
+        <translation type="vanished">アルバムは1つしか検出されませんでした -- 振り分ける必要はありません。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="976"/>
+        <source>Sorted into {count} album folders.</source>
+        <translation>{count} 個のアルバムフォルダに振り分けました。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="1015"/>
+        <source>Disconnecting...</source>
+        <translation>切断中...</translation>
+    </message>
+</context>
+<context>
+    <name>TelegramLoginDialog</name>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="161"/>
+        <source>Sign in to Telegram</source>
+        <translation>Telegram にサインイン</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="173"/>
+        <source>MDTools needs to sign in as your own Telegram account to talk to your bot -- Telegram does not let one bot message another directly.</source>
+        <translation>MDTools がボットと通信するには、あなた自身の Telegram アカウントでサインインする必要があります -- Telegram はボット同士が直接メッセージをやり取りすることを許可していません。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="183"/>
+        <source>Phone number</source>
+        <translation>電話番号</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="186"/>
+        <source>Code</source>
+        <translation>コード</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="190"/>
+        <source>Password</source>
+        <translation>パスワード</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="200"/>
+        <location filename="../panels/telegram_login_dialog.py" line="216"/>
+        <source>Send Code</source>
+        <translation>コードを送信</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="203"/>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="216"/>
+        <source>Verify</source>
+        <translation>確認</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="231"/>
+        <location filename="../panels/telegram_login_dialog.py" line="235"/>
+        <source>Verifying...</source>
+        <translation>確認中...</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="241"/>
+        <source>Enter a phone number first.</source>
+        <translation>先に電話番号を入力してください。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="245"/>
+        <source>Set the Telegram API ID and API Hash first (from my.telegram.org).</source>
+        <translation>先に Telegram の API ID と API Hash を設定してください（my.telegram.org から取得）。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="251"/>
+        <source>The Telegram API ID must be a number.</source>
+        <translation>Telegram の API ID は数値である必要があります。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="256"/>
+        <source>Requesting a code from Telegram...</source>
+        <translation>Telegram にコードをリクエスト中...</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="270"/>
+        <source>Enter the code Telegram just sent you.</source>
+        <translation>Telegram から送信されたコードを入力してください。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="275"/>
+        <source>This account has two-factor authentication -- enter its password.</source>
+        <translation>このアカウントは二段階認証が有効です -- パスワードを入力してください。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="280"/>
+        <source>Close</source>
+        <translation>閉じる</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="282"/>
+        <source>Already signed in as {name}.</source>
+        <translation>すでに {name} としてサインインしています。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="284"/>
+        <source>Signed in as {name}.</source>
+        <translation>{name} としてサインインしました。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="290"/>
+        <source>Sign-in failed: {error}
+
+You can try again.</source>
+        <translation>サインインに失敗しました: {error}
+
+もう一度お試しください。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="308"/>
+        <source>Stopping...</source>
+        <translation>停止中...</translation>
     </message>
 </context>
 <context>
@@ -2592,6 +3045,74 @@ The setting has been saved anyway, but a CD cannot be ripped there until it exis
     </message>
 </context>
 <context>
+    <name>_DownloadQueueItem</name>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="472"/>
+        <source>Queued</source>
+        <translation>待機中</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="475"/>
+        <source>Retry</source>
+        <translation>再試行</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="487"/>
+        <source>Downloading...</source>
+        <translation>ダウンロード中...</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="507"/>
+        <source>Downloading... ({speed}/s)</source>
+        <translation>ダウンロード中... ({speed}/s)</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="511"/>
+        <source>Saved</source>
+        <translation>保存済み</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="514"/>
+        <source>Failed: {error}</source>
+        <translation>失敗しました: {error}</translation>
+    </message>
+</context>
+<context>
+    <name>_MessageWidget</name>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="382"/>
+        <source>You</source>
+        <translation>あなた</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="407"/>
+        <source>Loading image...</source>
+        <translation>画像を読み込み中...</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation type="vanished">ダウンロード</translation>
+    </message>
+    <message>
+        <source>Saved</source>
+        <translation type="vanished">保存済み</translation>
+    </message>
+    <message>
+        <source>Failed: {error}</source>
+        <translation type="vanished">失敗しました: {error}</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="426"/>
+        <source>Could not display image</source>
+        <translation>画像を表示できませんでした</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="435"/>
+        <source>Translated: {text}</source>
+        <translation>翻訳: {text}</translation>
+    </message>
+</context>
+<context>
     <name>_PrintDialogBase</name>
     <message>
         <location filename="../panels/print_dialog.py" line="186"/>
@@ -2655,6 +3176,17 @@ The setting has been saved anyway, but a CD cannot be ripped there until it exis
         <location filename="../panels/print_dialog.py" line="353"/>
         <source>PDF (*.pdf)</source>
         <translation>PDF (*.pdf)</translation>
+    </message>
+</context>
+<context>
+    <name>parent</name>
+    <message>
+        <source>Choose Album</source>
+        <translation type="obsolete">アルバムを選択</translation>
+    </message>
+    <message>
+        <source>More than one album was downloaded -- which one do you want to record?</source>
+        <translation type="obsolete">複数のアルバムがダウンロードされました -- どちらを録音しますか？</translation>
     </message>
 </context>
 </TS>

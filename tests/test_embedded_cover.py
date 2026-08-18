@@ -54,6 +54,18 @@ def _write(tmp_path, name: str, data: bytes):
     return path
 
 
+def _vorbis_comment_block(comments: dict[str, str], vendor: bytes = b"test vendor") -> bytes:
+    """A VORBIS_COMMENT block body -- unlike PICTURE's, every length here
+    is little-endian (Ogg Vorbis's own comment format, carried as-is
+    inside FLAC's otherwise big-endian metadata blocks)."""
+    out = [struct.pack("<I", len(vendor)), vendor, struct.pack("<I", len(comments))]
+    for key, value in comments.items():
+        entry = f"{key}={value}".encode("utf-8")
+        out.append(struct.pack("<I", len(entry)))
+        out.append(entry)
+    return b"".join(out)
+
+
 # --- reading the block ------------------------------------------------
 
 
@@ -154,6 +166,71 @@ def test_no_files_at_all_is_not_an_error():
     assert embedded_cover.cover_from_files([]) is None
 
 
+# --- tags (VORBIS_COMMENT) ---------------------------------------------
+
+
+def test_album_and_artist_tags_are_read(tmp_path):
+    body = _vorbis_comment_block({"ALBUM": "Lost Souls", "ARTIST": "Caskets"})
+    path = _write(tmp_path, "a.flac", _flac((4, body)))
+
+    assert embedded_cover.flac_tags(path) == {"ALBUM": "Lost Souls", "ARTIST": "Caskets"}
+
+
+def test_tag_field_names_are_upper_cased_on_the_way_in(tmp_path):
+    """Vorbis comment field names are case-insensitive by spec -- a real
+    encoder is not guaranteed to write them upper-case."""
+    body = _vorbis_comment_block({"Album": "Unleashed"})
+    path = _write(tmp_path, "a.flac", _flac((4, body)))
+
+    assert embedded_cover.flac_tags(path) == {"ALBUM": "Unleashed"}
+
+
+def test_a_value_containing_an_equals_sign_keeps_the_rest_after_the_first(tmp_path):
+    body = _vorbis_comment_block({"ALBUM": "Him = Her"})
+    path = _write(tmp_path, "a.flac", _flac((4, body)))
+
+    assert embedded_cover.flac_tags(path) == {"ALBUM": "Him = Her"}
+
+
+def test_a_file_with_no_vorbis_comment_block_reports_no_tags(tmp_path):
+    path = _write(tmp_path, "a.flac", _flac((6, _picture_block(b"IMAGEBYTES"))))
+    assert embedded_cover.flac_tags(path) == {}
+
+
+def test_content_that_is_not_actually_flac_reports_no_tags(tmp_path):
+    """flac_tags(), like flac_pictures(), reads the file's own magic bytes
+    rather than trusting its extension -- album_sort.py is what checks the
+    extension before ever calling this, same layering as cover_from_file()
+    does for flac_pictures()."""
+    path = _write(tmp_path, "a.flac", b"ID3\x03nonsense")
+    assert embedded_cover.flac_tags(path) == {}
+
+
+def test_a_truncated_vorbis_comment_block_is_not_an_error(tmp_path):
+    body = _vorbis_comment_block({"ALBUM": "Lost Souls", "ARTIST": "Caskets"})[:10]
+    path = _write(tmp_path, "a.flac", _flac((4, body)))
+
+    assert embedded_cover.flac_tags(path) == {}
+
+
+def test_tags_are_found_after_other_blocks(tmp_path):
+    body = _vorbis_comment_block({"ALBUM": "Lost Souls"})
+    path = _write(tmp_path, "a.flac", _flac((6, _picture_block(b"IMAGEBYTES")), (4, body)))
+
+    assert embedded_cover.flac_tags(path) == {"ALBUM": "Lost Souls"}
+
+
+def test_reading_tags_does_not_disturb_reading_pictures_from_the_same_file(tmp_path):
+    """Both walk the same block structure via the shared _iter_flac_blocks
+    -- a regression here would likely mean one broke the other."""
+    picture_body = _picture_block(b"SLEEVE")
+    tag_body = _vorbis_comment_block({"ALBUM": "Lost Souls"})
+    path = _write(tmp_path, "a.flac", _flac((6, picture_body), (4, tag_body)))
+
+    assert embedded_cover.cover_from_file(path) == b"SLEEVE"
+    assert embedded_cover.flac_tags(path) == {"ALBUM": "Lost Souls"}
+
+
 # --- against the real encoder -----------------------------------------
 
 
@@ -211,3 +288,51 @@ def test_a_cover_embedded_by_the_bundled_encoder_reads_back_out(tmp_path):
     assert completed.returncode == 0, completed.stderr
 
     assert embedded_cover.cover_from_file(flac_path) == art.read_bytes()
+
+
+@pytest.mark.skipif(cdrip.find_tool("flac") is None, reason="the bundled flac.exe is not present")
+def test_tags_embedded_by_the_bundled_encoder_read_back_out(tmp_path):
+    """The little-endian-lengths detail is exactly the kind of thing a
+    fixture built from the specification could get right while still
+    disagreeing with what a real encoder produces -- this is the test that
+    would catch that."""
+    wav = tmp_path / "track.wav"
+    frames = 44100
+    pcm = b"\x00\x00\x00\x00" * frames
+    wav.write_bytes(
+        b"RIFF"
+        + (36 + len(pcm)).to_bytes(4, "little")
+        + b"WAVEfmt "
+        + (16).to_bytes(4, "little")
+        + (1).to_bytes(2, "little")
+        + (2).to_bytes(2, "little")
+        + (44100).to_bytes(4, "little")
+        + (44100 * 4).to_bytes(4, "little")
+        + (4).to_bytes(2, "little")
+        + (16).to_bytes(2, "little")
+        + b"data"
+        + len(pcm).to_bytes(4, "little")
+        + pcm
+    )
+
+    flac_path = tmp_path / "track.flac"
+    completed = subprocess.run(
+        [
+            cdrip.find_tool("flac"),
+            "-s",
+            "-f",
+            "--tag=ALBUM=Lost Souls",
+            "--tag=ARTIST=Caskets",
+            "-o",
+            str(flac_path),
+            str(wav),
+        ],
+        capture_output=True,
+        text=True,
+        errors="replace",
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    tags = embedded_cover.flac_tags(flac_path)
+    assert tags["ALBUM"] == "Lost Souls"
+    assert tags["ARTIST"] == "Caskets"

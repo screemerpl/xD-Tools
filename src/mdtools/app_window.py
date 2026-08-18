@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QToolBar,
 )
 
-from mdtools import app_settings, gallery, i18n, mixtape_cover, recent_projects, user_paths
+from mdtools import album_sort, app_settings, gallery, i18n, mixtape_cover, recent_projects, user_paths
 from mdtools.auto_layout import place_cover_on_label, place_logo_on_slider, recolour_insertion_mark
 from mdtools.gallery import save_downloaded_cover
 from mdtools.jcard_layout import build_jcard
@@ -40,6 +40,7 @@ from mdtools.panels.about_dialog import AboutDialog
 from mdtools.panels.asset_gallery_dialog import AssetGalleryDialog
 from mdtools.panels.cd_rip_dialog import CdRipDialog
 from mdtools.panels.erase_dialog import EraseDiscDialog
+from mdtools.panels.experimental_settings_dialog import ExperimentalSettingsDialog
 from mdtools.panels.folder_record_dialog import FolderRecordDialog
 from mdtools.panels import icons
 from mdtools.panels.grayscale_export_dialog import GrayscaleExportDialog
@@ -51,8 +52,10 @@ from mdtools.panels.record_dialog import RecordDialog
 from mdtools.panels.new_design_dialog import NewDesignDialog
 from mdtools.panels.print_dialog import PrintDialog
 from mdtools.panels.properties_panel import PropertiesPanel
+from mdtools.panels.remote_dialog import RemoteDialog
 from mdtools.panels.settings_dialog import SettingsDialog
 from mdtools.panels.startup_dialog import StartupDialog
+from mdtools.panels.telegram_chat_dialog import TelegramChatDialog, pick_album_folder
 from mdtools.panels.tool_panel import ToolPanel
 from mdtools.project import (
     PAGE_COVER,
@@ -98,6 +101,11 @@ class MainWindow(QMainWindow):
         self._has_startup_screen = show_startup_dialog
         # Set only by File > Exit: that means leave, not "go back".
         self._quitting = False
+        # Set when the very first StartupDialog is cancelled outright --
+        # main() checks this before ever calling show(), so Cancel on first
+        # launch actually quits instead of silently creating an untitled
+        # project anyway. See _run_startup_flow()'s own docstring.
+        self.startup_cancelled = False
         self._connected_scenes: set = set()
         self.clipboard = Clipboard()
         # One QUndoStack per project (undo history for a discarded project's
@@ -118,7 +126,16 @@ class MainWindow(QMainWindow):
         # tests, which would otherwise hang waiting for it); real usage
         # always wants it so the user can reopen a recent project or pick
         # templates before anything renders.
-        if not show_startup_dialog or not self._run_startup_flow():
+        if not show_startup_dialog:
+            self._new_design(prompt=False)
+        elif not self._run_startup_flow() and not self.startup_cancelled:
+            # _run_startup_flow() sets startup_cancelled itself, and only
+            # for a direct Cancel/close of the StartupDialog itself -- see
+            # its own docstring. Any *other* reason it returned False (the
+            # template picker was cancelled after choosing "New Project...",
+            # or a chosen recent project failed to open) still falls back to
+            # a fresh default project exactly as before; only the outer
+            # dialog's own Cancel changed meaning.
             self._new_design(prompt=False)
 
     # -- setup --------------------------------------------------------------
@@ -315,6 +332,13 @@ class MainWindow(QMainWindow):
         self.erase_disc_action = recording_menu.addAction(
             self.tr("Erase MiniDisc..."), self._erase_disc
         )
+        # The software remote used to be reachable only from the startup
+        # screen (closing the current project just to press a transport key
+        # was the only way to it) -- reported directly. Same "not recording,
+        # same deck/adapter" reasoning as Erase just above.
+        self.remote_action = recording_menu.addAction(
+            self.tr("Remote Control..."), self._open_remote_control
+        )
         self._sync_mdrem_actions()
 
         templates_menu = self.menuBar().addMenu(self.tr("&Templates"))
@@ -333,6 +357,35 @@ class MainWindow(QMainWindow):
         view_menu.addAction(self.tool_dock.toggleViewAction())
         view_menu.addAction(self.properties_dock.toggleViewAction())
         view_menu.addAction(self.layers_dock.toggleViewAction())
+
+        # Gated by Window > Settings' "Show experimental features" checkbox
+        # so nobody sees an in-development feature unless they opted in.
+        # See _sync_experimental_menu().
+        self.experimental_menu = self.menuBar().addMenu(self.tr("Experi&mental"))
+        self.experimental_menu.addAction(
+            self.tr("Experimental Settings..."), self._show_experimental_settings
+        )
+        # Hidden until a Telegram session actually exists -- see
+        # _sync_experimental_menu(); there is nothing this could usefully
+        # do without one, same "hidden rather than disabled" convention
+        # _sync_mdrem_actions() already follows for its own entries.
+        self.telegram_chat_action = self.experimental_menu.addAction(
+            self.tr("Download Album from Telegram Bot..."), self._open_telegram_bot_chat
+        )
+        # Neither of these needs a live chat session at all -- both just act
+        # on whatever has already accumulated in the one configured
+        # download folder (see telegram_chat_dialog.py's own note on why
+        # that folder is no longer a fresh one per session). Not gated
+        # behind the Telegram-session check telegram_chat_action uses,
+        # since sorting/recording what's already on disk needs no bot
+        # connection either.
+        self.experimental_menu.addAction(
+            self.tr("Sort Telegram Downloads into Album Folders..."), self._sort_telegram_downloads
+        )
+        self.experimental_menu.addAction(
+            self.tr("Record from Telegram Downloads..."), self._record_from_telegram_downloads
+        )
+        self._sync_experimental_menu()
 
         window_menu = self.menuBar().addMenu(self.tr("&Window"))
         window_menu.addAction(self.tr("Settings..."), self._show_settings)
@@ -583,12 +636,22 @@ class MainWindow(QMainWindow):
         """Shown once, at launch: StartupDialog offers reopening one of
         the last few edited projects, browsing for a different one, or
         starting a brand-new design. Returns True if a project ended up
-        loaded/created either way; False only if the user cancelled the
-        dialog outright (Cancel/close), in which case __init__ falls back
-        to _new_design(prompt=False) exactly like a cancelled
-        NewDesignDialog always has."""
+        loaded/created either way.
+
+        Returns False for two different reasons, only one of which sets
+        startup_cancelled: a direct Cancel/close of *this* dialog means the
+        same thing it already means everywhere else it appears
+        (_return_to_startup()'s own "I actually want out") -- the original
+        behaviour instead silently created an untitled project regardless
+        of what was clicked, reported directly as making the button
+        useless. Choosing "New Project..." and then cancelling the
+        template picker, or a chosen recent project failing to open, is a
+        different, more local cancellation -- startup_cancelled stays
+        False, and __init__ falls back to a fresh default project exactly
+        as it always has for those."""
         dialog = StartupDialog(recent_projects.recent_projects(), self)
         if dialog.exec() != StartupDialog.DialogCode.Accepted:
+            self.startup_cancelled = True
             return False
         if dialog.result_path is not None:
             return self._open_project_path(dialog.result_path)
@@ -1132,6 +1195,7 @@ class MainWindow(QMainWindow):
         dialog = SettingsDialog(self)
         dialog.exec()
         self._sync_mdrem_actions()
+        self._sync_experimental_menu()
 
     def _sync_mdrem_actions(self) -> None:
         """Re-reads the adapter setting into the menu.
@@ -1153,6 +1217,136 @@ class MainWindow(QMainWindow):
         # Erasing is nothing but adapter keypresses, so without one there is
         # not even a partial operation to offer.
         self.erase_disc_action.setVisible(enabled)
+        # The remote is nothing but adapter keypresses too.
+        self.remote_action.setVisible(enabled)
+
+    def _sync_experimental_menu(self) -> None:
+        """Shows/hides the whole Experimental menu per Window > Settings'
+        "Show experimental features" checkbox -- same "built once at
+        startup, so it needs an explicit re-sync after Settings closes"
+        reasoning as _sync_mdrem_actions() above. A QMenu itself has no
+        setVisible(); menuAction() is the QAction that actually places it
+        on the menu bar, and hiding that is what hides the whole menu.
+
+        The Telegram chat entry gets a second, independent gate on top:
+        a local Telegram session file existing at all. Fast and local
+        (same optimistic convention ExperimentalSettingsDialog's own status
+        label uses -- no network round trip just to build a menu), not a
+        promise the session is still valid; TelegramChatDialog's own live
+        is_authorized() check is what actually decides that once opened."""
+        self.experimental_menu.menuAction().setVisible(app_settings.experimental_features_enabled())
+        self.telegram_chat_action.setVisible(app_settings.telegram_session_path().exists())
+
+    def _show_experimental_settings(self) -> None:
+        ExperimentalSettingsDialog(self).exec()
+        # Signing in happens inside this dialog (its own "Sign in to
+        # Telegram..." button) -- without this, the chat entry would stay
+        # hidden until the next full app restart even though a session now
+        # exists.
+        self._sync_experimental_menu()
+
+    def _open_telegram_bot_chat(self) -> None:
+        """Experimental > Download Album from Telegram Bot... -- opens a
+        generic chat with the bot the user configured, then hands off to
+        Record Folder to MiniDisc. See panels/telegram_chat_dialog.py.
+
+        Guards on API ID/Hash/bot username all being set -- all three are
+        required before a connection attempt is even meaningful, and this
+        is the point where a not-yet-configured user finds out rather than
+        watching the dialog fail to connect.
+
+        The bot username and the API credentials are reported separately
+        because they fail for unrelated reasons and have different fixes: a
+        missing username is something the user simply has not filled in yet,
+        while missing credentials mean this build was made without them (see
+        app_settings._bundled_telegram_credentials()) and the only way
+        forward is registering an app of one's own. Telling someone to "set
+        the bot username" when the credentials are what is missing would
+        send them to a field that is already correct."""
+        if not app_settings.telegram_bot_username():
+            QMessageBox.information(
+                self,
+                self.tr("Download Album from Telegram Bot"),
+                self.tr("Set the bot username first, in Experimental > Experimental Settings..."),
+            )
+            return
+        if not (app_settings.telegram_api_id() and app_settings.telegram_api_hash()):
+            QMessageBox.information(
+                self,
+                self.tr("Download Album from Telegram Bot"),
+                self.tr(
+                    "This build has no Telegram API credentials. Register an app at my.telegram.org and "
+                    "add its API ID and API Hash to settings.ini to sign in."
+                ),
+            )
+            return
+
+        dialog = TelegramChatDialog(
+            app_settings.telegram_api_id(),
+            app_settings.telegram_api_hash(),
+            app_settings.telegram_bot_username(),
+            Path(app_settings.telegram_download_folder()),
+            self,
+        )
+        dialog.start_connecting()
+        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.downloaded_folder is not None:
+            self._record_folder_dialog(Path(dialog.downloaded_folder))
+
+    def _sort_telegram_downloads(self) -> None:
+        """Experimental > Sort Telegram Downloads into Album Folders... --
+        the same operation TelegramChatDialog's own "Sort into Album
+        Folders" button runs, but reachable without opening a chat at all.
+
+        Acts on the one configured download folder directly (created on
+        demand, same "created at the moment it's actually needed" rule as
+        cdrip.ensure_folder()/user_paths.projects_dir() -- there's nothing
+        to sort in a folder that doesn't exist yet, but no reason to fail
+        over that either), not a browsed folder: since downloads no longer
+        land in a fresh per-session subfolder (see telegram_chat_dialog.py),
+        this is the one place everything accumulates, and sort_folder()
+        already groups by ALBUM tag alone with no session bookkeeping
+        needed."""
+        root = Path(app_settings.telegram_download_folder())
+        root.mkdir(parents=True, exist_ok=True)
+        folders = album_sort.sort_folder(root)
+        if not folders:
+            # Two genuinely different reasons for "nothing moved", and saying
+            # "only one album" for both is what made this confusing to read
+            # in the already-sorted case (reported in those terms: "pokazuje
+            # ze nie ma nic do sortowania bo dwa juz sa posortowane"). A
+            # single unmoved album is still loose at this point, so asking
+            # the folder afterwards tells the two apart unambiguously.
+            if album_sort.loose_audio_files(root):
+                message = self.tr("These tracks all belong to one album -- there is nothing to separate.")
+            else:
+                message = self.tr("Everything is already sorted into album folders.")
+            QMessageBox.information(self, self.tr("Sort into Album Folders"), message)
+            return
+        QMessageBox.information(
+            self,
+            self.tr("Sort into Album Folders"),
+            self.tr("Sorted into {count} album folders.").format(count=len(folders)),
+        )
+
+    def _record_from_telegram_downloads(self) -> None:
+        """Experimental > Record from Telegram Downloads... -- records
+        whatever has already been downloaded through the Telegram bot chat,
+        without opening the bot chat itself.
+
+        Sorts first (silently, same reasoning as
+        TelegramChatDialog._on_continue_clicked()'s own auto-sort fix: a
+        folder still holding more than one album's worth of files flat
+        would otherwise be handed to pick_album_folder() as if it were a
+        single album, mixing every downloaded album's tracks into one
+        recording), then asks which album only when there's genuinely more
+        than one to choose from."""
+        root = Path(app_settings.telegram_download_folder())
+        root.mkdir(parents=True, exist_ok=True)
+        album_sort.sort_folder(root)
+        folder, ok = pick_album_folder(self, root)
+        if not ok:
+            return
+        self._record_folder_dialog(folder)
 
     def _save_as_template(self) -> None:
         """Captures the current page's template shape plus every layer on
@@ -1286,6 +1480,16 @@ class MainWindow(QMainWindow):
         self._run_record_dialog(port, metadata=rip.result_metadata)
 
     def _record_folder(self) -> None:
+        """Recording > Record Folder to MiniDisc... -- the plain menu entry,
+        with nothing already picked to skip browsing for. A thin,
+        zero-argument wrapper kept separate from _record_folder_dialog()
+        itself: QAction.triggered passes a `checked` bool that Qt's
+        signal/slot introspection could otherwise land in
+        _record_folder_dialog's own `initial_folder` parameter if that were
+        connected directly."""
+        self._record_folder_dialog()
+
+    def _record_folder_dialog(self, initial_folder: Path | None = None) -> None:
         """Recording > Record Folder to MiniDisc... -- loads an album that
         is already on disk into foobar2000's playlist, then records it.
 
@@ -1293,13 +1497,23 @@ class MainWindow(QMainWindow):
         resolved first (there is no point loading a playlist for a recording
         that cannot happen), and the dialog's own result is the hand-off.
         Unlike the CD, its metadata *is* passed on -- see FolderRecordDialog
-        for why files nobody rewrote cannot carry an edit by themselves."""
+        for why files nobody rewrote cannot carry an edit by themselves.
+
+        `initial_folder`, when given, skips FolderRecordDialog's own
+        interactive browse step by calling its already-public set_folder()
+        before showing it -- used by the Telegram bot chat's hand-off,
+        where the folder is already known rather than something to ask the
+        user to pick. The plain menu entry (initial_folder=None) is
+        unaffected -- FolderRecordDialog behaves exactly as before, browse
+        step included."""
         if not app_settings.mdrem_enabled():
             return
         port = resolve_port(self)
         if port is None:
             return
         folder = FolderRecordDialog(app_settings.foobar_url(), self)
+        if initial_folder is not None:
+            folder.set_folder(initial_folder)
         if folder.exec() != QDialog.DialogCode.Accepted:
             return
         self._run_record_dialog(port, metadata=folder.result_metadata)
@@ -1317,6 +1531,19 @@ class MainWindow(QMainWindow):
         if port is None:
             return
         EraseDiscDialog(port, self).exec()
+
+    def _open_remote_control(self) -> None:
+        """Recording > Remote Control... -- the same software remote the
+        startup screen's own Remote button opens, now reachable without
+        having to close whatever project is currently open first.
+
+        Deliberately not tied to the open project, same as Erase MiniDisc
+        just above: it drives the deck directly and has nothing to do with
+        which label is being designed."""
+        port = resolve_port(self)
+        if port is None:
+            return
+        RemoteDialog(port, self).exec()
 
     def _run_record_dialog(self, port: str, metadata: ProjectMetadata | None = None) -> None:
         """The recording itself, shared by all three entry points -- by the

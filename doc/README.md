@@ -17,14 +17,24 @@ The user manual, built from source rather than written here.
 .venv\Scripts\python scripts\manual\build_manual.py       # all three, or pass "pl"
 ```
 
-**The screenshot step needs a real screen; the build step does not.**
-`make_screenshots.py` opens each dialog and grabs it, so it puts windows on
-your desktop while it runs, and it cannot be run under
-`QT_QPA_PLATFORM=offscreen` -- that platform reports no installed font
-families here and every caption comes out as tofu boxes. `build_manual.py`
-only renders a `QTextDocument` into a `QPdfWriter`: no window appears, so
-the text can be rebuilt at any time, including while MDTools itself is busy
-recording.
+**Neither step should be run with `QT_QPA_PLATFORM=offscreen` forced --
+run both with whatever the normal, default platform plugin is.**
+`make_screenshots.py` opens each dialog and grabs it, so it visibly puts
+windows on your desktop while it runs, and it cannot be run offscreen at
+all: that platform reports no installed font families here, and every
+caption comes out as tofu boxes. `build_manual.py` never opens a window --
+it only renders a `QTextDocument` into a `QPdfWriter` -- which reads as
+"therefore safe under offscreen" but isn't: the missing-font-database
+problem is about the platform plugin's font enumeration, not about whether
+a window is shown, and it hits `QTextDocument` painting exactly the same
+way. Confirmed directly -- run under `QT_QPA_PLATFORM=offscreen`,
+`build_manual.py` silently produced PDFs where *every* glyph, English
+included, painted as a solid black box instead of a character, in all
+three languages, with no error or warning of any kind. Rebuilding with the
+default platform plugin (i.e. no `QT_QPA_PLATFORM` override) produced
+correct text immediately. `build_manual.py` can still be run while MDTools
+itself is busy recording -- that part of the original reasoning holds --
+just not with the platform forced to offscreen.
 
 **The screenshot script must never reach the network either.** The demo
 album is invented so the figures regenerate identically anywhere, offline --
@@ -54,3 +64,13 @@ using.
 and Japanese manuals show Polish and Japanese screenshots, so a mismatch
 is visible immediately. Re-check the affected strings there when you
 rename a menu item.
+
+**`make_screenshots.py` must apply the app's theme the same way `main.py`
+does.** It builds its own `QApplication` rather than importing `main()`, so
+adding `theme.apply_theme(app)` to one didn't automatically reach the
+other -- caught only because the screenshots were regenerated for an
+unrelated reason (a Telegram dialog change) right after the Fusion/dark
+theme landed, and would otherwise have kept shipping every figure in Qt's
+old default light theme, silently out of step with what the real app has
+looked like since. If `main.py` ever gains another app-wide, purely visual
+setup step, mirror it here too.

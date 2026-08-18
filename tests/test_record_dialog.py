@@ -20,6 +20,7 @@ class FakeClient:
         self.stopped = False
         self.prepared = False
         self.played = None
+        self.volume_set: float | None = None
         self.state = foobar.PlayerState(foobar.STOPPED, "", -1, 0.0, 0.0)
 
     def current_playlist(self):
@@ -37,6 +38,9 @@ class FakeClient:
 
     def prepare_for_recording(self):
         self.prepared = True
+
+    def set_volume(self, db):
+        self.volume_set = db
 
     def stop(self):
         self.stopped = True
@@ -483,6 +487,23 @@ def test_an_edited_track_artist_keeps_a_mixtape_a_mixtape(qt_app, monkeypatch, n
         "Depeche Mode",
     ]
     assert dialog.result_metadata.is_compilation()
+
+
+def test_starting_sets_foobars_volume(qt_app, monkeypatch, no_hardware):
+    """Explicit user request: every recording backs off foobar's output
+    volume first, so a digital transfer at 0dB never risks clipping."""
+    client = FakeClient(_items(3))
+    dialog = _dialog(client, monkeypatch)
+    monkeypatch.setattr(
+        record_module.QMessageBox, "warning", lambda *a, **k: record_module.QMessageBox.StandardButton.Ok
+    )
+    monkeypatch.setattr(
+        record_module.QMessageBox, "question", lambda *a, **k: record_module.QMessageBox.StandardButton.Yes
+    )
+
+    dialog._start()
+
+    assert client.volume_set == record_module.RECORDING_VOLUME_DB
 
 
 def test_the_track_list_is_frozen_once_recording_starts(qt_app, monkeypatch, no_hardware, no_lookup):

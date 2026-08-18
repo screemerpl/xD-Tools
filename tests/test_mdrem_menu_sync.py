@@ -102,6 +102,52 @@ def test_the_real_settings_dialog_keeps_the_menu_in_step(qt_app, isolated_settin
     assert window.record_action.isVisible()
 
 
+# --- and the Remote Control entry alongside it ------------------------------
+#
+# Reported directly: the software remote used to be reachable only from the
+# startup screen, so using it while a project was open meant closing that
+# project first.
+
+
+def test_the_remote_entry_follows_the_adapter_too(qt_app, isolated_settings):
+    app_settings.set_mdrem_enabled(False)
+    assert _window().remote_action.isVisible() is False
+
+    app_settings.set_mdrem_enabled(True)
+    assert _window().remote_action.isVisible() is True
+
+
+def test_opening_the_remote_resolves_a_port_and_shows_the_dialog(qt_app, isolated_settings, monkeypatch):
+    app_settings.set_mdrem_enabled(True)
+    window = _window()
+    monkeypatch.setattr(app_module, "resolve_port", lambda parent: "COM_TEST")
+    opened: list[str] = []
+
+    class _FakeRemote:
+        def __init__(self, port, parent=None):
+            opened.append(port)
+
+        def exec(self):
+            return 1
+
+    monkeypatch.setattr(app_module, "RemoteDialog", _FakeRemote)
+
+    window._open_remote_control()
+
+    assert opened == ["COM_TEST"]
+
+
+def test_no_port_no_remote_dialog(qt_app, isolated_settings, monkeypatch):
+    app_settings.set_mdrem_enabled(True)
+    window = _window()
+    monkeypatch.setattr(app_module, "resolve_port", lambda parent: None)
+    monkeypatch.setattr(
+        app_module, "RemoteDialog", lambda *a, **k: pytest.fail("must not open without a resolved port")
+    )
+
+    window._open_remote_control()
+
+
 # --- and the CD entry alongside it ------------------------------------------
 
 
