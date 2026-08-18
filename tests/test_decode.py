@@ -275,3 +275,19 @@ def test_mp3_is_not_offered_because_this_build_of_sox_cannot_read_one():
     burn."""
     assert ".mp3" not in decode.CONVERTIBLE_SUFFIXES
     assert decode.is_supported("album.mp3") is False
+
+
+def test_sox_is_kept_apart_from_the_64_bit_tools():
+    """Its DLLs are 32-bit and share names with the ones cd-paranoia and
+    flac need -- unpacking it alongside them overwrote libwinpthread-1.dll
+    once already."""
+    sox = decode.sox_path()
+    if sox is None:
+        pytest.skip("SoX is not bundled on this platform")
+
+    from pathlib import Path
+
+    from mdtools import cdrip
+
+    assert Path(sox).parent == cdrip.tools_dir() / "sox"
+    assert not (cdrip.tools_dir() / "libsox-3.dll").exists()

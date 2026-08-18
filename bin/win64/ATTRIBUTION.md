@@ -102,6 +102,13 @@ MP3 fails with "Unable to load LAME encoder library"). Dropping a 32-bit
   `libgomp-1`, `libgcc_s_sjlj-1`, `libssp-0`, `libwinpthread-1`).
   `wget.exe` and the PDF manuals from that package are deliberately not
   bundled.
+- **In the `sox/` subfolder, not here**, because this build is 32-bit while
+  cd-paranoia and flac are 64-bit: unpacking it alongside them overwrote
+  `libwinpthread-1.dll` with a 32-bit copy of the same name. That happened
+  not to break anything, since cd-paranoia does not import that DLL
+  directly -- but `zlib1.dll` and `libpng16-16.dll` collide just as easily.
+  Windows resolves an executable's DLLs from its own directory first, so a
+  folder per architecture keeps each set with its own binary.
 - Licence: GPL-2.0-or-later (`sox.exe`); `libsox` itself is
   LGPL-2.1-or-later.
 

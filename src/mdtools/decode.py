@@ -51,6 +51,9 @@ import wave
 from dataclasses import dataclass
 from pathlib import Path
 
+import sys
+
+from mdtools import cdrip
 from mdtools.cdrip import find_tool, flac_path
 from mdtools.embedded_cover import iter_flac_blocks
 
@@ -123,9 +126,21 @@ class AudioProperties:
 
 
 def sox_path() -> str | None:
-    """The bundled SoX if there is one, otherwise whatever is on PATH --
-    the rule cdrip.find_tool() already implements for every other tool
-    here."""
+    """The bundled SoX if there is one, otherwise whatever is on PATH.
+
+    **In a folder of its own**, unlike every other bundled tool, and that
+    is not tidiness: the official SoX package is 32-bit, while cd-paranoia
+    and flac are 64-bit builds from MSYS2. Unpacking it beside them
+    overwrote `libwinpthread-1.dll` with a 32-bit copy of the same name --
+    which happened not to break cd-paranoia, purely because it does not
+    import that DLL directly. `zlib1.dll` and `libpng16-16.dll` are just as
+    common, and the next tool added might not be so lucky. One folder per
+    architecture is the fix; Windows resolves an exe's DLLs from its own
+    directory first, so each set stays with its own binary.
+    """
+    bundled = cdrip.tools_dir() / "sox" / ("sox.exe" if sys.platform == "win32" else "sox")
+    if bundled.is_file():
+        return str(bundled)
     return find_tool("sox")
 
 
