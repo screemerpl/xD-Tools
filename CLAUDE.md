@@ -120,10 +120,11 @@ medium: a MiniDisc's second page is a J-card, a CD's is a case insert).
 order, with anything unrecognised appended rather than dropped. Adding a
 page is then an entry in `PAGE_KINDS` plus a template, which is exactly
 what **`PAGE_BACK`** turned out to cost when it arrived a day later: the
-jewel case tray card, 150x118mm with two 6.5mm spine folds (the strips that
-show down the sides of a closed case, with the 137mm panel between them
-sitting behind the disc). It is `verified: false` until somebody measures a
-real case.
+jewel case tray card, 151x117.5mm with two 6.5mm spine folds (the strips
+that show down the sides of a closed case, with the 138mm panel between
+them sitting behind the disc). Measured off a real case -- the first
+guess was 150x118 with a 137mm panel -- but still `verified: false` until
+one is cut and fitted, which is what that flag is for.
 
 Three consequences worth knowing:
 - `MainWindow._refresh_page_combo()` fills the dropdown from the project;
@@ -313,7 +314,9 @@ a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
   panel the track list, folded once and read through the clear back of the
   case. That maps straight onto the existing `fold_offsets_mm` machinery,
   so it needed no new page-count concept. The jewel case tray card
-  (150 x 118) is the one CD template still `verified: false`.
+  (151 x 117.5, a 138mm panel between two 6.5mm spines) is the one CD
+  template still `verified: false`: its numbers are measured, but nobody
+  has cut one yet.
 - **The automatic layout branches on the medium** (`_auto_layout_project()`):
   a MiniDisc project gets the full-face label and the J-card, a CD project
   gets `_auto_layout_cd_disc_label()` and `_auto_layout_cd_insert()`. Both
@@ -4170,6 +4173,22 @@ It exists because a printer's own dialog counts pages of a *job*, and each
 sheet only becomes a page once the job has been built -- so reprinting the
 one that jammed had meant printing the whole set again. `_on_print()` and
 `_on_print_current_sheet()` both go through one `_print(sheets)`.
+
+**The tray card, after it was measured and looked at.** 151 x 117.5mm --
+a 138mm panel fold to fold, between the two 6.5mm spines, which were
+right first time. Its own two corrections are worth keeping:
+- **`place_back()` grew `track_fill`** (default 1.0, the tray card passes
+  `BACK_TRACK_FILL` = 0.7). The list is fitted into that share of the
+  leftover space and then centred in *all* of it, so the slack is shared
+  above and below. At 1.0 a twelve-track album stretched across 138mm read
+  as a poster rather than as a sleeve -- reported directly. Every other
+  caller is unchanged: on a J-card flap or a shell label the list has to
+  work to fit at all, and there is no slack to leave.
+- **`cd_layout.place_back_logo()`** puts the Digital Audio mark in the
+  panel's bottom-*right* corner, because place_back's own footer (the year
+  and the running time) already holds the bottom-left. Positioned by the
+  item's footprint rather than `pos()`, like everything else scaled by
+  `set_item_scale()` here.
 
 ## PySide6/Qt gotchas hit in this codebase
 

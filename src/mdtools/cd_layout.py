@@ -71,6 +71,12 @@ DISC_FOOTER_MM = 5.0
 DISC_LOGO_HEIGHT_MM = 8.0
 DISC_GAP_MM = 1.5
 
+# The tray card's own mark, in the corner opposite the running-time
+# footer, and how much of the panel its track list is allowed to fill.
+BACK_LOGO_HEIGHT_MM = 7.0
+BACK_LOGO_MARGIN_MM = 4.0
+BACK_TRACK_FILL = 0.7
+
 class CdLayoutError(Exception):
     """The page could not be laid out -- a wrong template, or no artwork."""
 
@@ -302,8 +308,14 @@ def build_case_back(scene: DesignScene, metadata: ProjectMetadata, logo_path: st
             accent,
             turned=False,
             heading_scale=middle.height() / mm_to_px(JCARD_BACK_HEIGHT_MM),
+            # A track list stretched across all 138mm of this panel read as
+            # a poster rather than as a sleeve -- reported directly.
+            track_fill=BACK_TRACK_FILL,
         )
     )
+    mark = place_back_logo(scene, middle, logo_path or "")
+    if mark is not None:
+        added.append(mark)
     for spine in (left_spine, right_spine):
         # Both spines get the same caption on purpose: which side of the
         # case is visible depends on how it was shelved, and a card that
@@ -311,6 +323,38 @@ def build_case_back(scene: DesignScene, metadata: ProjectMetadata, logo_path: st
         # facing the wrong way.
         added.extend(place_spine(scene, spine, metadata, accent, logo_path or ""))
     return added
+
+
+def place_back_logo(scene: DesignScene, panel: QRectF, logo_path: str) -> QGraphicsItem | None:
+    """The Digital Audio mark in the tray card's bottom-right corner.
+
+    The bottom-*left* of that panel already carries the year and the
+    running time (place_back's own footer), so the mark takes the other
+    end of the same line rather than competing with it.
+    """
+    if not logo_path:
+        return None
+    item = scene.add_image(logo_path)
+    if item is None:
+        return None
+    natural = item.boundingRect()
+    if natural.width() <= 0 or natural.height() <= 0:
+        return item
+
+    scale = mm_to_px(BACK_LOGO_HEIGHT_MM) / natural.height()
+    set_item_scale(item, scale, scale)
+    margin = mm_to_px(BACK_LOGO_MARGIN_MM)
+    placed = _footprint(item)
+    # By its footprint, not by pos(): set_item_scale anchors its transform
+    # at the item's own centre.
+    item.setPos(
+        item.pos()
+        + QPointF(
+            panel.right() - margin - placed.right(),
+            panel.bottom() - margin - placed.bottom(),
+        )
+    )
+    return item
 
 
 def build_insert(scene: DesignScene, metadata: ProjectMetadata) -> list:
@@ -356,6 +400,7 @@ __all__ = [
     "build_disc_label",
     "build_insert",
     "lighten",
+    "place_back_logo",
     "place_disc_logo",
     "place_insert_cover",
 ]

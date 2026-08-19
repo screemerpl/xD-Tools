@@ -147,12 +147,12 @@
       "name": "CD Jewel Case Back (Tray Card)",
       "kind": "cover",
       "medium": "cd",
-      "width_mm": 150.0,
-      "height_mm": 118.0,
+      "width_mm": 151.0,
+      "height_mm": 117.5,
       "corner_radius_mm": 0.0,
       "fold_offsets_mm": [
         6.5,
-        143.5
+        144.5
       ],
       "safe_margin_mm": 3.0,
       "verified": false,

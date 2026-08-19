@@ -373,6 +373,7 @@ def place_back(
     columns: int = 0,
     track_columns: list[str] | None = None,
     heading: bool = True,
+    track_fill: float = 1.0,
 ) -> list[QGraphicsItem]:
     """The back of the case: the cover's dominant colour, a heading, a rule
     in the accent colour, the numbered track list, and the running time.
@@ -400,6 +401,14 @@ def place_back(
     gets a SIDE A block and a SIDE B block instead of one run of twelve
     tracks, without this function having to learn what a side is. The
     column count then comes from the list itself.
+
+    `track_fill` is how much of the leftover space the track list is fitted
+    into -- 1.0 uses all of it, which is right for a panel the list has to
+    work to fit at all. A jewel case tray card is 138mm across and its list
+    filled every millimetre of it, which read as a poster rather than as a
+    sleeve; 0.7 there leaves the type at a size somebody would set by hand.
+    The block is still centred in the *whole* space, so the slack is shared
+    above and below rather than left at the bottom.
 
     `heading=False` drops the artist/album block and its rule, leaving the
     panel to the track list alone. For a cassette's tuck-in flap that is
@@ -471,6 +480,9 @@ def place_back(
     tracks_height = height - pad - cursor - mm_to_px(footer_span)
 
     listing = track_columns if track_columns is not None else None
+    # The list is fitted into a share of the space and then centred in all
+    # of it -- see track_fill.
+    fitted_height = tracks_height * max(0.05, min(1.0, track_fill))
     if (listing or metadata.tracks) and tracks_height > mm_to_px(6):
         # The font search is capped, so a short album's list can end up much
         # shorter than the space it was given. Centring what it produced in
@@ -484,7 +496,7 @@ def place_back(
         if column_count > 1:
             gap = mm_to_px(BACK_PADDING_MM)
             column_width = (content_width - gap * (column_count - 1)) / column_count
-            column_area = QRectF(0, 0, column_width, tracks_height)
+            column_area = QRectF(0, 0, column_width, fitted_height)
             columns = [_text(scene, column, column_area, ink, fit=False) for column in listing]
             # One size across both, rather than one per column: they are
             # read side by side, and fitting them separately made the
@@ -497,7 +509,7 @@ def place_back(
                     put(item, pad + index * (column_width + gap), top)
                     added.append(item)
         else:
-            item = _text(scene, listing[0], QRectF(0, 0, content_width, tracks_height), ink)
+            item = _text(scene, listing[0], QRectF(0, 0, content_width, fitted_height), ink)
             if item is not None:
                 top = cursor + max(0.0, (tracks_height - item.boundingRect().height()) / 2)
                 put(item, pad, top)
