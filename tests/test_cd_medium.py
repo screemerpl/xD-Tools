@@ -38,11 +38,11 @@ def _cd_templates():
 
 def test_builtin_defaults_include_a_cd_disc_label():
     label = next(t for t in registry.load_templates()["disc"] if t.shape == "cd_label")
-    assert label.outer_diameter_mm == 118.0
-    assert label.hole_diameter_mm == 41.0
+    assert label.outer_diameter_mm == 117.0
+    assert label.hole_diameter_mm == 35.0
     # width/height stay equal to the outer diameter so everything that
     # reasons about a template's physical footprint keeps working.
-    assert (label.width_mm, label.height_mm) == (118.0, 118.0)
+    assert (label.width_mm, label.height_mm) == (117.0, 117.0)
     assert label.medium == MEDIUM_CD
     assert label.builtin is True
 
@@ -56,8 +56,8 @@ def test_builtin_defaults_include_both_slim_case_inserts():
     # A slim case has no tray card -- the folded insert is what gives the
     # track list somewhere to live, read through the clear back of the case.
     folded = next(t for t in covers if t.fold_offsets_mm)
-    assert (folded.width_mm, folded.height_mm) == (242.0, 120.0)
-    assert folded.fold_offsets_mm == [121.0]
+    assert (folded.width_mm, folded.height_mm) == (240.0, 120.0)
+    assert folded.fold_offsets_mm == [120.0]
 
 
 def test_every_builtin_template_declares_a_medium():
@@ -229,4 +229,4 @@ def test_the_template_manager_shows_a_cd_label_as_itself_and_lets_it_be_measured
     assert MEDIUM_CD in combo_values, "the medium is not shown at all"
 
     spin_values = {round(s.value(), 2) for s in dialog.findChildren(QDoubleSpinBox)}
-    assert 118.0 in spin_values and 41.0 in spin_values, "the label's defining dimensions are not editable"
+    assert 117.0 in spin_values and 35.0 in spin_values, "the label's defining dimensions are not editable"

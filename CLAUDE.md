@@ -290,20 +290,30 @@ a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
   hides those rows for this shape. `seed_disc_defaults()` also returns early
   for a CD medium: the "▲ INSERT THIS END" mark says which end of a *cartridge*
   goes into the deck, and a disc dropped onto a spindle has no such end.
-- **Where the CD dimensions came from, and the correction they carried.** The
-  user delegated the measuring ("to mozesz sobie znalezc sam w internecie"), so
-  unlike every MiniDisc template here these start from industry sources rather
-  than their own ruler, and are `verified: false` until they cut one. Full-size
-  CD labels are 118mm outer (4.65"), standard-hub hole 41mm. **A slim jewel
-  case takes only a front insert, 120 x 120mm -- not 124 x 124, and it has no
-  tray card at all**: 124mm is the height of the case body, not of the paper
-  (which sits under tabs), and the back of a slim case is the bare plastic
-  tray, with no pocket and no spine. So the track list gets a *folded* insert
-  instead -- "CD Slim Case Insert (Folded, 2 Panels)", 242 x 120mm with one
-  fold at 121mm: right panel is the cover, left panel the track list, folded
-  once and read through the clear back of the case. That maps straight onto
-  the existing `fold_offsets_mm` machinery, so it needed no new page-count
-  concept (a project still has exactly two pages).
+- **Where the CD dimensions came from, and the corrections they carried.**
+  The user delegated the first pass ("to mozesz sobie znalezc sam w
+  internecie"), so unlike every MiniDisc template these started from
+  industry sources rather than a ruler: 118mm outer, standard-hub hole
+  41mm, and a folded insert of 242 x 120mm folded at 121. **All three of
+  those numbers were later replaced by measured ones** and the templates
+  are now `verified: true`: the disc label is **117mm outer with a 35mm
+  hole**, and the folded insert **240 x 120mm folded at 120** -- two panels
+  the same size as the front insert, which is what it always should have
+  been (120 beside 121 described one case in two ways, and was spotted
+  while reviewing what was still unverified). Its name still says
+  "(Standard Hub)" though the hole is no longer the 41mm standard one:
+  `sync_builtin_templates()` matches built-ins **by name**, so renaming one
+  hands every existing install a duplicate beside the copy they may have
+  customised -- the same reason the "... (with Slider)" names were left
+  alone. **A slim jewel case takes only a front insert, 120 x 120mm -- not
+  124 x 124, and it has no tray card at all**: 124mm is the height of the
+  case body, not of the paper (which sits under tabs), and the back of a
+  slim case is the bare plastic tray, with no pocket and no spine. So the
+  track list gets a *folded* insert instead: right panel is the cover, left
+  panel the track list, folded once and read through the clear back of the
+  case. That maps straight onto the existing `fold_offsets_mm` machinery,
+  so it needed no new page-count concept. The jewel case tray card
+  (150 x 118) is the one CD template still `verified: false`.
 - **The automatic layout branches on the medium** (`_auto_layout_project()`):
   a MiniDisc project gets the full-face label and the J-card, a CD project
   gets `_auto_layout_cd_disc_label()` and `_auto_layout_cd_insert()`. Both

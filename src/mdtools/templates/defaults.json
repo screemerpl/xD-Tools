@@ -71,12 +71,12 @@
       "kind": "disc",
       "medium": "cd",
       "shape": "cd_label",
-      "width_mm": 118.0,
-      "height_mm": 118.0,
-      "outer_diameter_mm": 118.0,
-      "hole_diameter_mm": 41.0,
+      "width_mm": 117.0,
+      "height_mm": 117.0,
+      "outer_diameter_mm": 117.0,
+      "hole_diameter_mm": 35.0,
       "safe_margin_mm": 2.0,
-      "verified": false,
+      "verified": true,
       "builtin": true
     }
   ],
@@ -126,21 +126,21 @@
       "corner_radius_mm": 0.0,
       "fold_offsets_mm": [],
       "safe_margin_mm": 3.0,
-      "verified": false,
+      "verified": true,
       "builtin": true
     },
     {
       "name": "CD Slim Case Insert (Folded, 2 Panels)",
       "kind": "cover",
       "medium": "cd",
-      "width_mm": 242.0,
+      "width_mm": 240.0,
       "height_mm": 120.0,
       "corner_radius_mm": 0.0,
       "fold_offsets_mm": [
-        121.0
+        120.0
       ],
       "safe_margin_mm": 3.0,
-      "verified": false,
+      "verified": true,
       "builtin": true
     },
     {
