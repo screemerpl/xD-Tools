@@ -272,3 +272,55 @@ def test_without_a_plan_the_inlay_still_lists_the_whole_album(qt_app):
     assert "SIDE A" not in printed
     for track in metadata.tracks:
         assert track.title in printed
+
+
+# -- the measured shape --------------------------------------------------
+
+
+def test_the_shell_label_is_the_measured_one(qt_app):
+    template = _template(SHELL_LABEL, "label")
+
+    assert (template.width_mm, template.height_mm) == (90.0, 40.8)
+    assert template.top_chamfer_mm == 6.0
+    assert template.corner_radius_mm == 1.5
+    assert (template.hub_diameter_mm, template.hub_spacing_mm) == (16.0, 43.0)
+    assert template.hub_centre_from_top_mm == 23.5
+    # 15.5 above the opening, 16 of opening, 9.3 below -- which is what the
+    # height is, and how it was measured
+    assert template.hub_centre_from_top_mm - template.hub_diameter_mm / 2 == 15.5
+    assert round(template.height_mm - template.hub_centre_from_top_mm - template.hub_diameter_mm / 2, 2) == 9.3
+
+
+def test_the_reels_and_the_tape_window_are_one_opening(qt_app):
+    """Not two holes: the gap between the reels is the window the tape is
+    watched through, so a label bridging it would cover the tape."""
+    scene = DesignScene(_template(SHELL_LABEL, "label"))
+    clip = scene.template_clip_path()
+
+    from PySide6.QtCore import QPointF
+
+    from mdtools.constants import mm_to_px
+
+    cut = scene.cut_shape_rects()[0]
+    middle = QPointF(cut.center().x(), cut.top() + mm_to_px(23.5))
+    assert not clip.contains(middle), "the middle of the label is cut away"
+    # ...and both reel centres with it
+    for offset in (-21.5, 21.5):
+        assert not clip.contains(QPointF(cut.center().x() + mm_to_px(offset), middle.y()))
+
+
+def test_the_top_corners_are_chamfered_and_the_bottom_ones_rounded(qt_app):
+    scene = DesignScene(_template(SHELL_LABEL, "label"))
+    clip = scene.template_clip_path()
+
+    from PySide6.QtCore import QPointF
+
+    from mdtools.constants import mm_to_px
+
+    cut = scene.cut_shape_rects()[0]
+    inset = mm_to_px(1.0)  # inside the chamfer's own triangle
+    for x in (cut.left() + inset, cut.right() - inset):
+        assert not clip.contains(QPointF(x, cut.top() + inset)), "a chamfered corner is not material"
+    # the bottom ones are only rounded by 1.5mm, so a millimetre in is solid
+    for x in (cut.left() + mm_to_px(2), cut.right() - mm_to_px(2)):
+        assert clip.contains(QPointF(x, cut.bottom() - mm_to_px(2)))

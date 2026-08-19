@@ -180,14 +180,16 @@
       "kind": "label",
       "medium": "tape",
       "width_mm": 90.0,
-      "height_mm": 46.0,
+      "height_mm": 40.8,
       "corner_radius_mm": 1.5,
       "fold_offsets_mm": [],
       "safe_margin_mm": 2.0,
       "verified": false,
       "builtin": true,
-      "hub_diameter_mm": 24.0,
-      "hub_spacing_mm": 45.0
+      "hub_diameter_mm": 16.0,
+      "hub_spacing_mm": 43.0,
+      "top_chamfer_mm": 6.0,
+      "hub_centre_from_top_mm": 23.5
     }
   ]
 }
