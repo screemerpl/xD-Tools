@@ -58,7 +58,7 @@ from PySide6.QtWidgets import (
 
 from mdtools import app_settings, audio_folder, embedded_cover, foobar, mixtape_cover, user_paths
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
-from mdtools.project import ProjectMetadata
+from mdtools.project import MEDIUM_MD, medium_name, ProjectMetadata
 
 # The same 80 minutes RecordDialog and CdRipDialog warn about, checked here
 # too because here it is still free to act on: a folder can be trimmed, or
@@ -100,9 +100,12 @@ class _LoadWorker(QThread):
 
 
 class FolderRecordDialog(QDialog):
-    def __init__(self, base_url: str = foobar.DEFAULT_BASE_URL, parent=None):
+    def __init__(self, base_url: str = foobar.DEFAULT_BASE_URL, parent=None, medium: str = MEDIUM_MD):
+        """`medium` is wording only -- see CdRipDialog's own note."""
         super().__init__(parent)
-        self.setWindowTitle(self.tr("Record Folder to MiniDisc"))
+        self._medium = medium
+        self._target = medium_name(medium)
+        self.setWindowTitle(self._window_title())
         self.resize(600, 560)
         self._client = foobar.FoobarClient(base_url)
         self._paths: list[Path] = []
@@ -256,15 +259,18 @@ class FolderRecordDialog(QDialog):
             QTreeWidgetItem(self.tree, [str(index), path.stem, "", ""])
         self.tree.resizeColumnToContents(0)
 
+    def _window_title(self) -> str:
+        return self.tr("Record Folder to {medium}").format(medium=self._target)
+
     def _warn_about_count(self) -> None:
         if len(self._paths) <= UNLIKELY_TRACK_COUNT:
             self.warning_label.setVisible(False)
             return
         self.warning_label.setText(
             self.tr(
-                "That is {count} tracks -- far more than a MiniDisc holds. Check that this is one album's "
+                "That is {count} tracks -- far more than a {medium} holds. Check that this is one album's "
                 "folder and not a whole library."
-            ).format(count=len(self._paths))
+            ).format(count=len(self._paths), medium=self._target)
         )
         self.warning_label.setVisible(True)
 
@@ -313,7 +319,7 @@ class FolderRecordDialog(QDialog):
             return exe
         QMessageBox.warning(
             self,
-            self.tr("Record Folder to MiniDisc"),
+            self._window_title(),
             self.tr(
                 "foobar2000 could not be found. The tracks are loaded into it through its own program file, "
                 "so its location has to be set in Window > Settings..."
@@ -327,7 +333,7 @@ class FolderRecordDialog(QDialog):
         except foobar.FoobarError as exc:
             QMessageBox.warning(
                 self,
-                self.tr("Record Folder to MiniDisc"),
+                self._window_title(),
                 self.tr(
                     "Could not reach foobar2000: {error}\n\nIt must be running with the Beefweb Remote "
                     "Control component (foo_beefweb) enabled."

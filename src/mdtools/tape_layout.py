@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import dataclasses
 
-from PySide6.QtCore import QPointF, QRectF
+from PySide6.QtCore import QCoreApplication, QPointF, QRectF
 from PySide6.QtWidgets import QGraphicsItem
 
 from mdtools.auto_layout import place_cover_on_label
@@ -51,7 +51,7 @@ from mdtools.jcard_layout import (
 )
 from mdtools.palette import accent_colour, dominant_colour, readable_text_colour
 from mdtools.project import ProjectMetadata, numbered_track_lines
-from mdtools.tape import SidePlan
+from mdtools.tape import SidePlan, TapePlan
 
 # How many columns the inlay's tuck-in flap deals the track list into.
 FLAP_COLUMNS = 3
@@ -79,7 +79,31 @@ class TapeLayoutError(Exception):
 # --- the J-card ------------------------------------------------------------
 
 
-def build_jcard(scene: DesignScene, metadata: ProjectMetadata, logo_path: str = "") -> list[QGraphicsItem]:
+def side_track_columns(metadata: ProjectMetadata, plan: TapePlan) -> list[str]:
+    """The album as two headed blocks, one per side of the tape.
+
+    A cassette's running order is two running orders, and an inlay that
+    listed twelve tracks straight through would leave the reader to guess
+    where the tape is turned over -- the one thing the card knows and they
+    do not. Each side's tracks are numbered from one, matching both the
+    shell label beside it and the deck's own counter.
+    """
+    columns = []
+    for side in plan.sides:
+        if not side.tracks:
+            continue
+        heading = QCoreApplication.translate("TapeLayout", "SIDE {side}").format(side=side.label)
+        lines = numbered_track_lines(_side_metadata(metadata, side))
+        columns.append("\n".join([heading, ""] + lines))
+    return columns
+
+
+def build_jcard(
+    scene: DesignScene,
+    metadata: ProjectMetadata,
+    logo_path: str = "",
+    plan: TapePlan | None = None,
+) -> list[QGraphicsItem]:
     """Front cover, spine caption, and the album's track list on the flap.
 
     The three panels come from the card's own folds, so the proportions are
@@ -88,6 +112,11 @@ def build_jcard(scene: DesignScene, metadata: ProjectMetadata, logo_path: str = 
     heading band is scaled down from the MiniDisc J-card's: those millimetre
     constants were chosen against a 58.85mm panel, and at full size they ate
     a flap this shallow before the first track was printed.
+
+    `plan`, when given, splits the flap's track list into a SIDE A block
+    and a SIDE B block -- see side_track_columns. Without one the whole
+    album is listed straight through, which is the right answer only for a
+    card whose tape nobody has decided on yet.
 
     `logo_path` is optional and normally empty. The MiniDisc and CD cards
     both carry a format logo; a cassette's own marks (the shell's Type I/II
@@ -122,8 +151,14 @@ def build_jcard(scene: DesignScene, metadata: ProjectMetadata, logo_path: str = 
             # Three, because the flap is 102mm along and 24mm deep: in two
             # columns a normal album's list bottoms out at the smallest type
             # that still prints, and reads as a grey band rather than as
-            # track names.
+            # track names. A split by side overrides that with two columns
+            # of its own, which is what the card is actually about.
             columns=FLAP_COLUMNS,
+            track_columns=side_track_columns(metadata, plan) if plan is not None else None,
+            # No artist/album block here: the spine right beside it carries
+            # both, and on a panel this shallow that heading costs a fifth
+            # of the space the tracks are trying to fit into.
+            heading=False,
         )
     )
     added.extend(place_spine(scene, spine, metadata, accent, logo_path))

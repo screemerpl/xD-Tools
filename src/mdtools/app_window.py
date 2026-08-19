@@ -75,6 +75,7 @@ from mdtools.project import (
     PAGE_ORDER,
     PAGE_SIDE_A,
     PAGE_SIDE_B,
+    medium_name,
     medium_pages,
     page_template_kind,
     page_title,
@@ -1473,9 +1474,11 @@ class MainWindow(QMainWindow):
         Deliberately the medium rather than the machine: "Cassette" reads
         the way "MiniDisc" already does, and neither says "deck" -- the
         entry is about what comes out of it."""
-        if self.project is not None and self.project.medium == MEDIUM_TAPE:
-            return self.tr("Cassette")
-        return self.tr("MiniDisc")
+        return medium_name(self._recording_medium())
+
+    def _recording_medium(self) -> str:
+        """Which medium a recording started now would land on."""
+        return self.project.medium if self.project is not None else MEDIUM_MD
 
     def _refresh_page_combo(self) -> None:
         """Rebuilds the page dropdown from the open project.
@@ -1801,7 +1804,7 @@ class MainWindow(QMainWindow):
         port = self._resolve_recording_port()
         if port is None:
             return
-        rip = CdRipDialog(app_settings.foobar_url(), self)
+        rip = CdRipDialog(app_settings.foobar_url(), self, medium=self._recording_medium())
         if rip.exec() != QDialog.DialogCode.Accepted:
             return
         # The rip's own metadata goes forward. Its titles are the ones it
@@ -1840,7 +1843,7 @@ class MainWindow(QMainWindow):
         port = self._resolve_recording_port()
         if port is None:
             return
-        folder = FolderRecordDialog(app_settings.foobar_url(), self)
+        folder = FolderRecordDialog(app_settings.foobar_url(), self, medium=self._recording_medium())
         if initial_folder is not None:
             folder.set_folder(initial_folder)
         if folder.exec() != QDialog.DialogCode.Accepted:
@@ -2332,7 +2335,7 @@ class MainWindow(QMainWindow):
             self.apply_template(PAGE_COVER, jcard)
             scene = self.project.pages[PAGE_COVER]
             try:
-                items = build_tape_jcard(scene, metadata)
+                items = build_tape_jcard(scene, metadata, plan=plan)
             except TapeLayoutError:
                 items = []
             if items:

@@ -371,6 +371,8 @@ def place_back(
     turned: bool = True,
     heading_scale: float = 1.0,
     columns: int = 0,
+    track_columns: list[str] | None = None,
+    heading: bool = True,
 ) -> list[QGraphicsItem]:
     """The back of the case: the cover's dominant colour, a heading, a rule
     in the accent colour, the numbered track list, and the running time.
@@ -393,6 +395,18 @@ def place_back(
     turned up that is four times wider than it is deep -- see
     tape_layout.build_jcard.
 
+    `track_columns` replaces the track list outright with text the caller
+    has already arranged into columns -- which is how a cassette's inlay
+    gets a SIDE A block and a SIDE B block instead of one run of twelve
+    tracks, without this function having to learn what a side is. The
+    column count then comes from the list itself.
+
+    `heading=False` drops the artist/album block and its rule, leaving the
+    panel to the track list alone. For a cassette's tuck-in flap that is
+    the difference between a legible list and one at the smallest size that
+    prints: the panel is 24mm deep, the heading bands take a fifth of it,
+    and the album is already named twice over on the spine beside it.
+
     `heading_scale` multiplies the heading, rule and footer bands, which
     are millimetre constants chosen for a J-card's own narrow panel. A CD
     slim case insert is twice as wide, and at 1.0 its heading came out
@@ -406,7 +420,11 @@ def place_back(
     added: list[QGraphicsItem] = [_filled_rect(scene, panel, background)]
     ink = readable_text_colour(background)
     width, height = reading_size(panel) if turned else (panel.width(), panel.height())
-    pad = mm_to_px(BACK_PADDING_MM)
+    # The padding shrinks with the headings on a shallow panel, and only
+    # there (min(): a CD insert scales *up*, and a wider margin round a
+    # bigger panel is right). Left unscaled, 6mm of top and bottom margin
+    # is a quarter of a cassette flap gone before a track is printed.
+    pad = mm_to_px(BACK_PADDING_MM * min(1.0, heading_scale))
     content_width = width - 2 * pad
     cursor = pad
 
@@ -425,7 +443,7 @@ def place_back(
 
     artist = _text(
         scene,
-        metadata.artist.strip(),
+        metadata.artist.strip() if heading else "",
         QRectF(0, 0, content_width, mm_to_px(BACK_TITLE_MM * heading_scale)),
         accent,
         wrap=False,
@@ -435,7 +453,7 @@ def place_back(
 
     album = _text(
         scene,
-        metadata.album.strip(),
+        metadata.album.strip() if heading else "",
         QRectF(0, 0, content_width, mm_to_px(BACK_SUBTITLE_MM * heading_scale)),
         ink,
         wrap=False,
@@ -452,20 +470,22 @@ def place_back(
     footer_span = (BACK_FOOTER_MM + BACK_GAP_MM) * heading_scale if footer_text else 0.0
     tracks_height = height - pad - cursor - mm_to_px(footer_span)
 
-    if metadata.tracks and tracks_height > mm_to_px(6):
+    listing = track_columns if track_columns is not None else None
+    if (listing or metadata.tracks) and tracks_height > mm_to_px(6):
         # The font search is capped, so a short album's list can end up much
         # shorter than the space it was given. Centring what it produced in
         # that space spreads the slack above and below instead of leaving
         # one dead band at the bottom.
-        column_count = columns or (2 if len(metadata.tracks) > TWO_COLUMN_THRESHOLD else 1)
+        if listing is not None:
+            column_count = len(listing)
+        else:
+            column_count = columns or (2 if len(metadata.tracks) > TWO_COLUMN_THRESHOLD else 1)
+            listing = track_list_columns(metadata, column_count)
         if column_count > 1:
             gap = mm_to_px(BACK_PADDING_MM)
             column_width = (content_width - gap * (column_count - 1)) / column_count
             column_area = QRectF(0, 0, column_width, tracks_height)
-            columns = [
-                _text(scene, column, column_area, ink, fit=False)
-                for column in track_list_columns(metadata, column_count)
-            ]
+            columns = [_text(scene, column, column_area, ink, fit=False) for column in listing]
             # One size across both, rather than one per column: they are
             # read side by side, and fitting them separately made the
             # halves of a single list differ visibly in type.
@@ -477,12 +497,7 @@ def place_back(
                     put(item, pad + index * (column_width + gap), top)
                     added.append(item)
         else:
-            item = _text(
-                scene,
-                "\n".join(numbered_track_lines(metadata)),
-                QRectF(0, 0, content_width, tracks_height),
-                ink,
-            )
+            item = _text(scene, listing[0], QRectF(0, 0, content_width, tracks_height), ink)
             if item is not None:
                 top = cursor + max(0.0, (tracks_height - item.boundingRect().height()) / 2)
                 put(item, pad, top)

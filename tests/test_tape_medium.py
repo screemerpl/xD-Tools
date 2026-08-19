@@ -268,3 +268,30 @@ def test_the_two_shell_labels_do_not_overlap_on_their_shared_sheet(qt_app):
 
     a, b = dialog.items_for(PAGE_SIDE_A)[0], dialog.items_for(PAGE_SIDE_B)[0]
     assert not a.sceneBoundingRect().intersects(b.sceneBoundingRect())
+
+
+def test_the_rip_and_folder_dialogs_name_the_machine_the_tracks_go_onto(qt_app):
+    """Reported directly: the rip window said MiniDisc in front of a
+    cassette project."""
+    from mdtools.panels.cd_rip_dialog import CdRipDialog
+    from mdtools.panels.folder_record_dialog import FolderRecordDialog
+    from mdtools.project import MEDIUM_TAPE as TAPE
+
+    rip = CdRipDialog(medium=TAPE)
+    folder = FolderRecordDialog(medium=TAPE)
+
+    for dialog in (rip, folder):
+        assert "Cassette" in dialog.windowTitle()
+        assert "MiniDisc" not in dialog.windowTitle()
+
+
+def test_a_cassette_is_not_warned_about_a_minidiscs_sp_limit(qt_app):
+    """80 minutes is a MiniDisc's answer. A cassette is measured against
+    the tape that is actually in the deck, which its own dialog asks for."""
+    from mdtools.panels.cd_rip_dialog import CdRipDialog
+    from mdtools.project import MEDIUM_TAPE as TAPE
+
+    dialog = CdRipDialog(medium=TAPE)
+    dialog._warn_about_length(90 * 60)
+
+    assert not dialog.warning_label.isVisible()

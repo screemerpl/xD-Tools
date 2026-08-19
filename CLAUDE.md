@@ -4093,6 +4093,32 @@ the order they are computed in no longer matches `self._labels`.
 
 **Still outstanding: the Polish and Japanese translations, and the manual.**
 
+**Two more from looking at it: the inlay is split by side, and the dialogs
+on the way to a recording name the right machine.**
+
+`place_back()` grew `track_columns` (text the caller has already arranged
+into columns, which sets the column count) and `heading` (drop the
+artist/album block and its rule). `tape_layout.side_track_columns()` builds
+a SIDE A block and a SIDE B block from the same `TapePlan` the shell labels
+use, so the card says where the tape is turned over -- the one thing it
+knows and the reader does not. `build_jcard(..., plan=...)`; without a plan
+the whole album is still listed straight through.
+
+The flap also stopped printing at `MIN_POINT_SIZE`, from two changes:
+`BACK_PADDING_MM` is now multiplied by `min(1.0, heading_scale)` (6mm of top
+and bottom margin is a quarter of a 24mm flap, and only a shallow panel
+shrinks -- a CD insert scales *up*, where a wider margin is right), and the
+flap passes `heading=False` since the spine beside it already names the
+album twice. 12 tracks went from 3.5pt (the floor, and overlapping the
+running-time footer) to 4.75pt with nothing overlapping.
+
+`project.medium_name()` is the one place a medium is named on screen, and
+`CdRipDialog`/`FolderRecordDialog` take a `medium` argument that is *only*
+wording -- the work is identical, but a window headed "Record CD to
+MiniDisc" in front of a cassette project tells the user something untrue.
+It also gates the 80-minute SP warning, which is a MiniDisc's answer and not
+a tape's.
+
 ## PySide6/Qt gotchas hit in this codebase
 
 - **Never construct a Qt GUI type (`QColor`/`QPen`/`QBrush`/`QFont`/...) at

@@ -96,6 +96,25 @@ def medium_pages(medium: str) -> tuple[MediumPage, ...]:
     return MEDIUM_PAGES.get(medium, MEDIUM_PAGES[MEDIUM_MD])
 
 
+def medium_name(medium: str) -> str:
+    """What to call a medium on screen.
+
+    One function, because the Recording menu, the rip dialog and the folder
+    dialog all name the thing being recorded onto and none of them may
+    disagree with the others -- a window headed "Record CD to MiniDisc"
+    while the project is a cassette is exactly the report this exists to
+    answer.
+
+    QCoreApplication.translate with a fixed context rather than tr(): this
+    is a plain function, the same rule page_title() above follows.
+    """
+    if medium == MEDIUM_CD:
+        return QCoreApplication.translate("Media", "CD")
+    if medium == MEDIUM_TAPE:
+        return QCoreApplication.translate("Media", "Cassette")
+    return QCoreApplication.translate("Media", "MiniDisc")
+
+
 def page_template_kind(page: str) -> str:
     """Which template family a page takes. Unknown pages are treated as
     covers, which is the safe answer: every non-disc page so far is one."""

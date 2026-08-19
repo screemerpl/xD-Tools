@@ -229,3 +229,46 @@ def test_a_folded_page_is_refused_as_a_shell_label(qt_app):
 
     with pytest.raises(tape_layout.TapeLayoutError):
         tape_layout.build_side_label(scene, _album(), plan.sides[0])
+
+
+def test_the_inlay_lists_each_side_under_its_own_heading(qt_app):
+    """A cassette's running order is two running orders, and the card is
+    the only thing that knows where the tape is turned over."""
+    scene = DesignScene(_template(J_CARD))
+    metadata = _album(8)
+    plan = tape.split_sides(metadata.tracks, 60)
+
+    tape_layout.build_jcard(scene, metadata, plan=plan)
+
+    printed = _texts(scene.print_items())
+    side_a = next(text for text in printed if "SIDE A" in text)
+    side_b = next(text for text in printed if "SIDE B" in text)
+    for track in plan.sides[0].tracks:
+        assert track.title in side_a and track.title not in side_b
+    for track in plan.sides[1].tracks:
+        assert track.title in side_b and track.title not in side_a
+
+
+def test_each_sides_block_is_numbered_from_one(qt_app):
+    scene = DesignScene(_template(J_CARD))
+    metadata = _album(8)
+    plan = tape.split_sides(metadata.tracks, 60)
+
+    tape_layout.build_jcard(scene, metadata, plan=plan)
+
+    side_b = next(text for text in _texts(scene.print_items()) if "SIDE B" in text)
+    assert side_b.splitlines()[2].startswith("1."), side_b
+
+
+def test_without_a_plan_the_inlay_still_lists_the_whole_album(qt_app):
+    """Which is the right answer only for a card whose tape nobody has
+    decided on yet -- but it must not be an empty flap."""
+    scene = DesignScene(_template(J_CARD))
+    metadata = _album(6)
+
+    tape_layout.build_jcard(scene, metadata)
+
+    printed = "\n".join(_texts(scene.print_items()))
+    assert "SIDE A" not in printed
+    for track in metadata.tracks:
+        assert track.title in printed
