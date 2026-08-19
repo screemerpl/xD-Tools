@@ -107,7 +107,37 @@ scripts/
 
 ## Domain model
 
-A **Project** = exactly one Disc Label page + one Cover/J-Card page + metadata
+**A project's pages are a described list, not a fixed pair.** It really was
+a pair until 0.2.0, and that assumption had been written into the page
+dropdown, the template picker, `load_project()`'s validation and the print
+dialog's two named attributes -- so the first request for a third page (a
+CD's jewel case back) would have meant touching all of them. `project.py`
+now holds `PageKind`/`PAGE_KINDS`/`PAGE_ORDER` and two functions,
+`page_template_kind()` (which template family a page takes -- several pages
+share "cover") and `page_title()` (what to call it, which depends on the
+medium: a MiniDisc's second page is a J-card, a CD's is a case insert).
+`Project.ordered_pages()` lists what a project actually has, in PAGE_ORDER
+order, with anything unrecognised appended rather than dropped. Adding a
+page is then an entry in `PAGE_KINDS` plus a template -- **`PAGE_BACK` is
+already defined and deliberately unused**: the jewel case tray card
+(150x118mm, two 6.5mm spine folds) is decided but not built.
+
+Three consequences worth knowing:
+- `MainWindow._refresh_page_combo()` fills the dropdown from the project;
+  nothing enumerates pages by name any more, and `_change_page_template()`
+  asks `page_template_kind()` instead of "is this the disc page?".
+- `load_project()` requires a **disc** page and nothing else. A file with a
+  third page is a project from a later version, not an error.
+- `PrintDialog` carries `list[_Label]` built from `ordered_pages()`.
+  Sharing one sheet is a *two-label* arrangement search
+  (`printing._ARRANGEMENTS`), so with any other number each label gets its
+  own sheet and the checkbox is checked and disabled rather than left
+  offering something that cannot happen. Tests build a real three-page
+  project by hand (`test_more_than_two_pages.py`), because nothing in the
+  app creates one yet and an assumption removed only in principle is not
+  removed.
+
+A **Project** = one Disc Label page + one Cover/J-Card page + metadata
 (album/artist/year/tracks) + a project-wide default text style + the physical
 **medium** it is for (`Project.medium`, `MEDIUM_MD` / `MEDIUM_CD`), switchable via
 a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file

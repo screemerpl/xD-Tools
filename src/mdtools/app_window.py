@@ -66,6 +66,8 @@ from mdtools.project import (
     MEDIUM_MD,
     PAGE_COVER,
     PAGE_DISC,
+    page_template_kind,
+    page_title,
     GrayscaleAdjustment,
     Project,
     ProjectMetadata,
@@ -157,12 +159,10 @@ class MainWindow(QMainWindow):
         toolbar = QToolBar(self.tr("Page"), self)
         toolbar.addWidget(QLabel(self.tr("Editing:")))
         self.page_combo = QComboBox()
-        self.page_combo.addItem(self.tr("Disc Label"), PAGE_DISC)
-        self.page_combo.addItem(self.tr("Cover / J-Card"), PAGE_COVER)
-        # Relabelled per medium below -- a CD project's second page is a
-        # case insert, and calling it a J-card names a MiniDisc part it
-        # does not have. NewDesignDialog already makes the same
-        # distinction for its own template picker.
+        # Filled from whatever pages the open project actually has -- see
+        # _refresh_page_combo(). It used to be these two entries, written
+        # in here once and relabelled in place; a project with a third page
+        # had nowhere to appear.
         self.page_combo.currentIndexChanged.connect(self._on_page_combo_changed)
         toolbar.addWidget(self.page_combo)
         self.addToolBar(toolbar)
@@ -740,10 +740,11 @@ class MainWindow(QMainWindow):
         self.properties_panel.set_default_text_style(self.project.default_text_style)
         self._sync_grayscale_controls()
         # A new project can be for the other medium than the last one, and
-        # the Recording menu follows the medium.
+        # both the Recording menu and the page names follow the medium.
         self._sync_mdrem_actions()
-        self.page_combo.setCurrentIndex(0)
-        self._show_page(PAGE_DISC)
+        self.current_page = self.project.ordered_pages()[0]
+        self._refresh_page_combo()
+        self._show_page(self.current_page)
         # Building the pages above ran through the undo stack, which marks
         # the project dirty -- but a project this new has nothing to lose.
         self._mark_saved()
@@ -762,7 +763,7 @@ class MainWindow(QMainWindow):
         if template.items:
             for item_data in template.items:
                 item_from_dict(scene, item_data)
-        elif page == PAGE_DISC:
+        elif page_template_kind(page) == "disc":
             scene.seed_disc_defaults()
 
     def _change_page_template(self) -> None:
@@ -778,7 +779,7 @@ class MainWindow(QMainWindow):
 
         from mdtools.templates import registry
 
-        kind = "disc" if self.current_page == PAGE_DISC else "cover"
+        kind = page_template_kind(self.current_page)
         # Only this project's own medium: a CD project has no use for a
         # J-card and swapping one in would describe a case it does not have.
         templates = [
@@ -1119,10 +1120,11 @@ class MainWindow(QMainWindow):
         self.properties_panel.set_default_text_style(self.project.default_text_style)
         self._sync_grayscale_controls()
         # An opened project may be for the other medium than the one that
-        # was open a moment ago, and the Recording menu follows the medium.
+        # was open a moment ago; the menu and the page names follow it.
         self._sync_mdrem_actions()
-        self.page_combo.setCurrentIndex(0)
-        self._show_page(PAGE_DISC)
+        self.current_page = self.project.ordered_pages()[0]
+        self._refresh_page_combo()
+        self._show_page(self.current_page)
         recent_projects.add_recent_project(path)
         self._mark_saved()
         return True
@@ -1281,7 +1283,7 @@ class MainWindow(QMainWindow):
         """
         adapter = app_settings.mdrem_enabled()
         medium = self.project.medium if self.project is not None else None
-        self._relabel_cover_page(medium)
+        self._refresh_page_combo()
         for_md = medium in (None, MEDIUM_MD)
         for_cd = medium in (None, MEDIUM_CD)
 
@@ -1310,18 +1312,31 @@ class MainWindow(QMainWindow):
         self.telegram_record_action.setVisible(adapter and for_md)
         self.telegram_burn_action.setVisible(for_cd)
 
-    def _relabel_cover_page(self, medium: str | None) -> None:
-        """Names the second page after the thing it actually is.
+    def _refresh_page_combo(self) -> None:
+        """Rebuilds the page dropdown from the open project.
 
-        Rides along on the menu sync because it has the same trigger and
-        the same source of truth: whatever medium the open project is for,
-        re-read whenever that can have changed."""
-        index = self.page_combo.findData(PAGE_COVER)
-        if index < 0:
+        One list, from `Project.ordered_pages()`, named by
+        `project.page_title()` -- so a project with a third page needs
+        nothing here, and a page's name can follow the medium (a CD's
+        second page is a case insert, not a J-card) without this having to
+        know which pages exist.
+
+        The current page is kept if the project still has it, and falls
+        back to the first one if it does not.
+        """
+        if self.project is None:
             return
-        self.page_combo.setItemText(
-            index, self.tr("Case Insert") if medium == MEDIUM_CD else self.tr("Cover / J-Card")
-        )
+        wanted = self.current_page
+        self.page_combo.blockSignals(True)
+        self.page_combo.clear()
+        for page in self.project.ordered_pages():
+            self.page_combo.addItem(page_title(page, self.project.medium), page)
+        index = self.page_combo.findData(wanted)
+        self.page_combo.setCurrentIndex(index if index >= 0 else 0)
+        self.page_combo.blockSignals(False)
+        chosen = self.page_combo.currentData()
+        if chosen is not None and chosen != self.current_page:
+            self._show_page(chosen)
 
     def _sync_experimental_menu(self) -> None:
         """Shows/hides the whole Experimental menu per Window > Settings'

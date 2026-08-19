@@ -13,8 +13,79 @@ from PySide6.QtCore import QCoreApplication
 
 from mdtools.canvas.scene import DesignScene
 
+# The physical medium a project is for. Chosen once, when the project is
+# created, and it decides which templates File > New offers and which
+# recording/burning flow applies to it.
+MEDIUM_MD = "md"
+MEDIUM_CD = "cd"
+
 PAGE_DISC = "disc"
 PAGE_COVER = "cover"
+# Not built yet -- the planned CD back insert (a jewel case tray card).
+# Listed here so the shape of "a page kind" is visible, and so nothing
+# below has to change when it arrives.
+PAGE_BACK = "back"
+
+
+@dataclass(frozen=True)
+class PageKind:
+    """What one page of a project is.
+
+    A project used to be exactly a disc page plus a cover page, and that
+    assumption was written into every layer of the app -- the page
+    dropdown, the template picker, saving, printing. Adding a third page
+    (a CD's case back) meant touching all of it, so the pair became this
+    list instead: a page kind is *data*, and a new one is an entry here
+    rather than a change everywhere.
+
+    `template_kind` is which family of templates fits this page, matching
+    DiscTemplate.kind / CoverTemplate.kind. Several pages can share one:
+    a CD's front insert and its case back are both "cover" shapes.
+    """
+
+    key: str
+    template_kind: str
+
+
+PAGE_KINDS: dict[str, PageKind] = {
+    PAGE_DISC: PageKind(PAGE_DISC, "disc"),
+    PAGE_COVER: PageKind(PAGE_COVER, "cover"),
+    PAGE_BACK: PageKind(PAGE_BACK, "cover"),
+}
+
+# The order pages are offered in, for any project that has them. A project
+# carries only the pages it actually uses; this decides how they are
+# listed.
+PAGE_ORDER = (PAGE_DISC, PAGE_COVER, PAGE_BACK)
+
+
+def page_template_kind(page: str) -> str:
+    """Which template family a page takes. Unknown pages are treated as
+    covers, which is the safe answer: every non-disc page so far is one."""
+    kind = PAGE_KINDS.get(page)
+    return kind.template_kind if kind else "cover"
+
+
+def page_title(page: str, medium: str = "md") -> str:
+    """What to call a page on screen.
+
+    Depends on the medium as well as the page: a MiniDisc's second page is
+    a J-card, a CD's is a case insert, and calling either by the other's
+    name describes a part the project does not have.
+
+    QCoreApplication.translate with a fixed context rather than tr(): this
+    is a plain function, the same rule metadata_menu_entries() below
+    follows.
+    """
+    if page == PAGE_DISC:
+        return QCoreApplication.translate("Pages", "Disc Label")
+    if page == PAGE_COVER:
+        if medium == MEDIUM_CD:
+            return QCoreApplication.translate("Pages", "Case Insert")
+        return QCoreApplication.translate("Pages", "Cover / J-Card")
+    if page == PAGE_BACK:
+        return QCoreApplication.translate("Pages", "Case Back")
+    return page
 
 
 @dataclass
@@ -121,24 +192,30 @@ class GrayscaleAdjustment:
     contrast: int = 0
 
 
-# The physical medium a project is for. Chosen once, when the project is
-# created, and it decides which templates File > New offers and which
-# recording/burning flow applies to it -- not anything about how a page is
-# drawn, which follows from the templates themselves.
-MEDIUM_MD = "md"
-MEDIUM_CD = "cd"
-
-
 @dataclass
 class Project:
     metadata: ProjectMetadata
-    pages: dict[str, DesignScene]  # keys: PAGE_DISC, PAGE_COVER
+    # Keyed by page (PAGE_DISC, PAGE_COVER, ...). A project carries only
+    # the pages it uses -- two today, more once the CD case back lands --
+    # so nothing may assume a particular set. Use ordered_pages() to list
+    # them.
+    pages: dict[str, DesignScene]
     default_text_style: TextStyle = field(default_factory=TextStyle)
     grayscale_adjustment: GrayscaleAdjustment = field(default_factory=GrayscaleAdjustment)
     # MEDIUM_MD for every project saved before CD-R support existed -- they
     # were MiniDisc projects, so loading them as such is not a default, it
     # is the truth about them.
     medium: str = MEDIUM_MD
+
+    def ordered_pages(self) -> list[str]:
+        """This project's pages, in the order they are shown.
+
+        PAGE_ORDER decides the order; anything not listed there follows, in
+        whatever order the project itself holds it, so an unknown page is
+        never silently dropped from the dropdown.
+        """
+        known = [page for page in PAGE_ORDER if page in self.pages]
+        return known + [page for page in self.pages if page not in PAGE_ORDER]
 
 
 # What a mixtape is called when its own tags do not name it. Deliberately
