@@ -25,6 +25,9 @@ class NewDesignDialog(QDialog):
         self.resize(420, 190)
         self.selected_disc_template = None
         self.selected_cover_template = None
+        # None means the project simply has no such page -- not an error,
+        # and the normal case.
+        self.selected_back_template = None
         self.selected_medium = MEDIUM_MD
 
         self._templates = registry.load_templates()
@@ -44,6 +47,14 @@ class NewDesignDialog(QDialog):
         self.cover_combo = QComboBox()
         self.cover_label = QLabel(self.tr("Cover / J-card template"))
         layout.addRow(self.cover_label, self.cover_combo)
+
+        # Optional, and empty by default: most projects are two pages, and
+        # a case back nobody asked for is a blank page in the dropdown for
+        # ever. "(none)" is the first entry rather than a checkbox beside a
+        # combo, so there is one control and one state to read.
+        self.back_combo = QComboBox()
+        self.back_label = QLabel(self.tr("Case back (optional)"))
+        layout.addRow(self.back_label, self.back_combo)
 
         self.empty_label = QLabel(
             self.tr("Add at least one disc and one cover template first (Templates > Manage Templates).")
@@ -79,6 +90,15 @@ class NewDesignDialog(QDialog):
                 label = t.name + ("" if t.verified else self.tr("  (unverified dimensions)"))
                 combo.addItem(label, t)
 
+        # The back page takes cover-shaped templates like any other -- see
+        # project.page_template_kind() -- so it is offered the same list,
+        # with "(none)" in front.
+        self.back_combo.clear()
+        self.back_combo.addItem(self.tr("(none)"), None)
+        for t in covers:
+            label = t.name + ("" if t.verified else self.tr("  (unverified dimensions)"))
+            self.back_combo.addItem(label, t)
+
         # A CD's second page is a case insert, not a J-card -- calling it one
         # would name a MiniDisc part on a project that has none.
         if self.current_medium() == MEDIUM_CD:
@@ -94,4 +114,5 @@ class NewDesignDialog(QDialog):
         self.selected_medium = self.current_medium()
         self.selected_disc_template = copy.deepcopy(self.disc_combo.currentData())
         self.selected_cover_template = copy.deepcopy(self.cover_combo.currentData())
+        self.selected_back_template = copy.deepcopy(self.back_combo.currentData())
         self.accept()

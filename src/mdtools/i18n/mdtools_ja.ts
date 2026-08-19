@@ -1125,17 +1125,17 @@ Eject now to write them permanently?</source>
         <translation type="vanished">MDTools - MiniDiscラベルデザイナー</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="159"/>
+        <location filename="../app_window.py" line="161"/>
         <source>Page</source>
         <translation>ページ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="160"/>
+        <location filename="../app_window.py" line="162"/>
         <source>Editing:</source>
         <translation>編集中:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2021"/>
+        <location filename="../app_window.py" line="2132"/>
         <source>Disc Label</source>
         <translation>ディスクラベル</translation>
     </message>
@@ -1144,187 +1144,251 @@ Eject now to write them permanently?</source>
         <translation type="vanished">カバー / Jカード</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="170"/>
+        <location filename="../app_window.py" line="172"/>
         <source>Zoom</source>
         <translation>ズーム</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="175"/>
-        <location filename="../app_window.py" line="379"/>
+        <location filename="../app_window.py" line="177"/>
+        <location filename="../app_window.py" line="384"/>
         <source>Zoom Out</source>
         <translation>縮小</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="178"/>
-        <location filename="../app_window.py" line="378"/>
+        <location filename="../app_window.py" line="180"/>
+        <location filename="../app_window.py" line="383"/>
         <source>Zoom In</source>
         <translation>拡大</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="179"/>
+        <location filename="../app_window.py" line="181"/>
         <source>100%</source>
         <translation>100%</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="180"/>
+        <location filename="../app_window.py" line="182"/>
         <source>Fit</source>
         <translation>全体表示</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="183"/>
+        <location filename="../app_window.py" line="185"/>
         <source>Grayscale</source>
         <translation>グレースケール</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="186"/>
+        <location filename="../app_window.py" line="188"/>
         <source>Temporarily preview the canvas in grayscale -- view only, click again to restore color</source>
         <translation>キャンバスを一時的にグレースケールで表示します（表示のみ、もう一度クリックするとカラーに戻ります）</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="201"/>
+        <location filename="../app_window.py" line="203"/>
         <source>Grayscale preview/export brightness</source>
         <translation>グレースケール表示・書き出しの明るさ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="207"/>
+        <location filename="../app_window.py" line="209"/>
         <source>Grayscale preview/export contrast</source>
         <translation>グレースケール表示・書き出しのコントラスト</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="211"/>
+        <location filename="../app_window.py" line="213"/>
         <source>Brightness:</source>
         <translation>明るさ:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="213"/>
+        <location filename="../app_window.py" line="215"/>
         <source>Contrast:</source>
         <translation>コントラスト:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="245"/>
+        <location filename="../app_window.py" line="247"/>
         <source>Tools</source>
         <translation>ツール</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="265"/>
+        <location filename="../app_window.py" line="267"/>
         <source>Properties</source>
         <translation>プロパティ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="275"/>
+        <location filename="../app_window.py" line="277"/>
         <source>Layers</source>
         <translation>レイヤー</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="285"/>
+        <location filename="../app_window.py" line="287"/>
         <source>&amp;File</source>
         <translation>&amp;ファイル</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="286"/>
+        <location filename="../app_window.py" line="288"/>
         <source>New...</source>
         <translation>新規...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="287"/>
+        <location filename="../app_window.py" line="289"/>
         <source>Open Project...</source>
         <translation>プロジェクトを開く...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="288"/>
+        <location filename="../app_window.py" line="290"/>
         <source>Open Recent</source>
         <translation>最近使用したプロジェクトを開く</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="290"/>
+        <location filename="../app_window.py" line="292"/>
         <source>Save</source>
         <translation>保存</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="291"/>
+        <location filename="../app_window.py" line="293"/>
         <source>Save As...</source>
         <translation>名前を付けて保存...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="293"/>
+        <location filename="../app_window.py" line="295"/>
         <source>Import Metadata from Project...</source>
         <translation>プロジェクトからメタデータを読み込む...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="295"/>
+        <location filename="../app_window.py" line="297"/>
         <source>Export Cut SVG...</source>
         <translation>カット用SVGを書き出す...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="296"/>
+        <location filename="../app_window.py" line="298"/>
         <source>Export Print PNG...</source>
         <translation>印刷用PNGを書き出す...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="297"/>
+        <location filename="../app_window.py" line="299"/>
         <source>Export Print PNG (Grayscale)...</source>
         <translation>印刷用PNGを書き出す（グレースケール）...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="299"/>
+        <location filename="../app_window.py" line="301"/>
         <source>Print...</source>
         <translation>印刷...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="305"/>
+        <location filename="../app_window.py" line="307"/>
         <source>Close Project</source>
         <translation>プロジェクトを閉じる</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="308"/>
+        <location filename="../app_window.py" line="310"/>
         <source>Exit</source>
         <translation>終了</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="310"/>
+        <location filename="../app_window.py" line="312"/>
         <source>&amp;Edit</source>
         <translation>&amp;編集</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="311"/>
+        <location filename="../app_window.py" line="313"/>
         <source>&amp;Undo</source>
         <translation>&amp;元に戻す</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="314"/>
+        <location filename="../app_window.py" line="316"/>
         <source>&amp;Redo</source>
         <translation>&amp;やり直す</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="318"/>
-        <location filename="../app_window.py" line="946"/>
+        <location filename="../app_window.py" line="320"/>
+        <location filename="../app_window.py" line="1052"/>
         <source>Cut</source>
         <translation>切り取り</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="319"/>
+        <location filename="../app_window.py" line="321"/>
         <source>Copy</source>
         <translation>コピー</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="320"/>
-        <location filename="../app_window.py" line="954"/>
-        <location filename="../app_window.py" line="957"/>
+        <location filename="../app_window.py" line="322"/>
+        <location filename="../app_window.py" line="1060"/>
+        <location filename="../app_window.py" line="1063"/>
         <source>Paste</source>
         <translation>貼り付け</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="325"/>
+        <location filename="../app_window.py" line="327"/>
         <source>Delete</source>
         <translation>削除</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="431"/>
+        <location filename="../app_window.py" line="379"/>
+        <source>Add Page...</source>
+        <translation>ページを追加...</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="380"/>
+        <source>Remove This Page</source>
+        <translation>このページを削除</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="436"/>
         <source>About xD-Tools...</source>
         <translation>xD-Tools について...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2046"/>
+        <location filename="../app_window.py" line="845"/>
+        <location filename="../app_window.py" line="851"/>
+        <location filename="../app_window.py" line="866"/>
+        <location filename="../app_window.py" line="872"/>
+        <source>Add Page</source>
+        <translation>ページを追加</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="846"/>
+        <source>This project already has every page it can have.</source>
+        <translation>このプロジェクトには、追加できるページがもうありません。</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="851"/>
+        <source>Page:</source>
+        <translation>ページ:</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="867"/>
+        <source>There are no templates for that page (Templates &gt; Manage Templates).</source>
+        <translation>そのページ用のテンプレートがありません（テンプレート &gt; テンプレートの管理）。</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="872"/>
+        <source>Template:</source>
+        <translation>テンプレート:</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="901"/>
+        <location filename="../app_window.py" line="908"/>
+        <source>Remove Page</source>
+        <translation>ページを削除</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="902"/>
+        <source>The disc label and the cover are part of every project and cannot be removed.</source>
+        <translation>ディスクラベルとカバーはどのプロジェクトにも必ずあるもので、削除できません。</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="910"/>
+        <source>Remove the {page} page? Everything on it is deleted, and the undo history is reset.</source>
+        <translation>「{page}」のページを削除しますか？そこにあるものはすべて消え、元に戻す履歴もリセットされます。</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="2156"/>
+        <source>Lay Out Case Back</source>
+        <translation>ケースの裏を配置</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="2158"/>
+        <source>Case Back</source>
+        <translation>ケースの裏</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="2181"/>
         <source>Lay Out Case Insert</source>
         <translation>ケースインサートを配置</translation>
     </message>
@@ -1337,117 +1401,117 @@ Eject now to write them permanently?</source>
         <translation type="vanished">メタデータ...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="343"/>
+        <location filename="../app_window.py" line="345"/>
         <source>Record to MiniDisc from foobar2000...</source>
         <translation>foobar2000からMiniDiscに録音...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="337"/>
+        <location filename="../app_window.py" line="339"/>
         <source>Record CD to MiniDisc...</source>
         <translation>CDをMiniDiscに録音...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="100"/>
+        <location filename="../app_window.py" line="102"/>
         <source>xD-Tools - MiniDisc &amp; CD Studio</source>
         <translation>xD-Tools — MiniDisc・CD スタジオ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="333"/>
+        <location filename="../app_window.py" line="335"/>
         <source>&amp;Recording</source>
         <translation>&amp;録音</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="340"/>
+        <location filename="../app_window.py" line="342"/>
         <source>Record Folder to MiniDisc...</source>
         <translation>フォルダーをMiniDiscに録音...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="350"/>
+        <location filename="../app_window.py" line="352"/>
         <source>Burn Audio CD from Folder...</source>
         <translation>フォルダーからオーディオCDを書き込む...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="353"/>
+        <location filename="../app_window.py" line="355"/>
         <source>Burn Audio CD from foobar2000...</source>
         <translation>foobar2000 からオーディオCDを書き込む...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="360"/>
+        <location filename="../app_window.py" line="362"/>
         <source>Erase MiniDisc...</source>
         <translation>MiniDiscを消去...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="367"/>
+        <location filename="../app_window.py" line="369"/>
         <source>Remote Control...</source>
         <translation>リモコン...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="373"/>
+        <location filename="../app_window.py" line="375"/>
         <source>&amp;Templates</source>
         <translation>&amp;テンプレート</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="374"/>
+        <location filename="../app_window.py" line="376"/>
         <source>Manage Templates...</source>
         <translation>テンプレートを管理...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="375"/>
+        <location filename="../app_window.py" line="377"/>
         <source>Change Template for This Page...</source>
         <translation>このページのテンプレートを変更...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="377"/>
+        <location filename="../app_window.py" line="382"/>
         <source>&amp;View</source>
         <translation>&amp;表示</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="380"/>
+        <location filename="../app_window.py" line="385"/>
         <source>Fit to Window</source>
         <translation>ウィンドウに合わせる</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="393"/>
+        <location filename="../app_window.py" line="398"/>
         <source>Experi&amp;mental</source>
         <translation>&amp;実験的機能</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="395"/>
+        <location filename="../app_window.py" line="400"/>
         <source>Experimental Settings...</source>
         <translation>実験的機能の設定...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="402"/>
+        <location filename="../app_window.py" line="407"/>
         <source>Download Album from Telegram Bot...</source>
         <translation>Telegram ボットからアルバムをダウンロード...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="412"/>
+        <location filename="../app_window.py" line="417"/>
         <source>Sort Telegram Downloads into Album Folders...</source>
         <translation>Telegramのダウンロードをアルバムフォルダに振り分け...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="415"/>
+        <location filename="../app_window.py" line="420"/>
         <source>Record from Telegram Downloads...</source>
         <translation>Telegramのダウンロードから録音...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="420"/>
+        <location filename="../app_window.py" line="425"/>
         <source>Burn Telegram Downloads to Audio CD...</source>
         <translation>Telegram のダウンロードをオーディオCDに書き込む...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="426"/>
+        <location filename="../app_window.py" line="431"/>
         <source>&amp;Window</source>
         <translation>&amp;ウィンドウ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="427"/>
+        <location filename="../app_window.py" line="432"/>
         <source>Settings...</source>
         <translation>設定...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="429"/>
+        <location filename="../app_window.py" line="434"/>
         <source>&amp;Help</source>
         <translation>&amp;ヘルプ</translation>
     </message>
@@ -1456,12 +1520,12 @@ Eject now to write them permanently?</source>
         <translation type="vanished">MDToolsについて...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="486"/>
+        <location filename="../app_window.py" line="491"/>
         <source>Unsaved Changes</source>
         <translation>未保存の変更</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="487"/>
+        <location filename="../app_window.py" line="492"/>
         <source>This project has changes that have not been saved.
 
 Save them before continuing?</source>
@@ -1470,23 +1534,23 @@ Save them before continuing?</source>
 続ける前に保存しますか?</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="586"/>
+        <location filename="../app_window.py" line="591"/>
         <source>&apos;{name}&apos; has unverified placeholder dimensions -- measure your physical media/case and correct it in Templates &gt; Manage Templates before cutting anything for real.</source>
         <translation>「{name}」は未確認の仮の寸法です。実際にカットする前に、実物のメディア/ケースを測定し、テンプレート &gt; テンプレートを管理で修正してください。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="796"/>
-        <location filename="../app_window.py" line="810"/>
+        <location filename="../app_window.py" line="805"/>
+        <location filename="../app_window.py" line="819"/>
         <source>Change Template</source>
         <translation>テンプレートの変更</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="797"/>
+        <location filename="../app_window.py" line="806"/>
         <source>Template for this page:</source>
         <translation>このページのテンプレート:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="812"/>
+        <location filename="../app_window.py" line="821"/>
         <source>Changing the template clears this page: every layer on it is removed, and the undo history is reset.
 
 The other page and the project&apos;s metadata are left alone.</source>
@@ -1495,149 +1559,149 @@ The other page and the project&apos;s metadata are left alone.</source>
 もう一方のページとプロジェクトのメタデータはそのまま残ります。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="877"/>
+        <location filename="../app_window.py" line="983"/>
         <source>Add Text</source>
         <translation>テキストを追加</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="884"/>
+        <location filename="../app_window.py" line="990"/>
         <source>Add Rectangle</source>
         <translation>長方形を追加</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="891"/>
-        <location filename="../app_window.py" line="971"/>
+        <location filename="../app_window.py" line="997"/>
+        <location filename="../app_window.py" line="1077"/>
         <source>Delete Layer</source>
         <translation>レイヤーを削除</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="920"/>
-        <location filename="../app_window.py" line="927"/>
+        <location filename="../app_window.py" line="1026"/>
+        <location filename="../app_window.py" line="1033"/>
         <source>Rename Layer</source>
         <translation>レイヤー名を変更</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="920"/>
+        <location filename="../app_window.py" line="1026"/>
         <source>Layer name:</source>
         <translation>レイヤー名:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="989"/>
-        <location filename="../app_window.py" line="1000"/>
-        <location filename="../app_window.py" line="1010"/>
+        <location filename="../app_window.py" line="1095"/>
+        <location filename="../app_window.py" line="1106"/>
+        <location filename="../app_window.py" line="1116"/>
         <source>Insert Metadata Text</source>
         <translation>メタデータのテキストを挿入</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1019"/>
-        <location filename="../app_window.py" line="1025"/>
+        <location filename="../app_window.py" line="1125"/>
+        <location filename="../app_window.py" line="1131"/>
         <source>Add Image</source>
         <translation>画像を追加</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1019"/>
+        <location filename="../app_window.py" line="1125"/>
         <source>Images (*.png *.jpg *.jpeg *.bmp)</source>
         <translation>画像 (*.png *.jpg *.jpeg *.bmp)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1037"/>
+        <location filename="../app_window.py" line="1143"/>
         <source>Insert Asset</source>
         <translation>アセットを挿入</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1048"/>
+        <location filename="../app_window.py" line="1154"/>
         <source>Clip Layers</source>
         <translation>レイヤーを切り取る</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1051"/>
+        <location filename="../app_window.py" line="1157"/>
         <source>Clip Image</source>
         <translation>画像を切り取る</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1069"/>
+        <location filename="../app_window.py" line="1175"/>
         <source>Bake Layers</source>
         <translation>レイヤーを統合</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1081"/>
+        <location filename="../app_window.py" line="1187"/>
         <source>Import Metadata from Project</source>
         <translation>プロジェクトからメタデータを読み込む</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1090"/>
+        <location filename="../app_window.py" line="1196"/>
         <source>Import Metadata</source>
         <translation>メタデータを読み込む</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1090"/>
+        <location filename="../app_window.py" line="1196"/>
         <source>Could not read project:
 {error}</source>
         <translation>プロジェクトを読み込めませんでした:
 {error}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1093"/>
+        <location filename="../app_window.py" line="1199"/>
         <source>Imported metadata from {path}</source>
         <translation>{path} からメタデータを読み込みました</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1097"/>
-        <location filename="../app_window.py" line="1115"/>
+        <location filename="../app_window.py" line="1203"/>
+        <location filename="../app_window.py" line="1221"/>
         <source>Open Project</source>
         <translation>プロジェクトを開く</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1115"/>
+        <location filename="../app_window.py" line="1221"/>
         <source>Could not open project:
 {error}</source>
         <translation>プロジェクトを開けませんでした:
 {error}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1136"/>
+        <location filename="../app_window.py" line="1242"/>
         <source>(No Recent Projects)</source>
         <translation>(最近使用したプロジェクトはありません)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1156"/>
-        <location filename="../app_window.py" line="1180"/>
+        <location filename="../app_window.py" line="1262"/>
+        <location filename="../app_window.py" line="1286"/>
         <source>Saved {path}</source>
         <translation>{path} を保存しました</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1170"/>
+        <location filename="../app_window.py" line="1276"/>
         <source>Save Project As</source>
         <translation>プロジェクトに名前を付けて保存</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1188"/>
+        <location filename="../app_window.py" line="1294"/>
         <source>Export Cut SVG</source>
         <translation>カット用SVGを書き出す</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1188"/>
+        <location filename="../app_window.py" line="1294"/>
         <source>SVG (*.svg)</source>
         <translation>SVG (*.svg)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1193"/>
+        <location filename="../app_window.py" line="1299"/>
         <source>Exported cut outline to {path}</source>
         <translation>カットの輪郭を {path} に書き出しました</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1228"/>
+        <location filename="../app_window.py" line="1334"/>
         <source>Export Print PNG (Grayscale)</source>
         <translation>印刷用PNGを書き出す（グレースケール）</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2048"/>
+        <location filename="../app_window.py" line="2183"/>
         <source>Case Insert</source>
         <translation>ケースインサート</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1402"/>
-        <location filename="../app_window.py" line="1409"/>
+        <location filename="../app_window.py" line="1508"/>
+        <location filename="../app_window.py" line="1515"/>
         <source>Download Album from Telegram Bot</source>
         <translation>Telegram ボットからアルバムをダウンロード</translation>
     </message>
@@ -1646,8 +1710,8 @@ The other page and the project&apos;s metadata are left alone.</source>
         <translation type="vanished">先に Experimental &gt; Experimental Settings... で API ID、API Hash、ボットのユーザー名を設定してください。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1460"/>
-        <location filename="../app_window.py" line="1464"/>
+        <location filename="../app_window.py" line="1566"/>
+        <location filename="../app_window.py" line="1570"/>
         <source>Sort into Album Folders</source>
         <translation>アルバムフォルダに振り分け</translation>
     </message>
@@ -1656,61 +1720,61 @@ The other page and the project&apos;s metadata are left alone.</source>
         <translation type="vanished">アルバムは1つしか検出されませんでした -- 振り分ける必要はありません。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1465"/>
+        <location filename="../app_window.py" line="1571"/>
         <source>Sorted into {count} album folders.</source>
         <translation>{count} 個のアルバムフォルダに振り分けました。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1575"/>
+        <location filename="../app_window.py" line="1681"/>
         <source>Restart Now</source>
         <translation>今すぐ再起動</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1576"/>
+        <location filename="../app_window.py" line="1682"/>
         <source>Later</source>
         <translation>後で</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1699"/>
+        <location filename="../app_window.py" line="1805"/>
         <source>Choose Album Folder</source>
         <translation>アルバムのフォルダーを選択</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1717"/>
-        <location filename="../app_window.py" line="1742"/>
-        <location filename="../app_window.py" line="1749"/>
-        <location filename="../app_window.py" line="1775"/>
+        <location filename="../app_window.py" line="1823"/>
+        <location filename="../app_window.py" line="1848"/>
+        <location filename="../app_window.py" line="1855"/>
+        <location filename="../app_window.py" line="1881"/>
         <source>Burn Audio CD</source>
         <translation>オーディオCDを書き込む</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1718"/>
+        <location filename="../app_window.py" line="1824"/>
         <source>There are no audio files in that folder.</source>
         <translation>そのフォルダーには音声ファイルがありません。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1750"/>
+        <location filename="../app_window.py" line="1856"/>
         <source>foobar2000&apos;s playlist is empty, or its files are not reachable from here.</source>
         <translation>foobar2000 のプレイリストが空か、ファイルにここから到達できません。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1776"/>
+        <location filename="../app_window.py" line="1882"/>
         <source>Put this album&apos;s details into the open project, ready to design its label?</source>
         <translation>このアルバムの情報を開いているプロジェクトに入れて、ラベルを作れるようにしますか？</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1842"/>
-        <location filename="../app_window.py" line="1852"/>
+        <location filename="../app_window.py" line="1948"/>
+        <location filename="../app_window.py" line="1958"/>
         <source>Auto-Layout Disc Label</source>
         <translation>ディスクラベルを自動配置</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1843"/>
+        <location filename="../app_window.py" line="1949"/>
         <source>Fill in the album and artist in the Tools panel&apos;s Metadata... first.</source>
         <translation>先にツールパネルのメタデータ... でアルバム名とアーティストを入力してください。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1854"/>
+        <location filename="../app_window.py" line="1960"/>
         <source>No cover art could be found for this album, and the layout is built around it. Add an image yourself, or fetch one with the Metadata dialog&apos;s lookup.</source>
         <translation>このアルバムのカバーアートが見つかりませんでした。この配置はカバーアートを前提にしています。画像を自分で追加するか、メタデータ画面の検索で取得してください。</translation>
     </message>
@@ -1723,12 +1787,12 @@ The other page and the project&apos;s metadata are left alone.</source>
         <translation type="vanished">このアルバムのカバーアートが見つかりませんでした。この配置はカバーアートを前提にしています。画像を自分で追加するか、プロジェクト &gt; メタデータ... の検索で取得してください。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1862"/>
+        <location filename="../app_window.py" line="1968"/>
         <source>Auto-Layout</source>
         <translation>自動配置</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1864"/>
+        <location filename="../app_window.py" line="1970"/>
         <source>This replaces everything on both pages -- the disc label and the J-card -- and resets the undo history.
 
 The project&apos;s metadata is left alone.</source>
@@ -1737,12 +1801,12 @@ The project&apos;s metadata is left alone.</source>
 プロジェクトのメタデータはそのまま残ります。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1990"/>
+        <location filename="../app_window.py" line="2101"/>
         <source>Lay Out J-Card</source>
         <translation>Jカードの配置</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1992"/>
+        <location filename="../app_window.py" line="2103"/>
         <source>J-Card</source>
         <translation>Jカード</translation>
     </message>
@@ -1755,23 +1819,23 @@ The cover page and the project&apos;s metadata are left alone.</source>
 カバーページとプロジェクトのメタデータはそのまま残ります。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1951"/>
-        <location filename="../app_window.py" line="2019"/>
+        <location filename="../app_window.py" line="2062"/>
+        <location filename="../app_window.py" line="2130"/>
         <source>Lay Out Disc Label</source>
         <translation>ディスクラベルの配置</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1960"/>
+        <location filename="../app_window.py" line="2071"/>
         <source>Cover Art</source>
         <translation>カバーアート</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1964"/>
+        <location filename="../app_window.py" line="2075"/>
         <source>MiniDisc Logo</source>
         <translation>MiniDiscロゴ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1200"/>
+        <location filename="../app_window.py" line="1306"/>
         <source>Export Print PNG</source>
         <translation>印刷用PNGを書き出す</translation>
     </message>
@@ -1780,69 +1844,69 @@ The cover page and the project&apos;s metadata are left alone.</source>
         <translation type="vanished">MDTools - MiniDiscスタジオ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1200"/>
-        <location filename="../app_window.py" line="1228"/>
+        <location filename="../app_window.py" line="1306"/>
+        <location filename="../app_window.py" line="1334"/>
         <source>PNG (*.png)</source>
         <translation>PNG (*.png)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1205"/>
-        <location filename="../app_window.py" line="1233"/>
+        <location filename="../app_window.py" line="1311"/>
+        <location filename="../app_window.py" line="1339"/>
         <source>Exported print artwork to {path}</source>
         <translation>印刷用アートワークを {path} に書き出しました</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1260"/>
+        <location filename="../app_window.py" line="1366"/>
         <source>MDTools Project (*.mdproj)</source>
         <translation>MDToolsプロジェクト (*.mdproj)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1403"/>
+        <location filename="../app_window.py" line="1509"/>
         <source>Set the bot username first, in Experimental &gt; Experimental Settings...</source>
         <translation>Experimental &gt; Experimental Settings...でまずボットのユーザー名を設定してください。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1411"/>
+        <location filename="../app_window.py" line="1517"/>
         <source>This build has no Telegram API credentials. Register an app at my.telegram.org and add its API ID and API Hash to settings.ini to sign in.</source>
         <translation>このビルドにはTelegram APIの認証情報が含まれていません。my.telegram.orgでアプリを登録し、そのAPI IDとAPI Hashをsettings.iniに追加するとサインインできます。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1457"/>
+        <location filename="../app_window.py" line="1563"/>
         <source>These tracks all belong to one album -- there is nothing to separate.</source>
         <translation>これらのトラックはすべて同じアルバムのものです -- 分ける必要はありません。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1459"/>
+        <location filename="../app_window.py" line="1565"/>
         <source>Everything is already sorted into album folders.</source>
         <translation>すべてすでにアルバムフォルダに振り分けられています。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1524"/>
+        <location filename="../app_window.py" line="1630"/>
         <source>Save as Template</source>
         <translation>テンプレートとして保存</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1524"/>
+        <location filename="../app_window.py" line="1630"/>
         <source>Template name:</source>
         <translation>テンプレート名:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1543"/>
+        <location filename="../app_window.py" line="1649"/>
         <source>Saved template &apos;{name}&apos;</source>
         <translation>テンプレート「{name}」を保存しました</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1552"/>
+        <location filename="../app_window.py" line="1658"/>
         <source>Language</source>
         <translation>言語</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1571"/>
+        <location filename="../app_window.py" line="1677"/>
         <source>Language Changed</source>
         <translation>言語を変更しました</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1572"/>
+        <location filename="../app_window.py" line="1678"/>
         <source>Restart MDTools for the new language to take full effect.</source>
         <translation>新しい言語を完全に反映するには、MDToolsを再起動してください。</translation>
     </message>
@@ -2089,43 +2153,54 @@ choose one)</source>
         <translation>新規プロジェクト</translation>
     </message>
     <message>
-        <location filename="../panels/new_design_dialog.py" line="79"/>
+        <location filename="../panels/new_design_dialog.py" line="90"/>
+        <location filename="../panels/new_design_dialog.py" line="99"/>
         <source>  (unverified dimensions)</source>
         <translation>  (未確認の寸法)</translation>
     </message>
     <message>
-        <location filename="../panels/new_design_dialog.py" line="41"/>
+        <location filename="../panels/new_design_dialog.py" line="44"/>
         <source>Disc label template</source>
         <translation>ディスクラベルのテンプレート</translation>
     </message>
     <message>
-        <location filename="../panels/new_design_dialog.py" line="35"/>
+        <location filename="../panels/new_design_dialog.py" line="38"/>
         <source>MiniDisc</source>
         <translation>MiniDisc</translation>
     </message>
     <message>
-        <location filename="../panels/new_design_dialog.py" line="36"/>
+        <location filename="../panels/new_design_dialog.py" line="39"/>
         <source>CD-R</source>
         <translation>CD-R</translation>
     </message>
     <message>
-        <location filename="../panels/new_design_dialog.py" line="38"/>
+        <location filename="../panels/new_design_dialog.py" line="41"/>
         <source>Medium</source>
         <translation>メディア</translation>
     </message>
     <message>
-        <location filename="../panels/new_design_dialog.py" line="45"/>
-        <location filename="../panels/new_design_dialog.py" line="87"/>
+        <location filename="../panels/new_design_dialog.py" line="48"/>
+        <location filename="../panels/new_design_dialog.py" line="107"/>
         <source>Cover / J-card template</source>
         <translation>カバー / Jカードのテンプレート</translation>
     </message>
     <message>
-        <location filename="../panels/new_design_dialog.py" line="49"/>
+        <location filename="../panels/new_design_dialog.py" line="56"/>
+        <source>Case back (optional)</source>
+        <translation>ケースの裏（任意）</translation>
+    </message>
+    <message>
+        <location filename="../panels/new_design_dialog.py" line="60"/>
         <source>Add at least one disc and one cover template first (Templates &gt; Manage Templates).</source>
         <translation>先にディスクとカバーのテンプレートを少なくとも1つずつ追加してください（テンプレート &gt; テンプレートを管理）。</translation>
     </message>
     <message>
-        <location filename="../panels/new_design_dialog.py" line="85"/>
+        <location filename="../panels/new_design_dialog.py" line="97"/>
+        <source>(none)</source>
+        <translation>（なし）</translation>
+    </message>
+    <message>
+        <location filename="../panels/new_design_dialog.py" line="105"/>
         <source>Case insert template</source>
         <translation>ケースインサートのテンプレート</translation>
     </message>

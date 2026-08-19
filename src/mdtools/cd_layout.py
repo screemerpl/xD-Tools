@@ -44,7 +44,7 @@ from mdtools.auto_layout import place_cover_on_label
 from mdtools.canvas.items import set_item_scale
 from mdtools.canvas.scene import DesignScene
 from mdtools.constants import mm_to_px
-from mdtools.jcard_layout import _text, place_back
+from mdtools.jcard_layout import _text, place_back, place_spine
 from mdtools.palette import accent_colour, dominant_colour, readable_text_colour
 from mdtools.project import ProjectMetadata
 
@@ -273,6 +273,52 @@ def place_insert_cover(scene: DesignScene, panel: QRectF, cover_art: bytes) -> Q
     return item
 
 
+def build_case_back(scene: DesignScene, metadata: ProjectMetadata, logo_path: str | None = None) -> list:
+    """The jewel case tray card: a spine down each side, the track list on
+    the panel between them.
+
+    Three panels, from the card's two folds -- and the outer two are the
+    strips that show down the sides of the closed case, which is why they
+    are the ones carrying the album's name. `jcard_layout.place_spine()`
+    already draws exactly that (an accent band, the caption turned to read
+    top-to-bottom, the logo at its foot), so both spines are it, called
+    twice; the middle panel is `place_back()`, the same track-list block
+    the J-card and the folded insert use.
+
+    Not a new layout so much as the two existing ones meeting on one sheet
+    -- which is the point: a tray card that looked like neither would be
+    the odd one out in a set that has to be read together.
+    """
+    panels = scene.fold_panel_rects()
+    if len(panels) != 3:
+        raise CdLayoutError("this page is not a three-panel tray card")
+    if not metadata.cover_art:
+        raise CdLayoutError("there is no cover art to build the case back from")
+
+    left_spine, middle, right_spine = panels
+    background = dominant_colour(metadata.cover_art)
+    accent = accent_colour(metadata.cover_art, against=background)
+
+    added = list(
+        place_back(
+            scene,
+            middle,
+            metadata,
+            background,
+            accent,
+            turned=False,
+            heading_scale=middle.height() / mm_to_px(JCARD_BACK_HEIGHT_MM),
+        )
+    )
+    for spine in (left_spine, right_spine):
+        # Both spines get the same caption on purpose: which side of the
+        # case is visible depends on how it was shelved, and a card that
+        # only names the album on one of them is a card that is often
+        # facing the wrong way.
+        added.extend(place_spine(scene, spine, metadata, accent, logo_path or ""))
+    return added
+
+
 def build_insert(scene: DesignScene, metadata: ProjectMetadata) -> list:
     """The folded insert: track list on the left panel, cover on the right.
 
@@ -312,6 +358,7 @@ def build_insert(scene: DesignScene, metadata: ProjectMetadata) -> list:
 
 __all__ = [
     "CdLayoutError",
+    "build_case_back",
     "build_disc_label",
     "build_insert",
     "lighten",

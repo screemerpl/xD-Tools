@@ -118,9 +118,12 @@ share "cover") and `page_title()` (what to call it, which depends on the
 medium: a MiniDisc's second page is a J-card, a CD's is a case insert).
 `Project.ordered_pages()` lists what a project actually has, in PAGE_ORDER
 order, with anything unrecognised appended rather than dropped. Adding a
-page is then an entry in `PAGE_KINDS` plus a template -- **`PAGE_BACK` is
-already defined and deliberately unused**: the jewel case tray card
-(150x118mm, two 6.5mm spine folds) is decided but not built.
+page is then an entry in `PAGE_KINDS` plus a template, which is exactly
+what **`PAGE_BACK`** turned out to cost when it arrived a day later: the
+jewel case tray card, 150x118mm with two 6.5mm spine folds (the strips that
+show down the sides of a closed case, with the 137mm panel between them
+sitting behind the disc). It is `verified: false` until somebody measures a
+real case.
 
 Three consequences worth knowing:
 - `MainWindow._refresh_page_combo()` fills the dropdown from the project;
@@ -136,6 +139,30 @@ Three consequences worth knowing:
   project by hand (`test_more_than_two_pages.py`), because nothing in the
   app creates one yet and an assumption removed only in principle is not
   removed.
+
+**The case back is optional, and that is the load-bearing part.** A project
+without one is the normal case, so nothing may assume it exists:
+- File > New offers it as a third combo whose first entry is `(none)`,
+  which is the default -- a checkbox beside a combo would have been two
+  controls and two states for one question.
+- Templates > **Add Page...** / **Remove This Page** add or drop it later.
+  Only optional pages can be removed: the disc and cover pages are what a
+  project *is*, and `_remove_page()` says so rather than letting a project
+  be emptied. Removing resets the undo stack, for the same reason
+  `apply_template()` does -- its commands reference items on a scene that
+  is about to be discarded.
+- The automatic layout fills it **only when the project has one**, and
+  **does not change its template**, unlike the disc and cover halves which
+  re-template the page they lay out. That page exists because the user
+  added it and chose its shape; replacing that with whatever this method
+  preferred would undo their choice.
+
+`cd_layout.build_case_back()` is the two existing layouts meeting on one
+sheet rather than a third one: `jcard_layout.place_spine()` for each of the
+two side strips, `place_back()` for the panel between them. Both spines get
+the same caption on purpose -- which side of a case is visible depends on
+how it was shelved, and a card naming the album on only one of them is a
+card that is often facing the wrong way.
 
 A **Project** = one Disc Label page + one Cover/J-Card page + metadata
 (album/artist/year/tracks) + a project-wide default text style + the physical
