@@ -14,12 +14,14 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QMenu,
     QMessageBox,
     QPushButton,
     QVBoxLayout,
     QWidget,
 )
 
+from mdtools.project import MEDIUM_CD, MEDIUM_MD, MEDIUM_TAPE
 from mdtools.templates import registry
 from mdtools.templates.models import CoverTemplate, DiscTemplate
 
@@ -32,22 +34,51 @@ class TemplateManagerDialog(QDialog):
 
         self.templates = registry.load_templates()
 
-        root = QHBoxLayout(self)
+        # No parent here, deliberately: passing `self` installs this as the
+        # dialog's layout on the spot, and the setLayout(outer) at the end
+        # is then refused by Qt as "already has a layout" -- which is
+        # exactly what happened, leaving the Save/Cancel row off the screen
+        # entirely. The window could only be closed with the X, so every
+        # template edit was silently discarded. Reported as "where is the
+        # save button?".
+        root = QHBoxLayout()
 
         left = QVBoxLayout()
+
+        # A filter, not a property: which medium's templates to *look* at.
+        # Each template carries its own medium, edited on the right.
+        filter_row = QHBoxLayout()
+        filter_row.addWidget(QLabel(self.tr("Medium")))
+        self.medium_filter = QComboBox()
+        self.medium_filter.addItem(self.tr("All"), None)
+        self.medium_filter.addItem(self.tr("MiniDisc"), MEDIUM_MD)
+        self.medium_filter.addItem(self.tr("CD-R"), MEDIUM_CD)
+        self.medium_filter.addItem(self.tr("Compact Cassette"), MEDIUM_TAPE)
+        self.medium_filter.currentIndexChanged.connect(lambda _index: self._refresh_list())
+        filter_row.addWidget(self.medium_filter, 1)
+        left.addLayout(filter_row)
+
         self.list_widget = QListWidget()
         self.list_widget.currentRowChanged.connect(self._on_selection_changed)
         left.addWidget(self.list_widget)
 
         btn_row = QHBoxLayout()
-        add_disc_btn = QPushButton(self.tr("+ Disc"))
-        add_disc_btn.clicked.connect(self._add_disc)
-        add_cover_btn = QPushButton(self.tr("+ Cover"))
-        add_cover_btn.clicked.connect(self._add_cover)
+        # One button with a menu, rather than one button per kind: a page
+        # kind is data now (see project.PAGE_KINDS), and a row of buttons
+        # named after the two that exist today is exactly the shape this
+        # refactor set out to remove.
+        self.add_btn = QPushButton(self.tr("Add..."))
+        add_menu = QMenu(self.add_btn)
+        for kind, label in (
+            ("disc", self.tr("Disc label")),
+            ("cover", self.tr("Cover or insert")),
+            ("label", self.tr("Shell label")),
+        ):
+            add_menu.addAction(label, lambda checked=False, k=kind: self._add_template(k))
+        self.add_btn.setMenu(add_menu)
+        btn_row.addWidget(self.add_btn)
         self.del_btn = QPushButton(self.tr("Delete"))
         self.del_btn.clicked.connect(self._delete_selected)
-        btn_row.addWidget(add_disc_btn)
-        btn_row.addWidget(add_cover_btn)
         btn_row.addWidget(self.del_btn)
         left.addLayout(btn_row)
         root.addLayout(left, 1)
@@ -57,7 +88,14 @@ class TemplateManagerDialog(QDialog):
         self.editor_layout.addWidget(QLabel(self.tr("Select a template to edit.")))
         root.addWidget(self.editor_container, 2)
 
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        # "Save" rather than "OK": every edit here goes straight into the
+        # template object as it is typed, and nothing is written to disk
+        # until this is pressed -- which was invisible when the button was
+        # called OK ("where is the save button?", asked directly).
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
+        buttons.button(QDialogButtonBox.StandardButton.Save).setToolTip(
+            self.tr("Writes every change in this window to your template file.")
+        )
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
 
@@ -71,30 +109,58 @@ class TemplateManagerDialog(QDialog):
     def _builtin_suffix(self, builtin: bool) -> str:
         return self.tr(" [built-in]") if builtin else ""
 
-    def _refresh_list(self, select_index: int | None = None) -> None:
+    def _refresh_list(self, select_index: int | None = None, select_template=None) -> None:
+        """Fills the list, honouring the medium filter.
+
+        `select_template` selects by identity rather than by row, because a
+        filtered list has no stable relationship between a template's
+        position in `self.templates` and its row here -- which is what made
+        the old "the new disc's row is its index within the disc list"
+        arithmetic quietly wrong the moment anything filtered the view.
+        """
+        wanted = self.medium_filter.currentData()
         self.list_widget.blockSignals(True)
         self.list_widget.clear()
-        for t in self.templates["disc"]:
-            item = QListWidgetItem(self.tr("Disc: {name}").format(name=t.name) + self._builtin_suffix(t.builtin))
-            item.setData(1, ("disc", t))
-            self.list_widget.addItem(item)
-        for t in self.templates["cover"]:
-            item = QListWidgetItem(self.tr("Cover: {name}").format(name=t.name) + self._builtin_suffix(t.builtin))
-            item.setData(1, ("cover", t))
-            self.list_widget.addItem(item)
+        for kind, label in (
+            ("disc", self.tr("Disc: {name}")),
+            ("cover", self.tr("Cover: {name}")),
+            ("label", self.tr("Label: {name}")),
+        ):
+            for template in self.templates[kind]:
+                if wanted is not None and getattr(template, "medium", MEDIUM_MD) != wanted:
+                    continue
+                item = QListWidgetItem(
+                    label.format(name=template.name) + self._builtin_suffix(template.builtin)
+                )
+                item.setData(1, (kind, template))
+                self.list_widget.addItem(item)
         self.list_widget.blockSignals(False)
+
+        if select_template is not None:
+            for row in range(self.list_widget.count()):
+                if self.list_widget.item(row).data(1)[1] is select_template:
+                    self.list_widget.setCurrentRow(row)
+                    return
         if select_index is not None and 0 <= select_index < self.list_widget.count():
             self.list_widget.setCurrentRow(select_index)
 
-    def _add_disc(self) -> None:
-        self.templates["disc"].append(DiscTemplate(name=self.tr("New Disc"), width_mm=37.0, height_mm=52.0))
-        # discs are listed before covers, so the new disc's row is its index within the disc list
-        self._refresh_list(select_index=len(self.templates["disc"]) - 1)
-
-    def _add_cover(self) -> None:
-        self.templates["cover"].append(CoverTemplate(name=self.tr("New Cover"), width_mm=100.0, height_mm=60.0))
-        # covers are listed after all discs, so the new cover's row comes after the full disc list
-        self._refresh_list(select_index=len(self.templates["disc"]) + len(self.templates["cover"]) - 1)
+    def _add_template(self, kind: str) -> None:
+        """A new template of `kind`, taking the medium currently filtered
+        for -- which is almost always the one being worked on, and is one
+        less thing to set by hand."""
+        medium = self.medium_filter.currentData() or MEDIUM_MD
+        if kind == "disc":
+            template = DiscTemplate(name=self.tr("New Disc"), width_mm=37.0, height_mm=52.0, medium=medium)
+        elif kind == "label":
+            # Same dataclass as a cover, a different family -- see
+            # registry.KINDS for why that distinction is worth having.
+            template = CoverTemplate(
+                name=self.tr("New Label"), width_mm=90.0, height_mm=46.0, medium=medium, kind="label"
+            )
+        else:
+            template = CoverTemplate(name=self.tr("New Cover"), width_mm=100.0, height_mm=60.0, medium=medium)
+        self.templates[kind].append(template)
+        self._refresh_list(select_template=template)
 
     def _delete_selected(self) -> None:
         row = self.list_widget.currentRow()
@@ -127,6 +193,21 @@ class TemplateManagerDialog(QDialog):
         name_edit.textChanged.connect(lambda v: (setattr(template, "name", v), self._relabel(row, kind, v)))
         form.addRow(self.tr("Name"), name_edit)
 
+        # Which medium's File > New offers this template at all. Selected by
+        # data rather than index for the same reason the shape combo below
+        # is: setting the index fires the change signal, so a lookup that
+        # missed would rewrite the value it was meant to display.
+        medium_combo = QComboBox()
+        medium_combo.addItem(self.tr("MiniDisc"), MEDIUM_MD)
+        medium_combo.addItem(self.tr("CD-R"), MEDIUM_CD)
+        medium_combo.addItem(self.tr("Compact Cassette"), MEDIUM_TAPE)
+        medium_index = medium_combo.findData(template.medium)
+        medium_combo.setCurrentIndex(medium_index if medium_index >= 0 else 0)
+        medium_combo.currentIndexChanged.connect(
+            lambda index: setattr(template, "medium", medium_combo.itemData(index))
+        )
+        form.addRow(self.tr("Medium"), medium_combo)
+
         if template.items:
             form.addRow(
                 self.tr("Layers"),
@@ -153,7 +234,14 @@ class TemplateManagerDialog(QDialog):
             shape_combo = QComboBox()
             shape_combo.addItem(self.tr("Sticker (chamfer + fillet)"), "sticker")
             shape_combo.addItem(self.tr("Full disc label (rounded rect + slider notch)"), "full_label")
-            shape_combo.setCurrentIndex(0 if template.shape == "sticker" else 1)
+            shape_combo.addItem(self.tr("CD disc label (circle + spindle hole)"), "cd_label")
+            # Selected by data, never by index: picking "whatever isn't
+            # sticker" would land a cd_label template on the full_label entry
+            # and -- because setting the index fires currentIndexChanged --
+            # rewrite its shape to match, turning a CD label into a MiniDisc
+            # one just by opening this dialog.
+            shape_index = shape_combo.findData(template.shape)
+            shape_combo.setCurrentIndex(shape_index if shape_index >= 0 else 0)
             form.addRow(self.tr("Shape"), shape_combo)
 
             chamfer = spin(template.chamfer_mm, maximum=20.0)
@@ -208,18 +296,32 @@ class TemplateManagerDialog(QDialog):
             travel.valueChanged.connect(lambda v: setattr(template, "slider_travel_mm", v))
             form.addRow(self.tr("Slider travel channel length"), travel)
 
+            outer_diameter = spin(template.outer_diameter_mm, maximum=200.0)
+            outer_diameter.valueChanged.connect(lambda v: setattr(template, "outer_diameter_mm", v))
+            form.addRow(self.tr("Outer diameter (CD label)"), outer_diameter)
+
+            hole_diameter = spin(template.hole_diameter_mm, maximum=200.0)
+            hole_diameter.valueChanged.connect(lambda v: setattr(template, "hole_diameter_mm", v))
+            form.addRow(self.tr("Spindle hole diameter (0 = none)"), hole_diameter)
+
             # slider_w/h/r are shared: for "sticker" they size the shape
             # placed beside the disc; for "full_label" they size the shape
             # nested inside the notch -- so they stay visible either way.
             sticker_rows = [chamfer, fillet, slider_gap]
             full_label_rows = [full_label_radius, notch_w, notch_h, notch_r, notch_top, notch_buffer, travel]
+            cd_rows = [outer_diameter, hole_diameter]
+            # A CD has no cartridge, so nothing about a slider applies to it.
+            slider_rows = [slider_w, slider_h, slider_r]
 
             def update_shape_visibility(shape: str) -> None:
-                is_sticker = shape == "sticker"
                 for row_widget in sticker_rows:
-                    form.setRowVisible(row_widget, is_sticker)
+                    form.setRowVisible(row_widget, shape == "sticker")
                 for row_widget in full_label_rows:
-                    form.setRowVisible(row_widget, not is_sticker)
+                    form.setRowVisible(row_widget, shape == "full_label")
+                for row_widget in cd_rows:
+                    form.setRowVisible(row_widget, shape == "cd_label")
+                for row_widget in slider_rows:
+                    form.setRowVisible(row_widget, shape != "cd_label")
 
             def on_shape_changed(index: int) -> None:
                 shape = shape_combo.itemData(index)
@@ -282,6 +384,27 @@ class TemplateManagerDialog(QDialog):
             cutout_from_bottom.valueChanged.connect(lambda v: setattr(template, "cutout_from_bottom_mm", v))
             form.addRow(self.tr("Cutout distance from bottom"), cutout_from_bottom)
 
+            chamfer = spin(template.top_chamfer_mm, maximum=100.0)
+            chamfer.valueChanged.connect(lambda v: setattr(template, "top_chamfer_mm", v))
+            form.addRow(self.tr("Top corner chamfer (cut line)"), chamfer)
+
+            hub_d = spin(template.hub_diameter_mm, maximum=100.0)
+            hub_d.valueChanged.connect(lambda v: setattr(template, "hub_diameter_mm", v))
+            form.addRow(self.tr("Reel hole diameter (0 = no opening)"), hub_d)
+
+            hub_gap = spin(template.hub_spacing_mm, maximum=200.0)
+            hub_gap.valueChanged.connect(lambda v: setattr(template, "hub_spacing_mm", v))
+            form.addRow(self.tr("Reel hole spacing (centres)"), hub_gap)
+
+            hub_top = spin(template.hub_centre_from_top_mm, maximum=200.0)
+            hub_top.valueChanged.connect(lambda v: setattr(template, "hub_centre_from_top_mm", v))
+            form.addRow(self.tr("Reel centres from top (0 = middle)"), hub_top)
+
+            # A cover or insert is a solid sheet; only a sticker that goes
+            # onto a cassette has to be cut around the reels.
+            for row_widget in (chamfer, hub_d, hub_gap, hub_top):
+                form.setRowVisible(row_widget, kind == "label")
+
         verified = QCheckBox(self.tr("Verified against real media/case"))
         verified.setChecked(template.verified)
         verified.toggled.connect(lambda v: setattr(template, "verified", v))
@@ -292,7 +415,10 @@ class TemplateManagerDialog(QDialog):
     def _relabel(self, row: int, kind: str, name: str) -> None:
         _, template = self.list_widget.item(row).data(1)
         suffix = self._builtin_suffix(template.builtin)
-        label = self.tr("Disc: {name}") if kind == "disc" else self.tr("Cover: {name}")
+        label = {
+            "disc": self.tr("Disc: {name}"),
+            "label": self.tr("Label: {name}"),
+        }.get(kind, self.tr("Cover: {name}"))
         self.list_widget.item(row).setText(label.format(name=name) + suffix)
 
     def _on_accept(self) -> None:

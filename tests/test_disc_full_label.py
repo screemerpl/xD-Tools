@@ -15,9 +15,9 @@ def _full_label(**overrides) -> DiscTemplate:
         slider_notch_width_mm=27.5,
         slider_notch_height_mm=17.5,
         slider_notch_corner_radius_mm=2.5,
-        slider_notch_top_mm=25.2,
+        slider_notch_top_mm=24.3,
         slider_notch_buffer_mm=0.8,
-        slider_travel_mm=18.0,
+        slider_travel_mm=19.4,
     )
     defaults.update(overrides)
     return DiscTemplate(**defaults)
@@ -40,9 +40,9 @@ def test_notch_and_travel_channel_are_cut_out_of_the_label(qt_app):
     outline_path = scene.cut_only_items()[0].path()
 
     # base slider footprint (before the 0.8mm buffer): x 41.9..69.4 (flush
-    # right), y 25.2..42.7 (26mm from the MD's top, minus the label's own
+    # right), y 24.3..41.8 (26mm from the MD's top, minus the label's own
     # 0.8mm margin)
-    slider_center = QPointF(mm_to_px((41.9 + 69.4) / 2), mm_to_px((25.2 + 42.7) / 2))
+    slider_center = QPointF(mm_to_px((41.9 + 69.4) / 2), mm_to_px((24.3 + 41.8) / 2))
     assert not outline_path.contains(slider_center)
 
     # the buffer physically widens the notch by 0.8mm on top/bottom/left --
@@ -73,7 +73,7 @@ def test_no_notch_when_dimensions_are_zero(qt_app):
     scene = DesignScene(_full_label(slider_notch_width_mm=0.0, slider_notch_height_mm=0.0))
     outline_path = scene.cut_only_items()[0].path()
 
-    slider_center = QPointF(mm_to_px((41.9 + 69.4) / 2), mm_to_px((25.2 + 42.7) / 2))
+    slider_center = QPointF(mm_to_px((41.9 + 69.4) / 2), mm_to_px((24.3 + 41.8) / 2))
     assert outline_path.contains(slider_center)  # no hole -- should be solid material
 
 
@@ -81,7 +81,7 @@ def test_template_clip_path_excludes_the_notch(qt_app):
     scene = DesignScene(_full_label())
     clip = scene.template_clip_path()
 
-    slider_center = QPointF(mm_to_px((41.9 + 69.4) / 2), mm_to_px((25.2 + 42.7) / 2))
+    slider_center = QPointF(mm_to_px((41.9 + 69.4) / 2), mm_to_px((24.3 + 41.8) / 2))
     elsewhere = QPointF(mm_to_px(10.0), mm_to_px(10.0))
     assert not clip.contains(slider_center)
     assert clip.contains(elsewhere)
@@ -100,10 +100,10 @@ def test_slider_sticker_is_nested_inside_the_notch_not_beside_the_disc(qt_app):
     scene = DesignScene(_full_label_with_slider())
     main_path, slider_path = (i.path() for i in scene._outline_items)
 
-    # the sticker's own footprint (27.5x17.5, flush right, top at 25.2mm --
+    # the sticker's own footprint (27.5x17.5, flush right, top at 24.3mm --
     # same as the notch's unbuffered position) sits entirely within the
     # notch's void, not off to the side of the whole disc
-    slider_center = QPointF(mm_to_px((41.9 + 69.4) / 2), mm_to_px((25.2 + 42.7) / 2))
+    slider_center = QPointF(mm_to_px((41.9 + 69.4) / 2), mm_to_px((24.3 + 41.8) / 2))
     assert slider_path.contains(slider_center)
     assert not main_path.contains(slider_center)
 
@@ -124,7 +124,7 @@ def test_template_clip_path_covers_the_nested_slider_sticker(qt_app):
     scene = DesignScene(_full_label_with_slider())
     clip = scene.template_clip_path()
 
-    slider_center = QPointF(mm_to_px((41.9 + 69.4) / 2), mm_to_px((25.2 + 42.7) / 2))
+    slider_center = QPointF(mm_to_px((41.9 + 69.4) / 2), mm_to_px((24.3 + 41.8) / 2))
     assert clip.contains(slider_center)
 
 

@@ -20,7 +20,9 @@ diagrams at doc/img/.
 
 from __future__ import annotations
 
+import copy
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -211,10 +213,87 @@ def _fake_ports():
     ]
 
 
-def _make_fake_foobar():
+def _install_cd_stand_ins() -> None:
+    """A drive with the demo album in it, and a MusicBrainz that recognises
+    it -- so the CD window can be photographed with a disc read, on a
+    machine that has neither a drive nor a network."""
+    from mdtools import cdrip, musicbrainz
+
+    def drives():
+        return [cdrip.CdDrive(device="D:", label="Audio CD", has_media=True)]
+
+    def toc(device, run=None):
+        tracks, start = [], 0
+        for number, (_, seconds) in enumerate(DEMO_TRACKS, start=1):
+            sectors = seconds * cdrip.SECTORS_PER_SECOND
+            tracks.append(cdrip.TocTrack(number=number, first_lba=start, sectors=sectors))
+            start += sectors
+        return cdrip.DiscToc(tracks=tracks, leadout_lba=start)
+
+    def lookup(disc_toc, opener=None):
+        return [
+            musicbrainz.DiscRelease(
+                release_id="demo",
+                title=DEMO_ALBUM,
+                artist=DEMO_ARTIST,
+                year=DEMO_YEAR,
+                country="XE",
+                track_titles=[title for title, _ in DEMO_TRACKS],
+                track_artists=[""] * len(DEMO_TRACKS),
+            )
+        ]
+
+    cdrip.list_drives = drives
+    cdrip.read_toc = toc
+    cdrip.missing_tools = lambda: []
+    musicbrainz.lookup_disc = lookup
+
+
+def _install_burner_stand_ins() -> None:
+    """A burner and its tools, stood in for exactly as the deck and the CD
+    drive already are -- otherwise every burn screenshot would show
+    "Missing tools" and an empty drive list, which is a picture of a
+    machine, not of the feature."""
+    from mdtools import cdburn, decode
+
+    cdburn.cdrecord_path = lambda: "cdrecord"
+    cdburn.missing_tools = lambda: []
+    cdburn.list_burners = lambda **_kwargs: [
+        cdburn.Burner(device="1,0,0", description="HL-DT-ST DVDRAM GP20N 1.02")
+    ]
+    # A hi-res album is what a download normally is, and the verdict column
+    # saying so is worth showing.
+    decode.can_convert = lambda: True
+
+
+def _install_cover_stand_in() -> None:
+    """Stops the recording dialogs reaching iTunes, and gives them the demo
+    sleeve instead.
+
+    Two reasons, and the first is not cosmetic: this script is meant to
+    regenerate the same figures on any machine, offline (see DEMO_ALBUM), and
+    those dialogs now look a cover up as soon as they open. The second is
+    that the demo album is invented, so a real search correctly finds
+    nothing -- every figure would show an empty preview while the text
+    beside it describes the artwork.
+
+    Patched per importing module rather than on cover_preview itself: each
+    one did `from ... import fetch_into`, so its own name is what gets
+    called."""
+    from mdtools.panels import cd_rip_dialog, folder_record_dialog, record_dialog, tape_record_dialog
+
+    def fake_fetch(preview, artist, album, track_count=None):
+        preview.set_cover(demo_cover_bytes())
+        return None
+
+    for module in (record_dialog, cd_rip_dialog, folder_record_dialog, tape_record_dialog):
+        module.fetch_into = fake_fetch
+
+
+def _demo_playlist_items():
     from mdtools import foobar
 
-    items = [
+    return [
         foobar.PlaylistItem(
             track_number=str(index),
             title=title,
@@ -225,6 +304,25 @@ def _make_fake_foobar():
         )
         for index, (title, length) in enumerate(DEMO_TRACKS, start=1)
     ]
+
+
+def _install_folder_stand_in() -> None:
+    """Makes choosing a folder land straight in the loaded state.
+
+    Picking a folder now hands it to foobar2000 on a worker thread, which
+    this script has no real foobar for -- and a figure does not want a
+    thread in it anyway. Replacing the load with the result it would have
+    produced gives the dialog exactly the state a reader sees, including
+    the Record button being enabled."""
+    from mdtools.panels.folder_record_dialog import FolderRecordDialog
+
+    FolderRecordDialog._load = lambda self: self._on_loaded(_demo_playlist_items())
+
+
+def _make_fake_foobar():
+    from mdtools import foobar
+
+    items = _demo_playlist_items()
 
     class _FakeFoobar:
         def __init__(self, base_url: str = "", timeout: float = 0.0):
@@ -485,6 +583,19 @@ SIGNAL_CHAIN_STRINGS = {
 # --- the screenshots themselves --------------------------------------------
 
 
+def _demo_album_folder() -> Path:
+    """A throwaway folder of empty files for the Record Folder screenshot.
+
+    Empty is enough: that dialog only ever lists filenames and asks foobar
+    (stood in for here) what the tags say, so it never opens one. Under the
+    temp folder rather than anywhere the reader might have real music."""
+    folder = Path(tempfile.gettempdir()) / "MDTools Manual" / f"{DEMO_ARTIST} - {DEMO_ALBUM} ({DEMO_YEAR})"
+    folder.mkdir(parents=True, exist_ok=True)
+    for index, (title, _length) in enumerate(DEMO_TRACKS, start=1):
+        (folder / f"{index:02d} {title}.flac").write_bytes(b"")
+    return folder
+
+
 def demo_metadata():
     from mdtools.project import ProjectMetadata, Track
 
@@ -501,6 +612,9 @@ def capture_language(app, code: str) -> None:
     from mdtools import app_settings, i18n, mdrem
     from mdtools.app_window import MainWindow
     from mdtools.panels.about_dialog import AboutDialog
+    from mdtools.panels.cd_rip_dialog import CdRipDialog
+    from mdtools.panels.erase_dialog import EraseDiscDialog
+    from mdtools.panels.folder_record_dialog import FolderRecordDialog
     from mdtools.panels.metadata_dialog import MetadataDialog
     from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
     from mdtools.panels.new_design_dialog import NewDesignDialog
@@ -566,10 +680,288 @@ def capture_language(app, code: str) -> None:
 
     save(AboutDialog(), out / "about.png")
 
+    # -- a CD project: the ring label, the folded insert, and the burn
+    _capture_cd(out, code, metadata)
+
     # -- everything MDRem, with the hardware and foobar2000 stood in for
     save(RemoteDialog("COM7"), out / "remote.png")
     save(MDRemUploadDialog(metadata, "COM7"), out / "upload.png", settle_ms=400)
     save(RecordDialog("COM7", "http://localhost:8880"), out / "record.png", settle_ms=400)
+
+    # -- reading a CD, with the drive and MusicBrainz stood in for
+    rip = CdRipDialog("http://localhost:8880")
+    rip.show()
+    settle(200)
+    rip._read_disc()
+    save(rip, out / "cd-rip.png", settle_ms=400)
+    close_quietly(rip)
+
+    # -- recording a folder of files, with a throwaway album on disk
+    folder = FolderRecordDialog("http://localhost:8880")
+    folder.show()
+    settle(200)
+    folder.set_folder(_demo_album_folder())  # which loads it, see the stand-in
+    save(folder, out / "folder-record.png", settle_ms=400)
+    close_quietly(folder)
+
+    save(EraseDiscDialog("COM7"), out / "erase.png")
+
+    # -- a cassette project: the inlay, a shell label, and the recording
+    _capture_tape(out, code, metadata)
+
+    _capture_telegram(out, code)
+
+
+# --- the experimental Telegram feature ------------------------------------
+#
+# **Nothing here contacts Telegram**, which is the same rule the rest of this
+# script follows for the serial port, foobar2000 and the cover lookup -- but
+# it needs no stand-in object to achieve it. Both dialogs are inert until an
+# explicit action starts their worker (TelegramChatDialog.start_connecting(),
+# and TelegramLoginDialog only on "Send code"), so plain construction opens no
+# socket at all. The chat transcript is then filled by handing synthetic
+# ChatMessages straight to the dialog's own signal handlers -- the real
+# rendering code, driven with fake data, rather than a mock of the rendering.
+
+_TELEGRAM_CHAT: dict[str, list[str]] = {
+    #        bot greeting, the reply we show as sent, the file it answers with
+    "en": ["Send me an artist and album and I will look it up.", "Aurora Test Signal - Night Ferry"],
+    "pl": ["Podaj wykonawcę i album, a poszukam.", "Aurora Test Signal - Night Ferry"],
+    "ja": ["アーティストとアルバム名を送ってください。", "Aurora Test Signal - Night Ferry"],
+}
+
+# One row, two columns -- ChatMessage.buttons is a label *grid*, not a flat
+# list, since a position in it is what identifies a button to click.
+_TELEGRAM_BUTTONS = [["FLAC (312 MB)", "MP3 320 (98 MB)"]]
+
+
+# Windows captured here are kept alive for the life of the process. A
+# MainWindow collected while its scenes still have selectionChanged
+# connected prints "Internal C++ object (DesignScene) already deleted" at
+# interpreter shutdown -- harmless, since every file is written by then,
+# but it reads like a failed run.
+_KEEP_ALIVE: list = []
+
+
+def _capture_cd(out: Path, code: str, metadata) -> None:
+    """The CD half: a project on the CD templates with both pages laid out,
+    and the burn dialog over a folder of files.
+
+    The album is written to disk as real (empty) FLACs, because the burn
+    dialog reads its track lengths from the files themselves -- a list of
+    names alone would show a disc of zero-length tracks, which is a picture
+    of nothing.
+    """
+    import tempfile
+
+    from mdtools.app_window import CD_INSERT_TEMPLATE, CD_LABEL_TEMPLATE, MainWindow
+    from mdtools.panels.burn_dialog import BurnDialog
+    from mdtools.panels.print_dialog import PrintDialog
+    from mdtools.project import MEDIUM_CD, PAGE_COVER, PAGE_DISC
+    from mdtools.templates import registry
+
+    templates = registry.load_templates()
+    window = MainWindow(show_startup_dialog=False)
+    window.project.medium = MEDIUM_CD
+    window.apply_template(PAGE_DISC, next(t for t in templates["disc"] if t.name == CD_LABEL_TEMPLATE))
+    window.apply_template(PAGE_COVER, next(t for t in templates["cover"] if t.name == CD_INSERT_TEMPLATE))
+    window.project.metadata = metadata
+    window.show()
+    settle(300)
+    window._auto_layout_project(metadata)
+    settle(400)
+    save(window, out / "cd-label.png", settle_ms=500, before_grab=window.view.fit_to_window)
+
+    def show_insert() -> None:
+        window.page_combo.setCurrentIndex(window.page_combo.findData(PAGE_COVER))
+        settle(200)
+        window.view.fit_to_window()
+
+    save(window, out / "cd-insert.png", settle_ms=400, before_grab=show_insert)
+
+    # The optional third page, added the way the manual tells the reader to
+    # add it -- and then laid out, since an empty tray card is a picture of
+    # a rectangle.
+    from mdtools.canvas.scene import DesignScene
+    from mdtools.project import PAGE_BACK
+
+    tray = next(t for t in templates["cover"] if t.name.startswith("CD Jewel Case Back"))
+    window.project.pages[PAGE_BACK] = DesignScene(tray)
+    window._refresh_page_combo()
+    window._auto_layout_cd_case_back(metadata)
+
+    def show_back() -> None:
+        window.page_combo.setCurrentIndex(window.page_combo.findData(PAGE_BACK))
+        settle(200)
+        window.view.fit_to_window()
+
+    save(window, out / "cd-back.png", settle_ms=400, before_grab=show_back)
+
+    def separate_sheets(dialog) -> None:
+        dialog.orientation_combo.setCurrentIndex(1)
+        dialog.separate_sheets_check.setChecked(True)
+
+    printing = PrintDialog(window.project)
+    separate_sheets(printing)
+    save(printing, out / "cd-print.png", settle_ms=600)
+    close_quietly(printing)
+    close_quietly(window)
+    _KEEP_ALIVE.append(window)
+
+    # The dialog reads each track's length from the file itself, so the
+    # album is stood in for the same way the deck and the CD drive are:
+    # decode.analyze answers with the demo album's real running times.
+    # Writing eight real WAVs would mean 300MB of silence, and putting them
+    # anywhere near the repo would be worse than that.
+    from mdtools import decode
+
+    lengths = {}
+    sources = []
+    scratch = Path(tempfile.gettempdir()) / "xdtools-manual-burn"
+    for index, track in enumerate(metadata.tracks[:8], start=1):
+        path = scratch / f"{index:02d}.flac"
+        lengths[str(path)] = track.time_seconds or 210
+        sources.append((path, track.title, track.artist or metadata.artist))
+
+    def stand_in(target):
+        seconds = lengths.get(str(target), 210)
+        return decode.AudioProperties(
+            sample_rate=44100, bits_per_sample=16, channels=2, frames=seconds * 44100
+        )
+
+    real_analyze = decode.analyze
+    decode.analyze = stand_in
+    try:
+        burn = BurnDialog(
+            sources,
+            album=metadata.album,
+            artist=metadata.artist,
+            year=metadata.year,
+            cover_art=metadata.cover_art,
+        )
+        save(burn, out / "burn.png", settle_ms=400)
+        close_quietly(burn)
+    finally:
+        decode.analyze = real_analyze
+
+
+def _capture_tape(out: Path, code: str, metadata) -> None:
+    """The cassette half: the inlay card, a shell label, and the recording.
+
+    The recording window is shown at rest rather than mid-side: what it
+    looks like while a side is running is one status line different, and
+    what the reader needs to see is the split, the tape they are choosing,
+    and the instruction telling them what to press.
+    """
+    from mdtools.app_window import TAPE_JCARD_TEMPLATE, TAPE_LABEL_TEMPLATE, MainWindow
+    from mdtools.canvas.scene import DesignScene
+    from mdtools.panels.print_dialog import PrintDialog
+    from mdtools.panels.tape_record_dialog import TapeRecordDialog
+    from mdtools.project import MEDIUM_TAPE, PAGE_COVER, PAGE_DISC, PAGE_SIDE_A, PAGE_SIDE_B
+    from mdtools.templates import registry
+
+    templates = registry.load_templates()
+    window = MainWindow(show_startup_dialog=False)
+    window.project.medium = MEDIUM_TAPE
+    window.apply_template(
+        PAGE_COVER, next(t for t in templates["cover"] if t.name == TAPE_JCARD_TEMPLATE)
+    )
+    del window.project.pages[PAGE_DISC]
+    label = next(t for t in templates["label"] if t.name == TAPE_LABEL_TEMPLATE)
+    for page in (PAGE_SIDE_A, PAGE_SIDE_B):
+        window.project.pages[page] = DesignScene(copy.deepcopy(label))
+    window.current_page = PAGE_COVER
+    window._refresh_page_combo()
+    window.project.metadata = metadata
+    window.show()
+    settle(300)
+    window._auto_layout_project(metadata)
+    settle(400)
+
+    def show(page):
+        def go() -> None:
+            window.page_combo.setCurrentIndex(window.page_combo.findData(page))
+            settle(200)
+            window.view.fit_to_window()
+
+        return go
+
+    save(window, out / "tape-jcard.png", settle_ms=500, before_grab=show(PAGE_COVER))
+    save(window, out / "tape-label.png", settle_ms=400, before_grab=show(PAGE_SIDE_A))
+
+    printing = PrintDialog(window.project)
+    printing.orientation_combo.setCurrentIndex(1)
+    save(printing, out / "tape-print.png", settle_ms=600)
+    close_quietly(printing)
+    close_quietly(window)
+    _KEEP_ALIVE.append(window)
+
+    record = TapeRecordDialog("http://localhost:8880")
+    save(record, out / "tape-record.png", settle_ms=400)
+    close_quietly(record)
+
+
+def _capture_telegram(out: Path, code: str) -> None:
+    from mdtools import app_settings, telegram_bot
+    from mdtools.panels.experimental_settings_dialog import ExperimentalSettingsDialog
+    from mdtools.panels.telegram_chat_dialog import TelegramChatDialog
+    from mdtools.panels.telegram_login_dialog import TelegramLoginDialog
+
+    # A folder of its own rather than the real system temp: the button-state
+    # checks below read it, so controlling exactly what is in it keeps the
+    # figures deterministic. Two real (empty) .flac files, because Sort and
+    # Record enable themselves from what is actually on disk -- without them
+    # the figure would show three greyed-out buttons the manual points at.
+    download_folder = Path(tempfile.mkdtemp(prefix="mdtools-manual-telegram-"))
+    for track in ("01 Harbour Lights.flac", "02 Slow Tide.flac"):
+        (download_folder / track).write_bytes(b"")
+    app_settings.set_experimental_features_enabled(True)
+    app_settings.set_telegram_bot_username("@my_music_bot")
+    app_settings.set_telegram_download_folder(str(download_folder))
+
+    save(ExperimentalSettingsDialog(), out / "experimental-settings.png")
+    save(TelegramLoginDialog("0", "0"), out / "telegram-login.png")
+
+    greeting, reply = _TELEGRAM_CHAT[code]
+    chat = TelegramChatDialog("0", "0", "@my_music_bot", download_folder, None)
+    chat.show()
+    settle(200)
+    # What _on_ready() would normally set once connected.
+    chat._bot_name = "@my_music_bot"
+    chat._session_folder = str(download_folder)
+    chat.status_label.setText(chat.tr("Connected to {name}.").format(name="@my_music_bot"))
+    chat.message_edit.setEnabled(True)
+    chat.send_btn.setEnabled(True)
+    chat.open_folder_btn.setEnabled(True)
+    for button in chat.quick_command_buttons:
+        button.setEnabled(True)
+
+    chat._on_message_received(telegram_bot.ChatMessage(id=1, outgoing=False, text=greeting))
+    chat._on_message_received(telegram_bot.ChatMessage(id=2, outgoing=True, text=reply))
+    chat._on_message_received(
+        telegram_bot.ChatMessage(id=3, outgoing=False, text="Night Ferry", buttons=_TELEGRAM_BUTTONS)
+    )
+    for index, (name, size) in enumerate(
+        [("01 Harbour Lights.flac", 31_400_000), ("02 Slow Tide.flac", 28_900_000)], start=10
+    ):
+        chat._on_message_received(
+            telegram_bot.ChatMessage(id=index, outgoing=False, text="", file_name=name, file_size=size)
+        )
+    # One row mid-download, one already finished -- the two states the queue
+    # spends nearly all its time in.
+    chat._on_download_started(10)
+    chat._on_download_progress(10, 19_800_000, 31_400_000)
+    chat._on_download_started(11)
+    chat._on_download_finished(11, str(download_folder / "02 Slow Tide.flac"))
+    # _on_download_started(10) above left that one "in flight", which
+    # deliberately disables Sort/Record -- clear it so the figure shows their
+    # normal, usable state rather than a transient one.
+    chat._active_downloads.clear()
+    chat._update_sort_button()
+    chat._update_continue_button()
+
+    save(chat, out / "telegram-chat.png", settle_ms=400)
+    close_quietly(chat)
 
 
 def main() -> int:
@@ -579,14 +971,23 @@ def main() -> int:
     # in a throwaway folder instead of the user's real configuration.
     QStandardPaths.setTestModeEnabled(True)
 
-    from mdtools import foobar, mdrem
+    from mdtools import foobar, mdrem, theme
     from mdtools.templates import registry
+
+    # Matches main.py exactly -- otherwise these screenshots would keep
+    # showing Qt's old default light theme while the real app has looked
+    # like this (Fusion + a dark palette) since it was added.
+    theme.apply_theme(app)
 
     registry.sync_builtin_templates()
 
     mdrem.MDRemClient = _FakeDeck
     mdrem.list_ports = _fake_ports
     foobar.FoobarClient = _make_fake_foobar()
+    _install_cd_stand_ins()
+    _install_burner_stand_ins()
+    _install_cover_stand_in()
+    _install_folder_stand_in()
 
     draw_ir_circuit(OUT_DIR / "ir-circuit.png")
     for code in ("en", "pl", "ja"):

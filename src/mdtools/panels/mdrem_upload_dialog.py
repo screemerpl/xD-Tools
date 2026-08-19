@@ -1,5 +1,5 @@
 """Writes a project's metadata onto the MiniDisc itself, over infrared,
-via an MDRem adapter -- reached from Project > Metadata...'s "Upload
+via an MDRem adapter -- reached from the Metadata dialog's "Upload
 Tracklist" button.
 
 Three things shape this dialog, all properties of the deck rather than

@@ -1,6 +1,8 @@
 """The parts of MDRem support that need no hardware and no QApplication:
 text conversion, disc-title formatting, and building the upload plan."""
 
+import pytest
+
 from mdtools import app_settings, mdrem
 from mdtools.project import ProjectMetadata, Track
 
@@ -143,3 +145,216 @@ def test_mdrem_is_off_and_portless_until_configured():
 def test_mdrem_port_round_trips():
     app_settings.set_mdrem_port("COM7")
     assert app_settings.mdrem_port() == "COM7"
+
+
+# --- MDRemClient.command()'s chunked polling --------------------------------
+#
+# Regression coverage for the GUI-freeze fix: reported directly as "the
+# window looks frozen" while a title was being written. _read_line() used
+# to hand waitForReadyRead() the *entire* remaining budget in one call --
+# up to the whole 180 s TITLE_TIMEOUT_MS while waiting on the deck's reply
+# -- and a Python QThread.run() override calling a wrapped Qt blocking
+# method is not guaranteed to release the GIL for that call's own duration.
+# These tests don't touch a real QSerialPort (this file's own header says
+# "no hardware, no QApplication") -- they replace mdrem.QSerialPort with a
+# fake that mimics just the surface MDRemClient actually calls, and replace
+# time.monotonic() with a controllable fake clock so a 180 s deadline can be
+# exercised without a slow test.
+
+
+class _FakeClock:
+    def __init__(self):
+        self.now = 0.0
+
+    def monotonic(self) -> float:
+        return self.now
+
+    def advance(self, ms: float) -> None:
+        self.now += ms / 1000.0
+
+
+class _FakePort:
+    """Stands in for QSerialPort -- just the methods/nested enums
+    MDRemClient actually touches. Lines to deliver are queued via
+    queue_line(); each is handed over only once waitForReadyRead() has been
+    called `deliver_after` times, so a test can force _read_line() to poll
+    repeatedly before data "arrives", exactly like a slow-replying deck."""
+
+    class OpenModeFlag:
+        ReadWrite = 3
+
+    class DataBits:
+        Data8 = 8
+
+    class Parity:
+        NoParity = 0
+
+    class StopBits:
+        OneStop = 1
+
+    class FlowControl:
+        NoFlowControl = 0
+
+    def __init__(self, clock: _FakeClock):
+        self._clock = clock
+        self._is_open = False
+        self._read_buffer = bytearray()
+        self._pending_lines: list[tuple[bytes, int]] = []  # (line, deliver_after)
+        self.readyread_calls: list[int] = []
+        self.byteswritten_calls: list[int] = []
+        self._bytes_to_write = 0
+        self.flush_after = 1  # waitForBytesWritten calls before a write "completes"
+
+    def queue_line(self, line: bytes, deliver_after: int = 1) -> None:
+        self._pending_lines.append((line, deliver_after))
+
+    # --- config no-ops, matching MDRemClient.__init__'s setup calls -----
+    def setPortName(self, name): pass
+    def setBaudRate(self, rate): pass
+    def setDataBits(self, v): pass
+    def setParity(self, v): pass
+    def setStopBits(self, v): pass
+    def setFlowControl(self, v): pass
+    def setDataTerminalReady(self, v): pass
+    def errorString(self): return "fake error"
+
+    def isOpen(self) -> bool:
+        return self._is_open
+
+    def open(self, mode) -> bool:
+        self._is_open = True
+        return True
+
+    def close(self) -> None:
+        self._is_open = False
+
+    def clear(self) -> None:
+        self._read_buffer.clear()
+
+    def write(self, data: bytes) -> int:
+        self._bytes_to_write = len(data)
+        return len(data)
+
+    def bytesToWrite(self) -> int:
+        return self._bytes_to_write
+
+    def waitForBytesWritten(self, ms: int) -> bool:
+        self.byteswritten_calls.append(ms)
+        if len(self.byteswritten_calls) >= self.flush_after:
+            self._bytes_to_write = 0
+            self._clock.advance(min(ms, 1))
+            return True
+        self._clock.advance(ms)
+        return False
+
+    def canReadLine(self) -> bool:
+        return b"\n" in self._read_buffer
+
+    def waitForReadyRead(self, ms: int) -> bool:
+        self.readyread_calls.append(ms)
+        if self._pending_lines and len(self.readyread_calls) >= self._pending_lines[0][1]:
+            line, _ = self._pending_lines.pop(0)
+            self._read_buffer.extend(line)
+            self._clock.advance(min(ms, 1))
+            return True
+        self._clock.advance(ms)
+        return False
+
+    def readLine(self) -> bytes:
+        index = self._read_buffer.index(b"\n") + 1
+        line, self._read_buffer[:] = bytes(self._read_buffer[:index]), self._read_buffer[index:]
+        return line
+
+
+def _fake_client(monkeypatch) -> tuple[mdrem.MDRemClient, _FakePort, _FakeClock]:
+    clock = _FakeClock()
+    monkeypatch.setattr(mdrem.time, "monotonic", clock.monotonic)
+    port = _FakePort(clock)
+
+    # MDRemClient.__init__()/open() reference QSerialPort.DataBits.Data8 etc.
+    # directly off the module-level name, not off the constructed instance --
+    # so the stand-in callable needs those nested enum classes attached to
+    # itself too, not just to _FakePort. A plain function can carry
+    # arbitrary attributes in Python, which is all this needs.
+    def factory() -> _FakePort:
+        return port
+
+    for name in ("DataBits", "Parity", "StopBits", "FlowControl", "OpenModeFlag"):
+        setattr(factory, name, getattr(_FakePort, name))
+
+    monkeypatch.setattr(mdrem, "QSerialPort", factory)
+    client = mdrem.MDRemClient("COM_TEST")
+    client.open()
+    return client, port, clock
+
+
+def test_a_quick_reply_still_works_normally(monkeypatch):
+    client, port, _clock = _fake_client(monkeypatch)
+    port.queue_line(b"PONG\n")
+
+    assert client.command("PING") == []
+
+
+def test_a_slow_reply_is_polled_in_bounded_chunks_not_one_long_wait(monkeypatch):
+    """The actual regression guard: a reply that only arrives after several
+    polls proves waitForReadyRead() is never handed the whole remaining
+    budget in one call."""
+    client, port, _clock = _fake_client(monkeypatch)
+    port.queue_line(b"OK\n", deliver_after=5)
+
+    result = client.command("TITLETRACK 1 Test", timeout_ms=mdrem.TITLE_TIMEOUT_MS)
+
+    assert result == []
+    assert len(port.readyread_calls) == 5
+    assert all(call <= mdrem._POLL_CHUNK_MS for call in port.readyread_calls)
+
+
+def test_a_reply_that_never_arrives_still_times_out_at_the_deadline(monkeypatch):
+    client, port, clock = _fake_client(monkeypatch)
+    # Nothing queued -- every poll reports "still nothing".
+
+    with pytest.raises(mdrem.MDRemError, match="no reply"):
+        client.command("PING", timeout_ms=1000)
+
+    # The fake clock only ever advances by what each poll actually waited,
+    # so total elapsed time should land at the deadline, not drift past it
+    # by more than one chunk.
+    assert 1.0 <= clock.now <= 1.0 + mdrem._POLL_CHUNK_MS / 1000.0
+    assert all(call <= mdrem._POLL_CHUNK_MS for call in port.readyread_calls)
+
+
+def test_informational_lines_before_ok_are_returned(monkeypatch):
+    client, port, _clock = _fake_client(monkeypatch)
+    port.queue_line(b";some info\n")
+    port.queue_line(b"OK\n")
+
+    assert client.command("SOME COMMAND") == [";some info"]
+
+
+def test_an_err_reply_raises(monkeypatch):
+    client, port, _clock = _fake_client(monkeypatch)
+    port.queue_line(b"ERR bad command\n")
+
+    with pytest.raises(mdrem.MDRemError, match="ERR"):
+        client.command("BOGUS")
+
+
+def test_a_slow_write_is_also_polled_in_bounded_chunks(monkeypatch):
+    client, port, clock = _fake_client(monkeypatch)
+    port.flush_after = 4
+    port.queue_line(b"OK\n")
+
+    client.command("PING")
+
+    assert len(port.byteswritten_calls) == 4
+    assert all(call <= mdrem._POLL_CHUNK_MS for call in port.byteswritten_calls)
+
+
+def test_a_write_that_never_flushes_times_out(monkeypatch):
+    client, port, clock = _fake_client(monkeypatch)
+    port.flush_after = 10**9  # never
+
+    with pytest.raises(mdrem.MDRemError, match="timed out sending"):
+        client.command("PING", timeout_ms=None)
+
+    assert clock.now > 0

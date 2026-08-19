@@ -1,19 +1,31 @@
-# MDTools
+# xD-Tools
 
-A PySide6 desktop workbench for MiniDisc. It began as a label designer and
-outgrew the name -- **"MDTools - MiniDisc Studio"**, not "Label Designer":
+A PySide6 desktop workbench for three retro music media -- MiniDisc, CD-R
+and compact cassette. It has outgrown its own name twice: first as a
+MiniDisc "label designer" that had started recording and titling discs,
+then as "MDTools" once CD-R and cassette arrived. **"xD-Tools - Retro
+Media Studio"**, with the x standing in for M or C.
 
-- designs disc labels and cover/J-card inserts, exporting SVG (cut/fold
-  shapes only) and PNG (print artwork, clipped to the cut outline) for a
-  Cricut cutting machine plus a regular printer;
+- designs disc labels, J-cards, case inserts, tray cards and cassette
+  shell labels, exporting SVG (cut/fold shapes only) and PNG (print
+  artwork, clipped to the cut outline) for a Cricut cutting machine plus a
+  regular printer, and prints or exports whole sheets of them itself;
 - with an MDRem infrared adapter, records an album from foobar2000 onto a
-  deck with a track mark at every song, writes the disc and track titles
-  onto the MiniDisc, and stands in for the deck's remote.
+  MiniDisc deck with a track mark at every song, writes the disc and track
+  titles onto the disc, and stands in for the deck's remote;
+- rips an audio CD to FLAC, identifies it on MusicBrainz from its table of
+  contents, loads it into foobar2000 in disc order, and records that;
+- burns an audio CD-R with CD-Text, resampling to Red Book on the way;
+- records a cassette side by side, splitting the album where the tape runs
+  out -- a deck nothing here can drive, so it tells the user what to press.
 
 Keep the window title, Help > About, the README, `pyproject.toml`'s
 `description` and the user manual in step when that scope shifts again --
 every one of them described a "label designer" long after it stopped being
-only that, and each was found separately, at a different time.
+only that, and each was found separately, at a different time. This file
+is the same kind of hazard: the notes below outlive the state they were
+written about, so when one says work is outstanding, check before
+believing it.
 
 **Treat physical accuracy as load-bearing.** Output gets cut with a blade —
 mm dimensions and the cut-vs-print separation are not cosmetic details, they
@@ -22,9 +34,15 @@ without checking.
 
 ## Stack
 
-- PySide6 (`QGraphicsView`/`QGraphicsScene` as the vector canvas, `QtSvg` for export)
-- Pillow (grayscale PNG conversion)
-- PyInstaller for standalone builds (`scripts/build_windows.ps1`, `scripts/build_linux.sh`)
+- PySide6 (`QGraphicsView`/`QGraphicsScene` as the vector canvas, `QtSvg`
+  for export, `QtSerialPort` for the MDRem adapter, `QtPrintSupport` for
+  printing -- all of it inside the one wheel, which is why none of those
+  features added a dependency)
+- Pillow (grayscale conversion, cover palettes, opaque-content bounds)
+- Telethon (the Telegram bot integration, an experimental feature)
+- PyInstaller for standalone builds (`scripts/build_windows.ps1`,
+  `scripts/build_linux.sh`), NSIS for the Windows installer
+  (`scripts/build_installer.ps1`)
 - pytest + pytest-qt, run via `.venv/Scripts/python.exe -m pytest -q`
 
 ## Layout
@@ -33,18 +51,39 @@ without checking.
 src/mdtools/
   main.py                  entry point
   app_window.py             MainWindow: page switcher, menus, docks, undo group, wiring
-  project.py                Project / ProjectMetadata / Track / TextStyle dataclasses
+  project.py                Project / ProjectMetadata / Track / TextStyle, media and their pages
+  constants.py              MM_PER_INCH plus mm_to_px()/px_to_mm(), which read the DPI setting
+  app_settings.py           every global setting: DPI, MDRem, foobar, rip folder, Telegram
+  recent_projects.py        the last five projects, for File > Open Recent and the startup screen
+  user_paths.py             where every file dialog starts: Documents/MiniDiscProjects, Pictures
+  theme.py                  the flat dark theme: one palette and one stylesheet, sharing their colours
   commands.py               QUndoCommand subclasses (add/delete/reorder/transform/property-edit)
   clipboard.py              in-memory copy/cut/paste (reuses project_io's item (de)serialization)
+  grayscale.py              the desaturation + brightness/contrast maths, shared by preview and export
+  printing.py               sheet layout: pack copies, search arrangements, paint placements (no Qt UI)
   gallery.py                bundled asset gallery (assets/img) + per-user downloaded-covers cache, merged
   metadata_lookup.py         iTunes Search API: track list + release year + cover art, given Album + Artist
+  musicbrainz.py            identifying a CD from its TOC alone -- a CD carries no text (no Qt UI)
+  embedded_cover.py         the cover art and tags inside a FLAC file, as a last resort (no Qt)
+  mixtape_cover.py          draws a cover for a compilation, which by definition has none
+  palette.py                background/accent/text colours pulled out of a cover image (Pillow, no Qt)
   mdrem.py                  MDRem IR adapter: serial protocol, transliteration, upload plan (no Qt UI)
-  foobar.py                 foobar2000 via its Beefweb REST API: playlist, player state, control (no Qt UI)
+  foobar.py                 foobar2000 via its Beefweb REST API *and* its command line (no Qt UI)
+  cdrip.py                  audio CD: drives, TOC, disc ids, rip plan, cdparanoia/flac (no Qt UI)
+  decode.py                 what an audio file is, and Red Book PCM out of it (no Qt)
+  cdburn.py                 audio CD-R: burn plan, *.inf CD-Text, cdrecord (no Qt UI)
+  audio_folder.py           which files in a folder are the album, and in what order (no Qt)
+  album_sort.py             one folder of downloads split into one folder per album (no Qt)
+  tape.py                   where a cassette is turned over: sides, leader tape, lengths (no Qt)
+  telegram_bot.py           Telethon behind one class: sign-in, chat, downloads (experimental)
+  translate.py              MyMemory, for showing a bot's message in the user's language
   auto_layout.py            places cover art on a disc label and the logo on its slider (no Qt UI beyond items)
   jcard_layout.py           builds the three J-card panels: front cover, spine band, track list (no Qt UI)
-  palette.py                background/accent/text colours pulled out of a cover image (Pillow, no Qt)
+  cd_layout.py              the CD ring, the folded slim-case insert and the jewel case tray card
+  tape_layout.py            the cassette inlay (jcard_layout's own card) and a label per side
+  _build_credentials.py     gitignored, written by the build scripts -- the Telegram API id/hash
   i18n/
-    __init__.py               language setting persistence + QTranslator install
+    __init__.py               language setting persistence + QTranslator install (ours and Qt's own)
     mdtools_pl.ts / .qm       Polish translation (pyside6-lupdate/-lrelease output, hand-translated)
     mdtools_ja.ts / .qm       Japanese translation (pyside6-lupdate/-lrelease output, hand-translated)
   canvas/
@@ -58,29 +97,47 @@ src/mdtools/
     defaults.json              built-in templates
     template_dialog.py         Template Manager UI
   panels/
-    icons.py                     self-drawn QIcon glyphs for the Tools panel's icon-only buttons
+    icons.py                     bundled Twemoji SVGs, rendered through QSvgRenderer
     tool_panel.py               icon-only add text/rectangle/image buttons + "insert from metadata" menu + Clip/Bake Layers
     properties_panel.py         edit selected item (position, rotation, multiline text, font, color/probe, reset)
     layers_panel.py             list + select + reorder + rename + delete items
-    new_design_dialog.py        disc+cover template pickers for File > New
+    startup_dialog.py           the first screen: recent projects, open, new, multiprint, remote
+    new_design_dialog.py        File > New: the medium, then one template picker per page it has
+    settings_dialog.py          Window > Settings: DPI, MDRem port, foobar, rip folder, experimental
+    experimental_settings_dialog.py   whatever an experimental feature needs, kept out of the stable one
     metadata_dialog.py          album/artist/year/track-list editor + "Lookup Track List..." + "Upload Tracklist"
+    cover_preview.py            the cover thumbnail that is also the button for replacing it, plus its lookup
+    asset_gallery_dialog.py     Insert Asset: pick one of the bundled gallery images
+    grayscale_export_dialog.py  brightness/contrast, previewed against the real scene, before the save path
+    print_dialog.py             PrintDialog and MultiprintDialog over one shared base: sheets, PDF, PNG
     mdrem_port.py               resolve_port(): the saved port, a probe, or a warning -- shared by both entry points
     mdrem_upload_dialog.py      preview-then-write dialog + the worker thread driving an upload
-    remote_dialog.py            software Sony MD remote, opened from the startup screen
-    record_dialog.py            Project > Record to MiniDisc from foobar2000: arm, play, watch, hand off to titling
-    about_dialog.py             Help > About MDTools
-    asset_gallery_dialog.py     Insert Asset: pick one of the bundled gallery images
+    remote_dialog.py            software Sony MD remote, from the startup screen or the Recording menu
+    record_dialog.py            Recording > Record from foobar2000: arm, play, watch, hand off to titling
+    cd_rip_dialog.py            Recording > Record CD: read TOC, identify, rip, fill playlist, hand off
+    folder_record_dialog.py     Recording > Record Folder: a folder of files into that playlist instead
+    tape_record_dialog.py       Recording > Record Cassette: a side at a time, with the user working the deck
+    burn_dialog.py              Recording > Burn Audio CD: the plan, the verdicts, and cdrecord behind a worker
+    erase_dialog.py             Recording > Erase MiniDisc: a guided, ask-the-user-what-you-see erase
+    telegram_login_dialog.py    signing in as a user account, over a worker with a live asyncio loop
+    telegram_chat_dialog.py     the bot conversation, its download queue, and the hand-off to recording
+    about_dialog.py             Help > About xD-Tools
   io/
     svg_export.py               exports just the cut/fold shapes as physically-accurate SVG
     png_export.py               exports print artwork as PNG, clipped to the template outline
     project_io.py               save/load a whole project as one self-contained .mdproj JSON
 assets/
-  img/                      bundled asset gallery (currently just the MDTools logo) -- see gallery.py
-tests/          292+ tests, all offscreen via QT_QPA_PLATFORM=offscreen
-doc/            the built user manual (PDF x3) + its generated screenshots -- see doc/README.md
+  img/                      gallery images, the CD Digital Audio mark and the app icons -- see gallery.py
+  icons/                    the Twemoji button icons -- see panels/icons.py and ATTRIBUTION.md
+bin/
+  win64/                    bundled cd-paranoia + flac + cdrecord + sox, with their DLLs -- see ATTRIBUTION.md
+tests/          1360+ tests, all offscreen via QT_QPA_PLATFORM=offscreen
+doc/            the built user manual (PDF x3) + doc/img, its generated screenshots -- see doc/README.md
 scripts/
   build_windows.ps1 / build_linux.sh   PyInstaller onedir build
+  build_installer.ps1 + installer/mdtools.nsi   the Windows installer, NSIS over that build
   clean_windows.ps1 / clean_linux.sh   remove build/dist/__pycache__/etc.
+  make_app_icon.py / make_cd_logo.py   the .ico and the Digital Audio PNG, generated once each
   manual/
     make_screenshots.py      drives every dialog and grabs it, once per language
     build_manual.py           blocks -> QTextDocument -> QPdfWriter, with a measured TOC
@@ -89,8 +146,67 @@ scripts/
 
 ## Domain model
 
-A **Project** = exactly one Disc Label page + one Cover/J-Card page + metadata
-(album/artist/year/tracks) + a project-wide default text style, switchable via
+**A project's pages are a described list, not a fixed pair.** It really was
+a pair until 0.2.0, and that assumption had been written into the page
+dropdown, the template picker, `load_project()`'s validation and the print
+dialog's two named attributes -- so the first request for a third page (a
+CD's jewel case back) would have meant touching all of them. `project.py`
+now holds `PageKind`/`PAGE_KINDS`/`PAGE_ORDER` and two functions,
+`page_template_kind()` (which template family a page takes -- several pages
+share "cover") and `page_title()` (what to call it, which depends on the
+medium: a MiniDisc's second page is a J-card, a CD's is a case insert).
+`Project.ordered_pages()` lists what a project actually has, in PAGE_ORDER
+order, with anything unrecognised appended rather than dropped. Adding a
+page is then an entry in `PAGE_KINDS` plus a template, which is exactly
+what **`PAGE_BACK`** turned out to cost when it arrived a day later: the
+jewel case tray card, 151x117.5mm with two 6.5mm spine folds (the strips
+that show down the sides of a closed case, with the 138mm panel between
+them sitting behind the disc). Measured off a real case -- the first
+guess was 150x118 with a 137mm panel -- and `verified: true` since one was
+cut and fitted.
+
+Three consequences worth knowing:
+- `MainWindow._refresh_page_combo()` fills the dropdown from the project;
+  nothing enumerates pages by name any more, and `_change_page_template()`
+  asks `page_template_kind()` instead of "is this the disc page?".
+- `load_project()` requires a **disc** page and nothing else. A file with a
+  third page is a project from a later version, not an error.
+- `PrintDialog` carries `list[_Label]` built from `ordered_pages()`.
+  Sharing one sheet is a *two-label* arrangement search
+  (`printing._ARRANGEMENTS`), so with any other number each label gets its
+  own sheet and the checkbox is checked and disabled rather than left
+  offering something that cannot happen. Tests build a real three-page
+  project by hand (`test_more_than_two_pages.py`), because nothing in the
+  app creates one yet and an assumption removed only in principle is not
+  removed.
+
+**The case back is optional, and that is the load-bearing part.** A project
+without one is the normal case, so nothing may assume it exists:
+- File > New offers it as a third combo whose first entry is `(none)`,
+  which is the default -- a checkbox beside a combo would have been two
+  controls and two states for one question.
+- Templates > **Add Page...** / **Remove This Page** add or drop it later.
+  Only optional pages can be removed: the disc and cover pages are what a
+  project *is*, and `_remove_page()` says so rather than letting a project
+  be emptied. Removing resets the undo stack, for the same reason
+  `apply_template()` does -- its commands reference items on a scene that
+  is about to be discarded.
+- The automatic layout fills it **only when the project has one**, and
+  **does not change its template**, unlike the disc and cover halves which
+  re-template the page they lay out. That page exists because the user
+  added it and chose its shape; replacing that with whatever this method
+  preferred would undo their choice.
+
+`cd_layout.build_case_back()` is the two existing layouts meeting on one
+sheet rather than a third one: `jcard_layout.place_spine()` for each of the
+two side strips, `place_back()` for the panel between them. Both spines get
+the same caption on purpose -- which side of a case is visible depends on
+how it was shelved, and a card naming the album on only one of them is a
+card that is often facing the wrong way.
+
+A **Project** = one Disc Label page + one Cover/J-Card page + metadata
+(album/artist/year/tracks) + a project-wide default text style + the physical
+**medium** it is for (`Project.medium`, `MEDIUM_MD` / `MEDIUM_CD`), switchable via
 a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
 (images embedded as base64 PNG, not file paths).
 
@@ -98,7 +214,7 @@ a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
   fillet on the other three — given directly by the user, `verified: true`.
 - **Disc + slider variant ("MiniDisc Disc Label (with Slider)")**: the same
   disc shape, plus a second, fully independent cut shape for the
-  cartridge's write-protect slider label — 27.5mm x 17.5mm, left two
+  cartridge's sliding dust shutter label — 27.5mm x 17.5mm, left two
   corners rounded (2.5mm radius), right two corners square. Placed
   `slider_gap_mm` (3mm, a layout choice, not a measured spec) to the right
   of the disc, vertically centered — see `DesignScene._build_disc_outline`.
@@ -110,31 +226,62 @@ a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
   a completely different `DiscTemplate` outline — a single plain rounded
   rectangle (`corner_radius_mm`, 4mm) covering most of the disc's face,
   69.4mm x 66.4mm (the MD's own measured 71x68mm size inset by a 0.8mm
-  margin on all sides), with the write-protect slider's notch *cut into*
+  margin on all sides), with the sliding shutter's notch *cut into*
   the right edge instead of placed as a separate adjacent shape (compare to
   the plain slider variant above, which adds a second independent
   `LAYER_CUT` shape rather than subtracting a hole from the first one).
   The notch is `slider_notch_width_mm`/`slider_notch_height_mm` (27.5mm x
   17.5mm, same footprint as the other slider label, left corners rounded
   `slider_notch_corner_radius_mm` = 2.5mm), flush against the label's right
-  edge, positioned `slider_notch_top_mm` (25.2mm) below the label's own top
-  edge — that's the user's measured "26mm from the MD's top edge",
-  adjusted for the label's own 0.8mm margin, since the notch position has
-  to be expressed in the label's local coordinates, not the MD's.
+  edge, positioned `slider_notch_top_mm` (24.3mm) below the label's own top
+  edge. **These two numbers are set by where the cut lands, not by what
+  they are called** — the buffer below moves the actual edge 0.8mm up from
+  whatever this says, so 24.3 puts the cut at **23.5mm** below the label's
+  top, which is what the user measured off a cut label. The first reading
+  (26mm from the MD's own top edge, converted to 25.2 in label
+  coordinates) put the top of the notch 1mm too low, and was reported
+  after cutting one. So: change either number and check the *edge*, which
+  is what `test_builtin_defaults_include_a_full_disc_label_variant` now
+  asserts rather than the raw fields.
   `slider_notch_buffer_mm` (0.8mm) then physically enlarges the notch by
   that amount on its top/bottom/left sides (its right side is already
   flush with the label edge, so there's no material there to clear) — a
   real clearance cut, not a print-only keep-out zone, confirmed explicitly
   by the user ("it needs to be cut as well") after an initial ambiguous
   reading of "not printable" as a print-exclusion concept. `slider_travel_mm`
-  (18mm) then extends that already-buffered notch further down by the same
+  (19.4mm) then extends that already-buffered notch further down by the same
   buffered width (confirmed: "it needs to include a buffer"), forming one
   continuous cutout (see `DesignScene._build_full_label_outline`) — the
-  slot the slider tab travels through as it's slid between locked/unlocked.
+  channel the shutter sweeps through as the deck pushes it open. It ends
+  **62mm** below the label's top, measured the same way as the 23.5 above.
   Built via `QPainterPath.subtracted()` (one `LAYER_CUT` shape with a hole
   in it), unlike the additive slider variant, so `template_clip_path()`
   already excludes the notch correctly with no extra union logic needed.
   Dimensions user-confirmed, `verified: true`.
+- **What the "slider" actually is: the cartridge's sliding dust shutter,
+  not the write-protect tab** — corrected by the user while reading the
+  manual ("Slider ten od naklejki nie sluzy do zabezpieczenia przed
+  zapisem a do ochrony przeciwkurzowej"). Everything written here and in
+  the manual had called it a write-protect slider, which is a different
+  part: a small catch on the cartridge's edge that never gets a label.
+  **The geometry was right anyway, and the 18mm `slider_travel_mm` is why**
+  — a write-protect tab has no reason to need clearance swept across the
+  disc's *face*, whereas a shutter does, which is exactly what that
+  measurement was for. So this was purely a naming/explanation error, with
+  nothing to re-measure. Fixed in the manual (all three languages, plus a
+  note there explaining the part and why the channel must clear its whole
+  travel), in `auto_layout.py`/`canvas/scene.py`/`templates/models.py`
+  docstrings, and here. **The field names (`slider_*`,
+  `slider_notch_*`) and the template names ("... (with Slider)") were
+  deliberately left alone**: "slider" on its own is still accurate, and the
+  template names in particular are the *match key*
+  `registry.sync_builtin_templates()` uses (it appends any bundled built-in
+  whose `name` isn't already among the user's), so renaming one would hand
+  every existing install a duplicate template alongside the one they may
+  have customised. Every remaining "write-protect tab"/"write-protected
+  disc" mention — `erase_dialog.py`, `record_dialog.py`,
+  `remote_dialog.py`, and the MDRem erase findings further down — is about
+  the real write-protect catch and is correct as written.
 - **Full disc label + slider variant ("Full disc label (with Slider)")**:
   the same full-label outline (rounded rect + notch cutout) above, plus a
   second, independent `LAYER_CUT` shape for the printable/cuttable slider
@@ -160,6 +307,61 @@ a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
   rounded-rect (1mm radius) cutout on the *right* side, 10.3mm from the
   right fold line and 3.45mm from the bottom. User-confirmed against their
   physical case, `verified: true`.
+- **CD-R support: the medium is a project-level choice, not a per-page one.**
+  `Project.medium` is picked once in `NewDesignDialog` (a combo above the two
+  template pickers) and decides which templates that dialog and Templates >
+  "Change Template for This Page..." offer at all -- `DiscTemplate.medium` /
+  `CoverTemplate.medium` carry the same value, defaulting to `"md"` so every
+  template and every `.mdproj` written before CD support existed stays a
+  MiniDisc one (that is the truth about them, not a fallback). A project holds
+  exactly one disc page and one cover page, so an unfiltered picker would let
+  a J-card onto a CD project -- two pages describing different physical
+  objects, with nothing to notice it until something got cut.
+- **CD disc label (`shape == "cd_label"`)**: a plain annulus -- one circle with
+  the spindle hole `subtracted()` out of it, the same single-cut-shape-with-a-
+  hole approach `full_label` uses for its shutter notch (and *not* the additive
+  two-shapes approach the slider variant uses), so `template_clip_path()`
+  refuses to print into the hole with no extra handling anywhere.
+  `outer_diameter_mm` / `hole_diameter_mm` define it; `width_mm`/`height_mm` are
+  kept equal to the outer diameter so everything that reasons about a
+  template's physical footprint (printing, copy packing,
+  `crop_to_template_bounds()`) keeps working untouched. Every `slider_*` field
+  is meaningless here -- a CD has no cartridge -- and the Template Manager
+  hides those rows for this shape. `seed_disc_defaults()` also returns early
+  for a CD medium: the "▲ INSERT THIS END" mark says which end of a *cartridge*
+  goes into the deck, and a disc dropped onto a spindle has no such end.
+- **Where the CD dimensions came from, and the corrections they carried.**
+  The user delegated the first pass ("to mozesz sobie znalezc sam w
+  internecie"), so unlike every MiniDisc template these started from
+  industry sources rather than a ruler: 118mm outer, standard-hub hole
+  41mm, and a folded insert of 242 x 120mm folded at 121. **All three of
+  those numbers were later replaced by measured ones** and the templates
+  are now `verified: true`: the disc label is **117mm outer with a 35mm
+  hole**, and the folded insert **240 x 120mm folded at 120** -- two panels
+  the same size as the front insert, which is what it always should have
+  been (120 beside 121 described one case in two ways, and was spotted
+  while reviewing what was still unverified). Its name still says
+  "(Standard Hub)" though the hole is no longer the 41mm standard one:
+  `sync_builtin_templates()` matches built-ins **by name**, so renaming one
+  hands every existing install a duplicate beside the copy they may have
+  customised -- the same reason the "... (with Slider)" names were left
+  alone. **A slim jewel case takes only a front insert, 120 x 120mm -- not
+  124 x 124, and it has no tray card at all**: 124mm is the height of the
+  case body, not of the paper (which sits under tabs), and the back of a
+  slim case is the bare plastic tray, with no pocket and no spine. So the
+  track list gets a *folded* insert instead: right panel is the cover, left
+  panel the track list, folded once and read through the clear back of the
+  case. That maps straight onto the existing `fold_offsets_mm` machinery,
+  so it needed no new page-count concept. The jewel case tray card
+  (151 x 117.5, a 138mm panel between two 6.5mm spines) was the last CD
+  template to be verified; every built-in template is `verified: true`
+  now.
+- **The automatic layout branches on the medium** (`_auto_layout_project()`):
+  a MiniDisc project gets the full-face label and the J-card, a CD project
+  gets `_auto_layout_cd_disc_label()` and `_auto_layout_cd_insert()`. Both
+  halves of each target templates *by name*, so the branch is not cosmetic --
+  running the MiniDisc layout on a CD project would replace its pages with
+  MiniDisc shapes rather than laying them out.
 - Built-in templates can be edited but not deleted.
 - **New built-in templates reach existing installs via
   `registry.sync_builtin_templates()`, called once from `main()` on every
@@ -209,7 +411,14 @@ and `layers_panel.py`'s module-level `_label_for()` -- in
 source, just needs `-extensions py`) does purely static, literal-string
 scanning: `tr()`/`translate()` calls MUST have the literal string directly in
 the call, never through an indirection like a custom `_()` wrapper or a
-variable, or lupdate won't see it. **Every language listed in
+variable, or lupdate won't see it. **The flip side of that same rule, easy
+to miss because the string argument right next to it looks perfectly
+literal: the `tr()` *call itself* also can't be nested inside an f-string's
+`{...}` interpolation** (`f"<b>{self.tr('x')}</b>"`) -- lupdate sees zero
+occurrences, not merely an unfinished one; call `tr()` on its own line
+first and interpolate the *result* instead. Found the hard way twice (see
+the Telegram bot integration notes below) -- grep for `f["'].*\{self\.tr\(`
+after adding a heading/label built this way. **Every language listed in
 `i18n.AVAILABLE_LANGUAGES` needs this redone** (currently `pl` and `ja`) --
 regenerating after adding/changing translatable strings, per language:
 ```
@@ -526,6 +735,36 @@ small fixed margin around the actual cut shape (see `_build_disc_outline`/
 `_build_cover_outline`'s `setSceneRect(QRectF(-10, -10, w + 20, h + 20))`)
 -- so this is exactly the same physical footprint Export Print PNG's own
 output image already has, not a bug introduced by printing.
+
+**Landscape, and a sheet per label -- both forced by a CD project.**
+Printing was portrait-only, on the stated reasoning that both MiniDisc
+designs fit a portrait sheet comfortably. A CD project breaks that twice
+over: its folded slim-case insert is 242mm wide, which no portrait sheet
+takes upright (it fits only turned a quarter turn), and the disc label plus
+that insert exceed A4's 287mm printable length side by side, so **they
+cannot share one sheet in either orientation** -- 242 + 3 + 118 = 363.
+`oriented_page_size()` is the one place the paper is turned, so the preview,
+`_new_printer()`'s `setPageOrientation()` and a PNG export can never disagree
+about which way round it is.
+
+`build_sheet_layout()` packs one label type alone on a page -- the plain-grid
+half of `build_copies_layout()` without the two-label arrangement search,
+keeping the same "rotation is a fallback, never a default" rule -- and
+raises `PrintLayoutError` when not even one copy fits, which is a real
+answer rather than a failure to try. `print_sheets()` then prints several
+pages in **one** job with `newPage()` between them: a QPainter can only be
+opened on a QPrinter once, and starting a second job would ask the printer
+dialog again or overwrite the PDF just written. Empty sheets are skipped
+rather than emitted blank.
+
+**The preview shows one sheet at a time** (`PrintDialog.sheets()` /
+`_show_current_sheet()`), because what is on screen has to be a page that
+will actually come out, not a composite of two that will not. Items on the
+other sheet are *hidden*, never removed, so flipping back and forth keeps
+their positions, rotations and images. Export PNG writes one file per sheet
+(`name-1.png`, `name-2.png`) since a PNG holds one page and exporting only
+the first would silently lose half a project; a single sheet still writes
+exactly the filename that was asked for.
 
 **The actual print -- `printing.print_placements()` -- must run with
 `printer.setFullPage(True)` already set by the caller**, so the printer's
@@ -851,7 +1090,7 @@ base64 like any other image, no lingering tie to the gallery.
 
 **Metadata lookup (`metadata_lookup.py`) is this app's only network
 access, and deliberately the simplest possible implementation.** "Lookup
-Track List..." in `MetadataDialog` (Project > Metadata...) hits the
+Track List..." in `MetadataDialog` (the Tools panel's Metadata...) hits the
 iTunes Search API (no API key/signup, chosen explicitly over
 MusicBrainz/Discogs for that reason) via plain stdlib `urllib.request` —
 synchronous/blocking, not `QtNetwork`'s async `QNetworkAccessManager` —
@@ -884,7 +1123,31 @@ candidate's own year if the lookup response's collection entry lacks one.
 `lookup_album()` still exists as a one-shot convenience (auto-picks
 `search_albums()`'s top-ranked candidate) for callers that can't offer an
 interactive picker, but `MetadataDialog` itself always uses the two-call
-form. Both calls can raise `MetadataLookupError` (caught by the dialog
+form.
+
+**`best_match()` returns None when nothing is actually a match, and the
+test for that is two-part.** Found by a user pointing at a folder of
+Falling In Reverse's *Popular Monster* -- an album iTunes does not carry at
+all -- and getting a one-track cover version of the title track by an
+unrelated artist, whose sleeve was then shown as this disc's. Verified live
+while fixing: the same search for *Nevermind* used to hand back **Drake's
+"Honestly, Nevermind"**, because the real album is not in iTunes' album
+search results either.
+- `MIN_MATCH_CONFIDENCE` (0.70) on the blended score. A genuine hit is 0.85
+  without a known track count and past 0.90 with one; the failing case was
+  0.605.
+- `MIN_ARTIST_SIMILARITY` (0.40) on the artist alone, and this is the one
+  that does the real work -- the blend cannot carry it, because a perfect
+  title (0.55) plus a track count that happens to agree (0.15) already
+  reaches 0.70 with the artist contributing nothing. Measured against the
+  live results: every wrong artist scored under 0.15, while "Falling In
+  Reverse & Jelly Roll" against "Falling In Reverse" scores 0.68 and
+  "Bowie, David" against "David Bowie" 0.73. Skipped when the caller gave
+  no artist, since there is then nothing to judge.
+
+Returning nothing is the point: a wrong *edition* is a nuisance, a wrong
+*record* is somebody else's artwork printed on this disc -- and the callers
+have a better place to look anyway (`embedded_cover`). Both calls can raise `MetadataLookupError` (caught by the dialog
 and shown via `QMessageBox.warning`, never left to propagate/crash) for
 no-match, network, and bad-response cases alike — one exception type, one
 place the UI has to handle. A successful lookup **replaces** the whole
@@ -919,7 +1182,7 @@ me a bigger size" API parameter). Once tracks are fetched,
    real field, saved with the project** (`project_io.py`'s
    `_metadata_to_dict`/`_metadata_from_dict` base64-encode it exactly like
    image layers already are, under `"cover_art_base64"`, `None` when
-   there's no cover). This is why reopening Project > Metadata... later
+   there's no cover). This is why reopening the Metadata dialog later
    still shows the cover: `MetadataDialog.__init__` seeds
    `self._cover_art` from `metadata.cover_art` and calls
    `_show_cover_bytes()` immediately if it's set, rather than only ever
@@ -1238,6 +1501,64 @@ to keep both the existing text *and* the new icon showing side by side,
 rather than risk the toolbar's default/inherited style silently hiding
 the text once every action actually has an icon. See
 `test_view_zoom.py`'s `test_zoom_toolbar_actions_all_have_a_non_null_icon`.
+
+**`mdtools/theme.py` (`apply_theme()`, called once from `main.py` right
+after `QApplication` construction) replaces Qt's per-OS default look with a
+modern, flat, dark theme -- explicit user request, in two stages.** The
+first version was Fusion (already inside PySide6, zero new dependency)
+plus a hand-set `QPalette` -- flatter and more uniform than each OS's
+native style on its own, dark with a blue (`#2a82da`, KDE Breeze's own
+accent) `Highlight`/`Link` colour. Explicit follow-up ("this does not look
+very nice") asked for more polish than a bare palette can express --
+rounded corners, hover/pressed states, focus rings -- so `theme.py` grew a
+second layer, a hand-written QSS stylesheet (`_build_stylesheet()`)
+layered on top via `app.setStyleSheet(...)`, while keeping the palette
+(`_build_palette()`) as the fallback every widget still uses for whatever
+the stylesheet doesn't touch (`QMessageBox`, native file dialogs,
+disabled-state colours, text selection). **Kvantum was asked for
+explicitly and rejected**: it's a Linux/X11-only Qt style engine needing a
+compiled system-level plugin (via qt5ct/qt6ct), which cannot be bundled
+into a PyInstaller Windows build at all -- MDTools' primary target -- and
+would need the user's own machine to have it installed system-wide even on
+the Linux build. A pip-installable theme package (e.g. PyQtDarkTheme/
+qt-material) was offered as a third option and passed over for the same
+zero-extra-dependency reasoning the palette-only version was chosen for
+originally.
+
+**Every colour is a module-level constant used by *both* layers, so the
+palette and the stylesheet can never quietly disagree about what "the
+accent" is.** `_ACCENT`/`_WINDOW`/`_BASE`/etc. are plain hex strings (not
+pre-built `QColor`s -- see the standing "never construct a Qt GUI type at
+module import time" rule) interpolated directly into the QSS f-string and
+also fed to `QColor(...)` for the palette's `Highlight`/`Link` roles;
+`test_the_stylesheet_and_the_palette_agree_on_the_accent_colour` pins this
+down directly rather than trusting it by inspection.
+
+**Every QSS rule targets a specific, named widget type -- never a blanket
+`QWidget`/`QAbstractScrollArea`/`QGraphicsView` selector.** The disc/cover
+design canvas (`canvas/view.py`'s `DesignView`) already sets its own
+explicit white `backgroundBrush` regardless of the app palette, added
+pre-emptively when the palette-only dark theme first landed, since a
+physical label design has to stay legible against white the way it will
+actually print, not whatever colour this theme happens to be -- a blanket
+background rule in the new stylesheet would fight that exact protection.
+`test_the_stylesheet_never_sets_a_blanket_widget_background` guards this
+by parsing every selector line out of `_build_stylesheet()`'s own output
+and asserting none of them starts with one of those three names, rather
+than trusting every future edit to remember the rule by convention alone.
+
+**`scripts/manual/make_screenshots.py` needed the exact same
+`theme.apply_theme(app)` call `main.py` makes, or the manual's screenshots
+would silently keep showing Qt's old default light theme forever.** It
+builds its own `QApplication` rather than importing `main()`, so the two
+never shared this call automatically -- caught only because the
+screenshots were being regenerated for an unrelated reason (a Telegram
+dialog change) right after the Fusion/palette theme first landed, not
+from any test (there is no way to compare a generated PNG against "what
+the real running app currently looks like" in an automated test). See
+`doc/README.md`'s own "Two things worth knowing before editing" section,
+which documents this pitfall directly so it's remembered the next time
+`main.py` gains another app-wide, purely visual setup step.
 
 **Window icon: the existing MiniDisc logo (`assets/img/mdlogo.png`,
 600×600), reused rather than a separate small asset.** Qt scales it down
@@ -1559,6 +1880,54 @@ actually painted with it -- confirmed by a regression test that forces
 `gc.collect()` immediately after enabling it and checks the effect is
 still there.
 
+**Two save/load bugs found together, from one report ("the track list looks
+wrong after reopening -- as if the font were off").** The font was innocent:
+`QFont.toString()`/`fromString()` round-trips exactly, fractional point
+sizes included. What was actually happening:
+
+1. **`textWidth` was never saved.** `jcard_layout` wraps the track list to
+   the panel width; Qt's default is not to wrap, so it came back as long
+   unwrapped lines running off the card. Restored **before**
+   `transformOriginPoint` in `item_from_dict`, and that order is
+   load-bearing: the wrap width decides `boundingRect()`, and the origin is
+   that rect's centre.
+2. **`transformOriginPoint` was recomputed as `boundingRect().center()`
+   rather than saved -- and it is not always that.** `jcard_layout._fit_text()`
+   shrinks and wraps a text layer *after* creating it and never re-anchors
+   the origin, so a live J-card pivots around a point from before the
+   fitting. Those panels are rotated a quarter turn, so a different pivot
+   puts the text somewhere else entirely. It is now stored. Reproducing
+   what was actually there beats deriving something defensible -- and it
+   avoids touching the panel-placement maths, which is correct as it stands.
+
+**Then, prompted by "check the other layer types too": a scaled rectangle or
+ellipse was scaled a *second* time on load, and moved.** Unlike text and
+images, which scale through a transform, `set_item_scale()` resizes a
+shape's own `rect()` and caches the pre-scale size in `BASE_RECT_ROLE` the
+first time it is called (see `canvas/items.py`). `"w"`/`"h"` in the file are
+the rect as it stood, scaling already included -- so a freshly loaded item,
+with nothing cached, adopted that scaled size as its *base*, and the
+`set_item_scale()` call at the end of `item_from_dict` multiplied by the
+factor again. A 2x-wide rectangle reloaded 4x wide, and since that call also
+re-centres the shape, it moved too. Copy/paste shared the bug, going through
+the same two functions. Fixed by seeding `BASE_RECT_ROLE` with
+`w/scale_x, h/scale_y` before that call -- **derived rather than stored in a
+new field, so projects saved before the fix are repaired on load** and there
+is no second rule for older files.
+
+**Why none of this was caught: the existing tests compared saved fields, and
+every field that was being saved round-tripped perfectly.** The new ones
+(`test_item_roundtrip.py`, `test_jcard_roundtrip.py`) compare
+`item.mapToScene(item.boundingRect()).boundingRect()` -- where the layer
+actually lands on the page -- across a matrix of every item type against
+several rotation/scale combinations. Note the matrix deliberately includes
+scale `(1.0, 1.0)`: multiplying by one hides a double-scaling bug
+completely, and that was the only case previously covered. There is also a
+save-twice/load-twice test, since a per-round error compounds, and a check
+that a reloaded shape's *base* rect is right, not just its visible size --
+getting the appearance right over a wrong base would restore the bug the
+moment the user dragged a handle.
+
 **Known caveat:** projects saved before the z-order (`"z"`) field existed in
 the `.mdproj` schema load with every item defaulted to z=0 (a tie), so Move
 Up/Down appears broken (swapping equal values is a no-op) on old saves
@@ -1578,7 +1947,7 @@ button nor the startup screen's Remote button is constructed visible at
 all. Without hardware they could do nothing but explain themselves, which
 is worse than not being there.
 
-**Those two gates are free; the Project > Record menu entry is not.** Both
+**Those two gates are free; the Recording menu's entries are not.** Both
 buttons live on dialogs that are rebuilt every time they open, so they read
 the setting afresh each time. `record_action` is built once, at startup, and
 stayed visible after the adapter was switched off mid-session -- offering to
@@ -1664,6 +2033,56 @@ is m:ss rather than whole minutes for the same class of reason: rounding to
 minutes hid the erase checkbox's effect entirely on a short track list,
 where both answers land inside the same minute.
 
+**A second, deeper "looks frozen" report -- this time the whole window, not
+just the progress bar -- turned out to be a real GIL-starvation bug in
+`MDRemClient.command()`, not a progress-reporting cosmetic.** `_UploadWorker`
+already runs on its own `QThread` (see above), which is the architecturally
+correct fix for keeping a blocking `QSerialPort` call off the GUI thread --
+but `_read_line()` used to hand `waitForReadyRead()` the *entire* remaining
+budget in one call, up to the whole 180 s `TITLE_TIMEOUT_MS` while waiting
+on the deck's reply to a title write. A Python `QThread.run()` override
+calling into a wrapped Qt blocking method is not guaranteed to release the
+GIL for that call's own duration -- PySide/Shiboken sometimes does not, a
+known, occasionally-buggy behavior with real reports against exactly this
+shape of code (a custom `QThread` subclass making a long blocking call),
+and not something verifiable from this codebase alone for `QtSerialPort`
+specifically. If the GIL isn't released, every other Python thread --
+including the GUI thread's own event loop, and so every Python-level
+repaint/slot in the *entire app*, not just this dialog -- is starved for
+exactly as long as that one wait call runs, which reads precisely as "the
+whole window is frozen" rather than "this dialog's progress bar isn't
+moving."
+
+The fix, in `mdrem.py`: both `_read_line()`'s `waitForReadyRead()` and the
+new `_wait_for_bytes_written()` helper now poll in a loop, each individual
+call capped to `_POLL_CHUNK_MS` (200 ms) rather than ever being given the
+full remaining deadline at once. This bounds the *worst case* to one chunk
+regardless of whether the GIL is actually released underneath -- a single
+blocked call that short is imperceptible either way, where 180 s is not.
+The overall per-command timeout is unchanged (still governed by the same
+`deadline`/`time.monotonic()` arithmetic as before, just checked more
+often), and so is when `cancel()` can take effect -- still only between
+whole commands, never mid-exchange, since interrupting a title write
+partway would leave the deck's own firmware mid-edit, a protocol concern
+this chunking has nothing to do with and does not change.
+
+**No existing test exercised this code path at all** -- every prior MDRem
+test (`test_mdrem_ui.py`, `test_record_dialog.py`, `test_erase_dialog.py`)
+fakes the *whole* `MDRemClient` with a plain Python stand-in, never
+touching `command()`'s/`_read_line()`'s real internals against anything
+resembling `QSerialPort`. `test_mdrem.py` gained a `_FakePort` (mimicking
+just the `QSerialPort` surface `MDRemClient` actually touches, including
+its nested `DataBits`/`Parity`/`StopBits`/`FlowControl`/`OpenModeFlag`
+enums, since `mdrem.py` references those off the module-level `QSerialPort`
+name directly, not off an instance) plus a `_FakeClock` that replaces
+`time.monotonic()` so a 180 s deadline can be exercised without a slow
+test. `queue_line(line, deliver_after=N)` lets a test force a reply to only
+"arrive" after N polls, which is what
+`test_a_slow_reply_is_polled_in_bounded_chunks_not_one_long_wait` uses to
+assert directly on `len(port.readyread_calls)` and that every individual
+call was `<= _POLL_CHUNK_MS` -- the actual regression this whole fix is
+about, not just "does a normal exchange still work."
+
 **"Erase existing titles first" maps to the firmware's `TIMING COUNT`,
 and is worth roughly half the total time.** The firmware overshoots the
 old title's length on purpose (it cannot read the deck back), so clearing
@@ -1706,11 +2125,27 @@ kept visually apart from the transport keys on purpose -- on a physical
 remote Record is a deliberate reach, and a mouse makes stray clicks much
 easier than a thumb does.
 
+**Recording > "Remote Control..." reaches the exact same `RemoteDialog`
+from inside an already-open project, not just the startup screen --
+reported directly.** Before this, using the remote while a project was
+open meant closing that project first (back to the startup screen, the
+only place it was reachable), for a dialog that has nothing to do with
+which label is being designed -- the same "not recording, but the same
+deck/adapter" reasoning `_erase_disc()` already established for Erase
+MiniDisc, right next to it in the menu. `_open_remote_control()` is the
+same three-line shape as `_erase_disc()`: `resolve_port()`, bail if
+`None`, construct and `exec()` the dialog. `remote_action` is gated by
+`_sync_mdrem_actions()` exactly like the other MDRem entries (hidden
+rather than disabled, same "there is nothing it could usefully do without
+the adapter" convention) -- the startup screen's own Remote button is
+unaffected and still exists, this is a second, independent entry point to
+the same dialog, not a replacement.
+
 **"Record to MiniDisc from foobar2000..." (`foobar.py` +
 `panels/record_dialog.py`) records an album from foobar2000 onto a
 MiniDisc over S/PDIF and then titles it.** foobar plays; the deck records;
 MDTools watches which track is playing and, when the playlist ends, hands
-off to the existing Upload Tracklist dialog. Reached from the Project menu,
+off to the existing Upload Tracklist dialog. Reached from the Recording menu,
 hidden unless MDRem is enabled like every other MDRem entry point.
 
 **`foobar.py` talks to the Beefweb Remote Control component
@@ -1731,6 +2166,75 @@ recording.** What foobar is about to play *is* what will be on the disc, in
 that order; a lookup returns whatever release the search matched. Same
 reason `MetadataDialog` uses its live field values rather than the saved
 project when uploading.
+
+**`RecordDialog` is the last word on what the disc gets called, and it now
+shows that**: an editable Artist/Album/Year, a clickable cover, and an
+editable Title (and Artist) column, instead of the bare list of track names
+and lengths it used to be. The only place to fix a wrong album name was
+previously the project's own metadata *after* the recording -- too late for
+the titles already written onto the disc. So `_capture_metadata` reads the
+**widgets**, not the playlist, and `_offer_titling` reuses that result
+rather than rebuilding from the playlist as it did (which would have
+discarded every edit at the last step). Two details:
+- **The Artist column is read back as well as the Title.** Rebuilding
+  tracks from titles alone drops every performer, and with them the only
+  thing that makes a compilation one (`ProjectMetadata.is_compilation`) --
+  a disc would stop being a mixtape for having been looked at. The
+  identical bug was found and fixed in `MetadataDialog` once already.
+- **Everything freezes when recording starts** (`_set_fields_editable`):
+  what is on screen at that moment is what gets written when it stops.
+
+**The cover is looked up when the playlist loads, not when the album ends.**
+The same call, moved. After a recording is the worst possible moment to
+discover the search matched the wrong release -- nothing can be done but
+retype the album and go round again; now it is on screen while the name can
+still be corrected, or the picture clicked. A side effect worth having:
+`_capture_metadata` no longer touches the network at all, and it runs the
+instant an album finishes, where a hanging lookup would hold up the offer
+to write the titles.
+
+**`panels/cover_preview.py` is that picture, shared by four dialogs** (the
+Metadata editor and all three recording sources) -- `CoverPreview`, a
+QLabel that is also the button for replacing what it shows, plus
+`fetch_into()`, the blocking-with-a-wait-cursor lookup that fills it. It
+was lifted out of `metadata_dialog.py`'s private `_CoverLabel` when the
+second caller appeared. Not merely to avoid duplication: the rules it
+carries are the same everywhere and none of them are obvious.
+- **Every automatic source guesses**, so the picture must be clickable.
+- **`set_cover()` keeps bytes it cannot draw** and reports False rather
+  than dropping them. They came from somewhere that had a reason for them,
+  and Pillow (which `palette.py` reads a cover with) understands formats Qt
+  does not. The one caller that must be strict is `choose_file()`, where an
+  unreadable pick means the user pointed at a PDF -- and it puts the
+  previous cover back, since a bad pick must not destroy a good one.
+- **`fetch_into()` never runs for a compilation.** A search for "Various
+  Artists" returns an unrelated record's sleeve; callers branch on
+  `is_compilation()` first and draw one with `mixtape_cover` instead.
+
+**`mdtools/embedded_cover.py` is the last resort behind the search: the
+picture inside the files themselves.** A folder of FLACs ripped from
+somebody's own CDs routinely carries the sleeve, and it is certainly the
+right one for *this* release where a search result is a guess about it --
+but it is still the fallback, on purpose: embedded art is whatever the
+ripper attached (often a 300px scan, sometimes a photo of the disc) while
+iTunes returns a clean 600x600, which is what a printed label wants. Both
+`FolderRecordDialog._fetch_cover` and `RecordDialog._ensure_cover` try it
+only when `fetch_into` came back empty; the latter reaches the files
+through `PlaylistItem.path`, so an ordinary foobar playlist gets it too,
+not just a loaded folder.
+
+**It parses FLAC's PICTURE block directly -- no tag library.** A page of
+struct unpacking against a format frozen since 2007 is a smaller thing to
+own than a dependency, the same call already made for the MusicBrainz disc
+id. Front cover (type 3) wins over any other picture, and the 32x32 file
+icons (types 1 and 2) are never used. **ID3v2's APIC frame is deliberately
+not attempted** -- three frame layouts, unsynchronisation and optional
+compression -- so an MP3 folder simply reports no embedded art rather than
+being read badly. `test_embedded_cover.py` checks the parser against
+hand-built blocks *and* against a file written by the bundled `flac.exe`
+with `--picture=`, because a fixture written from the specification can
+agree with itself perfectly and still misread what the real encoder
+produces.
 
 **`RecordDialog` deliberately has no worker thread**, unlike the upload it
 hands off to. Every step here is either instantaneous (one localhost HTTP
@@ -1799,6 +2303,734 @@ track times are known up front, so `DISC_SP_SECONDS` (80 min) turns "the
 recording got cut off at minute 80" into a warning beforehand. It only ever
 warns -- which recording mode the deck is in (SP/LP2/LP4) can neither be
 read nor set through the key table, so it is not MDTools' decision to make.
+
+**Every recording backs foobar2000's own output volume off to
+`RECORDING_VOLUME_DB` (-5.0dB) first, via a new `FoobarClient.set_volume()`
+-- explicit user request, headroom against clipping on the digital
+transfer.** `_start()` calls it right alongside `prepare_for_recording()`/
+`stop()`, before `_arm_deck()` -- so this applies uniformly to every
+"record via foobar" entry point (plain foobar record, the CD-rip hand-off,
+the folder-record hand-off), since they all share this one `RecordDialog`.
+Confirmed live, not just from documentation (the same rigor this module's
+own header already holds itself to): `GET /api/player`'s own `"volume"`
+object reports `{"isMuted", "max": 0.0, "min": -100.0, "type": "db",
+"value"}`, and `POST /api/player` with a flat `{"volume": db}` body (same
+convention `prepare_for_recording()`'s own flat keys already use) sets it
+-- read back afterward to confirm the value actually landed, not just that
+the request returned 204. Deliberately does not touch `isMuted`: a muted
+player staying muted isn't this call's business.
+
+**Nothing in the recording flow depends on how the audio actually reaches
+the deck -- which is why the analogue inputs work with no code at all, and
+why the sample rate is a manual note rather than a check.** MDTools presses
+the deck's keys over infrared and watches foobar2000's playlist; the audio
+path is entirely outside that loop. So recording through the deck's
+*analogue* line inputs needs nothing added or branched on anywhere -- it
+just costs two extra conversions plus whatever the sound card's output
+stage adds, before ATRAC has even started, and makes the deck's input
+selector and recording level the user's problem (a digital input has
+neither). Documented in the manual's "Analogue instead, if you have to",
+deliberately not enforced or detected in code.
+
+The digital path does have one real failure mode, and it is left to the
+manual for the same reason: a MiniDisc is 44.1 kHz/16-bit stereo and the
+deck's digital input expects to be fed exactly that, so a 96 kHz or 24-bit
+stream -- which is what a modern player outputs from hi-res files unless
+something is told to convert them -- can be refused outright or drop out
+partway, with no way for the deck to report either (same one-way-infrared
+limitation as everything else here). The fix belongs in foobar2000:
+Resampler (SoX) in the DSP chain at 44100 Hz, output device at 16-bit
+stereo, which passes an ordinary 44.1/16 CD rip through untouched. **A
+check inside MDTools was considered and rejected**: Beefweb reports the
+*playing file's* sample rate, never the output device's format or what the
+DSP chain does on the way there, so "this file is 96 kHz" would be a false
+alarm for exactly the people who already have the resampler configured
+correctly -- the ones who would see it most often.
+
+**"Record CD to MiniDisc..." (`cdrip.py` + `musicbrainz.py` +
+`panels/cd_rip_dialog.py`) rips an audio CD into foobar2000's playlist and
+then hands over to the flow above, unchanged.** That hand-off is the design:
+arming the deck, the lead-in, a track mark at every boundary and titling
+afterwards all already exist and are driven by whatever foobar happens to
+have in its playlist, so this feature's job is only to make the playlist say
+the right thing. `_record_cd` and `_record_from_foobar` share
+`_run_record_dialog()`; `RecordDialog` never learns a CD was involved.
+
+`CdRipDialog.result_metadata` *is* handed forward, which it originally was
+not. The old reasoning -- the rip writes its titles into the files, so the
+playlist already carries them and a second copy could only disagree --
+still holds for the titles, and they are the same strings either way. What
+a playlist cannot carry is the **artwork**: the disc's cover is now looked
+up as soon as MusicBrainz identifies it (and again when a different
+pressing is picked from the Release combo), shown in a clickable preview,
+and would otherwise be thrown away between the two dialogs and searched
+for a second time.
+
+**It rips rather than letting foobar play the CD directly** -- foobar can
+open a disc, and that was the shorter path. But then the disc is read in
+real time *during* the recording, and a drive stumbling on a scratch at
+minute 31 puts that stumble on the MiniDisc, which cannot be patched
+afterwards. Ripping first moves every read error to a point where it costs a
+re-read and nothing else, which is the whole subject cdparanoia exists for.
+
+**Both tools are bundled binaries in `bin/win64`, not dependencies** --
+`cd-paranoia.exe` (libcdio's maintained cdparanoia port) and `flac.exe`,
+with their DLLs; provenance, versions and licences are in
+`bin/win64/ATTRIBUTION.md`, which is not optional paperwork (both are GPL).
+`cdrip.tools_dir()` resolves them exactly like `gallery.gallery_dir()` /
+`icons.icons_dir()` -- `sys._MEIPASS` when frozen, repo root in dev --
+and `scripts/build_windows.ps1` `--add-data`s the folder. **Nothing is
+bundled for Linux and that is deliberate**: both tools are distro packages
+there, so `find_tool()` falls through to PATH and no build-script change was
+needed. Writing our own CDDA reader over `IOCTL_CDROM_RAW_READ` was
+considered and rejected -- jitter correction and re-read logic is what
+cdparanoia *is*, and ours would be a worse copy of it.
+
+**Two things about cdparanoia's behaviour were established by running the
+bundled binary, not read anywhere, and the code depends on both.** It writes
+everything to **stderr**, success included (stdout is reserved for ripped
+audio), and **`-Q` exits 0 even when it found no drive at all**. So neither
+the exit code nor stdout can decide whether reading the TOC worked -- having
+parsed a track table out of the output is the only evidence there is. A rip
+proper *does* exit non-zero, which is what `rip_track` checks. See
+`test_a_clean_exit_with_no_toc_in_it_is_still_a_failure`.
+
+**Progress within a track comes from the output file's size, and the child's
+stderr goes to a file rather than a pipe.** Reading the pipe line by line was
+the first implementation and the obvious shape; it has two failure modes the
+current one avoids. It assumes cdparanoia terminates its progress output with
+newlines (it redraws a bar, and only `-e` promises lines at all), and it makes
+**cancelling depend on a line arriving** -- a quiet stretch would leave Stop
+doing nothing until the track finished. Not reading the pipe at all is not an
+option either: a full pipe buffer blocks the child. A file has no buffer to
+fill, so `rip_track` polls the clock (`RIP_POLL_S`, which is therefore also
+the worst-case Stop latency) and measures the growing WAV. Progress parsed out
+of cdparanoia's own `@ n` field was rejected separately: it means different
+things in different builds, while a file's size on disk cannot be misread.
+Measuring the file then gives the correctness check for free --
+`RipTask.expected_wav_bytes` is what the TOC says the track must weigh
+(44 + sectors x 2352), and **a track that came up short fails the rip however
+cleanly the process exited**, because a truncated track is not something you
+notice after it is on a MiniDisc. The log is deleted on success and **kept on
+failure**, where it is the only diagnosis a bad disc gets. Note the ordering
+constraint: both deletions happen after the `with open(...)` block, since
+Windows refuses to unlink a file that is still open.
+
+**Cancelling a rip is immediate, unlike cancelling an MDRem upload.** There
+the worker is mid-way through a blocking exchange that would leave the deck
+in name-edit mode; here killing the reader leaves nothing anywhere, and the
+partial WAV is deleted on the way out. A failed or cancelled rip must also
+**never reach the playlist** -- a half-ripped album loaded into foobar would
+be recorded as though it were the whole disc.
+
+**A CD carries no text at all, so identification is `musicbrainz.py`, not
+the existing iTunes lookup.** `metadata_lookup.py` takes an artist and album
+name, which is exactly what a bare disc cannot supply. MusicBrainz trades a
+TOC for one. Two queries, deliberately, because they fail in opposite
+directions: the **exact disc id** matches this pressing and nothing else but
+only hits if somebody submitted it, while the **fuzzy TOC search**
+(`/discid/-?toc=...`) finds releases nobody ever submitted an id for, at the
+cost of returning every pressing with the same track lengths. Exact first.
+Cover art still comes from `metadata_lookup.find_cover()` -- it already
+caches into the asset gallery, and MusicBrainz's artwork is a separate
+service. MusicBrainz **refuses requests without an identifying User-Agent**,
+so `_USER_AGENT` is not politeness.
+
+**The disc id's 100 fixed hex slots are load-bearing, not padding.** They
+are what makes two pressings hash identically regardless of track count, so
+it must not be "simplified" to just the tracks that exist. Verified end to
+end against the live service while building this: the TOC of Nirvana's
+*Nevermind* hashes to `I5l9cCSFccLKFEKS.7wqSZAorPU-`, which musicbrainz.org
+resolves to that release -- that string is the test vector in
+`test_cdrip.py`, and it is the one expectation in that file that came from
+outside it.
+
+**Beefweb cannot be given the ripped files, which is why `foobar.py` now
+also drives foobar2000's command line.** `POST /api/playlists/{id}/items/add`
+answers **403 "item is not under allowed path"** for anything outside the
+music directories configured in foobar's own preferences -- and that list
+starts out, and on a normal install stays, empty (`GET /api/browser/roots`
+returned `{"roots": []}` on the real install this was built against; adding a
+file from the user's own Music folder was refused). `foobar2000.exe /add` has
+no such notion. So Beefweb still makes the playlist, clears it and reads back
+what landed, and the *files* go in through `add_files_via_cli()`. Splitting
+one operation across two transports is not elegant; making every user
+configure a whitelist before a CD could be recorded is worse.
+`find_foobar_exe()` reads the `App Paths` registry key, and the location is
+overridable in Window > Settings.
+
+**`wait_for_item_count()` exists because `/add` returns before foobar has
+finished.** The command line is answered as soon as foobar *accepts* the
+files; reading and tagging them happens after, so asking for the playlist
+immediately reports a count still climbing.
+
+**Tags are written at encode time, and that is what makes the titles
+correct downstream.** `flac --tag=...` gets TITLE/ARTIST/ALBUMARTIST/
+ALBUM/DATE/TRACKNUMBER, so `foobar.metadata_from_playlist()` -- and
+therefore what gets written onto the MiniDisc -- reads the CD's real titles
+with no special casing anywhere. Both ARTIST and ALBUMARTIST, since the
+record flow reads `%album artist%` for the disc title. Filenames are
+zero-padded with the track number in front so disc order survives even if
+something along the way sorts them. Tags reach the encoder as **command line
+arguments**, so a Polish or Japanese title surviving that trip on Windows is
+an assumption about flac.exe's own argv handling, not something this code
+can guarantee -- which is why
+`test_the_bundled_encoder_writes_non_ascii_tags_without_mangling_them` runs
+the real bundled encoder and reads the Vorbis comment block back out of the
+FLAC. If that ever stops being true, every title on every ripped disc is
+silently wrong.
+
+**Old rips are deleted at the start of the next one, never at the end of a
+recording** -- the files stay in foobar's playlist for as long as the user
+might replay them, so deleting them when a recording finished would pull
+them out from under it (user's explicit choice among the alternatives).
+`clean_stale_rip_folders()` only removes folders holding nothing but
+`.flac`/`.wav`/`.log`: the rip folder is user-configurable, so it can be
+pointed somewhere that also holds something else, and a recursive delete has
+no business guessing. Default location is under the system temp folder --
+a rip is raw material for a recording, not a music collection.
+
+**The entry is gated behind the MDRem setting like the other recording
+entries**, via `_sync_mdrem_actions()`. Ripping needs no adapter, but this
+entry does not stop at ripping. The port is resolved *before* the rip, and
+foobar's reachability and location are checked before it too: the rip is the
+expensive half, and every one of those failures costs minutes if discovered
+afterwards and nothing if discovered first.
+
+**Verified end to end on real hardware** (a USB drive, Skillet's *Unleashed*),
+after being built blind on a machine with no optical drive at all:
+- `cd-paranoia -Q`'s real output matches the parser exactly; that capture is
+  now a fixture (`REAL_TOC_OUTPUT`) so a hand-written one can never drift
+  from the shape the bundled binary actually produces.
+- The **plain drive letter** (`-d F:`) works, so `device_candidates()`' first
+  spelling is the one that hits. The `\\.\F:` fallback has therefore never
+  been needed in practice -- keep it, but don't take it as load-bearing.
+- The disc's identifier (`_dODxWGqmW9J1Ez3UiD8Z1z2JpY-`) resolved on
+  musicbrainz.org to the right release with the right track count -- a
+  second live-verified vector alongside Nevermind's.
+- A ripped track came out **byte-exact against the TOC** (40,560,284 bytes),
+  and the tags survived the whole way round: written by flac.exe, read back
+  by foobar2000, `metadata_from_playlist()` returning the right artist,
+  album, year and titles. That round trip is the thing the MiniDisc's own
+  titles depend on.
+- Windows' CDFS reports the label **"Audio CD"** for an audio disc, so
+  `GetVolumeInformationW` succeeds where the code originally assumed it
+  would fail. `has_media` is a usable "something is in there" hint, never
+  the authority -- reading the TOC is.
+
+**Speed is the one unwelcome finding: about 3x, i.e. ~80 s for a 3:50
+track and ~15 minutes for a 43-minute album.** That is cdparanoia being
+thorough on a cheap USB drive, and it is the price of the error correction
+this feature exists for. If it ever needs to be faster, the lever is `-Z`
+(disable paranoia) -- which trades away exactly the thing that made ripping
+preferable to letting foobar play the disc live, so it should be a visible
+choice, never a quiet default.
+
+**Burning an audio CD-R (`decode.py` + `cdburn.py`) is the same
+plan-then-execute split as ripping, and the planning half is where every
+decision lives.** `build_burn_plan()` needs no drive, no QApplication and no
+files beyond the ones being burned; it returns every reason a disc cannot be
+written *attached to the plan* rather than raised, because the dialog has to
+show them all at once, next to the tracks they are about -- stopping at the
+first bad file would make fixing an album a matter of one failed attempt per
+problem. Those reasons are **codes, not sentences** (`NOT_RED_BOOK`,
+`TOO_SHORT`, `TOO_LONG_FOR_DISC`, ...), for the same reason
+`decode.AudioProperties.mismatches()` returns bare field names: the wording
+has to be translated and neither module has any Qt in it.
+
+**Reading a file's properties is deliberately separate from decoding it.** A
+CD-R holds 44.1kHz/16-bit stereo and nothing else, so every source file is
+measured against that *before* the disc is committed. `decode._ensure_pcm()`
+is the single place that decides which tool runs; every caller above it
+thinks only in terms of "a path to Red Book WAV".
+
+**Resampling is SoX, and the choice was measured rather than assumed.** A
+48kHz/24-bit album is what a download normally is -- the first real burn
+attempt hit exactly that and was refused, because `flac.exe` cannot
+resample. ffmpeg was chosen first (it would have brought MP3/M4A/Opus), then
+measured: its Windows builds are ~128MB of DLLs, `avcodec` alone 68MB, past
+the size GitHub warns about and in every clone forever. SoX does the one
+thing needed in 6MB. `convert_command()` is `rate -v` (high-quality
+resampler) plus `dither`, which is what makes 24->16 bits sound like the
+recording rather than like quantisation noise; effects come *after* the
+output file, which is SoX's own argument order.
+
+**What that costs, stated plainly because it was got wrong once:** this SoX
+package **cannot read MP3**. The format is in its own list, but decoding one
+needs `libmad-0.dll` loaded at runtime and the official release does not ship
+it -- established by running it (writing an MP3 fails with "Unable to load
+LAME encoder library"). `CONVERTIBLE_SUFFIXES` therefore excludes `.mp3` on
+purpose: promising it would turn a clear "unsupported" into a failure half
+way through a burn. Dropping a **32-bit** `libmad-0.dll` beside `sox.exe`
+would enable it with no code change.
+
+**SoX lives in `bin/win64/sox/`, not beside the other tools, and that is
+load-bearing.** It is a 32-bit build; cd-paranoia and flac are 64-bit MSYS2
+builds. Unpacking it alongside them overwrote `libwinpthread-1.dll` with a
+32-bit copy of the same name -- which happened not to break cd-paranoia only
+because it does not import that DLL directly. `zlib1.dll` and
+`libpng16-16.dll` collide just as easily. Windows resolves an executable's
+DLLs from its own directory first, so one folder per architecture keeps each
+set with its own binary; `decode.sox_path()` looks there before falling back
+to PATH, and `test_sox_is_kept_apart_from_the_64_bit_tools` guards it.
+
+**A wrong sample rate is a *note*, not a problem, when something can fix
+it.** `BurnPlan.notes` is a second list beside `problems`, because `can_burn`
+hangs on the latter and a note must never disable the button: with SoX
+present a 48kHz track shows "will be converted to 44100 Hz / 16-bit" and the
+burn proceeds; without it, the same track is `NOT_RED_BOOK` and blocks.
+
+**CD-Text goes through `mdrem.transliterate()` -- the MiniDisc titler's own
+function.** The spec allows ISO-8859-1 (and MS-JIS), but what a given player
+does with either is a guess, and that function's contract is already exactly
+the one wanted: strip to ASCII and *report* what had no equivalent instead of
+dropping it silently. A Japanese title therefore comes back empty with its
+characters listed, before the disc is written rather than after -- the same
+promise `MDRemUploadDialog` makes about a title going onto a MiniDisc.
+
+**The burner is cdrecord, not cdrdao, and that was forced rather than
+chosen.** cdrdao's `.toc` file is a nicer fit for describing a whole disc,
+but it has no maintained Windows build: the last official win32 package is
+1.1.5 from around 2004 (Cygwin + ASPI, in an OldFiles folder), and
+upstream's Windows instructions are stale. cdrecord (cdrtools 3.02a10) is
+still built for Windows -- the cdrtfe project publishes those builds -- does
+disc-at-once audio with CD-Text, and is packaged by every Linux
+distribution, so one tool covers both platforms. See
+`bin/win64/ATTRIBUTION.md` for provenance and licence (CDDL, plus GPL
+`cygwin1.dll`: that build is a Cygwin one).
+
+**CD-Text goes in through a `*.inf` file beside each WAV** (`-text
+-useinfo`), whose field names come from cdrecord's own manual page shipped
+in that same package, not from guesswork. Two rules that manual states and
+`_inf_quote()` follows: a value runs from the *first* single quote on the
+line to the *last*, and **needs no escaping in between** -- so an apostrophe
+inside a title must be left alone (escaping it would put a backslash on the
+disc), while one at the very end has to be dropped, since there is no escape
+sequence to reach for. Filenames stay bare and cdrecord runs with the work
+folder as its working directory: the Windows build is a Cygwin one, so
+handing it native paths invites translation surprises for nothing, and each
+`.inf` has to sit beside its WAV regardless.
+
+**What was established by running the bundled binary, not read anywhere.**
+The same discipline cd-paranoia's own surprises taught this project:
+- `-scanbus` prints the device list on **stdout** while its warnings go to
+  stderr, and two thirds of the lines it prints are not drives (`*` for an
+  empty slot, plus a `HOST ADAPTOR` entry).
+- The six **"Insufficient privileges" warnings are noise**: `-checkdrive`
+  still talked to the drive, and a `-eject` run physically opened the tray.
+  The drive obeys cdrecord with no elevation. Reporting one of those lines
+  as the reason a burn failed would send the user chasing a permissions
+  problem they do not have, which is what `_NOISE` in `_last_useful_line()`
+  is for.
+- An empty drive answers `-minfo` with "medium not present" and exits 255.
+- **`-eject` opens the tray even when the run fails** -- seen on a dry run
+  that stopped at "No disk". So it belongs only on the burn command;
+  `scan_command()` and `disc_info_command()` must never carry it, or merely
+  looking at the drive would spit the disc out.
+The real output of the first two is checked in as fixtures in
+`test_cdburn.py` (`REAL_SCANBUS_OUTPUT`, `REAL_NO_DISC_OUTPUT`), the same
+reason `test_cdrip.py` keeps `REAL_TOC_OUTPUT`. **Still an assumption**,
+marked at its own site: the shape of the progress line during an actual
+write.
+
+**`burn()` mirrors `cdrip.rip_track()` exactly** -- child output to a *file*
+rather than a pipe (an undrained pipe blocks the child; reading it line by
+line makes cancelling depend on a line arriving), poll the clock, keep the
+log on failure and delete it on success. **The one thing that is not the same
+is what cancelling costs**: stopping a rip leaves nothing anywhere, while
+stopping a burn leaves a disc that is neither blank nor finished and a CD-R
+cannot be rewritten. `burn()` still does what it is told immediately -- the
+warning belongs to the dialog. `simulate=True` (cdrecord's `-dummy`) is a
+real dry run and exists at this level, not only in the UI, because a wasted
+CD-R is this feature's version of a bad cut.
+
+**Verified end to end on real hardware, on 2026-08-19**: a 12-track
+48kHz/24-bit album resampled by SoX, written disc-at-once by cdrecord to a
+CD-R in an HL-DT-ST DVDRAM GP20N, and read back with `cdrecord -vv -toc` --
+12 tracks, lead-out at 41:47, and **`CD-Text len: 634`**, which is the one
+thing a `-dummy` run could never show. The scratch WAVs and their `.inf`
+files were still in the burn folder afterwards and `burn.log` was gone,
+which is only true on the success path.
+
+**One real bug came out of that first burn, and only from comparing the two
+halves against each other:** `BurnTrack.sectors` counted `frames / 588`,
+which is only true at 44.1 kHz -- so a 48 kHz album was planned as taking
+8.8% more disc than it does (45:29 against the 41:45 that came off it). It
+now counts `duration_seconds * 75`, because what reaches the CD is the
+*resampled* audio. The two agree exactly at 44.1 kHz, which is why it hid
+until a hi-res album turned up. It only ever overestimated, so nothing was
+ever written past the end of a disc -- but it would have refused an album
+that fits.
+
+**Everything that cannot be verified without a disc degrades to "unknown",
+never to an error.** `list_burners()` asks cdrecord itself for device names
+instead of constructing them (`0,0,0` is scsibus,target,lun as libscg
+numbers them -- not derivable from a drive letter), `parse_disc_info()`
+treats an unrecognised field as unknown and lets the burn try anyway, and
+`parse_progress()` returning None means "no progress information", never a
+failure. A burn that finishes correctly with a motionless progress bar is a
+cosmetic problem; one that stops because the output read differently would
+be a wasted disc. `build_windows.ps1` needed no change for the new binaries
+-- it already `--add-data`s the whole `bin/win64` folder.
+
+**`BurnDialog` is `RecordDialog`'s sibling, and the two differences are
+both consequences of the disc being one-shot.** Same editable
+album/artist/year, same clickable cover, same editable Title/Artist columns,
+same rule that what is on screen when the button is pressed is what gets
+written (`track_sources()` reads the *widgets*, never the list it was
+constructed with). But: **everything knowable is shown before the button** --
+per-track verdicts for anything that is not Red Book or is shorter than the
+standard's four seconds, the album's length against the disc's, and every
+character CD-Text will have to drop -- because a CD-R cannot be edited after
+the fact the way a MiniDisc's TOC can, so "find out on playback" is not a
+place to learn any of it. And **stopping is offered but never quietly**:
+cancelling during the decode stage costs a scratch folder, cancelling while
+the laser is writing leaves a disc that is neither blank nor finished, so
+`reject()` asks in those words first. It still never calls `worker.wait()`
+on the GUI thread -- the rule the MDRem upload dialog established the hard
+way. "Simulate" (cdrecord's own `-dummy`, the laser off) is offered rather than
+buried: it is the only way to rehearse a burn without spending a disc.
+
+**`BurnDialog._ensure_cover()` looks the artwork up, which the burn flow did
+not do at all at first** -- reported directly ("czemu tu nie ma okladki w
+oknie burn?"). The folder gave it names and a year and nothing else, so the
+cover box sat empty even for files that carried one, and the album reached
+the label with no artwork. It now follows exactly the order `RecordDialog`
+established: a search first (iTunes returns a clean 600x600, which is what a
+printed label wants), then the sleeve embedded in the files, and never a
+search at all for a compilation -- "Various Artists" returns somebody else's
+record.
+
+**The tool warning and the plan summary are two labels, deliberately.** A
+missing cdrecord must not hide what the plan says about the album -- installing
+a tool and re-encoding a hi-res track are separate jobs, and the user may do
+them in either order.
+
+**Burning is not gated behind `mdrem_enabled()`**, unlike every other entry
+in the Recording menu: it needs the drive, not the infrared adapter. The two
+entries (`_burn_cd_from_folder`, `_burn_cd_from_foobar`) both end in
+`_run_burn_dialog()`, which after a successful burn *offers* the album to
+the open project rather than applying it -- this is reachable with any
+project open, including one that has nothing to do with the disc just
+written, so unlike the post-recording layout (which follows a flow already
+confirmed several times over) it asks, and it does nothing at all unless the
+open project is a CD one.
+
+**`audio_folder.album_from_folder()` is the one place in this project that
+reads tags without foobar2000, and the module's own docstring used to swear
+it never would.** That rule was written for the *recording* path, where the
+files go into foobar's playlist first and every title comes back out of
+Beefweb -- foobar has to read them to play them, so adding a tag library for
+that would have been a dependency for nothing. A burn has no player in the
+loop at all: the files go straight to cdrecord, so there is nothing else to
+ask what a track is called. It reads FLAC's comment block through
+`embedded_cover.flac_tags()` (the parser this project already owns) and
+falls back to the filename stem for anything else -- a disc of blank track
+names being a worse outcome than one named after its files. Album, artist
+and year are decided by majority vote over the files that actually carry the
+tag, so one guest-credited track cannot rename the record (the same rule
+`foobar.album_title()` and `album_sort._group_display_name()` already
+follow), falling back to `guess_from_folder_name()`.
+
+**The Recording menu follows two things now: the adapter setting *and* the
+open project's medium** (`_sync_mdrem_actions()`, re-run after Window >
+Settings closes and after every File > New / Open, since that is when a
+medium can change). A MiniDisc project is not offered "Burn Audio CD"; a CD
+project is offered neither the remote, nor erasing, nor the three
+record-to-MiniDisc entries. **This is a change of principle, not tidying**:
+erasing, the remote and recording all act on whatever disc is physically in
+the deck, which has nothing to do with which label is open -- an
+independence that was itself deliberate (see the erase dialog's notes). It
+loses to a menu that matches the project in front of you, which is what was
+asked for. With no project open at all -- only reachable before the startup
+screen is answered -- nothing is hidden on medium grounds, because there is
+no medium yet.
+
+**Burning is the exception that keeps its own rule**: `burn_folder_action`
+and `burn_foobar_action` follow the medium but *not* the adapter, because a
+burn needs the drive and not the infrared. The same rule governs the
+Telegram entries -- `_burn_from_telegram_downloads()` and the chat dialog's
+own "Burn Downloaded Album to CD..." button are ungated, while their
+recording twins stay behind `mdrem_enabled()`. Copying the recording gate
+across would have hidden CD burning from exactly the person most likely to
+want it: somebody with no adapter at all.
+
+`TelegramChatDialog` therefore reports *which* button finished it
+(`downloaded_action`, `RECORD` / `BURN`) alongside `downloaded_folder` -- a
+folder alone cannot say, since a downloaded album can go to either medium --
+and both buttons share `_finish_with()`, so the auto-sort that stops a
+multi-album folder being treated as one album cannot apply to one and not
+the other. `app_window._burn_folder()` was split out of
+`_burn_cd_from_folder()` for that hand-off exactly as `_record_folder_dialog()`
+was, and `_burn_cd_from_folder()` stays zero-argument so the menu action
+cannot hand it `QAction.triggered`'s `checked` bool.
+
+**Two names were wrong and are fixed.** The page switcher said "Cover /
+J-Card" on a CD project, naming a MiniDisc part that project does not have;
+`_relabel_cover_page()` rides along on the same medium sync and says "Case
+Insert" there. And every pixmap layer read as "DesignPixmap" in the Layers
+panel: `layers_panel._label_for()`'s fallback stripped "QGraphics"/"Item"
+off the class name, which was right while these were plain Qt classes and
+broke silently when they became `DesignPixmapItem` and friends (added to
+suppress Qt's own selection decoration -- see canvas/items.py). It now names
+what an item *is*, by isinstance, and falls back to the old trick only for
+anything unrecognised.
+
+**The Project menu became "Recording", and the metadata editor moved out of
+it onto the Tools panel.** The menu held the one dialog used while *designing
+a label* next to three that drive a tape deck; nothing but recording is in it
+now (`app_window._build_menu`), and `ToolPanel.edit_metadata_requested` opens
+`MetadataDialog` from a button beside "Insert from Metadata" -- the album's
+details next to the layers built out of them. **Erase MiniDisc... stayed**,
+below a separator: it is not recording, but it is what you do to a disc you
+are about to record over, through the same deck and the same adapter, and a
+menu of its own for one entry would be worse. Every user-facing string that
+said "Project > Metadata..." had to change with it -- `app_window`,
+`settings_dialog`, `tool_panel`'s own empty-menu placeholder, the README and
+all three manuals -- so grep for a menu path before assuming it is still
+true.
+
+**"Record Folder to MiniDisc..." (`audio_folder.py` +
+`panels/folder_record_dialog.py`) is the third source of a recording, and
+structurally the thinnest.** Where `cdrip.py` has to *make* the audio first,
+this only has to point foobar2000 at files that already exist: list them,
+replace the playlist, read it back, hand off to `RecordDialog` exactly as the
+CD flow does.
+
+**Nothing here reads a tag, on purpose.** There is no tag library in this
+project and foobar2000 is a better one than anything that could be added for
+this -- it has to read the files to play them regardless. So `audio_folder.py`
+decides only *which* files and in *what order*, and every title, artist,
+album and length comes back out of Beefweb afterwards. Two consequences:
+
+- **`%path%` is appended to `foobar._COLUMNS`** (same "append, never insert"
+  rule `%artist%` already followed, so no positional index shifts), feeding
+  `PlaylistItem.display_title()` -- the title, else the filename stem.
+  foobar substitutes a filename for a missing `%title%` itself, so this is
+  usually belt and braces, but a folder of untagged files is exactly what
+  this feature is for and a disc of blank track names is not worth risking
+  on behaviour nobody here pinned down. `RecordDialog`'s own track list and
+  progress line use it too, so what is listed is what gets recorded.
+- **Order comes from the filename** (`natural_key`, digit runs compared as
+  numbers so `10` follows `9`), because it is the only ordering signal that
+  exists before foobar has seen the files. A folder holding tracks *is* the
+  album and its subfolders are skipped; only a folder with no audio directly
+  in it is recursed into, which is what puts a `CD1`/`CD2` two-disc album in
+  disc order without letting somebody pick a library root and silently get
+  all of it.
+
+**Three sources decide the album name, in strict order: what the user typed
+beats the tags, which beat the folder name.** The middle rung is the one
+that is easy to get wrong and did get wrong first time round -- the fields
+are *prefilled* from `guess_from_folder_name()` before foobar has read a
+single tag, so treating whatever sits in them as the user's word let a folder
+called "Disc 1" quietly rename a properly tagged record.
+`FolderRecordDialog._resolve()` compares each field against the guess it was
+seeded with: still holding it means untouched. A cleared field deliberately
+counts as untouched rather than as "no name", since falling back to the tags
+is what emptying a wrong guess actually wants.
+
+**This is the only entry point that hands metadata forward to
+`RecordDialog(..., metadata=...)`, and it has to.** The CD flow deliberately
+does not: it wrote its titles into the files it created, so the playlist
+already carries them and one source of truth beats two. A folder is somebody
+else's files and *nothing here rewrites them*, so an album name corrected in
+this dialog reaches the disc no other way. `_capture_metadata` uses the given
+metadata when there is one, and skips its own cover lookup when that metadata
+already carries artwork; `_offer_titling` now reuses `result_metadata` rather
+than rebuilding from the playlist, which would have thrown the correction
+away at the last step.
+
+**Choosing a folder loads it; the only button is Record.** Two earlier
+shapes were both wrong. The first loaded and accepted in the same click, so
+the dialog vanished the instant it had anything to show -- and what it has
+to show is the point: which album the tags turned out to describe, the
+artwork it will be labelled with, and the titles foobar read out of the
+files. The second put a "Load Folder" button in front of that, which the
+user rejected in one sentence: picking a folder in this dialog *is* the
+decision, so asking them to then press a button was asking them to confirm
+something they had already done. `set_folder()` therefore calls `_load()`,
+Record stays disabled until foobar has actually taken the files, and the
+status line says up front that browsing will replace the playlist.
+Cancelling after the load leaves the playlist replaced and nothing
+recorded, exactly as the CD flow does.
+
+**The load runs on a `QThread`, unlike everything else in this dialog.**
+`add_files_via_cli` and `wait_for_item_count` have a 30 second timeout each,
+so the worst case is a minute of frozen window -- normally it is a second or
+two, but that is not a bet worth taking. **Cancelling is deliberately not
+offered**: the playlist has already been cleared, the work is inside
+foobar2000, and stopping halfway would leave it holding part of an album
+with no indication why. `reject()` says so and returns; `closeEvent` ignores
+the X. (Compare `cdrip`'s worker, where cancelling is immediate and right,
+and the MDRem upload's, where it takes effect only between steps.)
+
+**`cdrip.ensure_folder()` -- the rip folder is a path somebody typed, so
+it routinely names a directory that does not exist.** That is the normal
+state before the first rip, not an error, and it used to be left for
+whatever came next to trip over: Windows' native folder picker complains
+rather than politely falling back when opened on a missing directory. Now
+`SettingsDialog` creates it before browsing *and* on OK, and `CdRipDialog`
+creates it before ripping. Same "created on demand, at the moment it is
+needed" rule as `user_paths.projects_dir()`. A folder that genuinely cannot
+be made (a drive that is not there, no write permission) raises
+`CdRipError` naming it -- and in Settings that **warns without blocking
+OK**, the same rule the MDRem port follows: hardware that is unplugged
+right now is a reason to say so, not a reason to refuse the setting.
+
+**Every file dialog starts somewhere deliberate -- `mdtools/user_paths.py`.**
+All of them used to pass `""` as the starting directory, which leaves Qt on
+the process's working directory: wherever the app was launched from, and for
+a frozen build the install folder. Projects landed next to the executable
+and exports scattered wherever the last dialog had wandered. The rule now is
+the one the OS already sets -- documents in Documents, pictures from
+Pictures -- with one named folder of its own,
+`Documents/MiniDiscProjects`, because a project is a thing a user should be
+able to find again a year later.
+
+- **`QStandardPaths`, never a hand-built `%USERPROFILE%/Documents`**: the
+  real folder is localised (Dokumenty, ドキュメント) and can be redirected
+  to OneDrive or another drive, and only the OS knows where it is.
+- **Created on demand, not at startup.** A folder appearing in someone's
+  Documents before they have saved anything is clutter; but a dialog
+  pointed at a directory that does not exist falls back somewhere
+  arbitrary, so `projects_dir()` creates it at the moment a dialog is about
+  to open in it. A read-only Documents falls back to Documents itself
+  rather than raising.
+- **Derived, not configurable.** The CD rip folder is a setting because it
+  holds hundreds of megabytes somebody may need off their system drive;
+  these are starting points for a picker, and a preference per dialog would
+  be more machinery than the problem deserves.
+- **Exports land beside the project** they came from, falling back to the
+  projects folder -- the SVG that cuts a design and the PNG that prints it
+  are the same job as the `.mdproj`, and the set is only findable at
+  cutting time if it stayed together. `PrintDialog` therefore takes a
+  `start_dir`; `MultiprintDialog` has no single project to belong to and
+  gets the fallback.
+
+**A first save is proposed as "Artist - Album (Year).mdproj", from
+`mdrem.disc_title()` -- the same function that composes what the deck is
+told.** One function, so the file on disk and the title on the disc cannot
+drift into disagreeing about what the album is. It is deliberately **not**
+run through `mdrem.transliterate()`: that strips a title to ASCII because
+the deck can display nothing else, and mangling "Zażółć" into "Zazolc" on
+disk would be carrying a hardware restriction somewhere it does not apply.
+Empty metadata suggests no filename at all rather than a bare ".mdproj".
+
+`test_user_paths.py` closes with a blanket guard
+(`test_no_dialog_is_left_starting_on_the_working_directory`) that drives
+every entry point and asserts none passes an empty directory, so this cannot
+quietly regress one dialog at a time.
+
+**Recording > "Erase MiniDisc..." (`panels/erase_dialog.py`) is built around
+an admission: we do not know what the ERASE key does.** The firmware's own
+findings say `ERASE` (SIRC `0x07DA`) is *recognised* by an MDS-JE480 as a
+write command -- sent to a write-protected disc it produced the deck's
+protection message, which a wrong code would not have -- but the entire
+write group was only ever tested behind the write-protect tab, deliberately
+(`RECORD` would otherwise have wiped the test recording), and at three-second
+intervals the deck's message never cleared between keys, so **which key does
+what was never distinguished**. Shipping "press this to erase your disc" on
+that basis would be guessing with someone's recording.
+
+So it is a **guided sequence that asks the user what their deck's display
+says** -- STOP, then ERASE, then a question, and only a Yes sends ENTER to
+accept. The user's eyes are the only instrument available; this is the same
+shape, and the same reasoning, as RecordDialog arming the deck and then
+asking whether it really armed. Three details worth keeping:
+- **ENTER is a button the user presses, not something sent for them.**
+  It used to go out once, automatically, the moment they answered "yes, it
+  is asking me" -- and on the real MDS-JE480 that did nothing visible, with
+  "maybe it needs it twice?" the obvious next thought and no way to try.
+  The deck cannot be read back, so how many presses a given model's menu
+  wants is not knowable from here; `ConfirmPromptDialog` hands the key to
+  the person who can see the display and stays open so they can press it
+  again, counting as it goes. **Done only counts as a confirmed erase if
+  ENTER actually went out at least once** -- otherwise it would be a way to
+  claim an erase that never happened.
+- **A "no" sends CANCEL**, rather than just stopping. Leaving the deck
+  parked on a destructive confirmation would arm it for whoever next walks
+  past.
+- **The question is about the display, never about the outcome.** "Is it
+  asking you to confirm?" is observable; "did it work?" is not, and the
+  answer decides whether an irreversible key goes out.
+- **It offers to eject afterwards**, because an erased TOC is volatile until
+  the disc comes out -- exactly as a written one is
+  (`MDRemUploadDialog._offer_eject`).
+
+It is deliberately **not tied to the open project**: it acts on whatever
+disc is physically in the deck, which has nothing to do with which label is
+being designed, so it works with no project open at all.
+
+**A playlist or a CD may be a compilation, and almost everything downstream
+assumed an album.** A mixtape takes its album and artist from whichever
+track happened to be first, so the disc gets titled after one track's
+record, the J-card credits one performer for twelve, and a cover art lookup
+keyed on those words returns some unrelated sleeve -- presented as though it
+were this disc's. `ProjectMetadata.is_compilation()` is the one predicate
+everything else hangs off.
+
+**The detection deliberately is not "do the track artists differ".** That
+would call every album with a guest feature a compilation, which is exactly
+the mistake `foobar.album_artist()` already exists to avoid. It asks whether
+*most* tracks can be attributed to one artist -- the album's own if it has
+one, else the commonest track artist -- with `_same_artist()` matching by
+substring either way, so "Falling In Reverse" still claims the track
+credited to "Falling In Reverse, Jelly Roll". A release credited to Various
+Artists says so outright and is taken at its word. **Absence of per-track
+artists is not evidence**: a hand-typed or looked-up track list has none,
+and stays an ordinary album.
+
+**Getting this wrong is asymmetric, so the negative case carries the
+weight.** A compilation misread as an album is a plain-looking cover; an
+album misread as a compilation is renamed to Various Artists, has its sleeve
+replaced and its J-card rewritten. Half of `test_compilation.py` pins down
+the ordinary path being untouched -- see
+`test_a_guest_feature_does_not_make_an_album_a_compilation` and
+`test_an_ordinary_albums_track_lines_are_unchanged_by_the_artist_field`.
+
+**`Track.artist` is the new field this rests on**, plumbed through
+`project_io` (defaulting to `""`, so projects saved before it load as the
+ordinary albums they were), `foobar`'s column set (`%artist%` **appended**
+to `_COLUMNS`, so every existing positional index keeps its meaning), the
+CD rip dialog's own Artist column, and the Metadata dialog's. That last one
+was not optional: `_current_metadata()` rebuilds the track list out of the
+table, so without a column to hold them, opening the Metadata dialog on a
+mixtape and pressing OK silently dropped every performer and the project
+stopped being a compilation just for having been looked at.
+
+**`foobar.album_title()` now answers "the album these are all from", not
+"track one's album".** Weighed against the tracks that actually carry an
+album tag, **not** against the whole playlist -- counting untagged tracks as
+votes against would strip the name off a half-tagged ordinary record, which
+is a regression on the normal path for the sake of the unusual one.
+
+**`mixtape_cover.render_cover()` draws a cover rather than special-casing
+every layout.** It returns ordinary PNG bytes for `metadata.cover_art`, so
+`auto_layout`, `jcard_layout`, `palette` and the `.mdproj` all carry on
+exactly as they do for a fetched sleeve -- nothing downstream knows. Two
+constraints shaped it, both physical:
+- **It has to survive grayscale.** Two colours chosen to contrast by hue can
+  convert to the same grey, at which point the accent rule disappears into
+  its own background. The accent is therefore separated by *luminance*, and
+  the search ladder desaturates towards a pale tint when brightness alone
+  cannot get there -- which it cannot for blue, carrying 0.0722 of luminance
+  against green's 0.7152. `test_background_and_accent_stay_apart_in_grayscale`
+  sweeps every hue rather than trusting one sample, and is what caught that.
+- **It has to survive being small.** The list is fitted by measurement, and
+  each track gets a **hanging indent** -- wrapping "01 Artist - Title" as one
+  paragraph puts continuation lines hard against the numbers, where "Heaven"
+  on its own line reads as track 03.
+An analogous accent hue replaced a complementary one after looking at a
+render: hot pink on bottle green was garish where a lifted neighbour reads
+as deliberate. The seed is a SHA-1 of the track list, not `hash()`, which is
+salted per process and would repaint the cover on every run.
+
+**Where the branch actually goes in: `record_dialog._capture_metadata()` and
+`app_window._fetch_cover_into_metadata()`, both immediately before their
+`find_cover()` call.** Not inside `find_cover` itself -- Project >
+Metadata...'s own "Lookup Track List..." button should still search for
+whatever the user typed, because there they asked for a search.
 
 **Templates > "Change Template for This Page..." (`app_window.apply_template`)
 swaps a page onto a different template.** Until it existed a template could
@@ -1879,7 +3111,7 @@ cover art (and a missing year) via `find_cover` before deciding it cannot
 proceed -- the layout is built around the cover, so without one there is
 nothing to gain by clearing the page first.
 
-**Project > Metadata... can also pull its fields straight from foobar2000
+**The Metadata dialog can also pull its fields straight from foobar2000
 ("Load from foobar2000").** Same source the record flow uses, available when
 nothing is being recorded -- what is queued to play is usually exactly what
 the label is for, and it beats a search because these are the real files
@@ -1981,6 +3213,69 @@ export clips to the cut path anyway), while clipping would rasterise the
 panel blocks and the track list -- turning text still worth editing into a
 flat image.
 
+**`cd_layout.py` lays out a CD project's two pages, and leans on the
+MiniDisc layouts rather than restating them.** `auto_layout.place_cover_on_label()`
+already scales artwork to cover a cut shape (deliberately overshooting, since
+Clip Layers is what trims it), and `jcard_layout.place_back()` already builds
+a track-list panel out of the cover's own colours. What is genuinely
+different is physical, and each difference is one decision:
+
+- **The disc is a ring.** Nothing can be printed across the hub, so text
+  lives in bands above and below it, each only as wide as the circle is at
+  that height -- `_chord_rect()` takes the chord at whichever band edge is
+  *further* from the centre, since using the nearer one would push text past
+  the cut line. `test_a_band_never_reaches_outside_the_circle` checks the
+  corners against the radius rather than trusting an inset.
+- **The label's artwork is lightened** (`lighten()`, Pillow, blend towards
+  white) rather than having a translucent white rectangle laid over it: the
+  result is one ordinary image layer that can be moved or replaced, not two
+  layers whose stacking order quietly matters. It is the same problem
+  `recolour_insertion_mark()` solves for a MiniDisc, at a scale where
+  recolouring the text is not enough.
+- **The accent is scored against white, not against the sleeve's dominant
+  colour** -- because white is what it will be read on once the artwork
+  underneath has been lightened. Scoring it the J-card's way picked a pale
+  yellow: correct against dark navy, invisible on the label.
+- **The insert is read upright**, unlike a J-card, which goes into its case a
+  quarter turn round. That is the only reason `place_back()` grew a `turned`
+  flag instead of this module getting a second copy of the panel logic. It
+  also grew `heading_scale`, because those heading bands are millimetre
+  constants chosen for a J-card's narrow panel, and a slim-case insert is
+  twice as wide -- at 1.0 the heading looked lost above a full-height track
+  list.
+- **Which panel is which follows from the fold**: crease in the middle, left
+  half folded behind the right, so the right half faces out at the front and
+  the left half through the clear back of the tray. Both stay upright --
+  folding about a vertical crease and then reading the other side flips
+  left-right twice, which cancels.
+
+**Two bugs here were found by looking at the render, not by reading the
+code, and they share one cause.** An item scaled by `set_item_scale()`
+carries a transform anchored at its own centre, so `pos()` is *not* its
+visible top-left. Placing by `pos()` put the Digital Audio mark half off the
+disc -- where Clip Layers removed it outright as being outside the cut shape,
+so it did not look misplaced, it was simply absent -- and left the insert's
+cover floating in the middle of its panel with white either side. Everything
+in this module now positions by the item's real footprint
+(`item.mapToScene(item.boundingRect()).boundingRect()`), the same technique
+`auto_layout._move_centre_to()` documents, and the tests assert on where
+items *land*.
+
+**The "Compact Disc Digital Audio" mark is a real asset, not a drawing.** An
+attempt to draw it from memory produced something that plainly was not the
+logo (reported in one sentence: "to twoje logo w ogole nie przypomina
+oryginalu"). It now comes from Wikimedia Commons' `CDDAlogo.svg`, downloaded
+unmodified -- SHA-1 verified against what Commons publishes -- with
+provenance, the public-domain-as-a-text-logo status and the trademark note in
+`assets/img/ATTRIBUTION.md`. `scripts/make_cd_logo.py` renders it to the PNG
+the app actually loads, because `gallery.py` lists raster files only and
+`QPixmap` cannot be relied on to read SVG in a frozen build (the same
+reasoning `panels/icons.py` gives for going through `QSvgRenderer`). **That
+script must not be run under `QT_QPA_PLATFORM=offscreen`** if it ever draws
+text again: PySide6 ships no fonts and offscreen finds no system font
+directory, so text comes out as empty boxes -- which is exactly how the first
+version rendered.
+
 **Unsaved work is guarded by a plain `_dirty` flag, not
 `QUndoStack.isClean()`.** Metadata edits, template changes and the automatic
 layouts all alter the project without necessarily leaving anything on the
@@ -2023,16 +3318,945 @@ Three details that are load-bearing here:
   changes a second time.
 - **The loop is a loop on purpose.** Backing out of the template picker
   means "not that one", so it returns to the startup screen rather than
-  quitting. `_run_startup_flow()` (launch) deliberately does *not* loop -- it
-  falls back to `_new_design(prompt=False)`, which is what the startup tests
-  pin down, and looping there would spin forever against a monkeypatched
-  always-Reject picker.
+  quitting. `_run_startup_flow()` (launch) deliberately does *not* loop --
+  see `startup_cancelled` below for what a direct Cancel/close of the
+  *first* `StartupDialog` now means there instead; choosing "New Project..."
+  and then backing out of the *template picker* still falls back to
+  `_new_design(prompt=False)`, which is what the startup tests pin down,
+  and looping on that specific sub-case would spin forever against a
+  monkeypatched always-Reject picker.
+
+**`self.startup_cancelled` -- Cancel/close on the very first `StartupDialog`
+now means "quit", not "silently start an untitled project anyway".**
+Reported directly as making the button useless: the original behaviour let
+`_run_startup_flow()` return `False` for *any* reason (the dialog itself
+rejected, a chosen recent project failing to load, the template picker
+being cancelled after choosing "New Project..."), and `__init__` treated
+every one of those identically -- fall back to `_new_design(prompt=False)`
+and show the main window regardless of what was actually clicked. Only the
+*first* case is really "I want out" (the same thing Cancel already means
+when `_return_to_startup()`'s own loop is showing this dialog again after a
+project closes -- see above); the other two are more local cancellations
+that should keep their original fallback behaviour. `_run_startup_flow()`
+now sets `startup_cancelled = True` itself, but *only* in the branch where
+`StartupDialog.exec()` itself doesn't return `Accepted` -- `__init__`'s own
+`elif not self._run_startup_flow() and not self.startup_cancelled:` is what
+keeps the other two `False`-returning cases falling back to a fresh default
+project exactly as before. `main.py` checks the flag *before* ever calling
+`window.show()`:
+```python
+window = MainWindow()
+if window.startup_cancelled:
+    return 0
+window.show()
+```
+so a cancelled first launch never paints a window at all, rather than
+flashing one open only to immediately quit. Regression coverage:
+`test_startup_dialog.py`'s
+`test_cancelling_the_startup_dialog_outright_means_quit_not_a_blank_project`
+(the actual bug) alongside
+`test_cancelling_new_project_after_choosing_new_falls_back_to_default_templates`
+(now also asserting `startup_cancelled is False`, pinning down that the
+*other* cancellation path is unaffected).
 - **`show_startup_dialog=False` now also means "closing just closes".**
   Every test constructs `MainWindow` that way, and they would all stall on a
   modal dialog with nothing to answer it. File > Exit sets `_quitting` for
   the same reason, and clears it again if the close is refused -- otherwise
   a cancelled Exit would leave the window primed to quit silently on the
   next close.
+
+**Experimental features live behind their own menu, their own settings
+dialog, and one flag -- Window > Settings' "Show experimental features"
+checkbox (`app_settings.experimental_features_enabled()`).** With it off,
+`app_window.py`'s `self.experimental_menu` (built once at startup, an empty
+menu until a feature lands in it) is hidden via `menuAction().setVisible()`
+-- a `QMenu` has no `setVisible()` of its own, `menuAction()` is the actual
+`QAction` placing it on the menu bar, and hiding *that* is what hides the
+whole menu. `_sync_experimental_menu()` re-reads the flag both at menu-build
+time and after Window > Settings closes, same "built once, needs an
+explicit re-sync" reasoning as `_sync_mdrem_actions()`. Explicit user
+decision: whatever settings an experimental feature needs get their own
+dialog (`panels/experimental_settings_dialog.py`'s `ExperimentalSettingsDialog`,
+reached from an "Experimental Settings..." entry inside the menu itself, so
+it needs no separate gating -- the entry only exists while the menu does)
+rather than rows bolted onto the main `SettingsDialog`, so the stable
+dialog never carries half-finished feature configuration and a second
+experimental feature later gets its own section in the same dialog instead
+of either one accumulating unrelated checkboxes.
+
+**Telegram bot integration (`telegram_bot.py` + `panels/telegram_login_dialog.py`
++ `panels/experimental_settings_dialog.py` + `panels/telegram_chat_dialog.py`).**
+Built in two phases -- account settings and sign-in first, then the chat
+dialog itself -- and both are described below, in that order. The feature
+is searching/downloading an album from a Telegram bot the *user runs
+themselves*, then handing the files to the existing Record Folder to
+MiniDisc flow exactly like any other folder of files. **Explicitly
+declined, discussed and refused outright**: any integration with public
+bots that redistribute copyrighted albums without authorization (e.g.
+`@HiFiAudioBot`) -- downloading from those is receiving an infringing copy
+regardless of whether the user separately owns the physical media, which is
+legally distinct from ripping your own disc (see the CD-ripping features
+above). This plan and the code it produced are for a bot the user controls.
+
+**Why a real user login, not a bot token.** Telegram's Bot API forbids one
+bot from messaging another bot -- MDTools can't send a search command to
+the user's bot as a bot itself and get a reply. To talk to a bot the way a
+person would in the Telegram app, this has to sign in as an actual
+Telegram *user account* (phone number + code, optionally a 2FA password)
+over the MTProto client protocol, via **Telethon** (pure Python, asyncio,
+no required C extension, so it stays easy to freeze with PyInstaller).
+That needs its own API ID/API Hash pair from https://my.telegram.org -- a
+credential for the application acting as a client, completely unrelated to
+whatever bot token the user's own bot uses internally; MDTools never needs
+the bot's token at all.
+
+**MDTools' builds carry their own registered API ID/Hash, but it is
+**injected at build time and never written into the source tree** --
+`app_settings._bundled_telegram_credentials()`.** Explicit user request in
+two stages: first "hardcode it so nobody has to go get their own", then
+"can it be stored securely in the exe". The honest answer to the second is
+**no, and no tooling changes that**: the value must be reconstructed in
+plaintext to be sent to Telegram, so any build carrying it yields it to
+`strings`, a debugger, or a look at the handshake. Obfuscation would be a
+speed bump presented as security, so it was offered as such and not chosen.
+What build-time injection *does* solve is the one exposure that is genuinely
+irreversible: this repo has a public remote, and a credential in git history
+survives a rewrite (forks, caches). So the credentials live outside version
+control, and the resolution order is:
+
+1. the per-user override in `settings.ini` (`set_telegram_api_id()`/
+   `set_telegram_api_hash()`) -- an explicit user choice always wins;
+2. `MDTOOLS_TELEGRAM_API_ID`/`_HASH` in the environment (CI, or a dev who
+   would rather not keep a file);
+3. `mdtools/_build_credentials.py`, which `scripts/build_windows.ps1`/
+   `build_linux.sh` generate from those same variables before running
+   PyInstaller, and which is **gitignored** -- keeping one locally is also
+   how a dev-mode run gets working credentials. Both scripts leave an
+   existing untracked file alone when the variables are unset, so a local
+   dev setup is never clobbered by a build, and warn (rather than fail) when
+   there is neither.
+
+**Missing credentials are a supported state, not an error.** A build made
+without them simply cannot sign in until the user supplies their own, which
+is what `ExperimentalSettingsDialog._sign_in()`'s guard and
+`app_window._open_telegram_bot_chat()`'s second check both say explicitly --
+the latter reports a missing bot username and missing credentials
+*separately*, since they fail for unrelated reasons and have different
+fixes, and telling someone to "set the bot username" when the credentials
+are what is missing would send them to a field that is already correct.
+`test_the_credentials_are_not_hardcoded_anywhere_in_the_source_tree` is the
+regression guard for the property that actually matters: it scans the
+package for a bare 32-hex-digit literal (the shape of an api_hash) and fails
+if one is committed. Worth keeping in mind that none of this makes the
+credentials a *secret* -- an API ID/Hash identifies the *application* to
+Telegram's MTProto API, not the end user; the genuinely sensitive per-user
+artefact is the Telethon session at `telegram_session_path()`, and the real
+risk from a leaked app id is Telegram rate-limiting or banning it, which the
+per-user override above is the escape hatch for. `_open_telegram_bot_chat()`'s own
+precondition check narrowed accordingly: API ID/Hash are effectively
+always set now, so in practice only a missing bot username still trips it
+-- the guard message was updated to say so rather than continuing to
+mention two credentials that can no longer actually be missing.
+
+**`ExperimentalSettingsDialog` shows no API ID/Hash rows at all** --
+follow-up report ("wciaz w eksperymentalnych ustawieniach widze parametery
+API"). Pre-filling two credential boxes with values the user neither
+obtained nor needs to know about only invited the question of what they
+were for, so both `QLineEdit`s and the my.telegram.org instructions block
+are gone; the dialog now starts straight at Bot username. `_sign_in()`
+reads `app_settings.telegram_api_id()`/`telegram_api_hash()` directly
+instead of from fields, and `_on_accept()` no longer writes them, so a
+hand-edited override in `settings.ini` survives pressing OK (guarded by
+`test_accepting_leaves_the_api_credentials_untouched`). The empty-credential
+guard in `_sign_in()` stays even though the UI can no longer produce that
+state -- it is reachable only by deliberately blanking the keys in
+`settings.ini`, which is exactly the case worth keeping a clear message
+for. Where they live, for reference: the built-in pair in
+`app_settings.py` (source, and so the frozen `.exe`), the optional
+override under `telegram_api_id`/`telegram_api_hash` in
+`%LOCALAPPDATA%/MDTools/settings.ini`, and the separate Telethon session
+database at `telegram_session_path()` (`telegram.session`, beside that
+same ini).
+
+**`_LoginWorker` (in `telegram_login_dialog.py`) needs a persistent asyncio
+event loop, unlike every other `QThread` in this codebase.** Every existing
+worker (`_UploadWorker`/`_RipWorker`/`_LoadWorker`) does one bounded job in
+`run()` and finishes. This one can't: Telethon's `sign_in()` needs the
+*same* `TelegramClient` instance that called `send_code_request()` (the
+phone-code-hash is cached on the instance, not the session file) --
+disconnecting and reconnecting between "code sent" and "code entered" would
+silently trigger a second, wasted code request and risk the user typing a
+now-stale code. So `run()` starts its own event loop and keeps it alive
+across however long the user takes to read an SMS and type it in (and,
+for a 2FA account, a password after that). The GUI thread hands a
+code/password into the coroutine blocked on `await queue.get()` via
+`loop.call_soon_threadsafe(queue.put_nowait, value)` -- the standard way to
+cross an asyncio loop's thread boundary. `submit_code()`/`submit_password()`/
+`cancel()` all wait on a `threading.Event` (`_ready`) before scheduling,
+guarding the narrow startup race between `QThread.start()` returning and
+`run()` actually creating the loop/queues -- in practice unreachable by a
+human, but real in a fast test calling these back to back. `cancel()`
+follows `MDRemUploadDialog`'s rule: it only takes effect at the next point
+the flow is waiting on a queue, not mid network call, and `reject()` never
+calls `worker.wait()` on the GUI thread (that's what froze the MDRem upload
+dialog for real once already) -- it asks the worker to stop and returns
+immediately, and `_on_worker_finished` closes the dialog once the thread
+actually exits.
+
+**`TelegramBotClient` (in `telegram_bot.py`) takes a client object as a
+constructor parameter rather than building one itself** -- dependency
+injection, so its whole request-code/submit-code/2FA-password/signed-in
+state machine is unit-tested against a `FakeTelethonClient` test double
+(`tests/test_telegram_bot.py`) with no real network or Telegram account
+involved, and `telegram_login_dialog.py`'s own tests can substitute the
+same fake via `create_telethon_client()` (the *only* place that imports and
+constructs the real `telethon.TelegramClient`) to drive the real `QThread`
+end to end. Every Telethon exception is translated into one `TelegramError`
+at this boundary -- `SessionPasswordNeededError` from `submit_code()` is
+deliberately *not* treated as an error (it returns
+`SignInResult.PASSWORD_REQUIRED`; 2FA is normal, expected behaviour, not a
+failure).
+
+**`app_settings.telegram_session_path()` is derived from `_settings()
+.fileName()`'s own parent, not recomputed independently via a second call
+to the underlying `AppConfigLocation` lookup.** The autouse
+`_isolated_app_settings` conftest fixture isolates every setting in this
+module by monkeypatching `_settings()` alone; a path computed any other way
+would silently point at the real per-user config directory even under that
+isolation, both in tests and by design (this file is Telethon's session
+database, equivalent to a live login to the user's real account -- it
+belongs beside `settings.ini`, never touched by any cleanup routine, never
+embedded in a `.mdproj`, and worth calling out plainly: API ID/Hash and this
+session are stored/kept in plain-text/unencrypted form, same as every other
+credential-shaped setting in this app -- there's no secret-storage
+mechanism anywhere in this codebase).
+
+**Phase 2 -- the actual chat dialog (`panels/telegram_chat_dialog.py`) --
+is built.** A generic mini-chat with the bot: shows whatever it sends
+(text, inline buttons, a file attachment), lets the user reply, downloads
+any file offered, and hands the download folder to
+`FolderRecordDialog` exactly like a folder picked by hand -- reached from
+Experimental > "Download Album from Telegram Bot...".
+
+**`telegram_bot.py` gained a `ChatMessage` dataclass and five more
+`TelegramBotClient` methods (`resolve_bot`, `send_text`, `start_watching`,
+`click`, `download`), all following the same boundary rule as Phase 1's
+sign-in methods: nothing outside this module ever touches a raw Telethon
+object.** `TelegramBotClient` now caches every message it has sent or seen
+in a `dict[id, RawMessage]` (`_remember()`), because `click()`/`download()`
+need the *raw* message back (their own `.click()`/`.download_media()` do
+the real work) while everything above this module only ever holds a plain
+integer id. `send_text()` runs its result through the exact same
+`_remember()`/`ChatMessage` path an incoming message does, so the dialog
+renders our own sent messages and the bot's replies through one code path,
+not two. Verified against the installed Telethon (1.44.0) directly rather
+than trusted from memory: `message.out` is a real instance attribute set
+in `Message.__init__` but invisible to `dir()`; `message.buttons` is
+`list[list[MessageButton]]` or `None`; `message.file` is a `File` (`.name`/
+`.size`) or `None`; `download_media(file=an_existing_directory, ...)`
+picks the message's own suggested filename inside it (checked via
+`os.path.isdir` internally -- the caller is responsible for that directory
+already existing, same "create it, then use it" rule as
+`cdrip.ensure_folder()`).
+
+**`_ChatWorker` extends `_LoginWorker`'s persistent-event-loop pattern from
+a one-shot exchange to a *running conversation*.** Same shape (event loop
+created in `run()`, client constructed inside it), but instead of finishing
+after one exchange it loops for as long as the dialog is open, dispatching
+between two `asyncio.Queue`s: incoming bot messages (fed by Telethon's own
+`events.NewMessage(chats=entity, incoming=True)` handler -- delivered *on
+the worker's own loop/thread*, so no `call_soon_threadsafe` needed for that
+direction) and outgoing commands from the GUI thread (send text / click a
+button / download a file), which *does* need it, via the same
+`_ready.wait()` guard + `loop.call_soon_threadsafe(queue.put_nowait, ...)`
+shape `_LoginWorker.submit_code()` already established.
+
+**The single costliest lesson of this phase: a `QThread` that loops
+forever (unlike every one-shot worker elsewhere in this codebase) turns
+"forgot to mock the client in one test" into a silent, output-less process
+crash, not a normal test failure.** `TelegramChatDialog` originally started
+its worker straight from `__init__` (auto-connect on open). A test that
+substitutes a fake `_worker` object to check `reject()`/`accept()`'s own
+shutdown logic (mirroring `test_mdrem_ui.py`'s `BusyWorker` pattern) still
+lets construction start a *real* `_ChatWorker` first -- and because that
+worker is parented to the dialog (`parent=self`), Qt keeps its C++ object
+alive via the parent/child tree regardless of the Python attribute being
+reassigned to the fake. Without a mocked client, that orphaned real worker
+tries to connect to actual Telegram servers with fake credentials in the
+background; and because `_ChatWorker.run()` never returns on its own (no
+`_flow()` exit condition short of `cancel()`), it is still "running" when
+Python's garbage collector eventually collects the now-unreferenced dialog
+sometime later -- at which point **Qt aborts the whole process with
+`qFatal()`, not a Python exception**, which is why this showed up as pytest
+silently producing zero output and exiting, not a traceback. Two fixes,
+both worth keeping in mind for *any* future persistent-loop worker in this
+codebase:
+- `start_connecting()` is a separate, explicit method, never called from
+  `__init__` -- plain construction of `TelegramChatDialog` is now always
+  inert (no thread, no network), so any test that just wants to inspect
+  initial widget state can't trip over this by accident.
+  `app_window._open_telegram_bot_chat()` calls it explicitly, right after
+  construction and before `exec()`.
+- Every test that *does* call `start_connecting()` must stop the worker
+  again (`dialog.reject()`, then pump the Qt event loop until
+  `dialog._worker is None`) before the test function returns -- see
+  `test_telegram_chat_dialog.py`'s `_shutdown()` helper, called from every
+  end-to-end test's `finally` block, and its module docstring for the full
+  story. `_LoginWorker`-based tests never needed this because that worker
+  finishes on its own after one exchange; anything shaped like
+  `_ChatWorker` (loops until cancelled) always will.
+
+**Both `accept()` and `reject()` need the same graceful-shutdown treatment
+on `TelegramChatDialog`, unlike `TelegramLoginDialog` (which only ever
+needed it on `reject()`).** The login dialog's worker finishes on its own
+once signed in, so closing it via "Close" after success never has a live
+worker to stop. The chat worker never finishes on its own -- both
+"Record Downloaded Albums..." (`accept()`) and "Close" (`reject()`) can be
+clicked while it's still happily looping, so both are routed through one
+shared `_close_with(finish)` that cancels the worker and defers calling
+`finish` (`super().accept`/`super().reject`) until `_on_worker_finished`
+confirms the thread actually exited -- never `worker.wait()` on the GUI
+thread, same rule as everywhere else this pattern appears.
+
+**The hand-off to Record Folder to MiniDisc reuses `FolderRecordDialog`
+completely unchanged, via a new optional parameter on the existing
+recording entry point.** `_record_folder()` (the plain menu action) split
+into a thin, zero-argument wrapper and `_record_folder_dialog(initial_folder:
+Path | None = None)`, which calls `FolderRecordDialog.set_folder()` (already
+public, already what the interactive Browse button itself calls) before
+`exec()` when a folder is already known -- skipping the browse step
+entirely rather than duplicating any of `FolderRecordDialog`'s own
+tag-reading/cover-lookup/metadata-reconciliation logic. **The zero-arg
+wrapper is not just tidiness**: `menu.addAction(text, callback)` connects
+`QAction.triggered`'s `checked: bool` straight through to a Python
+callable's positional parameters when the callable's signature allows one,
+so wiring the menu directly to `_record_folder_dialog` would have handed
+`initial_folder=True/False` on every click -- a real, easy-to-miss
+PySide/Qt signal-connection gotcha, not a hypothetical one; see the note
+in "PySide6/Qt gotchas" below. Still gated on `app_settings.mdrem_enabled()`
+exactly like the plain menu entry, since the actual recording step still
+needs the adapter regardless of where the folder came from -- the "Continue
+to Record Folder..." button is disabled (with a tooltip) rather than hidden
+when it's off, since unlike a menu action it has no `_sync_mdrem_actions()`
+equivalent to hide it dynamically.
+
+**Two follow-ups landed after real usage: a bot's photo wasn't showing at
+all, and messages stayed in whatever language the bot wrote them in.**
+
+**A Telegram *photo* (sent through the picture picker) has no filename
+attribute at all -- reported as "images aren't visible" in the chat
+dialog.** `File.name` looks for a `DocumentAttributeFilename`, which only
+a real `Document` carries, so a photo's `ChatMessage.file_name`/`file_size`
+stayed `None` -- meaning it fell through *both* the buttons branch and the
+file/Download branch in `_MessageWidget`, rendering as nothing at all.
+`ChatMessage.is_photo` (from `bool(message.photo)`, a real Telethon
+attribute distinct from `.document`) is its own flag rather than being
+inferred from a missing filename, precisely so nothing downstream has to
+know that distinction exists. `TelegramBotClient.download_bytes()` (new,
+alongside `download()`) uses Telethon's `file=bytes` sentinel for an
+in-memory download -- confirmed via source read (`file is bytes` checked
+throughout `telethon/client/downloads.py`) -- since a preview's whole point
+is being seen immediately, not saved to disk first. `_ChatWorker` triggers
+this automatically (fire-and-forget, via `asyncio.ensure_future` on its own
+loop -- not awaited, and a failure is silently skipped, same "a missing
+preview isn't worth interrupting the chat over" rule the rest of this
+dialog already follows) the moment a photo message arrives, and
+`_MessageWidget.set_photo()` scales it down to `_PHOTO_MAX_WIDTH` (320px)
+if wider before displaying it.
+
+**Automatic translation (`mdtools/translate.py`) -- explicit user request,
+not something inferred.** Every incoming (never outgoing) bot text message
+is translated into whatever `mdtools.i18n.current_language()` currently is
+and shown as a second, italic line underneath the original -- which is
+never replaced, since a translation can be wrong and the original may carry
+information (an exact command, a filename) a translation would obscure.
+**MyMemory** (mymemory.translated.net), not Google Translate's unofficial
+endpoint (what the popular `googletrans` package scrapes) -- explicitly
+chosen over it after being asked, for the same reason `metadata_lookup.py`
+picked the iTunes Search API over anything needing sign-up: a genuinely
+free, *documented* public API needing no key at all, rather than an
+undocumented, unsupported scrape that could break or start refusing
+requests without notice (a real tradeoff, not just caution -- MyMemory's
+quality is noticeably rougher on some inputs, confirmed by hand against the
+live API: "Hello, how are you?" came back completely untranslated because
+its top corpus match happened to be a bad one, while realistic
+bot-style sentences translated correctly). MyMemory's `langpair` **requires
+an explicit source** -- `autodetect|<target>` works, a blank/omitted source
+is rejected outright with a 403, confirmed against the live service, not
+assumed from docs.
+
+**Translation runs through `loop.run_in_executor(None, ...)`, not a direct
+`await`, because `mdtools.translate.translate()` is a plain blocking
+`urllib.request` call (same shape as `metadata_lookup.py`'s own), and
+`_ChatWorker`'s event loop has to keep dispatching other incoming
+messages/clicks/downloads while a translation is in flight.** That module
+doesn't know or care it's being called from inside an asyncio loop --
+exactly the same "this module doesn't assume async; the caller keeps it
+off the loop" split already established between `mdtools.telegram_bot`
+(genuinely async, Telethon-native) and everything else's blocking-call
+convention elsewhere in this codebase.
+
+**Two more follow-ups from real usage: the transcript didn't auto-scroll,
+and clicking a button surfaced a raw, alarming-looking Telegram error.**
+
+**Auto-scroll is wired to `QScrollBar.rangeChanged`, not a
+`QTimer.singleShot(0, ...)` after inserting a widget.** The first version
+did the latter and was reported as "the window doesn't scroll down on its
+own" -- a 0ms timer and Qt's own layout recomputation for the
+just-inserted widget aren't ordered relative to each other, so the scroll
+could fire *before* the transcript's real new size (and so its real new
+scrollbar maximum) existed, silently scrolling to the *previous* bottom
+and leaving the newest message off-screen. `rangeChanged(min, max)` only
+ever fires once the scrollable range has actually changed to reflect the
+new content, which is the standard, correct Qt idiom for "always follow a
+growing scroll area" -- connected once in `__init__`, so it also covers a
+widget growing *after* being added (e.g. a photo preview finishing load),
+not just a brand new message.
+
+**Clicking an inline button surfaced Telethon's raw `DataInvalidError`
+("Encrypted data invalid") -- confirmed, by reading Telethon's own
+`Message.click()`/`MessageButton.click()` source, that this is a genuine
+Telegram *server-side* rejection (RPC error `DATA_INVALID`) of that
+button's `callback_data`, not a client-side bug.** `message.click(i, j)`
+is `self._buttons[i][j].click()`, and `self._buttons` is the *exact same*
+list object the public `.buttons` property returns -- i.e. the row/col
+`_MessageWidget` renders and what `TelegramBotClient.click()` later
+indexes into can never disagree, so there is no off-by-one/stale-index bug
+to find here. The alarming stock wording is just Telegram's own published
+description for that error code, not a description of what actually went
+wrong (nothing about MTProto session security is implicated).
+`telegram_bot._describe()` translates `DataInvalidError` specifically into
+a message that says roughly that, instead of the raw RPC text -- the same
+"translate the handful of failures a user is actually likely to hit"
+pattern the other known errors there already follow. **The actual root
+cause turned out to be a real gap in this codebase, found from the user's
+own follow-up report -- see immediately below.**
+
+**`start_watching()` only ever listened for brand new messages
+(`events.NewMessage`), never edits to a message already sent
+(`events.MessageEdited`) -- and plenty of bots build a "menu" by editing
+one message's text/buttons in place (Telegram's own
+editMessageText/editMessageReplyMarkup) as the user navigates, rather than
+sending a fresh message every step.** Reported as "the buttons don't do
+anything in MDTools, but the bot clearly does something (visible on my
+phone)" -- and this is also the real explanation for the `DataInvalidError`
+right above, not just a coincidental second bug: once the bot edits its
+message, Telegram invalidates the *old* button's `callback_data`
+server-side, but MDTools' local cache (`TelegramBotClient._messages`) never
+saw the edit and kept serving the stale pre-edit object -- so a click sent
+the now-invalid old data, which the server correctly rejected. Two
+mechanical facts made the fix small: `events.MessageEdited` is a *subclass*
+of `events.NewMessage` (confirmed via its MRO) sharing the same `.message`
+shape, so `start_watching()`'s existing single handler function covers both
+event types with one extra `add_event_handler()` registration; and routing
+an edit through the same `_remember()` the new-message path already uses
+*overwrites* that id's cache entry with the freshly edited object for
+free, which is what actually fixes the click -- no separate "handle an
+edit" branch needed in `TelegramBotClient` at all. The dialog-side fix
+(`_on_message_received`, `panels/telegram_chat_dialog.py`) does need its
+own branch, though: Telegram keeps a message's id across an edit, so the
+same id arriving again means "replace this widget's content in its
+current position", not "append a new widget at the bottom" -- appending
+would have both left the transcript showing a wrong, stale duplicate *and*
+reordered the conversation as though an edit were a brand new message.
+
+**A quick-commands row (`/start`, `/help`) sends through the exact same
+`worker.send_text()` the free-text box uses** -- so a one-click shortcut
+for the two near-universal bot commands shows up in the transcript
+identically to anything typed by hand, no special-cased rendering path.
+
+**Album sorting (`album_sort.py` + "Sort into Album Folders" +
+`embedded_cover.flac_tags()`), a "Record Downloaded Albums..." picker for
+more than one downloaded album, and an "Open Download Folder" button --
+from real usage downloading multiple albums in one chat session.**
+`embedded_cover.py` gained `flac_tags()` (reads the `VORBIS_COMMENT`
+block) alongside its existing `flac_pictures()`, sharing a new
+`_iter_flac_blocks()` generator so the two never duplicate the actual
+binary walk. **Load-bearing detail, easy to get wrong by analogy with
+`PICTURE`'s block**: `VORBIS_COMMENT`'s own internal lengths are
+little-endian (Ogg Vorbis's own comment format, carried as-is inside an
+otherwise big-endian FLAC metadata block) -- confirmed against the bundled
+`flac.exe`'s real output, not just the written spec, same rigor
+`flac_pictures()`'s own real-encoder test already applied.
+`album_sort.sort_downloads()` groups a session folder's flat files by
+`ALBUM` tag first (decided with the user over other options -- reliable
+regardless of arrival order, but only for tagged FLACs), falling back to
+*arrival batches* (`batches_from_arrival_order()`: files that arrived as
+one unbroken run of file-messages, no other kind of message in between)
+for anything untagged -- so non-FLAC files and untagged FLACs still get
+grouped, at the cost of being wrong if a bot interleaves a status message
+between two tracks of the same album. Returns `[]` and moves nothing at
+one group or fewer, which is also what makes a second click, or a
+single-album session, a safe no-op with no special-casing needed at the
+call site. Folder names go through `cdrip.sanitize_filename()`, not
+`user_paths`'s copy -- the latter imports QtCore, which would break this
+module's own no-Qt rule, the same reasoning `cdrip.py`'s own copy of that
+function already documents.
+
+**Sorting has to work *incrementally*, and the "a single album needs no
+folder of its own" guard originally broke exactly that -- reported
+directly: two albums were already sorted into folders, a third was
+downloaded, and sorting again said "nothing to sort".** Since downloads
+accumulate in one folder across every session (see the per-session-folder
+note below), "some albums already in subfolders, one album's worth of new
+tracks still loose in the root" is the *normal* state after the first
+sort -- not a reason to skip the move. `_create_folders_and_move()`'s
+`len(groups) <= 1` early return fired unconditionally, so that third
+album's files stayed flat while `pick_album_folder()` offered only the two
+pre-existing subfolders: the newest album was both unsorted *and*
+unrecordable, with the UI claiming everything was fine. The guard is now
+`len(groups) <= 1 and not has_album_subfolders(root)` -- one album alone in
+a still-unsorted folder genuinely needs no nesting, but once anything has
+been sorted, a lone new group is the opposite case. `sort_downloads()`/
+`sort_folder()`'s own `len(flat_files) < 2` fast paths had the identical
+flaw (a one-track album arriving into an already-sorted folder was stranded
+before grouping even ran) and are now just `if not flat_files`, leaving the
+real decision to `_create_folders_and_move()`. **Idempotency never depended
+on either guard**: both callers only look at files still sitting directly in
+`root`, so anything already moved into a subfolder is simply invisible to a
+repeat call -- which is what
+`test_sorting_an_already_sorted_folder_with_nothing_new_is_still_a_no_op`
+pins down alongside the three tests for the bug itself.
+
+**Grouping keys strictly on the ALBUM tag, never on artist+album --
+reported directly: a featured-artist credit on one track ("Skillet, Lacey
+Sturm") landed in its own folder, apart from the rest of the same record
+tagged plainly "Skillet".** The original version keyed each file's group
+by its own `f"{artist} - {album}"`, so any per-track ARTIST variance --
+which is exactly what a guest feature is -- produced two different dict
+keys for what both files agree is one album. Fixed the same way
+`ProjectMetadata.is_compilation()`/`foobar.album_artist()` already handle
+this same class of problem elsewhere in this codebase: the album's
+*identity* comes from the ALBUM tag alone (grouping), and the artist half
+of the folder's *name* is decided afterward, from every track in that
+group, not from whichever track happened to be read first
+(`_group_display_name()`, `Counter.most_common()` over every ARTIST value
+seen in the group -- a single collab credit is normally the minority
+value, so it loses the vote rather than forking the folder).
+`read_album_tag()` also now prefers an ALBUMARTIST tag over ARTIST when a
+file has one, same "the album's own credited performer, not whoever's on
+this one track" reasoning `foobar.album_artist()` uses -- but that alone
+isn't sufficient, since plenty of real-world downloaded files simply have
+no ALBUMARTIST tag at all, only a per-track ARTIST that varies on a
+collab, which is why the majority-vote fallback still has to exist even
+with the ALBUMARTIST preference in place.
+
+**"Record Downloaded Albums..." used to look permanently disabled with
+no explanation -- reported directly.** `_update_continue_button()` is now
+the single place deciding both its enabled state and its tooltip, called
+from both `_on_ready()` (so the reason is visible the moment the dialog
+connects, not just after the first download) and `_on_download_finished()`
+-- adapter-off takes priority over nothing-downloaded-yet, since fixing
+the latter wouldn't help until the former is also fixed. `_on_continue_clicked()`
+only asks *which* album (`QInputDialog.getItem()`) when the session folder
+actually holds more than one subfolder -- zero or exactly one is already
+handled correctly by `audio_folder.list_audio_files()`'s own existing
+"recurse only if nothing sits directly in the folder" rule, so there is
+nothing else to change for those cases. **It now also calls
+`album_sort.sort_downloads()` itself, unconditionally, right before that
+check** -- reported directly ("czy ten przycisk automatycznie sortuje
+albumy w folderze przed otwarciem okna nagrywania?"). Before this,
+clicking straight through to record without first pressing "Sort into
+Album Folders" by hand left a multi-album session's files still flat, so
+`pick_album_folder()` saw zero subfolders and silently handed back the
+whole mixed folder as a single "album" -- mixing every downloaded album's
+tracks into one recording with no warning at all. Safe to call
+unconditionally because `sort_downloads()` is already idempotent and a
+no-op for a single album (`_create_folders_and_move()`'s `len(groups) <=
+1` guard) -- there is nothing to special-case at the call site for "only
+one album" or "already sorted".
+
+**`pick_album_folder()`'s two strings were using `parent.tr(...)`, which
+is wrong for a plain module-level function -- found only by testing it,
+not by inspection.** `QObject.tr()` resolves its translation *context* from
+the object's own runtime class (confirmed by installing a translator with
+two candidate contexts and reading back which one actually won: calling
+`parent.tr(...)` where `parent` is a `TelegramChatDialog` instance
+resolves under context `"TelegramChatDialog"`, never the literal `"parent"`
+identifier `pyside6-lupdate`'s static scan records it under). That
+mismatch means a translation supplied under whatever context lupdate
+happened to invent would never actually be found at runtime -- and it
+would only have gotten worse once `app_window.py`'s "Record from Telegram
+Downloads..." action (added later, see below) reused this same helper from
+`MainWindow`, since the same two source strings would then need looking up
+under a *third*, different context depending on which class happened to
+call it. Fixed by
+switching to `QCoreApplication.translate("TelegramChatDialog", "...")` --
+a fixed, explicit context, exactly the pattern this codebase's own i18n
+notes already establish for a translatable string in a plain module-level
+function (see project.py's `metadata_menu_entries()` and
+layers_panel.py's module-level `_label_for()`). Re-running
+`pyside6-lupdate` after the fix confirmed it: the two strings' existing
+Polish/Japanese translations carried over automatically onto the new,
+correct `TelegramChatDialog` context via lupdate's own same-text
+heuristic, and the old `parent`-context entries were marked obsolete.
+
+**"Sort into Album Folders" and "Record Downloaded Albums..." are also
+disabled for as long as *any* download is still in flight, not just
+whenever nothing has finished yet.** Reported directly. `self._active_downloads:
+set[int]` tracks every message id between `download_started` and
+`download_finished`/`download_failed` (added/discarded in
+`_on_download_started`/`_on_download_finished`/`_on_download_failed`, which
+now all call both `_update_sort_button()` and `_update_continue_button()`).
+Both buttons check it first -- sorting mid-download could act on a folder
+about to gain one more file the sort call already missed, and recording
+mid-download risks starting a MiniDisc recording one track short of the
+album that's still arriving. `_active_downloads` is discarded on failure
+too, not just success, so one failed download doesn't permanently wedge
+either button disabled for the rest of the session -- a retry (which goes
+through the same `download_started`/`finished`/`failed` signals as an
+original download, since `_on_download_requested` calls the same
+`_worker.download_file()` -> `_run_download()` path) re-adds and
+re-clears it exactly the same way.
+
+**Downloads no longer land in a fresh, timestamped subfolder per chat
+session -- explicit user request.** `_flow()` used to build `session_folder`
+as `self._download_root / f"telegram-{datetime.now():%Y%m%d-%H%M%S}"`; it
+is now just `self._download_root` (the one folder configured in
+Experimental Settings) directly, `mkdir(parents=True, exist_ok=True)`'d in
+place. Every chat session's downloads now accumulate in the same physical
+folder instead of scattering across a new one every time the dialog is
+reopened, which is what makes "Sort into Album Folders" (and the two new
+standalone Experimental actions below) actually useful across sessions
+rather than only within whichever one happens to still be open. The
+`session_folder`/`_session_folder` name stayed as-is throughout the file
+despite no longer being session-*scoped* on disk -- it is still correctly
+"the folder this dialog instance is working with", and renaming it
+everywhere (queue items, download tracking, the Open Download Folder
+button, every test) was judged not worth the diff for what is now purely a
+naming nuance, not a behavioural one.
+
+**Two new Experimental menu actions reach the same operations without ever
+opening the bot chat at all -- reported directly as missing.**
+`app_window._sort_telegram_downloads()` ("Sort Telegram Downloads into
+Album Folders...") and `_record_from_telegram_downloads()` ("Record from
+Telegram Downloads...") both act on `Path(app_settings.telegram_download_folder())`
+directly, `mkdir(parents=True, exist_ok=True)`'d the same "created on
+demand, at the moment it's needed" way `cdrip.ensure_folder()`/
+`user_paths.projects_dir()` already are -- there is nothing to sort in a
+folder that doesn't exist yet, but no reason to fail over that either.
+Neither is gated behind `telegram_chat_action`'s local-session-file check
+(`_sync_experimental_menu()`) -- sorting or recording what has already
+been downloaded needs no bot connection or sign-in at all, only files
+already on disk. `_sort_telegram_downloads()` calls `album_sort.sort_folder()`
+(the standalone, tag-only sibling of `sort_downloads()` -- no chat, so no
+`message_order`/arrival-batch fallback to lean on) and reports the result
+via the same `QMessageBox.information()` wording `TelegramChatDialog._sort_downloads()`
+already uses. `_record_from_telegram_downloads()` sorts first too, silently
+-- same reasoning as `_on_continue_clicked()`'s own auto-sort fix above: a
+folder still holding more than one album's worth of files flat would
+otherwise be handed to `pick_album_folder()` (imported from
+`telegram_chat_dialog.py`, the exact module-level helper the "Choose
+Album" i18n-context fix above was written in anticipation of this reuse)
+as if it were a single album -- then calls `self._record_folder_dialog(folder)`,
+the same hand-off `_open_telegram_bot_chat()` already uses.
+
+**A file attachment renders *only* in a download queue panel on the right
+(`_DownloadQueueItem`, in a `QSplitter` beside the transcript) -- never in
+the transcript itself, and downloads at most `_MAX_CONCURRENT_DOWNLOADS`
+(3) at once, both by explicit request after the transcript got buried under
+one row per track of a whole album.** `_ChatWorker._run_download()` now
+opens with `async with self._download_semaphore:` (an `asyncio.Semaphore`,
+created in `run()` alongside the worker's other asyncio primitives for the
+same "must belong to this thread's own loop" reason those already are) --
+everything past that line only runs once a slot is actually free, and
+`download_started` (new signal) fires right after acquiring it, which is
+what tells a queue row to move from "Queued" to "Downloading". Speed is
+derived from consecutive `download_progress` callbacks
+(`_DownloadQueueItem.set_progress()`), not reported by Telethon directly,
+and throttled to recompute at most every `_SPEED_UPDATE_INTERVAL_S` (0.5s)
+-- a raw per-callback delta is noisy (a tiny byte count over a tiny time
+slice). `_MessageWidget` lost its entire file-row branch (Download
+button, progress bar, status label) to `_DownloadQueueItem`; `_on_message_received()`
+now branches on `message.file_name` *before* building any transcript
+widget at all, routing to a new `_on_file_message()` instead -- but
+arrival-order bookkeeping (`self._message_order`) still has to happen
+unconditionally either way, since `album_sort.batches_from_arrival_order()`
+needs every message's position, file or not.
+
+**`pyside6-lupdate`'s static scanner does not see a `self.tr(...)` call
+nested inside an f-string's `{...}` interpolation at all -- not a partial
+miss, a silent zero-scan.** Found by actually grepping the compiled `.ts`
+for a string this session had *just* added
+(`f"<b>{self.tr('Downloads')}</b>"`) and finding it completely absent, not
+merely unfinished -- which is what led to checking every other f-string-
+wrapped `tr()` call in the codebase and finding a second, **pre-existing**
+one (`experimental_settings_dialog.py`'s "Telegram bot" section header,
+sitting untranslated since Phase 1 without ever showing up as a missing
+string in any `lupdate` run's own summary count, since it was never seen
+as a translatable string to begin with). Both fixed the same way: call
+`self.tr(...)` on its own line first, assign the *result* into the
+f-string, never the `tr()` call itself. Grep for `f["'].*\{self\.tr\(` to
+check for a regression -- this codebase's own existing i18n workflow docs
+already say "the literal string directly in the call, never through an
+indirection like ... a variable", which covers the *string argument*
+losing its indirection; this is the narrower, easier-to-miss flip side of
+that same rule -- the *call itself* also can't be indirected through
+nesting inside an f-string, even though the string argument right next to
+it is perfectly literal.
+
+## Compact cassette
+
+**The third medium, and the first that cannot hold an album in one piece
+or be driven at all.** `MEDIUM_TAPE`, three pages (`PAGE_COVER` J-card +
+`PAGE_SIDE_A` + `PAGE_SIDE_B`), a recording flow where **the deck is
+operated by the user and MDTools only says what to press**.
+
+**`project.MEDIUM_PAGES` is what made a third medium data rather than a
+change everywhere.** A medium declares its pages as `MediumPage(page,
+optional=False)` tuples; `medium_pages(medium)` reads it.
+`NewDesignDialog` builds one template row per page from that (rows created
+once for every page *any* medium can have, hidden via
+`QFormLayout.setRowVisible` for the ones this medium lacks) and reports
+**`selected_templates: dict[page, template]`** -- this replaced the old
+`selected_disc_template`/`selected_cover_template`/`selected_back_template`
+trio, so anything faking that dialog in a test sets the dict.
+`disc_combo`/`cover_combo`/`back_combo`/`disc_label`/`cover_label` remain as
+named properties onto `_rows`, because "the disc row" is still worth
+naming. `app_window._new_design()`, Add Page... and Remove Page all read
+`medium_pages()` now: a cassette is offered no disc page, and which pages
+cannot be removed is "the ones this medium marks required", not a
+hardcoded (disc, cover) pair.
+
+**`tape.py` decides where the album is turned over -- pure logic, no Qt,
+shared by the labels and the recording.** `split_sides(tracks,
+total_minutes)` tries every possible break in the *unchanged* running
+order and takes the most balanced one that fits; if none fits it returns
+the least-overrunning break with `fits` False, because running a few
+seconds into the run-out is the user's call (same rule as the MiniDisc
+flow's 80-minute warning). Two physical facts drive it:
+- **A stated length is both sides together**: a C60 is 30 minutes a side,
+  so `side_seconds()` halves it and every check is per side.
+- **Every side starts with leader tape, which is not magnetic.**
+  `LEADER_SECONDS` (10, the user's own number) of silence is recorded
+  first, on *each* side, and comes out of that side's usable time.
+`suggested_length()` offers the shortest stocked cassette that fits, and
+returns None for an untimed track list rather than guessing. C120 is
+deliberately not offered -- the tape is thin enough to stretch and jam.
+
+**Which tape a project is for is saved on the project
+(`Project.tape_total_minutes`, round-tripped by `project_io`), not asked
+for twice.** The recording dialog writes back the length actually used, so
+the shell labels split exactly where the recording did. A label that says
+side B starts at track seven, and a recording that turned over after track
+six, would each be defensible alone and wrong together.
+
+**`tape_layout.py`: the inlay card is `jcard_layout`'s own card.** A
+cassette J-card folds about *vertical* creases into front / spine / flap
+and is read a quarter turn round on the sheet -- structurally identical to
+the MiniDisc J-card, so `place_front_cover`/`place_spine`/`place_back` are
+reused rather than restated. Two things are its own:
+- **`build_side_label()`** -- `place_back()` with that side's tracks
+  substituted (so a label reads as part of the same set as the flap), plus
+  a big side letter in the accent colour down the left. **Each side's
+  tracks are numbered from one**, which is what the deck's own counter
+  will agree with. It refuses a folded page, and `_page_rect()` uses
+  `cut_shape_rects()`, not `sceneRect()`, or everything would be laid out
+  against the outline builder's transparent margin.
+- **The flap takes three columns** (`FLAP_COLUMNS`), because it is 102mm
+  along and 24mm deep: in two columns a normal album's list bottomed out
+  at `MIN_POINT_SIZE` and rendered as a grey band. `place_back()` gained a
+  `columns` parameter (0 = decide from the track count, as before) and
+  `project.track_list_columns(metadata, n)` generalised
+  `track_list_two_columns`, which now delegates to it.
+- No format logo on the card: a cassette's own marks belong to the shell,
+  and inventing one would put a badge on the paper that no real inlay has.
+
+**`TapeRecordDialog` (`panels/tape_record_dialog.py`) needs no adapter and
+no drive, so `_sync_mdrem_actions()` gates `record_tape_action` on the
+medium alone** -- like the burning entries, never on `mdrem_enabled()`.
+Per side: the user presses RECORD and clicks (the only confirmation that
+exists), ten seconds of silence run down, foobar plays that side, the user
+is told to stop and flip. Three details worth keeping:
+- **`FoobarClient.set_stop_after_current_track()`** is new, and it is what
+  makes the side break clean. Armed on the transition *into* the side's
+  last track, never at the start (the flag applies to whatever is playing
+  when it is read). Watching for the playlist to move past the boundary
+  instead always records the first fraction of the next track onto the end
+  of the side, because a poll can only notice a change after it happened.
+- **The cassette length is frozen with the other fields once recording
+  starts** -- changing it would move a side break that is already half on
+  the tape.
+- **Cancelling stops foobar and then says the deck is still recording**,
+  because there is no second end to stop from here.
+
+**The templates started as unverified standards rather than
+measurements**: `Cassette J-Card` 101.6 x 101.6mm, folds at 65.1 and 77.8
+(the 4" x 4" flat card every cassette printer works to: front 2 9/16",
+spine 1/2", tuck-in flap 15/16"), and `Cassette Shell Label` 88.9 x
+42.9mm. Both are `medium: "tape"` and reach existing installs through
+`registry.sync_builtin_templates()`. **The shell label's numbers above are
+the guess, not what shipped** -- see "The shell label, once it had been
+measured" at the end of this section for the 90 x 40.8mm it actually is,
+and why a rectangle with two round holes was wrong in kind. Both are
+`verified: true` now.
+
+**The app describes itself as three media now** -- window title
+("xD-Tools - Retro Media Studio"), Help > About, README and
+`pyproject.toml`. The Polish and Japanese translations and the manual
+(all three languages, with regenerated screenshots) were carried through
+with it and are current -- `pyside6-lupdate` reports no new strings, and
+`defaults.json` holds no `verified: false` template.
+
+### Round two on the cassette
+
+Five things, all from looking at the real thing:
+
+**A shell label is cut around the reel hubs**, and until it was, it was a
+plain rectangle with a track list on it -- reported in one sentence
+("przecież kaseta ma wycięcia okrągłe gdzie wchodzą rolki"). `CoverTemplate`
+gained `hub_diameter_mm` / `hub_spacing_mm` / `hub_centre_from_top_mm`, and
+`_build_cover_outline()` subtracts the two circles from the cut path -- one
+path with holes in it, the way `cd_label`'s spindle hole and `full_label`'s
+shutter notch already are, so `template_clip_path()` refuses to print into a
+hub opening with nothing else to change. `Cassette Shell Label` became
+90 x 46mm with 24mm holes 45mm apart at this point -- **superseded again**
+once it was measured properly: see "The shell label, once it had been
+measured" below, where the two holes turn out to be one opening.
+
+**The label carries the sleeve, and its text runs across.** The artwork is
+the whole sticker, washed towards white by `cd_layout.lighten()` (at 0.68 --
+heavier than a CD label's, because the type on this one is smaller), and
+`_auto_layout_tape()` now runs Clip Layers over each side page: that is what
+trims the deliberate overhang *and* punches the hub holes through the
+artwork. `tape_layout._label_bands()` returns the three pieces of a label
+that are not a hole -- the band above the openings, the gutter between them,
+the band below -- computed from the template's own hub geometry, so a
+corrected measurement moves the text with it. Artist + album go on top, the
+side letter fills the gutter (`_fill()`, grown *after* fitting: the font
+search caps at `MAX_POINT_SIZE`, which is right for a track list and leaves
+a single letter rattling around), and the tracks run along the bottom as one
+horizontal line rather than a column -- a label four times wider than it is
+tall has no room for a list.
+
+**"label" is a third template family** (`registry.KINDS`), because the side
+pages took the "cover" family and File > New would happily give a cassette
+three J-cards -- reported directly. Same `CoverTemplate` dataclass, a
+different family; `PAGE_KINDS` maps both side pages to it, and the Template
+Manager grows an Add > Shell label entry plus the three hub rows (visible
+only for that kind). `registry._rehome_moved_builtins()` moves a built-in
+whose family changed, **replacing it with the bundled version rather than
+carrying the old one across** -- a built-in that changed family here also
+changed shape, so its old dimensions describe nothing. This is the one place
+sync overwrites instead of appending.
+
+**Every recording source reaches whichever medium is open.** There is no
+separate cassette entry any more: `record_cd_action` / `record_folder_action`
+/ `record_action` / `telegram_record_action` rename themselves in
+`_sync_mdrem_actions()` ("Record CD to Cassette...") and are visible for a
+cassette *without* the adapter, because a cassette deck is driven by hand.
+`_run_record_dialog()` branches on the project's medium -- a rip is a rip
+whichever machine it ends up on, so the branch belongs there and not in four
+callers. `_resolve_recording_port()` returns `""` (a real answer) when no
+port is needed, which is why callers test it with `is None`.
+
+**A cassette's two shell labels share a sheet; the J-card gets its own.**
+`PrintDialog._sheet_groups()` is the general form of "one sheet per label":
+a pair that belongs together goes through the same two-label arrangement
+search a MiniDisc project's own pages use. Placements are keyed by page
+(`by_page`) before being handed to `_rebuild_items()`, since grouping means
+the order they are computed in no longer matches `self._labels`.
+
+**Two more from looking at it: the inlay is split by side, and the dialogs
+on the way to a recording name the right machine.**
+
+`place_back()` grew `track_columns` (text the caller has already arranged
+into columns, which sets the column count) and `heading` (drop the
+artist/album block and its rule). `tape_layout.side_track_columns()` builds
+a SIDE A block and a SIDE B block from the same `TapePlan` the shell labels
+use, so the card says where the tape is turned over -- the one thing it
+knows and the reader does not. `build_jcard(..., plan=...)`; without a plan
+the whole album is still listed straight through.
+
+The flap also stopped printing at `MIN_POINT_SIZE`, from two changes:
+`BACK_PADDING_MM` is now multiplied by `min(1.0, heading_scale)` (6mm of top
+and bottom margin is a quarter of a 24mm flap, and only a shallow panel
+shrinks -- a CD insert scales *up*, where a wider margin is right), and the
+flap passes `heading=False` since the spine beside it already names the
+album twice. 12 tracks went from 3.5pt (the floor, and overlapping the
+running-time footer) to 4.75pt with nothing overlapping.
+
+`project.medium_name()` is the one place a medium is named on screen, and
+`CdRipDialog`/`FolderRecordDialog` take a `medium` argument that is *only*
+wording -- the work is identical, but a window headed "Record CD to
+MiniDisc" in front of a cassette project tells the user something untrue.
+It also gates the 80-minute SP warning, which is a MiniDisc's answer and not
+a tape's.
+
+**The shell label, once it had been measured, and one thing it forced.**
+The guessed 88.9 x 42.9 rectangle with two round holes was wrong in kind,
+not only in size. Measured: **90 x 40.8mm** -- 15.5mm of material above the
+opening, the 16mm opening itself, 9.3 below, which is where the height
+comes from. Top corners cut off at 45 degrees (`top_chamfer_mm`, and the
+6mm is **the cut line itself**, so it takes 4.24 off each edge -- that is
+what a ruler laid along the cut reads), bottom ones rounded 1.5.
+
+**The opening is one shape, not two holes** -- a hole for each reel hub
+*and*, between them, the window the tape is watched through, so a label
+bridging that gap would cover the tape. `DesignScene.reel_window_path()`
+builds it as a rounded rectangle whose radius is half its height, which is
+exactly two half-circles joined by the rectangle between them, and
+subtracts it the same way the CD label's spindle hole is subtracted.
+
+That geometry moved the layout, and this is the part worth remembering:
+**the middle of the label no longer exists**, so the side letter cannot sit
+between the reels. `_label_bands()` now returns the band above the opening,
+the column *beside* it and the band below; the tracks take the deeper band
+(15.5mm) and the album's own name the shallower one (9.3). The top band is
+also inset by the chamfer's own leg on each side -- a full-width block at
+the very top would otherwise begin inside a corner that has been cut off,
+which is what `test_nothing_is_printed_where_the_reel_holes_are` caught.
+
+Both cassette templates are now **`verified: true`** -- the J-card was cut
+and fitted, the label measured off a real shell.
+
+**`PrintDialog` grew "Print This Sheet..."**, beside Print... and visible
+only while the labels are on separate sheets (`current_sheet_index()`
+returns None otherwise, and `MultiprintDialog` never has a choice to make).
+It exists because a printer's own dialog counts pages of a *job*, and each
+sheet only becomes a page once the job has been built -- so reprinting the
+one that jammed had meant printing the whole set again. `_on_print()` and
+`_on_print_current_sheet()` both go through one `_print(sheets)`.
+
+**The tray card, after it was measured and looked at.** 151 x 117.5mm --
+a 138mm panel fold to fold, between the two 6.5mm spines, which were
+right first time. Its own two corrections are worth keeping:
+- **`place_back()` grew `track_fill`** (default 1.0, the tray card passes
+  `BACK_TRACK_FILL` = 0.7). The list is fitted into that share of the
+  leftover space and then centred in *all* of it, so the slack is shared
+  above and below. At 1.0 a twelve-track album stretched across 138mm read
+  as a poster rather than as a sleeve -- reported directly. Every other
+  caller is unchanged: on a J-card flap or a shell label the list has to
+  work to fit at all, and there is no slack to leave.
+- **`cd_layout.place_back_logo()`** puts the Digital Audio mark in the
+  panel's bottom-*right* corner, because place_back's own footer (the year
+  and the running time) already holds the bottom-left. Positioned by the
+  item's footprint rather than `pos()`, like everything else scaled by
+  `set_item_scale()` here.
+
+**The Windows installer -- `scripts/build_installer.ps1` +
+`scripts/installer/mdtools.nsi`.** NSIS (zlib licence, `winget install
+NSIS.NSIS`) rather than WiX or Inno Setup: it packages a plain directory
+tree, which is exactly what PyInstaller's onedir mode produces, and an MSI
+would buy Group Policy deployment nobody asked for at the price of a much
+heavier toolchain. The build script reads `__version__` out of the package
+rather than restating it, and reduces it to numbers for NSIS's
+`VIProductVersion`, which takes four numeric parts and would refuse
+"0.3.0-rc2". 144MB of onedir compresses to ~43MB solid LZMA.
+
+Two things are deliberately absent, and both would be easy to add wrongly:
+- **No licence page** -- this repo has no LICENSE file, and an installer is
+  not the place to invent one.
+- **No `.mdproj` file association** -- `main.py` ignores `sys.argv`, so
+  double-clicking a project would open the app on its startup screen rather
+  than on that project. Worth adding the day the app learns to open a file
+  it was handed, and not before.
+
+Uninstalling removes the install directory (guarded on `MDTools.exe`
+actually being in it, so a hand-edited `$INSTDIR` cannot take a recursive
+delete with it), the shortcuts and the registry keys -- and leaves
+`%LOCALAPPDATA%/MDTools` alone, since the templates, settings and Telegram
+session in there are the user's, not the installer's.
 
 ## PySide6/Qt gotchas hit in this codebase
 
@@ -2047,6 +4271,22 @@ Three details that are load-bearing here:
   scope, the scene gets garbage collected out from under the view
   (`RuntimeError: Internal C++ object (...) already deleted`). Always keep
   the scene itself alive alongside the view.
+- **A `QThread` whose C++ object gets garbage collected while `isRunning()`
+  is still True aborts the whole process with `qFatal()` -- no Python
+  traceback, just silent process death.** Only a real risk for a worker
+  that loops indefinitely rather than finishing on its own (e.g.
+  `telegram_chat_dialog.py`'s `_ChatWorker`, which runs until `cancel()`'d,
+  unlike every one-shot worker elsewhere in this codebase) -- being parented
+  to a dialog (`parent=self`) keeps the C++ object alive via Qt's own
+  object tree regardless of whatever a Python variable currently points at,
+  so even reassigning `dialog._worker` to something else doesn't stop an
+  earlier real worker from still running in the background until the
+  dialog itself is destroyed. See the Telegram bot integration notes above
+  for the full incident (a missing test mock let this happen for real) and
+  the two-part fix: never auto-start a persistent-loop worker from
+  `__init__` (so plain construction stays inert), and every test that does
+  start one must stop it again (cancel + wait for the thread to actually
+  exit) before the test function returns.
 - **`QFormLayout` field `setVisible(False)` does NOT hide the row's
   label.** Use `form.setRowVisible(widget, visible)` (Qt 6.4+) so label+field
   hide together.
@@ -2108,6 +4348,18 @@ Three details that are load-bearing here:
   dialog methods with bool out-params — verify the actual return order for
   the specific PySide6 version in use (drive the real dialog via
   `QTimer.singleShot` auto-accept and print the raw tuple).
+- **`menu.addAction(text, callback)` (and `QAction.triggered.connect(callback)`
+  generally) passes `QAction.triggered`'s `checked: bool` straight through
+  to `callback` if its signature accepts a positional argument there --
+  including an *optional* one.** A callback like `def _record_folder_dialog
+  (self, initial_folder: Path | None = None)` connected directly to a menu
+  action would silently receive `initial_folder=True`/`False` on every
+  click, not the intended default of `None` -- Qt/PySide's signal-slot
+  introspection matches arity, it does not know an optional parameter was
+  meant to stay unset. `app_window.py`'s `_record_folder()` is a thin,
+  zero-argument wrapper kept specifically so the menu never connects
+  directly to the parameterized `_record_folder_dialog()` -- see the
+  Telegram bot integration notes above for where this was caught.
 - **A modal `QMessageBox`/dialog `.exec()` blocks forever under
   `QT_QPA_PLATFORM=offscreen`** with no user to click OK. Always monkeypatch
   it out (e.g. `monkeypatch.setattr(SomeModule.QMessageBox, "information",
@@ -2199,14 +4451,24 @@ Three details that are load-bearing here:
   `scripts/manual/make_screenshots.py`, which builds a demo project and
   grabs each dialog rather than anyone capturing them by hand. Two things
   follow. First, a UI change that renames a menu item or moves a control
-  invalidates **thirty-nine screenshots**, not one -- rerun the generator
+  invalidates **sixty-nine screenshots** (twenty-three figures x three
+  languages), not one -- rerun the generator
   rather than patching a figure. Second, the Polish and Japanese manuals
   show Polish and Japanese screenshots, so the menu names quoted in their
   text have to match `i18n/mdtools_{pl,ja}.ts` exactly; a rename means
   editing the translation *and* the manual text. The generator runs in
   `QStandardPaths` test mode and stubs `mdrem.MDRemClient`/
   `foobar.FoobarClient`, so it can safely run while the real app is using
-  the serial port.
+  the serial port. **The Telegram figures need no stub at all** -- both
+  dialogs are inert until an explicit action starts their worker
+  (`TelegramChatDialog.start_connecting()`, and `TelegramLoginDialog` only
+  on "Send code"), so plain construction opens no socket; the chat
+  transcript is then filled by handing synthetic `ChatMessage`s straight to
+  the dialog's own signal handlers, i.e. the real rendering code driven with
+  fake data. `_capture_telegram()` also creates two real (empty) `.flac`
+  files in a throwaway download folder, because Sort/Record enable
+  themselves from what is actually on disk -- without them the figure shows
+  three greyed-out buttons the manual points at.
 - **Adding a new built-in template no longer needs a manual edit of the
   live per-user `templates.json`.** Earlier in this project, every new
   built-in template required hand-editing

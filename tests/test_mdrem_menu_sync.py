@@ -100,3 +100,155 @@ def test_the_real_settings_dialog_keeps_the_menu_in_step(qt_app, isolated_settin
 
     assert app_settings.mdrem_enabled() is True
     assert window.record_action.isVisible()
+
+
+# --- and the Remote Control entry alongside it ------------------------------
+#
+# Reported directly: the software remote used to be reachable only from the
+# startup screen, so using it while a project was open meant closing that
+# project first.
+
+
+def test_the_remote_entry_follows_the_adapter_too(qt_app, isolated_settings):
+    app_settings.set_mdrem_enabled(False)
+    assert _window().remote_action.isVisible() is False
+
+    app_settings.set_mdrem_enabled(True)
+    assert _window().remote_action.isVisible() is True
+
+
+def test_opening_the_remote_resolves_a_port_and_shows_the_dialog(qt_app, isolated_settings, monkeypatch):
+    app_settings.set_mdrem_enabled(True)
+    window = _window()
+    monkeypatch.setattr(app_module, "resolve_port", lambda parent: "COM_TEST")
+    opened: list[str] = []
+
+    class _FakeRemote:
+        def __init__(self, port, parent=None):
+            opened.append(port)
+
+        def exec(self):
+            return 1
+
+    monkeypatch.setattr(app_module, "RemoteDialog", _FakeRemote)
+
+    window._open_remote_control()
+
+    assert opened == ["COM_TEST"]
+
+
+def test_no_port_no_remote_dialog(qt_app, isolated_settings, monkeypatch):
+    app_settings.set_mdrem_enabled(True)
+    window = _window()
+    monkeypatch.setattr(app_module, "resolve_port", lambda parent: None)
+    monkeypatch.setattr(
+        app_module, "RemoteDialog", lambda *a, **k: pytest.fail("must not open without a resolved port")
+    )
+
+    window._open_remote_control()
+
+
+# --- and the CD entry alongside it ------------------------------------------
+
+
+def test_the_cd_entry_follows_the_adapter_too(qt_app, isolated_settings, monkeypatch):
+    """Ripping a CD needs no adapter, but this entry does not stop at
+    ripping -- it goes straight on to record what it ripped, which does."""
+    app_settings.set_mdrem_enabled(False)
+    window = _window()
+    assert window.record_cd_action.isVisible() is False
+
+    _settings_returning(monkeypatch, True)
+    window._show_settings()
+
+    assert window.record_cd_action.isVisible()
+
+
+def test_recording_a_cd_refuses_outright_without_the_adapter(qt_app, isolated_settings, monkeypatch):
+    app_settings.set_mdrem_enabled(False)
+    monkeypatch.setattr(
+        app_module, "resolve_port", lambda *a, **k: pytest.fail("must not go looking for a port")
+    )
+    monkeypatch.setattr(
+        app_module, "CdRipDialog", lambda *a, **k: pytest.fail("must not open the rip dialog")
+    )
+
+    _window()._record_cd()
+
+
+def test_the_port_is_resolved_before_the_rip_not_after_it(qt_app, isolated_settings, monkeypatch):
+    """The rip is the expensive half. Discovering there is no adapter to
+    record through afterwards would waste every minute of it."""
+    app_settings.set_mdrem_enabled(True)
+    monkeypatch.setattr(app_module, "resolve_port", lambda *a, **k: None)
+    monkeypatch.setattr(
+        app_module, "CdRipDialog", lambda *a, **k: pytest.fail("must not open the rip dialog")
+    )
+
+    _window()._record_cd()
+
+
+def test_a_cancelled_rip_never_reaches_the_recording_dialog(qt_app, isolated_settings, monkeypatch):
+    from PySide6.QtWidgets import QDialog
+
+    app_settings.set_mdrem_enabled(True)
+    monkeypatch.setattr(app_module, "resolve_port", lambda *a, **k: "COM7")
+
+    class _RejectedRip:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def exec(self):
+            return QDialog.DialogCode.Rejected
+
+    monkeypatch.setattr(app_module, "CdRipDialog", _RejectedRip)
+    monkeypatch.setattr(
+        app_module, "RecordDialog", lambda *a, **k: pytest.fail("must not start recording")
+    )
+
+    _window()._record_cd()
+
+
+def test_a_finished_rip_hands_straight_over_to_the_recording_dialog(qt_app, isolated_settings, monkeypatch):
+    """The whole point of the feature: once the playlist holds the CD, the
+    existing record flow takes over unchanged and unaware a CD was ever
+    involved."""
+    from PySide6.QtWidgets import QDialog
+
+    app_settings.set_mdrem_enabled(True)
+    monkeypatch.setattr(app_module, "resolve_port", lambda *a, **k: "COM7")
+
+    from mdtools.project import ProjectMetadata
+
+    identified = ProjectMetadata(album="Unleashed", artist="Skillet", cover_art=b"art")
+
+    class _AcceptedRip:
+        result_metadata = identified
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def exec(self):
+            return QDialog.DialogCode.Accepted
+
+    recorded: list = []
+
+    class _FakeRecord:
+        result_metadata = None
+
+        def __init__(self, port, url, parent=None, metadata=None):
+            recorded.append((port, metadata))
+
+        def exec(self):
+            return QDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(app_module, "CdRipDialog", _AcceptedRip)
+    monkeypatch.setattr(app_module, "RecordDialog", _FakeRecord)
+
+    _window()._record_cd()
+
+    # The rip's own metadata goes with it. Its titles are the ones it wrote
+    # into the files, so they say what the playlist says; what it adds is
+    # the artwork found while identifying the disc, which nothing in a
+    # playlist carries.
+    assert recorded == [("COM7", identified)]

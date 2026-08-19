@@ -5,6 +5,7 @@ TOOL_PANEL_ICON_FNS = [
     icons.rectangle_icon,
     icons.image_icon,
     icons.gallery_icon,
+    icons.edit_metadata_icon,
     icons.metadata_icon,
     icons.crop_icon,
     icons.bake_icon,

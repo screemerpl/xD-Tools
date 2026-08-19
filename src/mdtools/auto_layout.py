@@ -1,5 +1,5 @@
 """Laying a disc label out by itself: cover art across the label, the
-MiniDisc logo on the write-protect slider.
+MiniDisc logo on the cartridge's sliding dust shutter.
 
 Used by the record-from-foobar flow, which by that point already knows the
 album and has its cover art, so there is nothing left for the user to

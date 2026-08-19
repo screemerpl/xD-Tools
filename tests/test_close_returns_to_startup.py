@@ -16,11 +16,22 @@ from mdtools.panels.startup_dialog import StartupDialog
 from mdtools.project import ProjectMetadata
 
 
-def _window(monkeypatch) -> MainWindow:
+def _window() -> MainWindow:
     """A window that believes it has a startup screen, without one having
-    been shown to build it."""
-    monkeypatch.setattr(StartupDialog, "exec", lambda self: StartupDialog.DialogCode.Rejected)
-    return MainWindow(show_startup_dialog=True)
+    been shown to build it.
+
+    Building via show_startup_dialog=False (the same fast path every other
+    test in this suite uses) sidesteps StartupDialog entirely, so this no
+    longer depends on what a *rejected* one means during construction --
+    which, since startup_cancelled, means "quit before ever showing a
+    window", not "fall back to a default project". Forcing
+    _has_startup_screen back on afterward is what actually matters here:
+    it is what closeEvent()/_return_to_startup() branch on, and this
+    helper's whole point is exercising that branch without a real
+    StartupDialog having been shown."""
+    window = MainWindow(show_startup_dialog=False)
+    window._has_startup_screen = True
+    return window
 
 
 def _startup_returns(monkeypatch, path=None, accepted: bool = True):
@@ -40,7 +51,7 @@ def _saved_project(tmp_path, album: str) -> str:
 
 
 def test_closing_reopens_the_startup_screen_instead_of_quitting(qt_app, monkeypatch, tmp_path):
-    window = _window(monkeypatch)
+    window = _window()
     path = _saved_project(tmp_path, "Chosen")
     _startup_returns(monkeypatch, path=path)
     event = QCloseEvent()
@@ -55,7 +66,7 @@ def test_closing_reopens_the_startup_screen_instead_of_quitting(qt_app, monkeypa
 def test_cancelling_the_startup_screen_really_does_close(qt_app, monkeypatch):
     """That is where quitting lives now -- otherwise there would be no way
     out at all."""
-    window = _window(monkeypatch)
+    window = _window()
     _startup_returns(monkeypatch, accepted=False)
     event = QCloseEvent()
 
@@ -67,7 +78,7 @@ def test_cancelling_the_startup_screen_really_does_close(qt_app, monkeypatch):
 def test_backing_out_of_the_template_picker_returns_to_the_startup_screen(qt_app, monkeypatch):
     """Not to a closed app: cancelling "which template?" means "not that
     one", and quitting over it would be a startling answer."""
-    window = _window(monkeypatch)
+    window = _window()
     attempts = []
 
     def fake_startup(self):
@@ -87,7 +98,7 @@ def test_backing_out_of_the_template_picker_returns_to_the_startup_screen(qt_app
 
 
 def test_unsaved_changes_are_still_asked_about_first(qt_app, monkeypatch):
-    window = _window(monkeypatch)
+    window = _window()
     window._mark_dirty()
     monkeypatch.setattr(
         StartupDialog, "exec", lambda self: pytest.fail("the startup screen must not appear before the prompt")
@@ -103,7 +114,7 @@ def test_unsaved_changes_are_still_asked_about_first(qt_app, monkeypatch):
 def test_discarding_changes_does_not_ask_about_them_twice(qt_app, monkeypatch, tmp_path):
     """The close prompt settles it; the startup screen's own load must not
     put the same question up again."""
-    window = _window(monkeypatch)
+    window = _window()
     window._mark_dirty()
     asked = []
     monkeypatch.setattr(
@@ -123,7 +134,7 @@ def test_file_close_project_goes_back_to_the_startup_screen(qt_app, monkeypatch,
     """The menu's own route back. Without it the File menu offered only
     Exit, hiding that the close button does something different -- which is
     how the difference was discovered, by being surprised by it."""
-    window = _window(monkeypatch)
+    window = _window()
     _startup_returns(monkeypatch, path=_saved_project(tmp_path, "Reopened"))
 
     window._close_project()
@@ -134,7 +145,7 @@ def test_file_close_project_goes_back_to_the_startup_screen(qt_app, monkeypatch,
 
 
 def test_close_project_still_asks_about_unsaved_changes(qt_app, monkeypatch):
-    window = _window(monkeypatch)
+    window = _window()
     window._mark_dirty()
     monkeypatch.setattr(
         StartupDialog, "exec", lambda self: pytest.fail("the startup screen must not appear before the prompt")
@@ -147,7 +158,7 @@ def test_close_project_still_asks_about_unsaved_changes(qt_app, monkeypatch):
 
 
 def test_the_file_menu_offers_both_ways_out(qt_app, monkeypatch):
-    window = _window(monkeypatch)
+    window = _window()
 
     labels = [action.text() for action in window.file_menu.actions()]
 
@@ -156,7 +167,7 @@ def test_the_file_menu_offers_both_ways_out(qt_app, monkeypatch):
 
 
 def test_file_exit_quits_rather_than_going_back(qt_app, monkeypatch):
-    window = _window(monkeypatch)
+    window = _window()
     monkeypatch.setattr(StartupDialog, "exec", lambda self: pytest.fail("Exit means leave"))
 
     window._exit_app()
@@ -167,7 +178,7 @@ def test_file_exit_quits_rather_than_going_back(qt_app, monkeypatch):
 def test_a_refused_exit_does_not_arm_the_next_close(qt_app, monkeypatch):
     """Cancelling the save prompt during File > Exit must not leave the
     window primed to quit silently the next time it is closed."""
-    window = _window(monkeypatch)
+    window = _window()
     window._mark_dirty()
     monkeypatch.setattr(app_module.QMessageBox, "question", lambda *a, **k: app_module.QMessageBox.StandardButton.Cancel)
 

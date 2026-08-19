@@ -109,3 +109,21 @@ def test_rename_layer_cancelled_dialog_leaves_name_unchanged(qt_app, tmp_path, m
 
     assert get_item_name(item) is None
     assert win.undo_stack.count() == before_count
+
+
+def test_layers_are_named_after_what_they_are_not_their_class(qt_app):
+    """They read as "DesignPixmap" once: the fallback stripped
+    "QGraphics"/"Item" off the type name, which stopped working when these
+    became Design*Item subclasses (see canvas/items.py)."""
+    from pathlib import Path
+
+    from mdtools.canvas.scene import DesignScene
+    from mdtools.panels.layers_panel import _label_for
+    from mdtools.templates.models import DiscTemplate
+
+    scene = DesignScene(DiscTemplate(name="t", width_mm=37.0, height_mm=52.0))
+
+    assert _label_for(scene.add_rectangle()) == "Rectangle"
+    assert _label_for(scene.add_ellipse()) == "Ellipse"
+    assert _label_for(scene.add_image(str(Path("assets/img/mdlogo.png")))) == "Image"
+    assert "Design" not in _label_for(scene.add_rectangle())

@@ -69,6 +69,9 @@ class DesignScene(QGraphicsScene):
         if t.shape == "full_label":
             self._build_full_label_outline(t)
             return
+        if t.shape == "cd_label":
+            self._build_cd_label_outline(t)
+            return
 
         w, h = mm_to_px(t.width_mm), mm_to_px(t.height_mm)
         path = chamfered_fillet_rect(w, h, mm_to_px(t.chamfer_mm), mm_to_px(t.fillet_mm))
@@ -92,7 +95,7 @@ class DesignScene(QGraphicsScene):
 
     def _build_full_label_outline(self, t: DiscTemplate) -> None:
         """A plain rounded-rect label covering most of the disc's face
-        (shape == "full_label"), with the write-protect slider's notch --
+        (shape == "full_label"), with the sliding shutter's notch --
         plus the channel it travels down through -- cut out of the right
         edge as one continuous shape. See DiscTemplate's docstring for the
         buffer/travel geometry."""
@@ -138,16 +141,108 @@ class DesignScene(QGraphicsScene):
 
         self.setSceneRect(QRectF(-10, -10, w + 20, h + 20))
 
+    def _build_cd_label_outline(self, t: DiscTemplate) -> None:
+        """A CD/CD-R disc label (shape == "cd_label"): one circle with the
+        spindle hole subtracted out of it.
+
+        Built with QPainterPath.subtracted() -- the same single-cut-shape-
+        with-a-hole approach _build_full_label_outline() uses for the
+        shutter notch, rather than two independent LAYER_CUT shapes -- so
+        template_clip_path() already refuses to print into the hole with no
+        extra handling anywhere. Falls back to width_mm/height_mm when
+        outer_diameter_mm hasn't been filled in, so a half-configured
+        template still draws something rather than nothing.
+        """
+        diameter = mm_to_px(t.outer_diameter_mm) if t.outer_diameter_mm > 0 else mm_to_px(t.width_mm)
+        path = QPainterPath()
+        path.addEllipse(QRectF(0, 0, diameter, diameter))
+
+        if t.hole_diameter_mm > 0:
+            hole = mm_to_px(t.hole_diameter_mm)
+            hole_path = QPainterPath()
+            # concentric with the label: a hole punched anywhere else would
+            # not fit over the disc's hub.
+            hole_path.addEllipse(QRectF((diameter - hole) / 2, (diameter - hole) / 2, hole, hole))
+            path = path.subtracted(hole_path)
+
+        outline = make_template_outline(path, LAYER_CUT)
+        self.addItem(outline)
+        self._outline_items.append(outline)
+
+        self.setSceneRect(QRectF(-10, -10, diameter + 20, diameter + 20))
+
+    @staticmethod
+    def reel_window_path(t: CoverTemplate, w_px: float, h_px: float) -> QPainterPath | None:
+        """The opening a cassette shell label is cut around.
+
+        One shape, not two: a hole for each reel hub *and* the window
+        between them that the tape is watched through -- a label bridging
+        the gap would cover the tape itself. Two half-circles joined by the
+        rectangle between them, which is exactly a rounded rectangle whose
+        radius is half its height.
+
+        Symmetric about the label's own centre line: whatever the sticker's
+        width, the opening has to line up with the shell underneath it, and
+        a shell is symmetric.
+        """
+        if t.hub_diameter_mm <= 0 or t.hub_spacing_mm <= 0:
+            return None
+        radius = mm_to_px(t.hub_diameter_mm) / 2
+        spacing = mm_to_px(t.hub_spacing_mm)
+        centre_y = mm_to_px(t.hub_centre_from_top_mm) if t.hub_centre_from_top_mm > 0 else h_px / 2
+        window = QPainterPath()
+        window.addRoundedRect(
+            QRectF(w_px / 2 - spacing / 2 - radius, centre_y - radius, spacing + 2 * radius, 2 * radius),
+            radius,
+            radius,
+        )
+        return window
+
+    @staticmethod
+    def _chamfered_top_rect(w: float, h: float, radius: float, chamfer_line: float) -> QPainterPath:
+        """A rectangle with its top corners cut off and its bottom ones
+        rounded -- the shape of a cassette shell label.
+
+        `chamfer_line` is the length of the cut itself, so at 45 degrees it
+        takes `chamfer_line / sqrt(2)` off each edge. That is the number a
+        ruler laid along the cut reads, which is the one that was measured.
+        """
+        leg = chamfer_line / math.sqrt(2)
+        radius = max(0.0, min(radius, h / 2))
+        path = QPainterPath()
+        path.moveTo(leg, 0)
+        path.lineTo(w - leg, 0)
+        path.lineTo(w, leg)
+        path.lineTo(w, h - radius)
+        if radius > 0:
+            path.arcTo(QRectF(w - 2 * radius, h - 2 * radius, 2 * radius, 2 * radius), 0, -90)
+        path.lineTo(radius, h)
+        if radius > 0:
+            path.arcTo(QRectF(0, h - 2 * radius, 2 * radius, 2 * radius), 270, -90)
+        path.lineTo(0, leg)
+        path.closeSubpath()
+        return path
+
     def _build_cover_outline(self, t: CoverTemplate) -> None:
         w, h = mm_to_px(t.width_mm), mm_to_px(t.height_mm)
         path = QPainterPath()
-        if t.corner_radius_mm > 0:
+        if getattr(t, "top_chamfer_mm", 0.0) > 0:
+            path = self._chamfered_top_rect(w, h, mm_to_px(t.corner_radius_mm), mm_to_px(t.top_chamfer_mm))
+        elif t.corner_radius_mm > 0:
             path.addRoundedRect(QRectF(0, 0, w, h), mm_to_px(t.corner_radius_mm), mm_to_px(t.corner_radius_mm))
         else:
             path.addRect(QRectF(0, 0, w, h))
 
         if t.cutout_width_mm > 0 and t.cutout_height_mm > 0 and t.fold_offsets_mm:
             path = path.subtracted(self._cutout_path(t, h_px=h))
+
+        # One subtracted path with a hole in it, the way the CD label's
+        # spindle hole and the full disc label's shutter notch are done --
+        # so template_clip_path() refuses to print into the reel opening
+        # with no extra handling anywhere.
+        window = self.reel_window_path(t, w_px=w, h_px=h)
+        if window is not None:
+            path = path.subtracted(window)
 
         outline = make_template_outline(path, LAYER_CUT)
         self.addItem(outline)
@@ -213,6 +308,18 @@ class DesignScene(QGraphicsScene):
         # always-visible default rather than inheriting that; explicitly
         # colored/loaded items (project_io.py) override this immediately.
         item.setDefaultTextColor(QColor("black"))
+        # QTextDocument keeps a 4px margin on every side by default. It is
+        # invisible on a wide block and ruinous on a narrow one -- on a
+        # 6.5mm case spine it left about 7px for the type itself, forcing
+        # the caption down to 4.75pt (measured). Nothing in this app wants
+        # it: every block is positioned by its own rectangle.
+        #
+        # Set **here**, not in the layout code that first needed it: a text
+        # item rebuilt by project_io on load goes through this method, so
+        # zeroing it anywhere else made a saved layer come back a different
+        # size from the one that was saved -- which is exactly what
+        # test_jcard_roundtrip.py caught.
+        item.document().setDocumentMargin(0)
         self._init_item(item)
         return item
 
@@ -254,7 +361,16 @@ class DesignScene(QGraphicsScene):
     def seed_disc_defaults(self) -> None:
         """Add the conventional "insert this end first" triangle + label
         near the top of a fresh disc label. Both are ordinary, fully-editable
-        text items -- move, restyle, or delete them like anything else."""
+        text items -- move, restyle, or delete them like anything else.
+
+        A CD label gets nothing: the insertion mark is a MiniDisc convention
+        (a cartridge goes into the deck one way round), and a disc that drops
+        onto a spindle has no end to insert first. Gated on the template's
+        medium rather than its shape, since that is the actual reason.
+        """
+        if getattr(self.template, "medium", "md") == "cd":
+            return
+
         triangle = self.add_text("▲")
         triangle_font = triangle.font()
         triangle_font.setPointSizeF(20)

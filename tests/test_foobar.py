@@ -135,6 +135,46 @@ def test_metadata_from_an_empty_playlist_is_empty_not_an_error():
     assert metadata.album == "" and metadata.tracks == []
 
 
+# --- untagged files --------------------------------------------------------
+#
+# What Record Folder exists for: somebody's own folder of files, which may
+# carry no tags at all. foobar substitutes the filename for a missing
+# %title% itself, but a disc full of blank track names is not a risk worth
+# taking on behaviour that is nowhere pinned down, so %path% is asked for
+# and the fallback is made here as well.
+
+
+def test_a_file_with_no_title_tag_is_named_after_its_file():
+    item = foobar.PlaylistItem.from_columns(
+        ["", "", "", "", "", "212", "", r"C:\Music\Skillet\03 Feel Invincible.flac"]
+    )
+    assert item.display_title() == "03 Feel Invincible"
+
+
+def test_a_real_title_always_wins_over_the_filename():
+    item = foobar.PlaylistItem.from_columns(
+        ["3", "Feel Invincible", "Skillet", "Unleashed", "2016", "212", "Skillet", r"C:\Music\track03.flac"]
+    )
+    assert item.display_title() == "Feel Invincible"
+
+
+def test_no_title_and_no_path_is_still_just_empty():
+    """%path% is appended to the column set, so an older or unexpected
+    response simply pads to "" -- which has to stay the answer it was
+    before, not raise."""
+    assert foobar.PlaylistItem.from_columns(["1", ""]).display_title() == ""
+
+
+def test_the_filename_fallback_reaches_the_track_list():
+    """The point of it: this is what gets written onto the disc."""
+    items = [
+        foobar.PlaylistItem.from_columns(["", "", "", "", "", "100", "", "/music/mix/01 Unknown Song.mp3"]),
+        foobar.PlaylistItem.from_columns(["", "", "", "", "", "100", "", "/music/mix/02 Another.mp3"]),
+    ]
+    titles = [track.title for track in foobar.metadata_from_playlist(items).tracks]
+    assert titles == ["01 Unknown Song", "02 Another"]
+
+
 # --- control ---------------------------------------------------------------
 
 
@@ -150,7 +190,109 @@ def test_preparing_to_record_forces_straight_through_once():
     assert body == {"playbackMode": 0, "stopAfterCurrentTrack": False}
 
 
+def test_set_volume_posts_a_flat_body():
+    sent: list = []
+    _client({}, sent).set_volume(-5.0)
+
+    path, body = sent[0]
+    assert path == "/api/player"
+    assert body == {"volume": -5.0}
+
+
 def test_play_targets_a_specific_playlist_item():
     sent: list = []
     _client({}, sent).play("p1", 0)
     assert sent[0][0] == "/api/player/play/p1/0"
+
+
+# --- filling the playlist for a CD rip --------------------------------------
+#
+# The awkward half of Record CD to MiniDisc: Beefweb makes the playlist and
+# reads it back, but cannot be handed the files (see add_files_via_cli).
+
+
+def test_clearing_a_playlist_posts_to_its_clear_endpoint():
+    sent: list = []
+    _client({}, sent).clear_playlist("p1")
+    assert sent[0][0] == "/api/playlists/p1/clear"
+
+
+def test_browser_roots_is_usually_empty_which_is_why_files_go_in_by_cli():
+    """Captured from the live component on a normal install: no music
+    directories configured, so every path is refused by items/add."""
+    client = _client({"/api/browser/roots": {"pathSeparator": "\\", "roots": []}})
+    assert client.browser_roots() == []
+
+
+def test_add_files_via_cli_sends_one_command_in_playlist_order():
+    """One call with every file, not one per file: foobar adds a batch in
+    the order it receives it."""
+    calls: list = []
+
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        return type("R", (), {"returncode": 0, "stdout": "", "stderr": ""})()
+
+    foobar.add_files_via_cli("fb2k.exe", ["01.flac", "02.flac"], run=fake_run)
+
+    assert calls == [["fb2k.exe", "/add", "01.flac", "02.flac"]]
+
+
+def test_adding_no_files_does_not_launch_anything():
+    def explode(*args, **kwargs):
+        raise AssertionError("should not have run foobar2000")
+
+    foobar.add_files_via_cli("fb2k.exe", [], run=explode)
+
+
+def test_a_failing_command_line_becomes_a_foobar_error():
+    def fake_run(command, **kwargs):
+        return type("R", (), {"returncode": 1, "stdout": "", "stderr": ""})()
+
+    with pytest.raises(foobar.FoobarError):
+        foobar.add_files_via_cli("fb2k.exe", ["01.flac"], run=fake_run)
+
+
+def test_waiting_for_the_add_polls_until_the_count_settles():
+    """The command line returns as soon as foobar has accepted the files;
+    reading and tagging them happens afterwards, so the count climbs for a
+    moment. Asking once would see a half-filled playlist."""
+    counts = iter([0, 1, 3])
+    client = foobar.FoobarClient()
+    client.playlists = lambda: [foobar.Playlist("p1", "Default", next(counts), True)]
+
+    settled = foobar.wait_for_item_count(client, "p1", 3, sleep=lambda _: None)
+
+    assert settled == 3
+
+
+def test_waiting_gives_up_at_the_deadline_rather_than_looping_forever():
+    client = foobar.FoobarClient()
+    client.playlists = lambda: [foobar.Playlist("p1", "Default", 1, True)]
+    clock = iter([0.0, 0.0, 99.0])
+
+    settled = foobar.wait_for_item_count(client, "p1", 3, sleep=lambda _: None, now=lambda: next(clock))
+
+    assert settled == 1
+
+
+def test_replacing_the_current_playlist_clears_it_then_adds(monkeypatch):
+    """Deliberately the *current* playlist rather than a new one: the record
+    flow reads whatever is current, so this keeps one meaning of "what is
+    about to be recorded"."""
+    sent: list = []
+    client = _client({"/api/playlists": PLAYLISTS}, sent)
+    added: list = []
+    monkeypatch.setattr(foobar, "add_files_via_cli", lambda exe, paths, **kw: added.append((exe, list(paths))))
+
+    playlist = foobar.replace_current_playlist(client, "fb2k.exe", ["01.flac", "02.flac"], wait=lambda *a, **k: 2)
+
+    assert playlist.id == "p1"
+    assert ("/api/playlists/p1/clear", {}) in sent
+    assert added == [("fb2k.exe", ["01.flac", "02.flac"])]
+
+
+def test_replacing_a_playlist_when_foobar_has_none_open_is_an_error():
+    client = _client({"/api/playlists": {"playlists": []}})
+    with pytest.raises(foobar.FoobarError):
+        foobar.replace_current_playlist(client, "fb2k.exe", ["01.flac"])

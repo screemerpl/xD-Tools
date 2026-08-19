@@ -1,11 +1,13 @@
 """Window > Settings... -- global, user-level app settings (currently just
 the DPI values used for the on-screen canvas, exports, and Bake Layers).
-Deliberately separate from Project > Metadata...: these apply the same way
+Deliberately separate from the Metadata dialog: these apply the same way
 regardless of which project is open, so they're read/written straight
 from mdtools.app_settings rather than living on the Project object.
 """
 
 from __future__ import annotations
+
+from pathlib import Path
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -14,6 +16,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QDoubleSpinBox,
+    QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QLabel,
@@ -25,11 +28,22 @@ from PySide6.QtWidgets import (
 
 from PySide6.QtCore import Qt
 
-from mdtools import app_settings, mdrem
+from mdtools import app_settings, cdrip, foobar, mdrem
 
 DPI_RANGE = (20.0, 4800.0)
 
 _PORT_ROLE = Qt.ItemDataRole.UserRole
+
+
+def _with_button(edit: QLineEdit, button: QPushButton) -> QWidget:
+    """A line edit and its Browse button as one form field, the same
+    packing the MDRem port row uses for its Detect button."""
+    widget = QWidget()
+    row = QHBoxLayout(widget)
+    row.setContentsMargins(0, 0, 0, 0)
+    row.addWidget(edit, 1)
+    row.addWidget(button)
+    return widget
 
 
 class SettingsDialog(QDialog):
@@ -77,6 +91,7 @@ class SettingsDialog(QDialog):
         )
         layout.addRow(self.tr("Bake DPI"), self.bake_dpi_spin)
 
+        self._build_experimental_row(layout)
         self._build_mdrem_rows(layout)
 
         restore_btn = QPushButton(self.tr("Restore Defaults"))
@@ -88,6 +103,19 @@ class SettingsDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addRow(buttons)
 
+    def _build_experimental_row(self, layout: QFormLayout) -> None:
+        """Gates work-in-progress features that aren't ready for everyone --
+        currently just the (empty, for now) Experimental menu. Kept separate
+        from the MDRem checkbox below: that one gates hardware support,
+        this one gates in-development software features, and the two have
+        nothing to do with each other."""
+        self.experimental_check = QCheckBox(self.tr("Show experimental features"))
+        self.experimental_check.setChecked(app_settings.experimental_features_enabled())
+        self.experimental_check.setToolTip(
+            self.tr("Shows in-development features that aren't finished yet.")
+        )
+        layout.addRow(self.experimental_check)
+
     def _build_mdrem_rows(self, layout: QFormLayout) -> None:
         """MDRem is the RP2040 IR adapter that writes titles onto the disc
         itself. Everything about it is optional -- with the checkbox off,
@@ -97,8 +125,8 @@ class SettingsDialog(QDialog):
         self.mdrem_check.setChecked(app_settings.mdrem_enabled())
         self.mdrem_check.setToolTip(
             self.tr(
-                "Adds Upload Tracklist to Project > Metadata... and a Remote window to the startup screen, "
-                "for writing titles onto the MiniDisc itself over infrared."
+                "Adds Upload Tracklist to the Metadata dialog, the Recording menu's entries, and a Remote "
+                "window to the startup screen, for writing titles onto the MiniDisc itself over infrared."
             )
         )
         self.mdrem_check.toggled.connect(self._sync_mdrem_enabled)
@@ -133,10 +161,67 @@ class SettingsDialog(QDialog):
             )
         )
         layout.addRow(self.tr("foobar2000 (Beefweb) URL"), self.foobar_url_edit)
+
+        self._build_cd_rows(layout)
         self._mdrem_form = layout
 
         self._populate_ports(app_settings.mdrem_port())
         self._sync_mdrem_enabled(self.mdrem_check.isChecked())
+
+    def _build_cd_rows(self, layout: QFormLayout) -> None:
+        """Settings for Record CD to MiniDisc.
+
+        Neither is tied to the MDRem checkbox, for the same reason the
+        Beefweb URL above is not: they describe foobar2000 and the
+        filesystem, not the infrared adapter."""
+        self.foobar_exe_edit = QLineEdit(app_settings.foobar_exe() or (foobar.find_foobar_exe() or ""))
+        self.foobar_exe_edit.setToolTip(
+            self.tr(
+                "foobar2000's own program file. Ripped CD tracks are loaded through it rather than through "
+                "Beefweb, which refuses files outside the music folders configured in foobar itself."
+            )
+        )
+        browse_exe = QPushButton(self.tr("Browse..."))
+        browse_exe.clicked.connect(self._browse_foobar_exe)
+        layout.addRow(self.tr("foobar2000 program"), _with_button(self.foobar_exe_edit, browse_exe))
+
+        self.cd_rip_folder_edit = QLineEdit(app_settings.cd_rip_folder())
+        self.cd_rip_folder_edit.setToolTip(
+            self.tr(
+                "Where a ripped CD is written. One album is a few hundred megabytes; earlier rips are deleted "
+                "when the next one starts, not when a recording ends, so they stay playable in the meantime."
+            )
+        )
+        browse_folder = QPushButton(self.tr("Browse..."))
+        browse_folder.clicked.connect(self._browse_rip_folder)
+        layout.addRow(self.tr("CD rip folder"), _with_button(self.cd_rip_folder_edit, browse_folder))
+
+    def _browse_foobar_exe(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(
+            self, self.tr("foobar2000 program"), self.foobar_exe_edit.text(), self.tr("Programs (*.exe);;All files (*)")
+        )
+        if path:
+            self.foobar_exe_edit.setText(path)
+
+    def _browse_rip_folder(self) -> None:
+        """Creates the configured folder before browsing to it.
+
+        Before the first rip it does not exist yet -- that is the normal
+        state, not a mistake -- and a picker opened on a directory that is
+        not there does not politely fall back: it complains. Creating it
+        first is also what the user asked for in so many words: if the
+        folder is missing, make it."""
+        start = self.cd_rip_folder_edit.text().strip()
+        if start:
+            try:
+                cdrip.ensure_folder(Path(start))
+            except cdrip.CdRipError:
+                # Not worth a dialog on the way to a dialog: the picker
+                # simply opens wherever it can, and OK will explain.
+                start = ""
+        path = QFileDialog.getExistingDirectory(self, self.tr("CD rip folder"), start)
+        if path:
+            self.cd_rip_folder_edit.setText(path)
 
     def _populate_ports(self, selected: str) -> None:
         """Lists the ports currently present, but never drops `selected`.
@@ -160,7 +245,7 @@ class SettingsDialog(QDialog):
 
     def _sync_mdrem_enabled(self, enabled: bool) -> None:
         """Only the port follows the checkbox. The foobar2000 address does
-        not: reading a playlist (Project > Metadata's "Load from
+        not: reading a playlist (the Metadata dialog's "Load from
         foobar2000") needs foobar, not the infrared adapter, so tying it to
         the adapter would disable a setting the user still needs."""
         self._mdrem_port_widget.setEnabled(enabled)
@@ -190,12 +275,38 @@ class SettingsDialog(QDialog):
         self.screen_dpi_spin.setValue(app_settings.DEFAULT_SCREEN_DPI)
         self.export_dpi_spin.setValue(app_settings.DEFAULT_EXPORT_DPI)
         self.bake_dpi_spin.setValue(app_settings.DEFAULT_BAKE_DPI)
+        self.cd_rip_folder_edit.setText(app_settings.default_cd_rip_folder())
 
     def _on_accept(self) -> None:
         app_settings.set_screen_dpi(self.screen_dpi_spin.value())
         app_settings.set_default_export_dpi(self.export_dpi_spin.value())
         app_settings.set_bake_dpi(self.bake_dpi_spin.value())
+        app_settings.set_experimental_features_enabled(self.experimental_check.isChecked())
         app_settings.set_mdrem_enabled(self.mdrem_check.isChecked())
         app_settings.set_mdrem_port(self.selected_port())
         app_settings.set_foobar_url(self.foobar_url_edit.text())
+        app_settings.set_foobar_exe(self.foobar_exe_edit.text())
+        app_settings.set_cd_rip_folder(self.cd_rip_folder_edit.text())
+        self._create_rip_folder()
         self.accept()
+
+    def _create_rip_folder(self) -> None:
+        """Makes the chosen folder now, so a rip never trips over it.
+
+        A failure warns but does not block OK, the same rule the MDRem port
+        follows: a drive that is not plugged in right now is a reason to say
+        so, not a reason to refuse the setting."""
+        folder = self.cd_rip_folder_edit.text().strip()
+        if not folder:
+            return
+        try:
+            cdrip.ensure_folder(Path(folder))
+        except cdrip.CdRipError as exc:
+            QMessageBox.warning(
+                self,
+                self.tr("CD rip folder"),
+                self.tr(
+                    "That folder could not be created: {error}\n\nThe setting has been saved anyway, but a "
+                    "CD cannot be ripped there until it exists."
+                ).format(error=exc),
+            )

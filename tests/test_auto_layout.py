@@ -31,9 +31,9 @@ def _full_label(with_slider: bool = True) -> DiscTemplate:
         slider_notch_width_mm=27.5,
         slider_notch_height_mm=17.5,
         slider_notch_corner_radius_mm=2.5,
-        slider_notch_top_mm=25.2,
+        slider_notch_top_mm=24.3,
         slider_notch_buffer_mm=0.8,
-        slider_travel_mm=18.0,
+        slider_travel_mm=19.4,
     )
     if with_slider:
         fields.update(slider_width_mm=27.5, slider_height_mm=17.5, slider_corner_radius_mm=2.5)

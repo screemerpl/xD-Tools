@@ -17,6 +17,7 @@ class ToolPanel(QWidget):
     bake_layers_requested = Signal()
     save_as_template_requested = Signal()
     auto_layout_requested = Signal()
+    edit_metadata_requested = Signal()
     metadata_text_requested = Signal(str)  # emits the text to insert
     metadata_columns_requested = Signal(list)  # emits column texts to insert as side-by-side layers
 
@@ -41,6 +42,20 @@ class ToolPanel(QWidget):
         asset_btn.clicked.connect(self.insert_asset_requested)
         layout.addWidget(asset_btn)
 
+        layout.addWidget(self._separator())
+
+        # The metadata pair, fenced off from the four buttons above it: those
+        # put something on the page, these two are about what the project
+        # *is* -- Metadata... edits the album's own details, and Insert from
+        # Metadata puts a piece of them onto the page.
+        edit_metadata_btn = self._icon_button(
+            icons.edit_metadata_icon(),
+            self.tr("Metadata..."),
+            self.tr("The album title, artist, year and track list this project describes"),
+        )
+        edit_metadata_btn.clicked.connect(self.edit_metadata_requested)
+        layout.addWidget(edit_metadata_btn)
+
         self.metadata_button = QToolButton()
         self.metadata_button.setIcon(icons.metadata_icon())
         self.metadata_button.setIconSize(ICON_SIZE)
@@ -51,10 +66,7 @@ class ToolPanel(QWidget):
         self._toolbar_buttons.append(self.metadata_button)
         layout.addWidget(self.metadata_button)
 
-        separator = QFrame()
-        separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setFrameShadow(QFrame.Shadow.Sunken)
-        layout.addWidget(separator)
+        layout.addWidget(self._separator())
 
         clip_layers_btn = self._icon_button(
             icons.crop_icon(),
@@ -108,6 +120,13 @@ class ToolPanel(QWidget):
         for button in self._toolbar_buttons:
             button.setFixedSize(button_size)
 
+    @staticmethod
+    def _separator() -> QFrame:
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        return line
+
     def _icon_button(self, icon, tooltip: str, extra_tooltip: str | None = None) -> QToolButton:
         """Icon-only button (no visible text) -- the label always lives in
         the tooltip instead, so hovering still tells you what it does."""
@@ -131,7 +150,7 @@ class ToolPanel(QWidget):
         self.metadata_menu.clear()
         column_entries = column_entries or []
         if not entries and not column_entries:
-            action = self.metadata_menu.addAction(self.tr("(fill in Project > Metadata... first)"))
+            action = self.metadata_menu.addAction(self.tr("(fill the metadata in first)"))
             action.setEnabled(False)
             return
         for label, text in entries:

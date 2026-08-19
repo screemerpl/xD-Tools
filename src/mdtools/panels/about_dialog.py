@@ -1,12 +1,12 @@
-"""Help > About MDTools."""
+"""Help > About xD-Tools."""
 
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QVBoxLayout
 
-APP_NAME = "MDTools"
-APP_VERSION = "0.1.0"
+APP_NAME = "xD-Tools"
+APP_VERSION = "0.3.0"
 APP_AUTHOR = 'Artur "Screemer" Jakubowicz'
 
 
@@ -25,10 +25,17 @@ class AboutDialog(QDialog):
 
         description = QLabel(
             self.tr(
-                "A desktop workbench for MiniDisc.\n\n"
-                "Design disc labels and cover/J-card inserts and export them as cut-ready SVG "
-                "and print-ready PNG, for a Cricut cutting machine plus a regular printer.\n\n"
-                "With an MDRem infrared adapter it also drives the deck itself: record an album "
+                "A desktop workbench for MiniDisc, CD-R and compact cassette.\n\n"
+                "Design the labels for any of them: a MiniDisc's sticker and J-card, a CD's ring "
+                "label and case inserts, or a cassette's inlay card and a sticker for each side "
+                "-- and export them as cut-ready SVG and print-ready PNG, for a Cricut cutting "
+                "machine plus a regular printer.\n\n"
+                "Burn an audio CD-R from a folder or from foobar2000's playlist, with CD-Text "
+                "titles, resampling anything that is not already 44.1 kHz / 16-bit on the way.\n\n"
+                "Record a cassette from foobar2000, side by side: it works out where to turn "
+                "the tape over, records ten seconds of silence past the leader, plays each "
+                "side and says when to flip it.\n\n"
+                "With an MDRem infrared adapter it also drives a MiniDisc deck: record an album "
                 "straight from foobar2000 with a track mark at every song, write the disc and "
                 "track titles onto the MiniDisc, and stand in for the remote."
             )

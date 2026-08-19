@@ -9,8 +9,7 @@ from mdtools.templates import registry
 
 def _fake_new_project_choice(disc, cover):
     def fake_exec(self):
-        self.selected_disc_template = disc
-        self.selected_cover_template = cover
+        self.selected_templates = {PAGE_DISC: disc, PAGE_COVER: cover}
         return NewDesignDialog.DialogCode.Accepted
 
     return fake_exec
@@ -57,7 +56,13 @@ def test_choosing_a_recent_project_in_the_startup_dialog_opens_it_directly(qt_ap
     assert win.current_project_path == str(path)
 
 
-def test_cancelling_the_startup_dialog_falls_back_to_default_templates(qt_app, monkeypatch):
+def test_cancelling_the_startup_dialog_outright_means_quit_not_a_blank_project(qt_app, monkeypatch):
+    """Reported directly as making Cancel useless: it used to silently
+    create an untitled project and show the main window regardless of what
+    was clicked. Cancel here now means the same thing it already means
+    when returning to the startup screen after closing a project -- "I
+    actually want out" -- which main.py acts on via startup_cancelled
+    before ever calling show()."""
     monkeypatch.setattr(StartupDialog, "exec", lambda self: StartupDialog.DialogCode.Rejected)
 
     def fail_if_shown(self):
@@ -67,18 +72,22 @@ def test_cancelling_the_startup_dialog_falls_back_to_default_templates(qt_app, m
 
     win = MainWindow()
 
-    # falling back to _new_design(prompt=False) must still leave a usable project
-    assert win.project is not None
-    assert win.project.pages[PAGE_DISC] is not None
-    assert win.project.pages[PAGE_COVER] is not None
+    assert win.startup_cancelled is True
+    assert win.project is None
 
 
 def test_cancelling_new_project_after_choosing_new_falls_back_to_default_templates(qt_app, monkeypatch):
+    """Different from cancelling the StartupDialog itself: the user
+    positively chose "New Project..." (accepting StartupDialog), and only
+    backed out of the *template picker* -- that is a more local
+    cancellation than "I want out", so it must not be treated as
+    startup_cancelled and must not quit."""
     monkeypatch.setattr(StartupDialog, "exec", lambda self: StartupDialog.DialogCode.Accepted)
     monkeypatch.setattr(NewDesignDialog, "exec", lambda self: NewDesignDialog.DialogCode.Rejected)
 
     win = MainWindow()
 
+    assert win.startup_cancelled is False
     assert win.project is not None
     assert win.project.pages[PAGE_DISC] is not None
     assert win.project.pages[PAGE_COVER] is not None

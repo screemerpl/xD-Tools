@@ -1,0 +1,434 @@
+"""The burn dialog, and the two menu entries that fill it.
+
+The worker's run() is called directly rather than started as a thread, the
+same way test_cd_rip_dialog.py drives its own: what is being tested is the
+order of the stages and which signal comes out, not Qt's threading.
+"""
+
+import wave
+from pathlib import Path
+
+import pytest
+from PySide6.QtWidgets import QFileDialog, QMessageBox
+
+from mdtools import app_settings, cdburn, decode, foobar
+from mdtools.app_window import MainWindow
+from mdtools.panels.burn_dialog import BurnDialog, _BurnWorker
+from mdtools.project import MEDIUM_CD, MEDIUM_MD
+
+
+def _write_wav(path, *, seconds=10.0, rate=44100):
+    with wave.open(str(path), "wb") as handle:
+        handle.setnchannels(2)
+        handle.setsampwidth(2)
+        handle.setframerate(rate)
+        handle.writeframes(b"\x00" * int(rate * seconds) * 4)
+    return path
+
+
+def _sources(tmp_path, count=2, **kwargs):
+    return [
+        (_write_wav(tmp_path / f"{i:02d}.wav", **kwargs), f"Track {i}", "Artist")
+        for i in range(1, count + 1)
+    ]
+
+
+@pytest.fixture
+def burnable(monkeypatch):
+    """A machine with cdrecord and a burner in it."""
+    monkeypatch.setattr(cdburn, "cdrecord_path", lambda: "cdrecord")
+    monkeypatch.setattr(cdburn, "missing_tools", lambda: [])
+    monkeypatch.setattr(
+        cdburn, "list_burners", lambda: [cdburn.Burner(device="1,0,0", description="ASUS BW-16D1HT")]
+    )
+
+
+# -- what the dialog shows before anything is written --------------------
+
+
+def test_each_track_gets_a_verdict_before_the_button(qt_app, tmp_path, burnable, monkeypatch):
+    """With no resampler around, a hi-res track is a wall; the button has
+    to say so rather than let a disc be spent finding out."""
+    monkeypatch.setattr(decode, "can_convert", lambda: False)
+    sources = _sources(tmp_path, 1) + [(_write_wav(tmp_path / "hi.wav", rate=48000), "Hi-res", "A")]
+    dialog = BurnDialog(sources, album="Album", artist="Artist")
+
+    assert dialog.table.item(0, 3).text() == "OK"
+    assert "44100" in dialog.table.item(1, 3).text()
+    assert dialog.burn_button.isEnabled() is False, "a disc that cannot be written must not offer to be"
+
+
+def test_a_track_that_will_be_converted_says_so_without_blocking_the_burn(qt_app, tmp_path, burnable, monkeypatch):
+    monkeypatch.setattr(decode, "can_convert", lambda: True)
+    sources = _sources(tmp_path, 1) + [(_write_wav(tmp_path / "hi.wav", rate=48000), "Hi-res", "A")]
+
+    dialog = BurnDialog(sources, album="Album", artist="Artist")
+
+    assert "converted" in dialog.table.item(1, 3).text()
+    assert dialog.burn_button.isEnabled() is True
+
+
+def test_the_summary_shows_the_length_against_the_disc(qt_app, tmp_path, burnable):
+    dialog = BurnDialog(_sources(tmp_path, 3), album="Album", artist="Artist")
+
+    assert "80:00" in dialog.summary_label.text()
+    assert "0:32" in dialog.summary_label.text()  # 3 x 10s plus the 2s lead-in
+
+
+def test_characters_cd_text_cannot_carry_are_named_up_front(qt_app, tmp_path, burnable):
+    """The same promise the MiniDisc upload dialog makes -- and the same
+    transliterator underneath."""
+    dialog = BurnDialog([(_write_wav(tmp_path / "a.wav"), "君の名は", "Artist")], album="A", artist="B")
+
+    assert "CD-Text" in dialog.summary_label.text()
+
+
+def test_a_missing_tool_does_not_hide_what_the_plan_says(qt_app, tmp_path, monkeypatch):
+    monkeypatch.setattr(cdburn, "missing_tools", lambda: ["cdrecord"])
+    monkeypatch.setattr(cdburn, "list_burners", lambda: [])
+
+    dialog = BurnDialog(_sources(tmp_path, 2), album="Album", artist="Artist")
+
+    assert "cdrecord" in dialog.tools_label.text()
+    assert "80:00" in dialog.summary_label.text()
+    assert dialog.burn_button.isEnabled() is False
+
+
+# -- what is on screen is what gets written ------------------------------
+
+
+def test_an_edited_title_is_what_reaches_the_disc(qt_app, tmp_path, burnable):
+    dialog = BurnDialog(_sources(tmp_path, 2), album="Album", artist="Artist")
+    dialog.table.item(0, 0).setText("Corrected Title")
+    dialog.table.item(0, 1).setText("Corrected Artist")
+
+    plan = dialog.build_plan()
+
+    assert plan.tracks[0].title == "Corrected Title"
+    # and it is what cdrecord will read out of the .inf file as CD-Text
+    assert "Tracktitle=\t'Corrected Title'" in cdburn.inf_text(plan, 1)
+    assert dialog.metadata().tracks[0].artist == "Corrected Artist"
+
+
+def test_an_emptied_title_falls_back_to_the_filename(qt_app, tmp_path, burnable):
+    """A disc of blank track names is worse than one named after its
+    files."""
+    dialog = BurnDialog(_sources(tmp_path, 1), album="Album", artist="Artist")
+    dialog.table.item(0, 0).setText("   ")
+
+    assert dialog.build_plan().tracks[0].title == "01"
+
+
+def test_the_metadata_handed_on_is_the_album_as_edited(qt_app, tmp_path, burnable):
+    dialog = BurnDialog(_sources(tmp_path, 2), album="Wrong", artist="Artist", year=2016)
+    dialog.album_edit.setText("Unleashed")
+
+    metadata = dialog.metadata()
+
+    assert (metadata.album, metadata.artist, metadata.year) == ("Unleashed", "Artist", 2016)
+    assert [track.title for track in metadata.tracks] == ["Track 1", "Track 2"]
+
+
+def test_burning_without_a_burner_says_so_and_starts_nothing(qt_app, tmp_path, monkeypatch):
+    monkeypatch.setattr(cdburn, "missing_tools", lambda: [])
+    monkeypatch.setattr(cdburn, "list_burners", lambda: [])
+    warned = []
+    monkeypatch.setattr(QMessageBox, "warning", lambda *args, **kwargs: warned.append(args))
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda *a, **k: pytest.fail("nothing should be confirmed when there is no drive"),
+    )
+
+    dialog = BurnDialog(_sources(tmp_path, 1), album="Album", artist="Artist")
+    dialog._start()
+
+    assert warned
+    assert dialog._worker is None
+
+
+def test_starting_a_real_burn_asks_first_and_says_it_cannot_be_undone(qt_app, tmp_path, burnable, monkeypatch):
+    asked = []
+
+    def fake_question(parent, title, text, *args, **kwargs):
+        asked.append(text)
+        return QMessageBox.StandardButton.Cancel
+
+    monkeypatch.setattr(QMessageBox, "question", fake_question)
+
+    dialog = BurnDialog(_sources(tmp_path, 2), album="Album", artist="Artist")
+    dialog._start()
+
+    assert asked and "cannot be rewritten" in asked[0]
+    assert dialog._worker is None, "cancelling the question must not start anything"
+
+
+def test_a_simulated_run_is_not_described_as_writing_a_disc(qt_app, tmp_path, burnable, monkeypatch):
+    asked = []
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda parent, title, text, *a, **k: (asked.append(text), QMessageBox.StandardButton.Cancel)[1],
+    )
+
+    dialog = BurnDialog(_sources(tmp_path, 1), album="Album", artist="Artist")
+    dialog.simulate_check.setChecked(True)
+    dialog._start()
+
+    assert asked and "Nothing will be written" in asked[0]
+
+
+# -- the worker ----------------------------------------------------------
+
+
+def _plan(tmp_path, count=2):
+    return cdburn.build_burn_plan(_sources(tmp_path, count), album="Album", artist="Artist")
+
+
+def test_the_worker_decodes_then_writes_then_reports_success(qt_app, tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        cdburn, "prepare_wavs", lambda plan, directory, **kwargs: (calls.append("decode"), ["01.wav"])[1]
+    )
+    monkeypatch.setattr(cdburn, "write_inf_files", lambda plan, directory: ["01.inf"])
+    monkeypatch.setattr(cdburn, "burn", lambda *args, **kwargs: calls.append("burn"))
+
+    worker = _BurnWorker(_plan(tmp_path), "1,0,0", tmp_path, speed=8, simulate=False, eject=True)
+    stages, succeeded = [], []
+    worker.stage.connect(stages.append)
+    worker.succeeded.connect(lambda: succeeded.append(True))
+    worker.run()
+
+    assert calls == ["decode", "burn"]
+    assert stages == ["decode", "burn"]
+    assert succeeded == [True]
+
+
+def test_the_worker_reports_a_failure_rather_than_raising(qt_app, tmp_path, monkeypatch):
+    monkeypatch.setattr(cdburn, "prepare_wavs", lambda *a, **k: ["01.wav"])
+    monkeypatch.setattr(cdburn, "write_inf_files", lambda *a, **k: ["01.inf"])
+
+    def fail(*args, **kwargs):
+        raise cdburn.BurnError("Cannot open SCSI device")
+
+    monkeypatch.setattr(cdburn, "burn", fail)
+
+    worker = _BurnWorker(_plan(tmp_path), "1,0,0", tmp_path, speed=8, simulate=False, eject=True)
+    failures = []
+    worker.failed.connect(failures.append)
+    worker.run()
+
+    assert failures == ["Cannot open SCSI device"]
+
+
+def test_cancelling_during_the_decode_stage_costs_nothing(qt_app, tmp_path, monkeypatch):
+    """No disc has been touched at that point -- only a scratch folder."""
+    burned = []
+
+    def cancel_immediately(plan, directory, *, on_progress=None, should_cancel=None, **kwargs):
+        assert should_cancel is not None and should_cancel()
+        raise cdburn.BurnCancelled()
+
+    monkeypatch.setattr(cdburn, "prepare_wavs", cancel_immediately)
+    monkeypatch.setattr(cdburn, "burn", lambda *a, **k: burned.append(True))
+
+    worker = _BurnWorker(_plan(tmp_path), "1,0,0", tmp_path, speed=8, simulate=False, eject=True)
+    cancelled = []
+    worker.cancelled.connect(lambda: cancelled.append(True))
+    worker.cancel()
+    worker.run()
+
+    assert cancelled == [True]
+    assert burned == [], "the drive must never be reached once the run was cancelled"
+
+
+def test_stopping_asks_about_the_disc_and_does_not_wait_on_the_worker(qt_app, tmp_path, burnable, monkeypatch):
+    """reject() must never block the GUI thread on a worker -- that is what
+    froze the MDRem upload dialog once already."""
+
+    class BusyWorker:
+        def __init__(self):
+            self.cancelled = False
+
+        def cancel(self):
+            self.cancelled = True
+
+        def wait(self, *args):
+            raise AssertionError("reject() must not wait on the worker")
+
+    dialog = BurnDialog(_sources(tmp_path, 1), album="Album", artist="Artist")
+    worker = BusyWorker()
+    dialog._worker = worker
+
+    asked = []
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda parent, title, text, *a, **k: (asked.append(text), QMessageBox.StandardButton.Ok)[1],
+    )
+    dialog.reject()
+
+    assert asked and "unfinished" in asked[0]
+    assert worker.cancelled is True
+
+    dialog._worker = None  # so the dialog can be torn down normally
+
+
+def test_declining_the_stop_question_leaves_the_burn_running(qt_app, tmp_path, burnable, monkeypatch):
+    class BusyWorker:
+        cancelled = False
+
+        def cancel(self):
+            type(self).cancelled = True
+
+    dialog = BurnDialog(_sources(tmp_path, 1), album="Album", artist="Artist")
+    dialog._worker = BusyWorker()
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Cancel)
+
+    dialog.reject()
+
+    assert BusyWorker.cancelled is False
+    dialog._worker = None
+
+
+# -- the menu entries ----------------------------------------------------
+
+
+def test_burning_from_a_folder_reads_the_files_tags(qt_app, tmp_path, monkeypatch):
+    folder = tmp_path / "Skillet - Unleashed (2016)"
+    folder.mkdir()
+    _write_wav(folder / "01 One.wav")
+    _write_wav(folder / "02 Two.wav")
+
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(folder))
+    captured = {}
+
+    def fake_run(self, sources, *, album, artist, year):
+        captured["sources"] = sources
+        captured["album"] = album
+
+    monkeypatch.setattr(MainWindow, "_run_burn_dialog", fake_run)
+
+    MainWindow(show_startup_dialog=False)._burn_cd_from_folder()
+
+    assert [Path(path).name for path, _t, _a in captured["sources"]] == ["01 One.wav", "02 Two.wav"]
+    # untagged WAVs: the folder name is the only thing left to go on
+    assert captured["album"] == "Unleashed"
+
+
+def test_an_empty_folder_says_so_rather_than_opening_an_empty_dialog(qt_app, tmp_path, monkeypatch):
+    folder = tmp_path / "nothing"
+    folder.mkdir()
+    monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *a, **k: str(folder))
+    warned = []
+    monkeypatch.setattr(QMessageBox, "warning", lambda *args, **kwargs: warned.append(args))
+    monkeypatch.setattr(
+        MainWindow, "_run_burn_dialog", lambda *a, **k: pytest.fail("nothing to burn, nothing to show")
+    )
+
+    MainWindow(show_startup_dialog=False)._burn_cd_from_folder()
+
+    assert warned
+
+
+def test_burning_from_foobar_uses_the_playlists_own_paths_and_titles(qt_app, tmp_path, monkeypatch):
+    items = [
+        foobar.PlaylistItem(
+            track_number="1",
+            title="Feel Invincible",
+            album_artist="Skillet",
+            album="Unleashed",
+            date="2016",
+            length_seconds=213,
+            artist="Skillet",
+            path=str(tmp_path / "01.flac"),
+        )
+    ]
+    monkeypatch.setattr(
+        foobar.FoobarClient, "current_playlist", lambda self: foobar.Playlist(id="p1", title="Default", item_count=1, is_current=True)
+    )
+    monkeypatch.setattr(foobar.FoobarClient, "playlist_items", lambda self, playlist_id, limit=500: items)
+
+    captured = {}
+    monkeypatch.setattr(
+        MainWindow,
+        "_run_burn_dialog",
+        lambda self, sources, *, album, artist, year: captured.update(
+            sources=sources, album=album, artist=artist
+        ),
+    )
+
+    MainWindow(show_startup_dialog=False)._burn_cd_from_foobar()
+
+    assert captured["sources"] == [(tmp_path / "01.flac", "Feel Invincible", "Skillet")]
+    assert (captured["album"], captured["artist"]) == ("Unleashed", "Skillet")
+
+
+def test_a_written_disc_offers_its_details_to_an_open_cd_project(qt_app, tmp_path, monkeypatch, burnable):
+    window = MainWindow(show_startup_dialog=False)
+    window.project.medium = MEDIUM_CD
+
+    def fake_exec(self):
+        self.result_metadata = self.metadata()
+        return BurnDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(BurnDialog, "exec", fake_exec)
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Ok)
+
+    window._run_burn_dialog(_sources(tmp_path, 2), album="Unleashed", artist="Skillet", year=2016)
+
+    assert window.project.metadata.album == "Unleashed"
+    assert len(window.project.metadata.tracks) == 2
+
+
+def test_a_minidisc_project_is_left_alone_by_a_cd_burn(qt_app, tmp_path, monkeypatch, burnable):
+    """Burning is reachable with any project open, including one that has
+    nothing to do with the disc."""
+    window = MainWindow(show_startup_dialog=False)
+    window.project.medium = MEDIUM_MD
+    window.project.metadata.album = "Some MiniDisc"
+
+    monkeypatch.setattr(
+        BurnDialog,
+        "exec",
+        lambda self: (setattr(self, "result_metadata", self.metadata()), BurnDialog.DialogCode.Accepted)[1],
+    )
+    monkeypatch.setattr(
+        QMessageBox, "question", lambda *a, **k: pytest.fail("an unrelated project must not be asked about")
+    )
+
+    window._run_burn_dialog(_sources(tmp_path, 1), album="Unleashed", artist="Skillet", year=2016)
+
+    assert window.project.metadata.album == "Some MiniDisc"
+
+
+def test_the_burn_work_folder_sits_under_the_configured_rip_folder(qt_app, tmp_path, monkeypatch, burnable):
+    """Scratch WAVs are raw material, like a rip -- they belong wherever the
+    user pointed that, not next to their music."""
+    monkeypatch.setattr(app_settings, "cd_rip_folder", lambda: str(tmp_path / "scratch"))
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Ok)
+
+    started = {}
+
+    class _Anything:
+        """Stands in for both a signal (connect) and a method (call)."""
+
+        def __call__(self, *args, **kwargs):
+            return None
+
+        def connect(self, *args, **kwargs):
+            return None
+
+    class FakeWorker:
+        def __init__(self, plan, device, work_dir, **kwargs):
+            started["work_dir"] = work_dir
+
+        def __getattr__(self, name):
+            return _Anything()
+
+    monkeypatch.setattr("mdtools.panels.burn_dialog._BurnWorker", FakeWorker)
+
+    dialog = BurnDialog(_sources(tmp_path, 1), album="Album", artist="Artist")
+    dialog._start()
+
+    assert started["work_dir"] == tmp_path / "scratch" / "burn"

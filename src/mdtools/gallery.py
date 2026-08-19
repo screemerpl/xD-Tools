@@ -11,7 +11,7 @@ gallery:
   build_linux.sh, which --add-data the whole directory into the bundle).
 - `downloaded_covers_dir()` -- a per-user, writable cache (unlike the
   bundled folder, which is read-only, especially in a frozen build) where
-  album covers fetched via Project > Metadata's "Lookup Track List..."
+  album covers fetched via the Metadata dialog's "Lookup Track List..."
   are saved, so a fetched cover shows up here immediately without any
   extra "add to gallery" step.
 """

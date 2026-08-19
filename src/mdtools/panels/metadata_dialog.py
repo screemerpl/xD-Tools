@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from mdtools import app_settings, foobar
+from mdtools import app_settings, foobar, user_paths
 from mdtools.gallery import downloaded_covers_dir, save_downloaded_cover
 from mdtools.metadata_lookup import (
     AlbumCandidate,
@@ -35,11 +35,14 @@ from mdtools.metadata_lookup import (
     find_cover,
     search_albums,
 )
+from mdtools.panels.cover_preview import CoverPreview
 from mdtools.panels.mdrem_port import resolve_port
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
-from mdtools.project import ProjectMetadata, Track, format_time, parse_time
+from mdtools.project import MEDIUM_MD, ProjectMetadata, Track, format_time, parse_time
 
-TITLE_COL, TIME_COL = 0, 1
+# Artist sits between them: it belongs with the title it qualifies, and
+# is empty on an ordinary album (see ProjectMetadata.is_compilation).
+TITLE_COL, ARTIST_COL, TIME_COL = 0, 1, 2
 COVER_SIZE = 100
 
 _INVALID_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*]')
@@ -49,39 +52,18 @@ def _sanitize_filename(text: str) -> str:
     return _INVALID_FILENAME_CHARS.sub("_", text).strip() or "cover"
 
 
-class _CoverLabel(QLabel):
-    """The cover preview, clickable.
-
-    Both automatic sources here guess: iTunes returns whatever release its
-    search matched, which for a reissue, a compilation or a band with a
-    common name is regularly the wrong artwork. Being able to point at a
-    file is the only way out of that, so the picture itself is the button
-    -- clicking what you want to change is where anyone looks first."""
-
-    clicked = Signal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-
-    def mouseReleaseEvent(self, event) -> None:
-        # Released inside, not merely pressed: a press that wandered off the
-        # label before letting go is how anyone cancels a misclick.
-        if event.button() == Qt.MouseButton.LeftButton and self.rect().contains(event.position().toPoint()):
-            self.clicked.emit()
-        super().mouseReleaseEvent(event)
-
-
 class MetadataDialog(QDialog):
-    def __init__(self, metadata: ProjectMetadata, parent=None):
+    def __init__(self, metadata: ProjectMetadata, parent=None, medium: str = MEDIUM_MD):
+        """`medium` decides whether "Upload Tracklist" is offered at all.
+
+        That button writes titles onto a MiniDisc over infrared; on a CD
+        project there is no MiniDisc for it to write to, and the titles
+        went onto the disc as CD-Text when it was burned. It stayed visible
+        on CD projects at first -- reported directly."""
         super().__init__(parent)
         self.setWindowTitle(self.tr("Project Metadata"))
         self.resize(420, 480)
         self.result_metadata: ProjectMetadata | None = None
-        # Carries over into result_metadata on OK -- seeded from whatever
-        # was already saved with the project, so reopening this dialog
-        # later still shows a cover fetched in an earlier session.
-        self._cover_art: bytes | None = metadata.cover_art
 
         layout = QVBoxLayout(self)
 
@@ -121,18 +103,8 @@ class MetadataDialog(QDialog):
         self.year_spin.setValue(metadata.year or 0)
         form.addRow(self.tr("Year of release"), self.year_spin)
 
-        self.cover_label = _CoverLabel()
-        self.cover_label.setFixedSize(COVER_SIZE, COVER_SIZE)
-        self.cover_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.cover_label.setFrameShape(QFrame.Shape.Box)
-        self.cover_label.setScaledContents(False)
-        self.cover_label.setToolTip(
-            self.tr("Click to choose the cover art yourself -- use this when the fetched one is wrong.")
-        )
-        self.cover_label.clicked.connect(self._choose_cover_file)
-        self._show_no_cover()
-        if self._cover_art:
-            self._show_cover_bytes(self._cover_art)
+        self.cover_label = CoverPreview(COVER_SIZE)
+        self.cover_label.set_cover(metadata.cover_art)
 
         top_row = QHBoxLayout()
         top_row.addLayout(form, 1)
@@ -141,11 +113,13 @@ class MetadataDialog(QDialog):
 
         layout.addWidget(QLabel(self.tr("Tracks:")))
 
-        self.table = QTableWidget(0, 2)
-        self.table.setHorizontalHeaderLabels([self.tr("Title"), self.tr("Time (mm:ss, optional)")])
+        self.table = QTableWidget(0, 3)
+        self.table.setHorizontalHeaderLabels(
+            [self.tr("Title"), self.tr("Artist (only on a compilation)"), self.tr("Time (mm:ss, optional)")]
+        )
         self.table.horizontalHeader().setSectionResizeMode(TITLE_COL, QHeaderView.ResizeMode.Stretch)
         for track in metadata.tracks:
-            self._append_row(track.title, format_time(track.time_seconds))
+            self._append_row(track.title, format_time(track.time_seconds), track.artist)
         layout.addWidget(self.table)
 
         btn_row = QHBoxLayout()
@@ -172,7 +146,7 @@ class MetadataDialog(QDialog):
             )
         )
         self.upload_btn.clicked.connect(self._upload_tracklist)
-        self.upload_btn.setVisible(app_settings.mdrem_enabled())
+        self.upload_btn.setVisible(app_settings.mdrem_enabled() and medium == MEDIUM_MD)
         layout.addWidget(self.upload_btn)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -270,7 +244,7 @@ class MetadataDialog(QDialog):
         self.year_spin.setValue(metadata.year or 0)
         self.table.setRowCount(0)
         for track in metadata.tracks:
-            self._append_row(track.title, format_time(track.time_seconds))
+            self._append_row(track.title, format_time(track.time_seconds), track.artist)
 
         self._fetch_cover_for(metadata.album, metadata.artist, len(metadata.tracks), metadata.year)
 
@@ -293,8 +267,7 @@ class MetadataDialog(QDialog):
             self.year_spin.setValue(chosen.year)
         if data is None or chosen is None:
             return
-        self._cover_art = data
-        self._show_cover_bytes(data)
+        self.cover_label.set_cover(data)
         save_downloaded_cover(chosen.artist_name, chosen.collection_name, data)
 
     def _fetch_and_save_cover(self, candidate: AlbumCandidate) -> None:
@@ -305,9 +278,9 @@ class MetadataDialog(QDialog):
 
         Saved in two places, for two different purposes: the per-user
         gallery cache (so it's immediately selectable from Tools > Insert
-        Asset...), and self._cover_art (so it's carried into
-        result_metadata on OK and saved with the *project*, restoring the
-        preview here next time this dialog is reopened)."""
+        Asset...), and the preview widget, which is what carries it into
+        result_metadata on OK and so into the saved *project* -- which is
+        why reopening this dialog later still shows it."""
         try:
             data = fetch_artwork(candidate.artwork_url)
         except MetadataLookupError:
@@ -315,49 +288,13 @@ class MetadataDialog(QDialog):
 
         filename = f"{_sanitize_filename(candidate.artist_name)} - {_sanitize_filename(candidate.collection_name)}.jpg"
         (downloaded_covers_dir() / filename).write_bytes(data)
-        self._cover_art = data
-        self._show_cover_bytes(data)
+        self.cover_label.set_cover(data)
 
-    def _choose_cover_file(self) -> None:
-        """Replaces the cover with a local image file.
-
-        Deliberately overrides whatever a lookup found, without asking: the
-        user clicked the picture they can see is wrong."""
-        path, _ = QFileDialog.getOpenFileName(
-            self, self.tr("Choose Cover Art"), "", self.tr("Images (*.png *.jpg *.jpeg *.bmp *.webp)")
-        )
-        if not path:
-            return
-        try:
-            data = Path(path).read_bytes()
-        except OSError as exc:
-            QMessageBox.warning(self, self.tr("Choose Cover Art"), self.tr("Could not read the file:\n{error}").format(error=exc))
-            return
-        # Checked here rather than trusted from the extension: the bytes are
-        # what gets saved into the project and later handed to the layout
-        # code, which has no way to report back that they were never an image.
-        if not self._show_cover_bytes(data):
-            QMessageBox.warning(
-                self, self.tr("Choose Cover Art"), self.tr("That file could not be read as an image.")
-            )
-            return
-        self._cover_art = data
-
-    def _show_no_cover(self) -> None:
-        self.cover_label.setPixmap(QPixmap())
-        self.cover_label.setText(self.tr("No cover\n\n(click to\nchoose one)"))
-
-    def _show_cover_bytes(self, data: bytes) -> bool:
-        pixmap = QPixmap()
-        if not pixmap.loadFromData(data):
-            return False
-        self.cover_label.setText("")
-        self.cover_label.setPixmap(
-            pixmap.scaled(
-                COVER_SIZE, COVER_SIZE, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
-            )
-        )
-        return True
+    @property
+    def _cover_art(self) -> bytes | None:
+        """The cover the preview is holding. One owner, so a fetch, a
+        locally chosen file and what OK returns cannot disagree."""
+        return self.cover_label.data
 
     def _run_lookup(self, call):
         """Runs a blocking metadata_lookup call with a wait cursor and the
@@ -379,15 +316,16 @@ class MetadataDialog(QDialog):
         year_text = str(candidate.year) if candidate.year else "?"
         return f"{candidate.artist_name} — {candidate.collection_name} ({year_text}, {candidate.track_count} tracks)"
 
-    def _append_row(self, title: str, time_text: str) -> int:
+    def _append_row(self, title: str, time_text: str, artist: str = "") -> int:
         row = self.table.rowCount()
         self.table.insertRow(row)
         self.table.setItem(row, TITLE_COL, QTableWidgetItem(title))
+        self.table.setItem(row, ARTIST_COL, QTableWidgetItem(artist))
         self.table.setItem(row, TIME_COL, QTableWidgetItem(time_text))
         return row
 
     def _add_track(self) -> None:
-        row = self._append_row("", "")
+        row = self._append_row("", "", "")
         title_item = self.table.item(row, TITLE_COL)
         self.table.setCurrentItem(title_item)
         self.table.editItem(title_item)
@@ -404,7 +342,7 @@ class MetadataDialog(QDialog):
         target = row + direction
         if target < 0 or target >= self.table.rowCount():
             return
-        for col in (TITLE_COL, TIME_COL):
+        for col in (TITLE_COL, ARTIST_COL, TIME_COL):
             a = self.table.takeItem(row, col)
             b = self.table.takeItem(target, col)
             self.table.setItem(row, col, b)
@@ -425,14 +363,16 @@ class MetadataDialog(QDialog):
                 continue
             time_item = self.table.item(row, TIME_COL)
             time_text = time_item.text() if time_item else ""
-            tracks.append(Track(title=title, time_seconds=parse_time(time_text)))
+            artist_item = self.table.item(row, ARTIST_COL)
+            artist = artist_item.text().strip() if artist_item else ""
+            tracks.append(Track(title=title, time_seconds=parse_time(time_text), artist=artist))
 
         return ProjectMetadata(
             album=self.album_edit.text().strip(),
             artist=self.artist_edit.text().strip(),
             year=self.year_spin.value() or None,
             tracks=tracks,
-            cover_art=self._cover_art,
+            cover_art=self.cover_label.data,
         )
 
     def _upload_tracklist(self) -> None:

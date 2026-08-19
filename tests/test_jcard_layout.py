@@ -13,7 +13,7 @@ from PIL import Image
 
 from mdtools import jcard_layout
 from mdtools.canvas.scene import DesignScene
-from mdtools.jcard_layout import build_jcard, place_front_cover, place_front_logo, spine_caption
+from mdtools.jcard_layout import build_jcard, place_back, place_front_cover, place_front_logo, spine_caption
 from mdtools.project import ProjectMetadata, Track
 from mdtools.templates.models import CoverTemplate, DiscTemplate
 
@@ -269,3 +269,34 @@ def test_without_cover_art_there_is_nothing_to_lay_out(qt_app):
 def test_a_page_that_does_not_fold_is_left_alone(qt_app):
     scene = DesignScene(DiscTemplate(name="sticker", width_mm=37.0, height_mm=52.0))
     assert build_jcard(scene, _metadata(), _logo_path()).items == []
+
+
+def test_both_columns_of_a_track_list_are_set_in_the_same_size(qt_app):
+    """Reported directly: a list split into two columns was fitted one
+    column at a time, so each took whichever size suited its own longest
+    line and the two halves of one list came out in visibly different type.
+    Applies to the CD insert too -- it shares this function."""
+    metadata = ProjectMetadata(
+        album="Album",
+        artist="Artist",
+        year=2024,
+        # deliberately lopsided: the second column's lines are far longer,
+        # which is exactly what used to shrink it on its own
+        tracks=[
+            Track(title="Short" if i < 7 else f"A considerably longer track title number {i}", time_seconds=200)
+            for i in range(1, 15)
+        ],
+    )
+    scene = DesignScene(_jcard_template())
+    panels = scene.fold_panel_rects()
+
+    items = place_back(scene, panels[2], metadata, "#202030", "#e0a020")
+
+    columns = [
+        item
+        for item in items
+        if hasattr(item, "toPlainText") and ("Short" in item.toPlainText() or "considerably longer" in item.toPlainText())
+    ]
+    assert len(columns) == 2, "this album should have produced two columns"
+    sizes = {round(item.font().pointSizeF(), 3) for item in columns}
+    assert len(sizes) == 1, f"the two columns disagree on size: {sizes}"

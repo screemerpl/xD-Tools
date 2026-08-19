@@ -1,4 +1,4 @@
-"""Project > "Record to MiniDisc from foobar2000..." -- records an album
+"""Recording > "Record to MiniDisc from foobar2000..." -- records an album
 from foobar2000 onto a MiniDisc over S/PDIF, then titles the result.
 
 The sequence, and why each step is where it is:
@@ -29,26 +29,30 @@ part of this feature most likely to disappoint on a live or continuous mix.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtWidgets import (
-    QApplication,
     QCheckBox,
     QDialog,
     QDialogButtonBox,
+    QFormLayout,
+    QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMessageBox,
     QProgressBar,
     QPushButton,
+    QSpinBox,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
 )
 
-from mdtools import foobar, mdrem
-from mdtools.gallery import save_downloaded_cover
-from mdtools.metadata_lookup import MetadataLookupError, find_cover
+from mdtools import embedded_cover, foobar, mdrem, mixtape_cover
+from mdtools.panels.cover_preview import CoverPreview, fetch_into
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
-from mdtools.project import ProjectMetadata
+from mdtools.project import ProjectMetadata, Track
 
 # An MD holds 80 minutes in SP. The deck also has MDLP (LP2/LP4) for 160/320,
 # but which mode it is in cannot be read or set through our key table, so this
@@ -63,6 +67,14 @@ LEAD_IN_MS = 1500
 # sees a new track, so a slower poll pushes the mark further into it.
 POLL_MS = 250
 
+# Applied to foobar2000's own output volume at the start of every recording
+# (see _start() below) -- a layout choice, not a measured spec, the same
+# kind of deliberate headroom-below-0dB margin as any other digital transfer
+# leaves before recording, explicit user request. Set through
+# FoobarClient.set_volume(), confirmed live against a running foobar2000/
+# foo_beefweb.
+RECORDING_VOLUME_DB = -5.0
+
 # RECORD pressed *during* recording adds a track mark -- established on an
 # MDS-JE480 by recording, sending it mid-way, and finding two tracks.
 TRACK_MARK_KEY = "SEND RECORD"
@@ -74,7 +86,24 @@ def _mmss(seconds: float) -> str:
 
 
 class RecordDialog(QDialog):
-    def __init__(self, port: str, base_url: str = foobar.DEFAULT_BASE_URL, parent=None):
+    def __init__(
+        self,
+        port: str,
+        base_url: str = foobar.DEFAULT_BASE_URL,
+        parent=None,
+        metadata: ProjectMetadata | None = None,
+    ):
+        """`metadata`, when given, is what the disc gets titled from instead
+        of the playlist's own tags.
+
+        Only Record Folder passes it, and only because it has to: a folder
+        holds somebody else's files, which nothing here rewrites, so an
+        album name typed into that dialog can reach the disc no other way.
+        The CD flow deliberately does *not* -- it writes its titles into the
+        files it created, so the playlist already carries them, and one
+        source of truth beats two that can disagree. Either way it describes
+        the very playlist that is about to be recorded: it is built from the
+        same items, moments earlier."""
         super().__init__(parent)
         self.setWindowTitle(self.tr("Record to MiniDisc from foobar2000"))
         self.resize(520, 500)
@@ -90,6 +119,7 @@ class RecordDialog(QDialog):
         # as project metadata, with cover art if any was found. None means
         # nothing was recorded, so nothing should be adopted.
         self.result_metadata: ProjectMetadata | None = None
+        self._given_metadata = metadata
         # Held open for the whole session rather than reopened per key:
         # opening a serial port costs far more than sending, and a track
         # mark's accuracy depends on how fast it goes out.
@@ -101,10 +131,40 @@ class RecordDialog(QDialog):
         self.summary_label.setWordWrap(True)
         layout.addWidget(self.summary_label)
 
+        # What this disc is, not just what is on it. The three fields and
+        # the artwork are the whole of what gets written onto the MiniDisc
+        # and onto the label, so this is the last place to look at them
+        # before forty minutes of real time goes by.
+        form = QFormLayout()
+        self.artist_edit = QLineEdit()
+        self.album_edit = QLineEdit()
+        self.year_spin = QSpinBox()
+        self.year_spin.setRange(0, 2999)
+        self.year_spin.setSpecialValueText(" ")
+        form.addRow(self.tr("Artist"), self.artist_edit)
+        form.addRow(self.tr("Album"), self.album_edit)
+        form.addRow(self.tr("Year"), self.year_spin)
+
+        self.cover_label = CoverPreview()
+
+        header = QHBoxLayout()
+        header.addLayout(form, 1)
+        header.addWidget(self.cover_label)
+        layout.addLayout(header)
+
         self.tree = QTreeWidget()
-        self.tree.setHeaderLabels([self.tr("#"), self.tr("Title"), self.tr("Length")])
+        self.tree.setHeaderLabels([self.tr("#"), self.tr("Title"), self.tr("Artist"), self.tr("Length")])
         self.tree.setRootIsDecorated(False)
         layout.addWidget(self.tree)
+
+        hint = QLabel(
+            self.tr(
+                "Everything above and in the Title column can be edited, and is what gets written onto the "
+                "disc. Fill the Artist column in only on a compilation, where each track has its own."
+            )
+        )
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
 
         self.mark_check = QCheckBox(self.tr("Mark tracks through the adapter"))
         self.mark_check.setChecked(True)
@@ -171,10 +231,11 @@ class RecordDialog(QDialog):
             self.start_btn.setEnabled(False)
             return
 
-        for item in self._items:
-            QTreeWidgetItem(self.tree, [item.track_number, item.title, _mmss(item.length_seconds)])
-        self.tree.resizeColumnToContents(0)
-        self.tree.resizeColumnToContents(2)
+        # The seed for every field on this dialog. Given metadata wins where
+        # there is any (only Record Folder passes it -- see __init__), else
+        # the playlist speaks for itself.
+        self._seed = self._given_metadata or foobar.metadata_from_playlist(self._items)
+        self._fill_fields(self._seed)
 
         total = foobar.total_seconds(self._items)
         self.summary_label.setText(
@@ -183,7 +244,63 @@ class RecordDialog(QDialog):
                 "It will be recorded to the disc in this order, then titled from these names."
             ).format(playlist=self._playlist.title, count=len(self._items), total=_mmss(total))
         )
+        self._ensure_cover()
         self._warn_about_length(total)
+
+    def _fill_fields(self, metadata: ProjectMetadata) -> None:
+        self.artist_edit.setText(metadata.artist)
+        self.album_edit.setText(metadata.album)
+        self.year_spin.setValue(metadata.year or 0)
+        self.cover_label.set_cover(metadata.cover_art)
+        self.tree.clear()
+        for index, item in enumerate(self._items):
+            # display_title(), not title: an untagged file is recorded under
+            # its filename, so that is what this list has to show.
+            title = metadata.tracks[index].title if index < len(metadata.tracks) else item.display_title()
+            artist = metadata.tracks[index].artist if index < len(metadata.tracks) else item.artist
+            row = QTreeWidgetItem(
+                self.tree, [item.track_number, title, artist, _mmss(item.length_seconds)]
+            )
+            row.setFlags(row.flags() | Qt.ItemFlag.ItemIsEditable)
+        self.tree.resizeColumnToContents(0)
+        self.tree.resizeColumnToContents(3)
+
+    def _set_fields_editable(self, editable: bool) -> None:
+        """Frozen while the deck is running. What is on screen at the moment
+        recording starts is what will be written afterwards, so letting the
+        album be renamed halfway through would only make the two disagree."""
+        for widget in (self.artist_edit, self.album_edit, self.year_spin, self.tree, self.cover_label):
+            widget.setEnabled(editable)
+
+    def _ensure_cover(self) -> None:
+        """Finds the artwork now, before the recording, rather than after.
+
+        It used to be looked up once the album had finished playing, which
+        is the worst possible moment to discover the search matched the
+        wrong release: nothing could be done about it except retype the
+        album and try again. Here it is on screen while the user can still
+        correct the name, or click the picture and point at the right
+        sleeve."""
+        if self.cover_label.data:
+            return  # already came with the metadata (Record Folder does this)
+        if self._seed.is_compilation():
+            # A mixtape has no sleeve to look up, and looking one up anyway
+            # is worse than having none: a search for "Various Artists"
+            # returns an unrelated record's artwork. One is drawn from the
+            # track list instead.
+            self.cover_label.set_cover(mixtape_cover.render_cover(self._seed))
+            return
+        chosen = fetch_into(
+            self.cover_label, self.artist_edit.text(), self.album_edit.text(), len(self._items)
+        )
+        if chosen is not None and not self.year_spin.value() and chosen.year:
+            self.year_spin.setValue(chosen.year)
+        if not self.cover_label.data:
+            # Last resort: the sleeve the files themselves carry. Reachable
+            # here because %path% is in the playlist's column set, so this
+            # covers a plain foobar playlist as well as a loaded folder --
+            # see embedded_cover for why it ranks below the search.
+            self.cover_label.set_cover(embedded_cover.cover_from_files(i.path for i in self._items if i.path))
 
     def _warn_about_length(self, total: int) -> None:
         if total <= DISC_SP_SECONDS:
@@ -203,6 +320,7 @@ class RecordDialog(QDialog):
             return
         try:
             self._client.prepare_for_recording()
+            self._client.set_volume(RECORDING_VOLUME_DB)
             self._client.stop()
         except foobar.FoobarError as exc:
             self._fail(self.tr("foobar2000: {error}").format(error=exc))
@@ -217,6 +335,7 @@ class RecordDialog(QDialog):
         self._marked_index = -1
         self.start_btn.setEnabled(False)
         self.mark_check.setEnabled(False)
+        self._set_fields_editable(False)
         self.close_btn.setText(self.tr("Stop"))
         self.progress.setVisible(True)
         self.status_label.setVisible(True)
@@ -320,7 +439,9 @@ class RecordDialog(QDialog):
         elapsed = done + state.position
         total = max(1, foobar.total_seconds(self._items))
         self.progress.setValue(int(1000 * min(1.0, elapsed / total)))
-        title = self._items[state.item_index].title if 0 <= state.item_index < len(self._items) else ""
+        title = (
+            self._items[state.item_index].display_title() if 0 <= state.item_index < len(self._items) else ""
+        )
         self.status_label.setText(
             self.tr("Recording {index} of {count}: {title} -- {elapsed} of {total}").format(
                 index=state.item_index + 1,
@@ -355,36 +476,48 @@ class RecordDialog(QDialog):
         self._offer_titling()
 
     def _capture_metadata(self) -> None:
-        """Adopts the playlist as the project's metadata, and looks up cover
-        art for it.
+        """Reads the dialog back as the project's metadata.
 
-        The cover (and a year, if the files had no date tag) is a bonus on
-        top: a failure here leaves the metadata itself intact rather than
-        losing the whole capture, exactly as MetadataDialog treats its own
-        artwork fetch."""
-        metadata = foobar.metadata_from_playlist(self._items)
+        The widgets are the source, not the playlist, because the user has
+        been able to correct them since it was loaded -- and the artwork was
+        already settled at that point too (see _ensure_cover), so nothing
+        here goes near the network. That matters for more than speed: this
+        runs the instant an album finishes playing, and a lookup that hung
+        there would hold up the offer to write the titles."""
+        metadata = replace(
+            self._seed,
+            artist=self.artist_edit.text().strip(),
+            album=self.album_edit.text().strip(),
+            year=self.year_spin.value() or None,
+            cover_art=self.cover_label.data,
+            tracks=self._tracks_from_tree(),
+        )
         self.result_metadata = metadata
-        if not metadata.album and not metadata.artist:
-            return
 
-        self.status_label.setText(self.tr("Looking up cover art..."))
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            # Our own ranking, and never a picker: stopping a just-finished
-            # recording to ask about cover art would be worse than
-            # occasionally getting the wrong edition of the right album.
-            data, chosen = find_cover(metadata.artist, metadata.album, len(metadata.tracks))
-        except MetadataLookupError:
-            return
-        finally:
-            QApplication.restoreOverrideCursor()
+    def _tracks_from_tree(self) -> list[Track]:
+        """One Track per row, from the Title and Artist columns.
 
-        if chosen is not None and metadata.year is None:
-            metadata.year = chosen.year
-        if data is None or chosen is None:
-            return
-        metadata.cover_art = data
-        save_downloaded_cover(chosen.artist_name, chosen.collection_name, data)
+        The Artist column is read as well as the Title, and that is not
+        decoration: rebuilding tracks without it would drop every performer
+        on a compilation, which is the one thing that makes it a compilation
+        (see ProjectMetadata.is_compilation) -- the disc would silently stop
+        being a mixtape for having been looked at. The same mistake was
+        found and fixed in MetadataDialog once already.
+
+        Built one per *playlist item* rather than one per seed track: the
+        playlist is what is actually going onto the disc, so if the two ever
+        disagreed about how many tracks there are, it is the playlist that
+        is right."""
+        tracks = []
+        for index, item in enumerate(self._items):
+            row = self.tree.topLevelItem(index)
+            seed = self._seed.tracks[index] if index < len(self._seed.tracks) else None
+            title = row.text(1).strip() if row is not None else (seed.title if seed else item.display_title())
+            artist = row.text(2).strip() if row is not None else (seed.artist if seed else item.artist)
+            tracks.append(
+                Track(title=title, time_seconds=item.length_seconds or None, artist=artist)
+            )
+        return tracks
 
     def _offer_titling(self) -> None:
         answer = QMessageBox.question(
@@ -395,7 +528,9 @@ class RecordDialog(QDialog):
         )
         if answer != QMessageBox.StandardButton.Yes:
             return
-        metadata = foobar.metadata_from_playlist(self._items)
+        # Whatever _capture_metadata settled on, so an album name corrected
+        # before the recording is the one written onto the disc.
+        metadata = self.result_metadata or foobar.metadata_from_playlist(self._items)
         # A disc that was just recorded has no titles to erase, and erasing
         # is roughly half the total time.
         MDRemUploadDialog(metadata, self._port, self, clear_default=False).exec()

@@ -1,10 +1,11 @@
 import math
 
 import pytest
-from PySide6.QtCore import QBuffer, QByteArray, QIODevice
+from PySide6.QtCore import QBuffer, QByteArray, QIODevice, Qt
 from PySide6.QtGui import QColor, QImage
 from PySide6.QtPrintSupport import QPrinter
 
+from mdtools import printing
 from mdtools.canvas.scene import DesignScene
 from mdtools.io.png_export import render_scene_to_image
 from mdtools.printing import (
@@ -298,3 +299,83 @@ def test_print_placements_writes_a_real_pdf(qt_app, tmp_path):
 
     assert output_path.is_file()
     assert output_path.stat().st_size > 0
+
+
+# -- landscape, and a sheet per label ------------------------------------
+
+
+def test_turning_the_page_swaps_its_sides():
+    assert printing.oriented_page_size((210.0, 297.0), printing.LANDSCAPE) == (297.0, 210.0)
+    assert printing.oriented_page_size((210.0, 297.0), printing.PORTRAIT) == (210.0, 297.0)
+
+
+def test_a_cd_insert_only_fits_a_portrait_sheet_turned_sideways():
+    """242mm wide against A4's 200mm of printable width: upright it does
+    not go, which is what forced landscape to be offered at all."""
+    a4 = printing.PAGE_SIZES_MM["A4"]
+
+    portrait = printing.build_sheet_layout((242.0, 120.0), 1, a4, 5.0)
+    landscape = printing.build_sheet_layout(
+        (242.0, 120.0), 1, printing.oriented_page_size(a4, printing.LANDSCAPE), 5.0
+    )
+
+    assert portrait.rotated is True
+    assert landscape.rotated is False, "there is no reason to turn it when it fits as it is"
+
+
+def test_a_label_that_fits_upright_is_never_turned():
+    """Rotation stays a fallback here, exactly as in the two-label
+    layout."""
+    placed = printing.build_sheet_layout((118.0, 118.0), 2, printing.PAGE_SIZES_MM["A4"], 5.0)
+
+    assert placed.rotated is False
+    assert len(placed.positions) == 2
+
+
+def test_a_label_too_big_for_the_page_is_refused_rather_than_placed_off_it():
+    with pytest.raises(printing.PrintLayoutError):
+        printing.build_sheet_layout((400.0, 400.0), 1, printing.PAGE_SIZES_MM["A4"], 5.0)
+
+
+def test_how_many_of_one_label_a_sheet_holds():
+    a4 = printing.PAGE_SIZES_MM["A4"]
+
+    assert printing.max_copies_on_sheet((118.0, 118.0), a4, 5.0) == 2
+    assert printing.max_copies_on_sheet((242.0, 120.0), a4, 5.0) == 1
+    assert printing.max_copies_on_sheet((400.0, 400.0), a4, 5.0) == 0
+
+
+def test_printing_several_sheets_produces_several_pages(qt_app, tmp_path):
+    """The whole point of the separate-sheets mode, and not something to
+    take on trust: the PDF is read back and its pages counted."""
+    output = tmp_path / "two.pdf"
+    printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+    printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
+    printer.setOutputFileName(str(output))
+    printer.setFullPage(True)
+
+    image = QImage(10, 10, QImage.Format.Format_ARGB32)
+    image.fill(Qt.GlobalColor.red)
+    sheet = [printing.PrintPlacement(image=image, x_mm=5, y_mm=5, width_mm=50, height_mm=50)]
+
+    printing.print_sheets(printer, [sheet, sheet])
+
+    assert output.is_file()
+    assert output.read_bytes().count(b"/Type /Page\n") == 2 or output.read_bytes().count(b"/Type/Page") == 2
+
+
+def test_an_empty_sheet_is_skipped_rather_than_printed_blank(qt_app, tmp_path):
+    output = tmp_path / "one.pdf"
+    printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+    printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
+    printer.setOutputFileName(str(output))
+    printer.setFullPage(True)
+
+    image = QImage(10, 10, QImage.Format.Format_ARGB32)
+    image.fill(Qt.GlobalColor.red)
+    sheet = [printing.PrintPlacement(image=image, x_mm=5, y_mm=5, width_mm=50, height_mm=50)]
+
+    printing.print_sheets(printer, [sheet, []])
+
+    data = output.read_bytes()
+    assert data.count(b"/Type /Page\n") <= 1 and data.count(b"/Type/Page") <= 1

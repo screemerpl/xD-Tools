@@ -68,3 +68,63 @@ def test_nothing_to_choose_from_is_not_an_error():
 def test_a_completely_unrelated_result_scores_low():
     unrelated = _candidate("Some Other Band", "A Totally Different Record", 9)
     assert match_confidence(unrelated, ARTIST, TITLE, 11) < 0.35
+
+
+# --- when nothing is actually a match ---------------------------------
+#
+# The real failure this floor exists for: a folder of Falling In Reverse's
+# "Popular Monster" -- an album iTunes does not carry at all -- came back
+# with a one-track cover version of the title track by an unrelated artist,
+# and its sleeve was shown as though it belonged to the disc. These four are
+# what the live search actually returned, scores included.
+
+
+COVER_VERSIONS = [
+    _candidate("Alex Krotz", "Popular Monster - Single", 1, cid=10),
+    _candidate("Way of the Future", "Popular Monster - Single", 1, cid=11),
+    _candidate("TruthBound AKA Daqtrrican", "Popular Monster - Single", 1, cid=12),
+    _candidate("WetNLoud", "Popular Monster - Single", 1, cid=13),
+]
+
+
+def test_the_right_title_by_the_wrong_artist_is_not_a_match():
+    """A wrong edition of the right record is a nuisance; a wrong record is
+    a different album's artwork printed on this disc."""
+    assert best_match(COVER_VERSIONS, ARTIST, TITLE, 12) is None
+
+
+def test_the_right_title_and_the_right_track_count_are_still_not_enough():
+    """The blended score alone cannot carry this, which is worth pinning
+    because it looks as though it should: title (0.55) plus a track count
+    that happens to agree (0.15) reaches the floor exactly, with the artist
+    contributing nothing. So the artist is checked on its own terms too."""
+    title_only = _candidate("Somebody Else Entirely", TITLE, 11)
+
+    assert match_confidence(title_only, ARTIST, TITLE, 11) >= 0.70, "the blend alone lets it through"
+    assert best_match([title_only], ARTIST, TITLE, 11) is None
+
+
+def test_with_no_artist_to_compare_the_artist_check_does_not_apply():
+    """Somebody who only knows the album name gets the blended score's
+    answer -- there is nothing to judge the artist against."""
+    assert best_match([TRIBUTE], "", TITLE, 11) is TRIBUTE
+
+
+def test_a_real_match_is_comfortably_above_the_floor():
+    """The gap has to be wide enough that ordinary hits are never refused --
+    including one found without knowing the track count, which costs 0.15
+    of the total on its own."""
+    from mdtools.metadata_lookup import MIN_MATCH_CONFIDENCE
+
+    assert match_confidence(ALBUM, ARTIST, TITLE, 11) > MIN_MATCH_CONFIDENCE
+    assert match_confidence(ALBUM, ARTIST, TITLE, None) > MIN_MATCH_CONFIDENCE
+    assert match_confidence(DELUXE, ARTIST, TITLE, 15) > MIN_MATCH_CONFIDENCE
+    assert best_match([SINGLE, ALBUM], ARTIST, TITLE) is ALBUM
+
+
+def test_a_guest_credit_on_the_release_still_matches():
+    """Common enough to be worth pinning: the artist string is not always
+    the bare band name."""
+    featured = _candidate("Falling In Reverse & Jelly Roll", TITLE, 11)
+    assert best_match([featured], ARTIST, TITLE, 11) is featured
+

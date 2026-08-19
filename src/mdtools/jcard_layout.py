@@ -31,7 +31,7 @@ from mdtools.canvas.items import SCALE_ROLE, set_item_scale
 from mdtools.canvas.scene import DesignScene
 from mdtools.constants import mm_to_px
 from mdtools.palette import accent_colour, dominant_colour, readable_text_colour
-from mdtools.project import ProjectMetadata, numbered_track_lines, track_list_two_columns
+from mdtools.project import ProjectMetadata, numbered_track_lines, track_list_columns
 
 # Breathing room inside a panel, in millimetres. The back panel's text needs
 # more than the spine's, which has barely 8.3mm to work with.
@@ -57,6 +57,11 @@ FRONT_LOGO_HEIGHT_MM = 7.0
 MAX_POINT_SIZE = 20.0
 MIN_POINT_SIZE = 3.5
 POINT_STEP = 0.25
+
+# The height of a J-card's own back panel. Every other card's heading bands
+# are scaled against it (see place_back's heading_scale) rather than given a
+# second set of constants to drift from.
+JCARD_BACK_HEIGHT_MM = 58.85
 
 # Beyond this many tracks a single column gets too tall and thin to read, so
 # the list splits into the two side-by-side columns project.py already knows
@@ -133,6 +138,42 @@ def _fit_text(item: QGraphicsItem, area: QRectF, *, wrap: bool) -> None:
     item.setFont(font)
 
 
+def _fits(item: QGraphicsItem, area: QRectF, *, wrap: bool) -> bool:
+    if wrap:
+        item.setTextWidth(area.width())
+    bounds = item.boundingRect()
+    return bounds.width() <= area.width() and bounds.height() <= area.height()
+
+
+def _fit_together(items: list[QGraphicsItem], area: QRectF, *, wrap: bool = True) -> None:
+    """Shrinks several blocks to a *single* size, the largest at which they
+    all fit.
+
+    A track list split into two columns used to be fitted one column at a
+    time, so each got whichever size suited its own longest line -- and two
+    columns of the same list, read side by side, came out in visibly
+    different type. Reported directly, on both the J-card and the CD
+    insert, which share this function.
+
+    The search is the same walk down from MAX_POINT_SIZE as _fit_text, just
+    with the test being "all of them fit" rather than "this one does".
+    """
+    if not items:
+        return
+    font = items[0].font()
+    size = MAX_POINT_SIZE
+    while size > MIN_POINT_SIZE:
+        font.setPointSizeF(size)
+        for item in items:
+            item.setFont(font)
+        if all(_fits(item, area, wrap=wrap) for item in items):
+            return
+        size -= POINT_STEP
+    font.setPointSizeF(MIN_POINT_SIZE)
+    for item in items:
+        item.setFont(font)
+
+
 def _text(
     scene: DesignScene,
     text: str,
@@ -141,7 +182,10 @@ def _text(
     *,
     wrap: bool = True,
     bold: bool = False,
+    fit: bool = True,
 ) -> QGraphicsItem | None:
+    """`fit=False` leaves the size alone, for a caller that is going to fit
+    this block together with others (see _fit_together)."""
     if not text.strip():
         return None
     item = scene.add_text(text)
@@ -150,7 +194,8 @@ def _text(
         font = item.font()
         font.setBold(True)
         item.setFont(font)
-    _fit_text(item, area, wrap=wrap)
+    if fit:
+        _fit_text(item, area, wrap=wrap)
     return item
 
 
@@ -292,15 +337,23 @@ def place_spine(
 
     caption = spine_caption(metadata)
     text_height = max(inner.height() - logo_span - mm_to_px(SPINE_PADDING_MM), mm_to_px(10))
-    # Bold: at the size an 8.3mm spine allows, a regular weight is legible
-    # on screen and disappears once printed.
+    # Bold: at the size a spine allows, a regular weight is legible on
+    # screen and disappears once printed.
     item = _text(scene, caption, QRectF(0, 0, text_height, inner.width()), ink, wrap=False, bold=True)
     if item is not None:
         item.setTransformOriginPoint(item.boundingRect().center())
         # Clockwise, so the caption reads top-to-bottom with the case
         # standing upright -- the way a CD or MD spine conventionally does.
         item.setRotation(90)
-        _move_top_left_to(item, QPointF(inner.left(), inner.top()))
+        # Centred along the strip rather than pinned to its top. A short
+        # caption on a 118mm tray-card spine otherwise sat in the top
+        # two-thirds and left the rest looking empty -- reported directly.
+        # The logo is at the foot, so the space it takes is excluded before
+        # centring in what is left.
+        span = item.boundingRect().width()
+        available = inner.height() - logo_span
+        offset = max(0.0, (available - span) / 2)
+        _move_top_left_to(item, QPointF(inner.left(), inner.top() + offset))
         added.append(item)
     return added
 
@@ -309,99 +362,166 @@ def place_spine(
 
 
 def place_back(
-    scene: DesignScene, panel: QRectF, metadata: ProjectMetadata, background: str, accent: str
+    scene: DesignScene,
+    panel: QRectF,
+    metadata: ProjectMetadata,
+    background: str,
+    accent: str,
+    *,
+    turned: bool = True,
+    heading_scale: float = 1.0,
+    columns: int = 0,
+    track_columns: list[str] | None = None,
+    heading: bool = True,
+    track_fill: float = 1.0,
 ) -> list[QGraphicsItem]:
     """The back of the case: the cover's dominant colour, a heading, a rule
     in the accent colour, the numbered track list, and the running time.
 
-    Everything is turned a quarter turn, like the front -- the card goes
-    into the case that way round, so a track list left upright reads
-    sideways. Laid out here in *reading* coordinates (x along the 73mm
-    side), with _place_turned doing the conversion.
+    On a J-card everything is turned a quarter turn, like the front -- the
+    card goes into the case that way round, so a track list left upright
+    reads sideways. It is laid out here in *reading* coordinates (x along
+    the 73mm side), with _place_turned doing the conversion.
+
+    `turned=False` lays the same panel out upright, for a CD slim case
+    insert, which is read the way it is printed. Only the mapping from
+    reading coordinates to the panel changes: the heading, the rule, the
+    two-column threshold and the centring of the list in its leftover space
+    are the same job either way, and keeping them in one function is what
+    stops the two cards drifting apart.
+
+    `columns` forces how many side-by-side columns the track list is dealt
+    into; 0 means "decide from the track count" (one, or two past
+    TWO_COLUMN_THRESHOLD), which is what every caller wanted until a panel
+    turned up that is four times wider than it is deep -- see
+    tape_layout.build_jcard.
+
+    `track_columns` replaces the track list outright with text the caller
+    has already arranged into columns -- which is how a cassette's inlay
+    gets a SIDE A block and a SIDE B block instead of one run of twelve
+    tracks, without this function having to learn what a side is. The
+    column count then comes from the list itself.
+
+    `track_fill` is how much of the leftover space the track list is fitted
+    into -- 1.0 uses all of it, which is right for a panel the list has to
+    work to fit at all. A jewel case tray card is 138mm across and its list
+    filled every millimetre of it, which read as a poster rather than as a
+    sleeve; 0.7 there leaves the type at a size somebody would set by hand.
+    The block is still centred in the *whole* space, so the slack is shared
+    above and below rather than left at the bottom.
+
+    `heading=False` drops the artist/album block and its rule, leaving the
+    panel to the track list alone. For a cassette's tuck-in flap that is
+    the difference between a legible list and one at the smallest size that
+    prints: the panel is 24mm deep, the heading bands take a fifth of it,
+    and the album is already named twice over on the spine beside it.
+
+    `heading_scale` multiplies the heading, rule and footer bands, which
+    are millimetre constants chosen for a J-card's own narrow panel. A CD
+    slim case insert is twice as wide, and at 1.0 its heading came out
+    looking lost above a full-height track list -- so the caller says how
+    much bigger its panel is rather than this growing a second set of
+    constants.
 
     The heading and rule exist because a bare list of tracks on a flat
     colour looked unfinished -- they give the panel something to be
     anchored by, and use the accent that is otherwise only on the spine."""
     added: list[QGraphicsItem] = [_filled_rect(scene, panel, background)]
     ink = readable_text_colour(background)
-    width, height = reading_size(panel)
-    pad = mm_to_px(BACK_PADDING_MM)
+    width, height = reading_size(panel) if turned else (panel.width(), panel.height())
+    # The padding shrinks with the headings on a shallow panel, and only
+    # there (min(): a CD insert scales *up*, and a wider margin round a
+    # bigger panel is right). Left unscaled, 6mm of top and bottom margin
+    # is a quarter of a cassette flap gone before a track is printed.
+    pad = mm_to_px(BACK_PADDING_MM * min(1.0, heading_scale))
     content_width = width - 2 * pad
     cursor = pad
+
+    def put(item: QGraphicsItem, x: float, y: float) -> None:
+        if turned:
+            _place_turned(item, panel, x=x, y=y, clockwise=True)
+        else:
+            _move_top_left_to(item, QPointF(panel.left() + x, panel.top() + y))
 
     def place(item: QGraphicsItem | None, span_mm: float) -> None:
         nonlocal cursor
         if item is not None:
-            _place_turned(item, panel, x=pad, y=cursor, clockwise=True)
+            put(item, pad, cursor)
             added.append(item)
         cursor += mm_to_px(span_mm)
 
     artist = _text(
         scene,
-        metadata.artist.strip(),
-        QRectF(0, 0, content_width, mm_to_px(BACK_TITLE_MM)),
+        metadata.artist.strip() if heading else "",
+        QRectF(0, 0, content_width, mm_to_px(BACK_TITLE_MM * heading_scale)),
         accent,
         wrap=False,
         bold=True,
     )
-    place(artist, BACK_TITLE_MM if artist is not None else 0)
+    place(artist, BACK_TITLE_MM * heading_scale if artist is not None else 0)
 
     album = _text(
         scene,
-        metadata.album.strip(),
-        QRectF(0, 0, content_width, mm_to_px(BACK_SUBTITLE_MM)),
+        metadata.album.strip() if heading else "",
+        QRectF(0, 0, content_width, mm_to_px(BACK_SUBTITLE_MM * heading_scale)),
         ink,
         wrap=False,
     )
-    place(album, BACK_SUBTITLE_MM + BACK_GAP_MM if album is not None else 0)
+    place(album, (BACK_SUBTITLE_MM + BACK_GAP_MM) * heading_scale if album is not None else 0)
 
     if artist is not None or album is not None:
-        rule = _filled_rect(scene, QRectF(0, 0, content_width, mm_to_px(BACK_RULE_MM)), accent)
-        place(rule, BACK_RULE_MM + BACK_GAP_MM)
+        rule = _filled_rect(scene, QRectF(0, 0, content_width, mm_to_px(BACK_RULE_MM * heading_scale)), accent)
+        place(rule, (BACK_RULE_MM + BACK_GAP_MM) * heading_scale)
 
     footer_text = " · ".join(
         part for part in (str(metadata.year) if metadata.year else "", total_running_time(metadata)) if part
     )
-    footer_span = BACK_FOOTER_MM + BACK_GAP_MM if footer_text else 0.0
+    footer_span = (BACK_FOOTER_MM + BACK_GAP_MM) * heading_scale if footer_text else 0.0
     tracks_height = height - pad - cursor - mm_to_px(footer_span)
 
-    if metadata.tracks and tracks_height > mm_to_px(6):
+    listing = track_columns if track_columns is not None else None
+    # The list is fitted into a share of the space and then centred in all
+    # of it -- see track_fill.
+    fitted_height = tracks_height * max(0.05, min(1.0, track_fill))
+    if (listing or metadata.tracks) and tracks_height > mm_to_px(6):
         # The font search is capped, so a short album's list can end up much
         # shorter than the space it was given. Centring what it produced in
         # that space spreads the slack above and below instead of leaving
         # one dead band at the bottom.
-        if len(metadata.tracks) > TWO_COLUMN_THRESHOLD:
+        if listing is not None:
+            column_count = len(listing)
+        else:
+            column_count = columns or (2 if len(metadata.tracks) > TWO_COLUMN_THRESHOLD else 1)
+            listing = track_list_columns(metadata, column_count)
+        if column_count > 1:
             gap = mm_to_px(BACK_PADDING_MM)
-            column_width = (content_width - gap) / 2
-            columns = [
-                _text(scene, column, QRectF(0, 0, column_width, tracks_height), ink)
-                for column in track_list_two_columns(metadata)
-            ]
+            column_width = (content_width - gap * (column_count - 1)) / column_count
+            column_area = QRectF(0, 0, column_width, fitted_height)
+            columns = [_text(scene, column, column_area, ink, fit=False) for column in listing]
+            # One size across both, rather than one per column: they are
+            # read side by side, and fitting them separately made the
+            # halves of a single list differ visibly in type.
+            _fit_together([item for item in columns if item is not None], column_area)
             tallest = max((item.boundingRect().height() for item in columns if item is not None), default=0.0)
             top = cursor + max(0.0, (tracks_height - tallest) / 2)
             for index, item in enumerate(columns):
                 if item is not None:
-                    _place_turned(item, panel, x=pad + index * (column_width + gap), y=top, clockwise=True)
+                    put(item, pad + index * (column_width + gap), top)
                     added.append(item)
         else:
-            item = _text(
-                scene,
-                "\n".join(numbered_track_lines(metadata)),
-                QRectF(0, 0, content_width, tracks_height),
-                ink,
-            )
+            item = _text(scene, listing[0], QRectF(0, 0, content_width, fitted_height), ink)
             if item is not None:
                 top = cursor + max(0.0, (tracks_height - item.boundingRect().height()) / 2)
-                _place_turned(item, panel, x=pad, y=top, clockwise=True)
+                put(item, pad, top)
                 added.append(item)
         cursor += tracks_height
 
     if footer_text:
         footer = _text(
-            scene, footer_text, QRectF(0, 0, content_width, mm_to_px(BACK_FOOTER_MM)), accent, wrap=False
+            scene, footer_text, QRectF(0, 0, content_width, mm_to_px(BACK_FOOTER_MM * heading_scale)), accent, wrap=False
         )
         if footer is not None:
-            _place_turned(footer, panel, x=pad, y=height - pad - mm_to_px(BACK_FOOTER_MM), clockwise=True)
+            put(footer, pad, height - pad - mm_to_px(BACK_FOOTER_MM * heading_scale))
             added.append(footer)
     return added
 

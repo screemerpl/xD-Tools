@@ -88,6 +88,15 @@ class DesignView(QGraphicsView):
             | QPainter.RenderHint.TextAntialiasing
             | QPainter.RenderHint.SmoothPixmapTransform
         )
+        # The canvas represents physical, printed material -- "physical
+        # accuracy is load-bearing" per this project's own top-level rule
+        # -- so it stays a plain white workspace regardless of the app's
+        # own theme (see mdtools.theme's dark palette), the same way a page
+        # in a real design tool stays white even inside a dark UI chrome.
+        # Without this, the template outline (make_template_outline() sets
+        # NoBrush -- it's a line, not a filled shape) would show whatever
+        # the ambient palette happens to be behind it.
+        self.setBackgroundBrush(QBrush(QColor("white")))
         self.setDragMode(QGraphicsView.DragMode.RubberBandDrag)
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         # MinimalViewportUpdate (the default) only repaints the scene-tracked
@@ -458,13 +467,24 @@ class DesignView(QGraphicsView):
                 event.accept()
                 return
         # No handle grabbed -- let Qt's native item dragging happen (if the
-        # click landed on a movable item). Remember where every currently
+        # click landed on a movable item), then remember where every
         # selected item started so a completed native move can be pushed
-        # onto the undo stack in mouseReleaseEvent; harmless if nothing
-        # actually gets dragged (the before/after comparison there is a no-op).
+        # onto the undo stack in mouseReleaseEvent. Harmless if nothing
+        # actually gets dragged (the before/after comparison there is a
+        # no-op).
+        #
+        # **After super(), not before, and that is the whole point.** It is
+        # super() that selects the item under the cursor, so a snapshot
+        # taken first saw the *previous* selection -- empty when clicking
+        # straight onto an unselected item. Dragging something in one
+        # motion, which is how anyone actually moves a layer, therefore
+        # produced no undo entry at all: reported as "undo does not work
+        # when moving, maybe I move too fast". Speed had nothing to do with
+        # it. The positions are unchanged by selection, so reading them a
+        # moment later is the same snapshot, only of the right items.
+        super().mousePressEvent(event)
         scene = self.scene()
         self._pre_move_positions = {i: (i.x(), i.y()) for i in scene.selectedItems()} if scene else {}
-        super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event) -> None:
         if self._drag_kind is not None:

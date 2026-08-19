@@ -375,3 +375,43 @@ def test_paste_across_pages_works(qt_app):
 
     assert len(win._current_scene().print_items()) == 1
     assert len(win.project.pages[PAGE_DISC].print_items()) == disc_baseline + 1
+
+
+def test_dragging_an_unselected_layer_is_undoable(qt_app):
+    """Reported as "undo does not work when moving, maybe I move too fast".
+    Speed had nothing to do with it: the pre-move snapshot was taken
+    *before* super().mousePressEvent(), and it is that call which selects
+    the item under the cursor. Clicking straight onto an unselected layer
+    and dragging in one motion -- how anyone actually moves something --
+    therefore snapshotted an empty selection and pushed nothing."""
+    from PySide6.QtCore import QPoint, Qt
+    from PySide6.QtGui import QUndoStack
+    from PySide6.QtTest import QTest
+
+    from mdtools.canvas.scene import DesignScene
+    from mdtools.canvas.view import DesignView
+    from mdtools.templates.models import DiscTemplate
+
+    scene = DesignScene(DiscTemplate(name="t", width_mm=37.0, height_mm=52.0))
+    item = scene.add_rectangle()
+    item.setPos(30, 30)
+    view = DesignView()
+    view.setScene(scene)
+    view.undo_stack = QUndoStack()
+    view.resize(600, 600)
+    view.show()
+    view.centerOn(item)
+    assert not item.isSelected(), "the point of this test is that it starts unselected"
+
+    start = view.mapFromScene(item.sceneBoundingRect().center())
+    end = QPoint(start.x() + 60, start.y() + 40)
+    QTest.mousePress(view.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
+    QTest.mouseMove(view.viewport(), end)
+    QTest.mouseMove(view.viewport(), QPoint(end.x() + 1, end.y() + 1))
+    QTest.mouseRelease(view.viewport(), Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, end)
+
+    assert (round(item.x()), round(item.y())) != (30, 30), "the drag did not move anything"
+    assert view.undo_stack.count() == 1
+
+    view.undo_stack.undo()
+    assert (round(item.x()), round(item.y())) == (30, 30)
