@@ -775,6 +775,24 @@ def _capture_cd(out: Path, code: str, metadata) -> None:
 
     save(window, out / "cd-insert.png", settle_ms=400, before_grab=show_insert)
 
+    # The optional third page, added the way the manual tells the reader to
+    # add it -- and then laid out, since an empty tray card is a picture of
+    # a rectangle.
+    from mdtools.canvas.scene import DesignScene
+    from mdtools.project import PAGE_BACK
+
+    tray = next(t for t in templates["cover"] if t.name.startswith("CD Jewel Case Back"))
+    window.project.pages[PAGE_BACK] = DesignScene(tray)
+    window._refresh_page_combo()
+    window._auto_layout_cd_case_back(metadata)
+
+    def show_back() -> None:
+        window.page_combo.setCurrentIndex(window.page_combo.findData(PAGE_BACK))
+        settle(200)
+        window.view.fit_to_window()
+
+    save(window, out / "cd-back.png", settle_ms=400, before_grab=show_back)
+
     def separate_sheets(dialog) -> None:
         dialog.orientation_combo.setCurrentIndex(1)
         dialog.separate_sheets_check.setChecked(True)

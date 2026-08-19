@@ -213,6 +213,15 @@ BOOK = [
             {"p": "**Narzędzia > Zapisz jako szablon...** zapisuje kształt bieżącej strony *razem ze "
                   "wszystkim, co na niej leży*, jako nowy szablon — układ, który ci się podoba, może być "
                   "punktem wyjścia dla następnej płyty."},
+            {"h2": "Dodawanie i usuwanie stron"},
+            {"p": "Projekt zaczyna się od dwóch stron — etykiety płyty i okładki — a projekt CD może mieć "
+                  "trzecią: **tył pudełka**, czyli tackę, która siedzi za płytą, z zadrukowanym paskiem "
+                  "wzdłuż każdego boku pudełka. Proponowana jest przy zakładaniu projektu (wiersz **Tył "
+                  "pudełka**, który zaczyna od *(brak)*), a później można ją dołożyć lub zdjąć przez "
+                  "**Szablony > Dodaj stronę...** i **Usuń tę stronę**."},
+            {"note": "Etykieta płyty i okładka są częścią każdego projektu i nie da się ich usunąć. Zdjąć "
+                     "można tylko strony opcjonalne, a usunięcie kasuje wszystko, co na nich jest — "
+                     "dlatego program pyta wcześniej i zeruje potem historię cofania."},
             {"h2": "Zmiana szablonu później"},
             {"p": "**Szablony > Zmień szablon tej strony...** przełącza bieżącą stronę na inny szablon."},
             {"warn": "To **czyści stronę**: znikają wszystkie warstwy, a historia cofania jest zerowana. "
@@ -299,6 +308,15 @@ BOOK = [
                   "więc tył wypada odwrotnie."},
             {"note": "Wszystko, co powstaje, to zwykłe warstwy. Przesuwaj je, zmieniaj styl, usuwaj — to "
                      "pierwszy szkic, a nie gotowy projekt."},
+            {"h2": "Tył pudełka, jeśli jest"},
+            {"p": "Projekt CD z tyłem pudełka dostaje i jego układ: nazwa albumu i wykonawcy biegnie "
+                  "wzdłuż **obu** bocznych pasków — to, która strona pudełka jest widoczna, zależy od "
+                  "tego, jak stoi na półce — a między nimi ląduje spis utworów w kolorach okładki."},
+            {"fig": ("cd-back", "Tacka: zadrukowany pasek wzdłuż każdego boku pudełka i spis utworów na "
+                                "panelu, który siedzi za płytą.")},
+            {"note": "W odróżnieniu od dwóch pozostałych stron ta zachowuje szablon, który jej nadałeś. "
+                     "Istnieje tylko dlatego, że sam ją dodałeś i wybrałeś jej kształt, a układ nie ma "
+                     "prawa tego cofać."},
             {"h2": "Przycinaj warstwy i Spłaszcz warstwy"},
             {"p": "**Przycinaj warstwy** dociąga wszystko do obszaru drukowalnego: warstwy leżące "
                   "całkowicie poza nim znikają, obrazy wystające poza krawędź są do niej przycinane. "

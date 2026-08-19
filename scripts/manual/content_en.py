@@ -211,6 +211,15 @@ BOOK = [
             {"p": "**Tools > Save as Template...** captures the current page's shape *and everything on "
                   "it* as a new template, so a layout you like can be the starting point for the next "
                   "disc."},
+            {"h2": "Adding and removing pages"},
+            {"p": "A project starts with two pages -- the disc label and the cover -- and a CD project "
+                  "can have a third: the **case back**, the tray card that sits behind the disc, with a "
+                  "printed strip down each side of the case. It is offered when the project is created "
+                  "(the **Case back** row, which starts at *(none)*), and can be added or dropped later "
+                  "from **Templates > Add Page...** and **Remove This Page**."},
+            {"note": "The disc label and the cover are part of every project and cannot be removed. Only "
+                     "the optional pages can, and removing one deletes everything on it -- so it asks "
+                     "first, and resets the undo history afterwards."},
             {"h2": "Changing a template later"},
             {"p": "**Templates > Change Template for This Page...** switches the page you are on to a "
                   "different one."},
@@ -302,6 +311,15 @@ BOOK = [
                   "around the case, so the back ends up the other way up."},
             {"note": "Everything it produces is ordinary layers. Move them, restyle them, delete them - "
                      "it is a first draft, not a finished design."},
+            {"h2": "The case back, if there is one"},
+            {"p": "A CD project with a case back gets that laid out too: the album and artist run down "
+                  "**both** side strips -- which side of a case is visible depends on how it was shelved "
+                  "-- with the track list on the panel between them, in the cover's own colours."},
+            {"fig": ("cd-back", "The tray card: a printed strip down each side of the case, the track "
+                                "list on the panel that sits behind the disc.")},
+            {"note": "Unlike the other two pages, this one keeps whatever template you gave it. It only "
+                     "exists because you added it and chose its shape, and the layout has no business "
+                     "undoing that."},
             {"h2": "Clip Layers and Bake Layers"},
             {"p": "**Clip Layers** trims everything to the printable area: layers entirely outside it are "
                   "removed, images that hang over the edge are cut back to it. The automatic disc layout "
