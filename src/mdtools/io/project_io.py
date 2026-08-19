@@ -31,7 +31,6 @@ from mdtools.canvas.items import (
 from mdtools.canvas.scene import DesignScene
 from mdtools.project import (
     MEDIUM_MD,
-    PAGE_COVER,
     PAGE_DISC,
     GrayscaleAdjustment,
     Project,
@@ -279,9 +278,12 @@ def load_project(path: str | Path) -> Project:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     metadata = _metadata_from_dict(data.get("metadata", {}))
     pages = {key: _scene_from_dict(page_data) for key, page_data in data["pages"].items()}
-    for key in (PAGE_DISC, PAGE_COVER):
-        if key not in pages:
-            raise ValueError(f"Project file is missing its '{key}' page")
+    # Whatever pages the file holds, in the order it holds them -- not a
+    # fixed pair. A file *without* a disc page is still a broken file, but
+    # one with a third page is a project from a later version, not an
+    # error, and the app can show what it does understand.
+    if PAGE_DISC not in pages:
+        raise ValueError(f"Project file is missing its '{PAGE_DISC}' page")
     default_text_style = _text_style_from_dict(data.get("default_text_style", {}))
     grayscale_adjustment = _grayscale_adjustment_from_dict(data.get("grayscale_adjustment", {}))
     return Project(

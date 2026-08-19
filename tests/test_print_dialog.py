@@ -76,16 +76,16 @@ def test_label_items_report_their_true_physical_mm_size(qt_app):
         dialog._dpi,
     )
 
-    assert (dialog._disc_items[0].width_mm, dialog._disc_items[0].height_mm) == expected_disc
-    assert (dialog._cover_items[0].width_mm, dialog._cover_items[0].height_mm) == expected_cover
+    assert (dialog.items_for(PAGE_DISC)[0].width_mm, dialog.items_for(PAGE_DISC)[0].height_mm) == expected_disc
+    assert (dialog.items_for(PAGE_COVER)[0].width_mm, dialog.items_for(PAGE_COVER)[0].height_mm) == expected_cover
 
 
 def test_starts_with_exactly_one_copy_of_each_label(qt_app):
     dialog = PrintDialog(_project())
 
     assert dialog.copies_spin.value() == 1
-    assert len(dialog._disc_items) == 1
-    assert len(dialog._cover_items) == 1
+    assert len(dialog.items_for(PAGE_DISC)) == 1
+    assert len(dialog.items_for(PAGE_COVER)) == 1
 
 
 def test_increasing_copies_adds_that_many_of_each_label(qt_app):
@@ -93,10 +93,10 @@ def test_increasing_copies_adds_that_many_of_each_label(qt_app):
 
     dialog.copies_spin.setValue(3)
 
-    assert len(dialog._disc_items) == 3
-    assert len(dialog._cover_items) == 3
+    assert len(dialog.items_for(PAGE_DISC)) == 3
+    assert len(dialog.items_for(PAGE_COVER)) == 3
     # each copy must land at its own, distinct position -- not stacked
-    disc_positions = {(item.pos().x(), item.pos().y()) for item in dialog._disc_items}
+    disc_positions = {(item.pos().x(), item.pos().y()) for item in dialog.items_for(PAGE_DISC)}
     assert len(disc_positions) == 3
 
 
@@ -112,20 +112,21 @@ def test_rebuild_items_seeds_each_items_rotation_from_the_layout(qt_app):
     conservative -- see printing.py's _ROTATION_COMBOS ordering) decision
     logic."""
     dialog = PrintDialog(_project())
-    original_width, original_height = dialog._disc_raw.width(), dialog._disc_raw.height()
+    original_width, original_height = dialog.label_for(PAGE_DISC).raw.width(), dialog.label_for(PAGE_DISC).raw.height()
 
-    dialog._rebuild_items(PlacedCopies([(10.0, 10.0)], rotated=True), PlacedCopies([(10.0, 80.0)], rotated=False))
+    # one PlacedCopies per label, in the project's own page order
+    dialog._rebuild_items([PlacedCopies([(10.0, 10.0)], rotated=True), PlacedCopies([(10.0, 80.0)], rotated=False)])
 
-    disc_item = dialog._disc_items[0]
+    disc_item = dialog.items_for(PAGE_DISC)[0]
     assert disc_item.rotated is True
     assert disc_item.oriented_raw_image().width() == original_height
     assert disc_item.oriented_raw_image().height() == original_width
-    assert disc_item.width_mm == dialog._disc_size_mm[1]
-    assert disc_item.height_mm == dialog._disc_size_mm[0]
+    assert disc_item.width_mm == dialog.label_for(PAGE_DISC).size_mm[1]
+    assert disc_item.height_mm == dialog.label_for(PAGE_DISC).size_mm[0]
 
-    cover_item = dialog._cover_items[0]
+    cover_item = dialog.items_for(PAGE_COVER)[0]
     assert cover_item.rotated is False
-    assert cover_item.oriented_raw_image() is dialog._cover_raw  # not rotated -- left untouched
+    assert cover_item.oriented_raw_image() is dialog.label_for(PAGE_COVER).raw  # not rotated -- left untouched
 
 
 def test_too_many_copies_places_the_overflow_in_the_corner_with_a_warning(qt_app, monkeypatch):
@@ -144,19 +145,19 @@ def test_too_many_copies_places_the_overflow_in_the_corner_with_a_warning(qt_app
     message = warnings[0][2]
     assert message == "Only 4 of 7 copies could be arranged automatically. The rest have been placed in the top-left corner -- drag them into place, and right-click a label to rotate it 90 degrees."
     assert dialog.copies_spin.value() == 7  # honored, not reverted
-    assert len(dialog._disc_items) == 7
-    assert len(dialog._cover_items) == 7
+    assert len(dialog.items_for(PAGE_DISC)) == 7
+    assert len(dialog.items_for(PAGE_COVER)) == 7
 
     corner_px = (dialog.MARGIN_MM * dialog.PREVIEW_PX_PER_MM, dialog.MARGIN_MM * dialog.PREVIEW_PX_PER_MM)
-    fitting_positions = {(item.pos().x(), item.pos().y()) for item in dialog._disc_items[:4]}
-    overflow_positions = {(item.pos().x(), item.pos().y()) for item in dialog._disc_items[4:]}
+    fitting_positions = {(item.pos().x(), item.pos().y()) for item in dialog.items_for(PAGE_DISC)[:4]}
+    overflow_positions = {(item.pos().x(), item.pos().y()) for item in dialog.items_for(PAGE_DISC)[4:]}
     assert len(fitting_positions) == 4  # the automatically-fitting copies each got their own real grid cell
     assert overflow_positions == {corner_px}  # every overflow copy stacked at the same corner
 
 
 def test_right_clicking_a_label_rotates_it_and_refreshes_its_display(qt_app):
     dialog = PrintDialog(_project())
-    item = dialog._disc_items[0]
+    item = dialog.items_for(PAGE_DISC)[0]
     assert item.rotated is False
     original_width_mm, original_height_mm = item.width_mm, item.height_mm
     original_raw_width, original_raw_height = item.raw_image.width(), item.raw_image.height()
@@ -183,10 +184,10 @@ def test_right_clicking_one_copy_does_not_rotate_its_siblings(qt_app):
         def accept(self):
             pass
 
-    dialog._disc_items[0].contextMenuEvent(_FakeContextMenuEvent())
+    dialog.items_for(PAGE_DISC)[0].contextMenuEvent(_FakeContextMenuEvent())
 
-    assert dialog._disc_items[0].rotated is True
-    assert dialog._disc_items[1].rotated is False
+    assert dialog.items_for(PAGE_DISC)[0].rotated is True
+    assert dialog.items_for(PAGE_DISC)[1].rotated is False
 
 
 def test_changing_page_size_relayouts_the_existing_copies(qt_app):
@@ -195,8 +196,8 @@ def test_changing_page_size_relayouts_the_existing_copies(qt_app):
 
     dialog.page_size_combo.setCurrentText("Letter")
 
-    assert len(dialog._disc_items) == 2
-    assert len(dialog._cover_items) == 2
+    assert len(dialog.items_for(PAGE_DISC)) == 2
+    assert len(dialog.items_for(PAGE_COVER)) == 2
 
 
 def test_brightness_contrast_rows_hidden_until_grayscale_is_checked(qt_app):
@@ -213,11 +214,11 @@ def test_brightness_contrast_rows_hidden_until_grayscale_is_checked(qt_app):
 
 def test_checking_grayscale_desaturates_the_preview_pixmaps(qt_app):
     dialog = PrintDialog(_project())
-    before = dialog._disc_items[0].display_image
+    before = dialog.items_for(PAGE_DISC)[0].display_image
 
     dialog.grayscale_check.setChecked(True)
 
-    after = dialog._disc_items[0].display_image
+    after = dialog.items_for(PAGE_DISC)[0].display_image
     assert after is not before
     pixel = after.pixelColor(after.width() // 2, after.height() // 2)
     assert pixel.red() == pixel.green() == pixel.blue()
@@ -225,10 +226,10 @@ def test_checking_grayscale_desaturates_the_preview_pixmaps(qt_app):
 
 def test_dragging_a_label_changes_its_print_position(qt_app):
     dialog = PrintDialog(_project())
-    dialog._disc_items[0].setPos(50 * dialog.PREVIEW_PX_PER_MM, 20 * dialog.PREVIEW_PX_PER_MM)
+    dialog.items_for(PAGE_DISC)[0].setPos(50 * dialog.PREVIEW_PX_PER_MM, 20 * dialog.PREVIEW_PX_PER_MM)
 
     placements = dialog._build_placements()
-    disc_placement = next(p for p in placements if p.width_mm == dialog._disc_items[0].width_mm)
+    disc_placement = next(p for p in placements if p.width_mm == dialog.items_for(PAGE_DISC)[0].width_mm)
 
     assert abs(disc_placement.x_mm - 50.0) < 1e-6
     assert abs(disc_placement.y_mm - 20.0) < 1e-6
@@ -483,8 +484,8 @@ def test_separate_sheets_puts_each_label_on_its_own_page(qt_app):
 
     sheets = dialog.sheets()
     assert len(sheets) == 2
-    assert all(item in dialog._disc_items for item in sheets[0])
-    assert all(item in dialog._cover_items for item in sheets[1])
+    assert all(item in dialog.items_for(PAGE_DISC) for item in sheets[0])
+    assert all(item in dialog.items_for(PAGE_COVER) for item in sheets[1])
 
 
 def test_the_preview_shows_one_sheet_at_a_time(qt_app):
@@ -493,13 +494,13 @@ def test_the_preview_shows_one_sheet_at_a_time(qt_app):
     dialog = PrintDialog(_project())
     dialog.separate_sheets_check.setChecked(True)
 
-    assert all(item.isVisible() for item in dialog._disc_items)
-    assert not any(item.isVisible() for item in dialog._cover_items)
+    assert all(item.isVisible() for item in dialog.items_for(PAGE_DISC))
+    assert not any(item.isVisible() for item in dialog.items_for(PAGE_COVER))
 
     dialog.sheet_combo.setCurrentIndex(1)
 
-    assert not any(item.isVisible() for item in dialog._disc_items)
-    assert all(item.isVisible() for item in dialog._cover_items)
+    assert not any(item.isVisible() for item in dialog.items_for(PAGE_DISC))
+    assert all(item.isVisible() for item in dialog.items_for(PAGE_COVER))
 
 
 def test_turning_separate_sheets_off_again_shows_everything(qt_app):

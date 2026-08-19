@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QMenu,
     QMessageBox,
     QPushButton,
     QVBoxLayout,
@@ -33,22 +34,46 @@ class TemplateManagerDialog(QDialog):
 
         self.templates = registry.load_templates()
 
-        root = QHBoxLayout(self)
+        # No parent here, deliberately: passing `self` installs this as the
+        # dialog's layout on the spot, and the setLayout(outer) at the end
+        # is then refused by Qt as "already has a layout" -- which is
+        # exactly what happened, leaving the Save/Cancel row off the screen
+        # entirely. The window could only be closed with the X, so every
+        # template edit was silently discarded. Reported as "where is the
+        # save button?".
+        root = QHBoxLayout()
 
         left = QVBoxLayout()
+
+        # A filter, not a property: which medium's templates to *look* at.
+        # Each template carries its own medium, edited on the right.
+        filter_row = QHBoxLayout()
+        filter_row.addWidget(QLabel(self.tr("Medium")))
+        self.medium_filter = QComboBox()
+        self.medium_filter.addItem(self.tr("All"), None)
+        self.medium_filter.addItem(self.tr("MiniDisc"), MEDIUM_MD)
+        self.medium_filter.addItem(self.tr("CD-R"), MEDIUM_CD)
+        self.medium_filter.currentIndexChanged.connect(lambda _index: self._refresh_list())
+        filter_row.addWidget(self.medium_filter, 1)
+        left.addLayout(filter_row)
+
         self.list_widget = QListWidget()
         self.list_widget.currentRowChanged.connect(self._on_selection_changed)
         left.addWidget(self.list_widget)
 
         btn_row = QHBoxLayout()
-        add_disc_btn = QPushButton(self.tr("+ Disc"))
-        add_disc_btn.clicked.connect(self._add_disc)
-        add_cover_btn = QPushButton(self.tr("+ Cover"))
-        add_cover_btn.clicked.connect(self._add_cover)
+        # One button with a menu, rather than one button per kind: a page
+        # kind is data now (see project.PAGE_KINDS), and a row of buttons
+        # named after the two that exist today is exactly the shape this
+        # refactor set out to remove.
+        self.add_btn = QPushButton(self.tr("Add..."))
+        add_menu = QMenu(self.add_btn)
+        for kind, label in (("disc", self.tr("Disc label")), ("cover", self.tr("Cover or insert"))):
+            add_menu.addAction(label, lambda checked=False, k=kind: self._add_template(k))
+        self.add_btn.setMenu(add_menu)
+        btn_row.addWidget(self.add_btn)
         self.del_btn = QPushButton(self.tr("Delete"))
         self.del_btn.clicked.connect(self._delete_selected)
-        btn_row.addWidget(add_disc_btn)
-        btn_row.addWidget(add_cover_btn)
         btn_row.addWidget(self.del_btn)
         left.addLayout(btn_row)
         root.addLayout(left, 1)
@@ -58,7 +83,14 @@ class TemplateManagerDialog(QDialog):
         self.editor_layout.addWidget(QLabel(self.tr("Select a template to edit.")))
         root.addWidget(self.editor_container, 2)
 
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        # "Save" rather than "OK": every edit here goes straight into the
+        # template object as it is typed, and nothing is written to disk
+        # until this is pressed -- which was invisible when the button was
+        # called OK ("where is the save button?", asked directly).
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
+        buttons.button(QDialogButtonBox.StandardButton.Save).setToolTip(
+            self.tr("Writes every change in this window to your template file.")
+        )
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
 
@@ -72,30 +104,48 @@ class TemplateManagerDialog(QDialog):
     def _builtin_suffix(self, builtin: bool) -> str:
         return self.tr(" [built-in]") if builtin else ""
 
-    def _refresh_list(self, select_index: int | None = None) -> None:
+    def _refresh_list(self, select_index: int | None = None, select_template=None) -> None:
+        """Fills the list, honouring the medium filter.
+
+        `select_template` selects by identity rather than by row, because a
+        filtered list has no stable relationship between a template's
+        position in `self.templates` and its row here -- which is what made
+        the old "the new disc's row is its index within the disc list"
+        arithmetic quietly wrong the moment anything filtered the view.
+        """
+        wanted = self.medium_filter.currentData()
         self.list_widget.blockSignals(True)
         self.list_widget.clear()
-        for t in self.templates["disc"]:
-            item = QListWidgetItem(self.tr("Disc: {name}").format(name=t.name) + self._builtin_suffix(t.builtin))
-            item.setData(1, ("disc", t))
-            self.list_widget.addItem(item)
-        for t in self.templates["cover"]:
-            item = QListWidgetItem(self.tr("Cover: {name}").format(name=t.name) + self._builtin_suffix(t.builtin))
-            item.setData(1, ("cover", t))
-            self.list_widget.addItem(item)
+        for kind, label in (("disc", self.tr("Disc: {name}")), ("cover", self.tr("Cover: {name}"))):
+            for template in self.templates[kind]:
+                if wanted is not None and getattr(template, "medium", MEDIUM_MD) != wanted:
+                    continue
+                item = QListWidgetItem(
+                    label.format(name=template.name) + self._builtin_suffix(template.builtin)
+                )
+                item.setData(1, (kind, template))
+                self.list_widget.addItem(item)
         self.list_widget.blockSignals(False)
+
+        if select_template is not None:
+            for row in range(self.list_widget.count()):
+                if self.list_widget.item(row).data(1)[1] is select_template:
+                    self.list_widget.setCurrentRow(row)
+                    return
         if select_index is not None and 0 <= select_index < self.list_widget.count():
             self.list_widget.setCurrentRow(select_index)
 
-    def _add_disc(self) -> None:
-        self.templates["disc"].append(DiscTemplate(name=self.tr("New Disc"), width_mm=37.0, height_mm=52.0))
-        # discs are listed before covers, so the new disc's row is its index within the disc list
-        self._refresh_list(select_index=len(self.templates["disc"]) - 1)
-
-    def _add_cover(self) -> None:
-        self.templates["cover"].append(CoverTemplate(name=self.tr("New Cover"), width_mm=100.0, height_mm=60.0))
-        # covers are listed after all discs, so the new cover's row comes after the full disc list
-        self._refresh_list(select_index=len(self.templates["disc"]) + len(self.templates["cover"]) - 1)
+    def _add_template(self, kind: str) -> None:
+        """A new template of `kind`, taking the medium currently filtered
+        for -- which is almost always the one being worked on, and is one
+        less thing to set by hand."""
+        medium = self.medium_filter.currentData() or MEDIUM_MD
+        if kind == "disc":
+            template = DiscTemplate(name=self.tr("New Disc"), width_mm=37.0, height_mm=52.0, medium=medium)
+        else:
+            template = CoverTemplate(name=self.tr("New Cover"), width_mm=100.0, height_mm=60.0, medium=medium)
+        self.templates[kind].append(template)
+        self._refresh_list(select_template=template)
 
     def _delete_selected(self) -> None:
         row = self.list_widget.currentRow()

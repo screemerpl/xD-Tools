@@ -43,7 +43,7 @@ from mdtools.panels.erase_dialog import EraseDiscDialog
 from mdtools.panels.experimental_settings_dialog import ExperimentalSettingsDialog
 from mdtools import foobar
 from mdtools.audio_folder import album_from_folder
-from mdtools.cd_layout import CdLayoutError, build_disc_label, build_insert
+from mdtools.cd_layout import CdLayoutError, build_case_back, build_disc_label, build_insert
 from mdtools.panels.burn_dialog import BurnDialog
 from mdtools.panels.folder_record_dialog import FolderRecordDialog
 from mdtools.panels import icons
@@ -64,8 +64,12 @@ from mdtools.panels.tool_panel import ToolPanel
 from mdtools.project import (
     MEDIUM_CD,
     MEDIUM_MD,
+    PAGE_BACK,
     PAGE_COVER,
     PAGE_DISC,
+    PAGE_ORDER,
+    page_template_kind,
+    page_title,
     GrayscaleAdjustment,
     Project,
     ProjectMetadata,
@@ -157,12 +161,10 @@ class MainWindow(QMainWindow):
         toolbar = QToolBar(self.tr("Page"), self)
         toolbar.addWidget(QLabel(self.tr("Editing:")))
         self.page_combo = QComboBox()
-        self.page_combo.addItem(self.tr("Disc Label"), PAGE_DISC)
-        self.page_combo.addItem(self.tr("Cover / J-Card"), PAGE_COVER)
-        # Relabelled per medium below -- a CD project's second page is a
-        # case insert, and calling it a J-card names a MiniDisc part it
-        # does not have. NewDesignDialog already makes the same
-        # distinction for its own template picker.
+        # Filled from whatever pages the open project actually has -- see
+        # _refresh_page_combo(). It used to be these two entries, written
+        # in here once and relabelled in place; a project with a third page
+        # had nowhere to appear.
         self.page_combo.currentIndexChanged.connect(self._on_page_combo_changed)
         toolbar.addWidget(self.page_combo)
         self.addToolBar(toolbar)
@@ -373,6 +375,9 @@ class MainWindow(QMainWindow):
         templates_menu = self.menuBar().addMenu(self.tr("&Templates"))
         templates_menu.addAction(self.tr("Manage Templates..."), self._manage_templates)
         templates_menu.addAction(self.tr("Change Template for This Page..."), self._change_page_template)
+        templates_menu.addSeparator()
+        templates_menu.addAction(self.tr("Add Page..."), self._add_page)
+        templates_menu.addAction(self.tr("Remove This Page"), self._remove_page)
 
         view_menu = self.menuBar().addMenu(self.tr("&View"))
         view_menu.addAction(self.tr("Zoom In"), self.view.zoom_in).setShortcut(QKeySequence.StandardKey.ZoomIn)
@@ -704,6 +709,7 @@ class MainWindow(QMainWindow):
                 return False
             disc_template = dialog.selected_disc_template
             cover_template = dialog.selected_cover_template
+            back_template = dialog.selected_back_template
             medium = dialog.selected_medium
             if disc_template is None or cover_template is None:
                 return False
@@ -723,27 +729,31 @@ class MainWindow(QMainWindow):
                 return False
             disc_template = discs[0]
             cover_template = covers[0]
+            back_template = None
 
-        disc_scene = DesignScene(disc_template)
-        self._populate_new_scene(disc_scene, disc_template, PAGE_DISC)
-
-        cover_scene = DesignScene(cover_template)
-        self._populate_new_scene(cover_scene, cover_template, PAGE_COVER)
+        pages = {}
+        for page, template in (
+            (PAGE_DISC, disc_template),
+            (PAGE_COVER, cover_template),
+            (PAGE_BACK, back_template),
+        ):
+            if template is None:
+                continue  # an optional page nobody asked for
+            scene = DesignScene(template)
+            self._populate_new_scene(scene, template, page)
+            pages[page] = scene
 
         self.current_project_path = None
-        self.project = Project(
-            metadata=ProjectMetadata(),
-            pages={PAGE_DISC: disc_scene, PAGE_COVER: cover_scene},
-            medium=medium,
-        )
+        self.project = Project(metadata=ProjectMetadata(), pages=pages, medium=medium)
         self._reset_undo_stack()
         self.properties_panel.set_default_text_style(self.project.default_text_style)
         self._sync_grayscale_controls()
         # A new project can be for the other medium than the last one, and
-        # the Recording menu follows the medium.
+        # both the Recording menu and the page names follow the medium.
         self._sync_mdrem_actions()
-        self.page_combo.setCurrentIndex(0)
-        self._show_page(PAGE_DISC)
+        self.current_page = self.project.ordered_pages()[0]
+        self._refresh_page_combo()
+        self._show_page(self.current_page)
         # Building the pages above ran through the undo stack, which marks
         # the project dirty -- but a project this new has nothing to lose.
         self._mark_saved()
@@ -762,7 +772,7 @@ class MainWindow(QMainWindow):
         if template.items:
             for item_data in template.items:
                 item_from_dict(scene, item_data)
-        elif page == PAGE_DISC:
+        elif page_template_kind(page) == "disc":
             scene.seed_disc_defaults()
 
     def _change_page_template(self) -> None:
@@ -778,7 +788,7 @@ class MainWindow(QMainWindow):
 
         from mdtools.templates import registry
 
-        kind = "disc" if self.current_page == PAGE_DISC else "cover"
+        kind = page_template_kind(self.current_page)
         # Only this project's own medium: a CD project has no use for a
         # J-card and swapping one in would describe a case it does not have.
         templates = [
@@ -817,6 +827,103 @@ class MainWindow(QMainWindow):
         if answer != QMessageBox.StandardButton.Ok:
             return
         self.apply_template(self.current_page, template)
+
+    def _add_page(self) -> None:
+        """Adds one of the pages this project does not have yet.
+
+        Only optional pages can be added, which today means the case back:
+        the disc and cover pages are created with the project. The template
+        is picked from the family that page takes, so this needs no list of
+        its own -- see project.page_template_kind().
+        """
+        if self.project is None:
+            return
+        missing = [page for page in PAGE_ORDER if page not in self.project.pages]
+        if not missing:
+            QMessageBox.information(
+                self,
+                self.tr("Add Page"),
+                self.tr("This project already has every page it can have."),
+            )
+            return
+
+        names = [page_title(page, self.project.medium) for page in missing]
+        chosen, ok = QInputDialog.getItem(self, self.tr("Add Page"), self.tr("Page:"), names, 0, False)
+        if not ok:
+            return
+        page = missing[names.index(chosen)]
+
+        from mdtools.templates import registry
+
+        templates = [
+            t
+            for t in registry.load_templates()[page_template_kind(page)]
+            if getattr(t, "medium", MEDIUM_MD) == self.project.medium
+        ]
+        if not templates:
+            QMessageBox.warning(
+                self,
+                self.tr("Add Page"),
+                self.tr("There are no templates for that page (Templates > Manage Templates)."),
+            )
+            return
+        template_names = [t.name for t in templates]
+        chosen_template, ok = QInputDialog.getItem(
+            self, self.tr("Add Page"), self.tr("Template:"), template_names, 0, False
+        )
+        if not ok:
+            return
+
+        template = copy.deepcopy(templates[template_names.index(chosen_template)])
+        scene = DesignScene(template)
+        self._populate_new_scene(scene, template, page)
+        self.project.pages[page] = scene
+        self._mark_dirty()
+        self.current_page = page
+        self._refresh_page_combo()
+        self._show_page(page)
+
+    def _remove_page(self) -> None:
+        """Removes the page on screen, if it is one the project can do
+        without.
+
+        The disc and cover pages are what a project *is*; only the optional
+        ones can go. Everything on the page goes with it, so this confirms
+        first and resets the undo stack afterwards -- the same reasoning
+        apply_template() gives for the same problem.
+        """
+        if self.project is None:
+            return
+        page = self.current_page
+        if page in (PAGE_DISC, PAGE_COVER):
+            QMessageBox.information(
+                self,
+                self.tr("Remove Page"),
+                self.tr("The disc label and the cover are part of every project and cannot be removed."),
+            )
+            return
+
+        answer = QMessageBox.warning(
+            self,
+            self.tr("Remove Page"),
+            self.tr(
+                "Remove the {page} page? Everything on it is deleted, and the undo history is reset."
+            ).format(page=page_title(page, self.project.medium)),
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if answer != QMessageBox.StandardButton.Ok:
+            return
+
+        scene = self.project.pages.pop(page)
+        # id() is reused after garbage collection, so a stale entry here
+        # could make a future scene skip connecting selectionChanged.
+        self._connected_scenes.discard(id(scene))
+        self._reset_undo_stack()
+        self._mark_dirty()
+        self.current_page = self.project.ordered_pages()[0]
+        self._refresh_page_combo()
+        self._show_page(self.current_page)
 
     def apply_template(self, page: str, template) -> None:
         """Replaces a page's scene with a fresh one on `template`.
@@ -1119,10 +1226,11 @@ class MainWindow(QMainWindow):
         self.properties_panel.set_default_text_style(self.project.default_text_style)
         self._sync_grayscale_controls()
         # An opened project may be for the other medium than the one that
-        # was open a moment ago, and the Recording menu follows the medium.
+        # was open a moment ago; the menu and the page names follow it.
         self._sync_mdrem_actions()
-        self.page_combo.setCurrentIndex(0)
-        self._show_page(PAGE_DISC)
+        self.current_page = self.project.ordered_pages()[0]
+        self._refresh_page_combo()
+        self._show_page(self.current_page)
         recent_projects.add_recent_project(path)
         self._mark_saved()
         return True
@@ -1157,13 +1265,16 @@ class MainWindow(QMainWindow):
     def _save_project_as(self) -> bool:
         if self.project is None:
             return False
-        # First save proposes "Artist - Album (Year).mdproj" in the
-        # projects folder, using the same disc_title() the deck is told, so
-        # the file and the disc cannot end up named differently.
+        # First save proposes "Artist - Album (Year) -CD.mdproj" in the
+        # projects folder: disc_title() is the same string the deck is
+        # told, so the file and the disc cannot end up named differently,
+        # and the medium is appended because the same album is very likely
+        # to exist on both -- two files that would otherwise collide on the
+        # one name.
         path, _ = QFileDialog.getSaveFileName(
             self,
             self.tr("Save Project As"),
-            user_paths.project_start_path(self.current_project_path, disc_title(self.project.metadata)),
+            user_paths.project_start_path(self.current_project_path, self._suggested_project_name()),
             self._project_file_filter(),
         )
         if not path:
@@ -1237,6 +1348,18 @@ class MainWindow(QMainWindow):
         dialog = PrintDialog(self.project, self, self._export_start_path())
         dialog.exec()
 
+    def _suggested_project_name(self) -> str:
+        """"Artist - Album (Year) -MD", or -CD.
+
+        Empty when the metadata is empty: user_paths.project_start_path()
+        treats that as "suggest no filename at all" rather than offering a
+        bare " -MD.mdproj".
+        """
+        title = disc_title(self.project.metadata)
+        if not title:
+            return ""
+        return f"{title} -{'CD' if self.project.medium == MEDIUM_CD else 'MD'}"
+
     def _project_file_filter(self) -> str:
         # a module-level constant can't use self.tr(), so this is computed
         # per-call instead (cheap, and picks up the active language)
@@ -1281,7 +1404,7 @@ class MainWindow(QMainWindow):
         """
         adapter = app_settings.mdrem_enabled()
         medium = self.project.medium if self.project is not None else None
-        self._relabel_cover_page(medium)
+        self._refresh_page_combo()
         for_md = medium in (None, MEDIUM_MD)
         for_cd = medium in (None, MEDIUM_CD)
 
@@ -1310,18 +1433,31 @@ class MainWindow(QMainWindow):
         self.telegram_record_action.setVisible(adapter and for_md)
         self.telegram_burn_action.setVisible(for_cd)
 
-    def _relabel_cover_page(self, medium: str | None) -> None:
-        """Names the second page after the thing it actually is.
+    def _refresh_page_combo(self) -> None:
+        """Rebuilds the page dropdown from the open project.
 
-        Rides along on the menu sync because it has the same trigger and
-        the same source of truth: whatever medium the open project is for,
-        re-read whenever that can have changed."""
-        index = self.page_combo.findData(PAGE_COVER)
-        if index < 0:
+        One list, from `Project.ordered_pages()`, named by
+        `project.page_title()` -- so a project with a third page needs
+        nothing here, and a page's name can follow the medium (a CD's
+        second page is a case insert, not a J-card) without this having to
+        know which pages exist.
+
+        The current page is kept if the project still has it, and falls
+        back to the first one if it does not.
+        """
+        if self.project is None:
             return
-        self.page_combo.setItemText(
-            index, self.tr("Case Insert") if medium == MEDIUM_CD else self.tr("Cover / J-Card")
-        )
+        wanted = self.current_page
+        self.page_combo.blockSignals(True)
+        self.page_combo.clear()
+        for page in self.project.ordered_pages():
+            self.page_combo.addItem(page_title(page, self.project.medium), page)
+        index = self.page_combo.findData(wanted)
+        self.page_combo.setCurrentIndex(index if index >= 0 else 0)
+        self.page_combo.blockSignals(False)
+        chosen = self.page_combo.currentData()
+        if chosen is not None and chosen != self.current_page:
+            self._show_page(chosen)
 
     def _sync_experimental_menu(self) -> None:
         """Shows/hides the whole Experimental menu per Window > Settings'
@@ -1831,15 +1967,42 @@ class MainWindow(QMainWindow):
             self,
             self.tr("Auto-Layout"),
             self.tr(
-                "This replaces everything on both pages -- the disc label and the J-card -- and resets the "
-                "undo history.\n\nThe project's metadata is left alone."
-            ),
+                "This replaces everything on {pages} and resets the undo history.\n\nThe project's "
+                "metadata is left alone."
+            ).format(pages=self._auto_layout_page_names()),
             QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel,
         )
         if answer != QMessageBox.StandardButton.Ok:
             return
         self._auto_layout_project(metadata)
+
+    def _auto_layout_page_names(self) -> str:
+        """The pages this layout is about to overwrite, by name.
+
+        It used to say "both pages -- the disc label and the J-card"
+        regardless: on a CD project that named a MiniDisc part the project
+        does not have, and it counted wrong the moment a case back existed.
+        Built from the project instead, so it cannot go stale again.
+        """
+        pages = [page for page in self.project.ordered_pages() if page in self._auto_layout_pages()]
+        names = [page_title(page, self.project.medium) for page in pages]
+        if len(names) > 1:
+            return self.tr("{first} and {last}").format(
+                first=", ".join(names[:-1]), last=names[-1]
+            )
+        return names[0] if names else ""
+
+    def _auto_layout_pages(self) -> set[str]:
+        """Which pages the automatic layout writes to.
+
+        The case back is included only when the project has one -- it is
+        optional, and the layout leaves it alone otherwise.
+        """
+        pages = {PAGE_DISC, PAGE_COVER}
+        if self.project.medium == MEDIUM_CD and PAGE_BACK in self.project.pages:
+            pages.add(PAGE_BACK)
+        return pages
 
     def _fetch_cover_into_metadata(self, metadata: ProjectMetadata) -> None:
         """Looks up cover art for metadata that has none yet, filling in a
@@ -1881,8 +2044,9 @@ class MainWindow(QMainWindow):
         return next((t for t in registry.load_templates()[kind] if t.name == name), None)
 
     def _auto_layout_project(self, metadata: ProjectMetadata) -> None:
-        """Turns an album into a first draft of both pages: the disc label
-        and the J-card.
+        """Turns an album into a first draft of the project's pages: the
+        disc label and the J-card, or a CD's ring label, case insert and --
+        if there is one -- its case back.
 
         After a recording this runs without asking. That is deliberate: the
         recording flow has already asked for confirmation several times
@@ -1894,6 +2058,11 @@ class MainWindow(QMainWindow):
             return
         if self.project.medium == MEDIUM_CD:
             self._auto_layout_cd_insert(metadata)
+            # Only if the project has one: the case back is optional, and
+            # laying out a page that does not exist is not a thing to do
+            # quietly or loudly.
+            if PAGE_BACK in self.project.pages:
+                self._auto_layout_cd_case_back(metadata)
             self._auto_layout_cd_disc_label(metadata)
             return
         self._auto_layout_cover(metadata)
@@ -1992,6 +2161,30 @@ class MainWindow(QMainWindow):
         self.undo_stack.endMacro()
 
         self._clip_layers()
+
+    def _auto_layout_cd_case_back(self, metadata: ProjectMetadata) -> None:
+        """The tray card, if this project has one.
+
+        Unlike the other two halves this does *not* change the page's
+        template: the back page only exists because the user added it and
+        chose its shape, and replacing that with whichever template this
+        method preferred would undo their choice. It lays out whatever is
+        already there, and does nothing if that page is not a three-panel
+        card.
+        """
+        scene = self.project.pages.get(PAGE_BACK)
+        if scene is None:
+            return
+        logo_path = gallery.gallery_dir() / "cd_digital_audio.png"
+        try:
+            items = build_case_back(scene, metadata, str(logo_path) if logo_path.exists() else None)
+        except CdLayoutError:
+            return
+
+        self.undo_stack.beginMacro(self.tr("Lay Out Case Back"))
+        for item in items:
+            self.undo_stack.push(AddItemCommand(scene, item, self.tr("Case Back")))
+        self.undo_stack.endMacro()
 
     def _auto_layout_cd_insert(self, metadata: ProjectMetadata) -> None:
         """The folded slim-case insert: cover on the right panel, track list

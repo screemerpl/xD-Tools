@@ -246,6 +246,18 @@ class DesignScene(QGraphicsScene):
         # always-visible default rather than inheriting that; explicitly
         # colored/loaded items (project_io.py) override this immediately.
         item.setDefaultTextColor(QColor("black"))
+        # QTextDocument keeps a 4px margin on every side by default. It is
+        # invisible on a wide block and ruinous on a narrow one -- on a
+        # 6.5mm case spine it left about 7px for the type itself, forcing
+        # the caption down to 4.75pt (measured). Nothing in this app wants
+        # it: every block is positioned by its own rectangle.
+        #
+        # Set **here**, not in the layout code that first needed it: a text
+        # item rebuilt by project_io on load goes through this method, so
+        # zeroing it anywhere else made a saved layer come back a different
+        # size from the one that was saved -- which is exactly what
+        # test_jcard_roundtrip.py caught.
+        item.document().setDocumentMargin(0)
         self._init_item(item)
         return item
 
