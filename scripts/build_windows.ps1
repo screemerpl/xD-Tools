@@ -38,7 +38,7 @@ if ($env:MDTOOLS_TELEGRAM_API_ID -and $env:MDTOOLS_TELEGRAM_API_HASH) {
 }
 
 & ".venv/Scripts/pyinstaller.exe" --noconfirm --windowed --name MDTools --paths src `
-    --icon "assets/img/mdlogo.ico" `
+    --icon "assets/img/xdtools.ico" `
     --add-data "src/mdtools/templates/defaults.json;mdtools/templates" `
     --add-data "src/mdtools/i18n/mdtools_pl.qm;mdtools/i18n" `
     --add-data "src/mdtools/i18n/mdtools_ja.qm;mdtools/i18n" `

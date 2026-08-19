@@ -133,6 +133,42 @@ def _fit_text(item: QGraphicsItem, area: QRectF, *, wrap: bool) -> None:
     item.setFont(font)
 
 
+def _fits(item: QGraphicsItem, area: QRectF, *, wrap: bool) -> bool:
+    if wrap:
+        item.setTextWidth(area.width())
+    bounds = item.boundingRect()
+    return bounds.width() <= area.width() and bounds.height() <= area.height()
+
+
+def _fit_together(items: list[QGraphicsItem], area: QRectF, *, wrap: bool = True) -> None:
+    """Shrinks several blocks to a *single* size, the largest at which they
+    all fit.
+
+    A track list split into two columns used to be fitted one column at a
+    time, so each got whichever size suited its own longest line -- and two
+    columns of the same list, read side by side, came out in visibly
+    different type. Reported directly, on both the J-card and the CD
+    insert, which share this function.
+
+    The search is the same walk down from MAX_POINT_SIZE as _fit_text, just
+    with the test being "all of them fit" rather than "this one does".
+    """
+    if not items:
+        return
+    font = items[0].font()
+    size = MAX_POINT_SIZE
+    while size > MIN_POINT_SIZE:
+        font.setPointSizeF(size)
+        for item in items:
+            item.setFont(font)
+        if all(_fits(item, area, wrap=wrap) for item in items):
+            return
+        size -= POINT_STEP
+    font.setPointSizeF(MIN_POINT_SIZE)
+    for item in items:
+        item.setFont(font)
+
+
 def _text(
     scene: DesignScene,
     text: str,
@@ -141,7 +177,10 @@ def _text(
     *,
     wrap: bool = True,
     bold: bool = False,
+    fit: bool = True,
 ) -> QGraphicsItem | None:
+    """`fit=False` leaves the size alone, for a caller that is going to fit
+    this block together with others (see _fit_together)."""
     if not text.strip():
         return None
     item = scene.add_text(text)
@@ -150,7 +189,8 @@ def _text(
         font = item.font()
         font.setBold(True)
         item.setFont(font)
-    _fit_text(item, area, wrap=wrap)
+    if fit:
+        _fit_text(item, area, wrap=wrap)
     return item
 
 
@@ -400,10 +440,15 @@ def place_back(
         if len(metadata.tracks) > TWO_COLUMN_THRESHOLD:
             gap = mm_to_px(BACK_PADDING_MM)
             column_width = (content_width - gap) / 2
+            column_area = QRectF(0, 0, column_width, tracks_height)
             columns = [
-                _text(scene, column, QRectF(0, 0, column_width, tracks_height), ink)
+                _text(scene, column, column_area, ink, fit=False)
                 for column in track_list_two_columns(metadata)
             ]
+            # One size across both, rather than one per column: they are
+            # read side by side, and fitting them separately made the
+            # halves of a single list differ visibly in type.
+            _fit_together([item for item in columns if item is not None], column_area)
             tallest = max((item.boundingRect().height() for item in columns if item is not None), default=0.0)
             top = cursor + max(0.0, (tracks_height - tallest) / 2)
             for index, item in enumerate(columns):

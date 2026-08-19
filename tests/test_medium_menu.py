@@ -113,3 +113,28 @@ def test_the_second_page_is_not_called_a_j_card_on_a_cd_project(window):
     window._sync_mdrem_actions()
 
     assert "J-Card" in window.page_combo.itemText(index)
+
+
+# --- the Experimental menu ----------------------------------------------
+
+
+def test_the_telegram_hand_offs_follow_the_medium_as_well(window, monkeypatch):
+    """They are the same two operations as the Recording menu's, reached
+    from somewhere else -- reported as not changing with the medium."""
+    window.project.medium = MEDIUM_MD
+    window._sync_mdrem_actions()
+    assert window.telegram_record_action.isVisible()
+    assert not window.telegram_burn_action.isVisible()
+
+    window.project.medium = MEDIUM_CD
+    window._sync_mdrem_actions()
+    assert not window.telegram_record_action.isVisible()
+    assert window.telegram_burn_action.isVisible()
+
+
+def test_burning_telegram_downloads_survives_the_adapter_being_off(window, monkeypatch):
+    monkeypatch.setattr(app_settings, "mdrem_enabled", lambda: False)
+    window.project.medium = MEDIUM_CD
+    window._sync_mdrem_actions()
+
+    assert window.telegram_burn_action.isVisible()

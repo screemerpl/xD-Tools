@@ -12,6 +12,12 @@ from mdtools.templates import registry
 
 def main() -> int:
     app = QApplication(sys.argv)
+    # **Not** renamed along with the visible name, and it must not be:
+    # QStandardPaths.AppConfigLocation is built from this, so changing it
+    # would move %LOCALAPPDATA%/MDTools -- taking templates.json, settings.ini
+    # and the Telegram session with it, and losing every customised template
+    # anyone already has. The same trap as setOrganizationName, which
+    # i18n/__init__.py already documents.
     app.setApplicationName("MDTools")
     theme.apply_theme(app)
     # Sets the icon for every window in the app (title bar, taskbar,
@@ -20,7 +26,7 @@ def main() -> int:
     # separately, via PyInstaller's --icon flag (see
     # scripts/build_windows.ps1), since that has to be baked into the .exe
     # at build time, not set at runtime.
-    app.setWindowIcon(QIcon(str(gallery.gallery_dir() / "mdlogo.png")))
+    app.setWindowIcon(QIcon(str(gallery.gallery_dir() / "xdtools.png")))
     i18n.install_translator(app, i18n.current_language())
     registry.sync_builtin_templates()
     window = MainWindow()

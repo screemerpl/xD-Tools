@@ -89,15 +89,18 @@ CD_INSERT_TEMPLATE = "CD Slim Case Insert (Folded, 2 Panels)"
 class MainWindow(QMainWindow):
     def __init__(self, show_startup_dialog: bool = True):
         super().__init__()
-        # Not "Label Designer" any more: designing labels is one of four
+        # Not "Label Designer" any more, and not MiniDisc-only either:
+        # designing labels is one of several
         # things this does, alongside recording a disc from foobar2000,
         # titling it over infrared, and standing in for the deck's remote.
-        self.setWindowTitle(self.tr("MDTools - MiniDisc Studio"))
+        # "xD-Tools": the x stands in for M or C, which is the joke and
+        # also, now, the truth -- it does MiniDisc and CD alike.
+        self.setWindowTitle(self.tr("xD-Tools - MiniDisc & CD Studio"))
         # Set here too, not just on QApplication in main.py -- so the
         # window has the right icon (title bar/taskbar/alt-tab) even when
         # MainWindow is constructed directly (tests, or any future
         # embedding) rather than only via main()'s normal startup path.
-        self.setWindowIcon(QIcon(str(gallery.gallery_dir() / "mdlogo.png")))
+        self.setWindowIcon(QIcon(str(gallery.gallery_dir() / "xdtools.png")))
         self.resize(1100, 720)
 
         self.project: Project | None = None
@@ -363,7 +366,9 @@ class MainWindow(QMainWindow):
         self.remote_action = recording_menu.addAction(
             self.tr("Remote Control..."), self._open_remote_control
         )
-        self._sync_mdrem_actions()
+        # _sync_mdrem_actions() is deliberately *not* called here: it also
+        # gates two entries in the Experimental menu, which is built
+        # further down. It runs once both menus exist.
 
         templates_menu = self.menuBar().addMenu(self.tr("&Templates"))
         templates_menu.addAction(self.tr("Manage Templates..."), self._manage_templates)
@@ -406,22 +411,24 @@ class MainWindow(QMainWindow):
         self.experimental_menu.addAction(
             self.tr("Sort Telegram Downloads into Album Folders..."), self._sort_telegram_downloads
         )
-        self.experimental_menu.addAction(
+        self.telegram_record_action = self.experimental_menu.addAction(
             self.tr("Record from Telegram Downloads..."), self._record_from_telegram_downloads
         )
         # Deliberately not gated on the MDRem setting, unlike the recording
         # entry above it: burning needs the drive, not the adapter.
-        self.experimental_menu.addAction(
+        self.telegram_burn_action = self.experimental_menu.addAction(
             self.tr("Burn Telegram Downloads to Audio CD..."), self._burn_from_telegram_downloads
         )
         self._sync_experimental_menu()
+        # Both menus exist now, so the adapter/medium gating can run.
+        self._sync_mdrem_actions()
 
         window_menu = self.menuBar().addMenu(self.tr("&Window"))
         window_menu.addAction(self.tr("Settings..."), self._show_settings)
 
         help_menu = self.menuBar().addMenu(self.tr("&Help"))
         self._build_language_menu(help_menu)
-        help_menu.addAction(self.tr("About MDTools..."), self._show_about)
+        help_menu.addAction(self.tr("About xD-Tools..."), self._show_about)
 
     def _reset_undo_stack(self) -> None:
         """A fresh, empty undo history for the just-created/opened project.
@@ -1293,6 +1300,15 @@ class MainWindow(QMainWindow):
         # the medium alone, and stay put when MDRem is switched off.
         self.burn_folder_action.setVisible(for_cd)
         self.burn_foobar_action.setVisible(for_cd)
+
+        # The Experimental menu's two hand-offs are the same pair of
+        # operations reached from a different place, so they follow exactly
+        # the same rules -- reported as not changing with the medium.
+        # "Download Album from Telegram Bot..." and "Sort Telegram
+        # Downloads..." are untouched: downloading and tidying files belong
+        # to neither medium.
+        self.telegram_record_action.setVisible(adapter and for_md)
+        self.telegram_burn_action.setVisible(for_cd)
 
     def _relabel_cover_page(self, medium: str | None) -> None:
         """Names the second page after the thing it actually is.

@@ -1,24 +1,33 @@
-# MDTools
+# xD-Tools
 
-A desktop workbench for MiniDisc.
+A desktop workbench for MiniDisc and CD-R. (The x stands in for M or C --
+which started as a joke and then turned out to be the description.)
 
-**Design** disc labels and cover/J-card inserts, exporting standards-compliant
-SVG (cut lines) and PNG (print artwork) for use with Cricut Design Space and a
-regular printer.
+**Design** disc labels and cover inserts for either medium -- a MiniDisc's
+sticker and J-card, or a CD's ring label and slim-case insert -- exporting
+standards-compliant SVG (cut lines) and PNG (print artwork) for use with
+Cricut Design Space and a regular printer.
 
 **Record and title** -- with an MDRem infrared adapter, record an album
 straight from foobar2000 with a track mark at every song, write the disc and
 track titles onto the MiniDisc itself, lay out both labels from the album's
 own artwork, and use the software remote to drive the deck.
 
-**Record from a CD** -- pick an optical drive, and MDTools extracts the disc
+**Record from a CD** -- pick an optical drive, and xD-Tools extracts the disc
 to FLAC with the bundled cdparanoia and flac, identifies it on MusicBrainz
 from its table of contents, loads the tracks into foobar2000 in disc order,
 and hands over to the same recording flow.
 
-**Record from a folder** -- point MDTools at an album you already have on
+**Record from a folder** -- point xD-Tools at an album you already have on
 disk, in any format foobar2000 plays, and it loads those files into the
 playlist in filename order and records them the same way.
+
+**Burn an audio CD** -- point it at a folder or at foobar2000's playlist and
+it writes a Red Book CD-R with the bundled cdrecord, disc-at-once, with
+CD-Text titles. Anything that is not already 44.1 kHz / 16-bit stereo (a
+hi-res download, say) is resampled by the bundled SoX on the way, and the
+plan says so per track before the disc is committed -- a CD-R cannot be
+edited afterwards.
 
 **Mixtapes too** -- a disc or playlist whose tracks are by different artists
 is recognised as a compilation, credited to Various Artists rather than to
@@ -29,9 +38,9 @@ list, since there is no sleeve to look up.
 
 A full user manual lives in [`doc/`](doc/), as a PDF in each of the three
 languages the app itself speaks:
-[English](doc/MDTools-Manual-EN.pdf),
-[Polski](doc/MDTools-Manual-PL.pdf),
-[日本語](doc/MDTools-Manual-JA.pdf).
+[English](doc/xD-Tools-Manual-EN.pdf),
+[Polski](doc/xD-Tools-Manual-PL.pdf),
+[日本語](doc/xD-Tools-Manual-JA.pdf).
 It is generated -- text and screenshots both -- see [`doc/README.md`](doc/README.md)
 for how to rebuild it.
 
@@ -108,7 +117,7 @@ imported, doesn't break it.
 
 **File > Close Project** (Ctrl+W), and the window's close button, go back to
 the startup screen rather than quitting -- switching to another project
-doesn't mean relaunching MDTools. Unsaved changes are asked about first. To
+doesn't mean relaunching xD-Tools. Unsaved changes are asked about first. To
 leave for good, use **File > Exit**, or cancel the startup screen.
 
 ## Disc label geometry
@@ -176,12 +185,12 @@ else. Loading an existing saved project never re-adds them.
 
 ## Writing titles onto the disc itself (MDRem)
 
-MDTools can also write the album and track names onto the MiniDisc, not
+xD-Tools can also write the album and track names onto the MiniDisc, not
 just onto a printed label -- via **MDRem**, a small RP2040 board that
 emulates a Sony RM-D10P infrared remote and connects over USB.
 
 Turn it on in **Window > Settings...** ("Enable MDRem IR remote adapter"),
-pick the serial port, or press **Detect** to have MDTools ask each port
+pick the serial port, or press **Detect** to have xD-Tools ask each port
 whether an adapter answers. Two things then appear:
 
 - **Metadata... > Upload Tracklist** writes the disc title
@@ -222,13 +231,13 @@ one go: it arms the deck, plays the album out of foobar2000 over S/PDIF,
 watches it to the end, then writes the titles.
 
 You need foobar2000 running with the **Beefweb Remote Control**
-(`foo_beefweb`) component enabled -- that is how MDTools reads the playlist
+(`foo_beefweb`) component enabled -- that is how xD-Tools reads the playlist
 and knows which track is playing. Its address is configurable in
 **Window > Settings...** if you moved it off the default port.
 
 Load the album in foobar2000, connect its S/PDIF output to the deck, then:
 
-1. MDTools shows the playlist, its total time, and warns if it won't fit on
+1. xD-Tools shows the playlist, its total time, and warns if it won't fit on
    an 80-minute disc in SP mode.
 2. It sets foobar to play straight through once (no shuffle, no repeat) and
    tells the deck to start recording.
@@ -251,17 +260,17 @@ Two caveats:
 - **Leave "Mark tracks through the adapter" ticked, and turn LEVEL-SYNC off
   on the deck.** Left to itself the deck starts a new track when the sound
   drops to silence and comes back, which silently merges any two songs that
-  run into each other. MDTools instead sends a track mark at the exact
+  run into each other. xD-Tools instead sends a track mark at the exact
   moment foobar changes track. Running both at once is what causes trouble:
   each marks a slightly different spot and you get a sliver of a track in
   between.
-- **Set the recording mode (SP/LP2) on the deck yourself.** MDTools has no
+- **Set the recording mode (SP/LP2) on the deck yourself.** xD-Tools has no
   reliable way to read or change it.
 
 ### Recording an album from a folder of files
 
 **Recording > Record Folder to MiniDisc...** records an album that is already
-on disk. Browse to the folder, and MDTools loads those files into foobar2000
+on disk. Browse to the folder, and xD-Tools loads those files into foobar2000
 and hands over to the recording above -- the same arming, track marks and
 titling.
 
@@ -272,7 +281,7 @@ titling.
   alone; only a folder with no audio directly in it is looked inside, which
   is what puts a two-disc album kept as `CD1`/`CD2` in disc order.
 - **Where the titles come from**: the files' own tags, read by foobar2000
-  rather than by MDTools -- it is the better tag reader of the two and has
+  rather than by xD-Tools -- it is the better tag reader of the two and has
   to read them anyway to play them. A file with no title tag is recorded
   under its filename.
 - **The album and artist** start out guessed from the folder's name
@@ -353,9 +362,9 @@ python -m venv .venv
 ## Building a standalone executable
 
 ```powershell
-scripts\build_windows.ps1   # -> dist\MDTools\MDTools.exe
+scripts\build_windows.ps1   # -> dist\xD-Tools\xD-Tools.exe
 ```
 
 ```bash
-scripts/build_linux.sh      # -> dist/MDTools/MDTools
+scripts/build_linux.sh      # -> dist/xD-Tools/xD-Tools
 ```
