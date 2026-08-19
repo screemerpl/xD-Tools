@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QVBoxLayout
 
 APP_NAME = "xD-Tools"
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.2.0"
 APP_AUTHOR = 'Artur "Screemer" Jakubowicz'
 
 
