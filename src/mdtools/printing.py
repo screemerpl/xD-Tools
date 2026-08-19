@@ -20,12 +20,16 @@ from PySide6.QtPrintSupport import QPrinter
 from mdtools import app_settings
 from mdtools.constants import MM_PER_INCH
 
-# Portrait only -- both label designs comfortably fit either page size
-# right-side up; there was no request for landscape, so it's not offered.
+# Page sizes as they come, portrait. `oriented_page_size()` turns one on
+# its side; the dialog offers both, which it did not always do -- see that
+# function for what forced it.
 PAGE_SIZES_MM: dict[str, tuple[float, float]] = {
     "A4": (210.0, 297.0),
     "Letter": (215.9, 279.4),
 }
+
+PORTRAIT = "portrait"
+LANDSCAPE = "landscape"
 
 # Spacing between adjacent copies -- a layout choice for cutting
 # clearance, not a measured spec (compare DiscTemplate.slider_gap_mm's
@@ -321,6 +325,74 @@ def _grid_positions(
     ]
 
 
+def oriented_page_size(page_size_mm: tuple[float, float], orientation: str) -> tuple[float, float]:
+    """The page the right way round.
+
+    Landscape was not offered at first, on the reasoning that both MiniDisc
+    designs fit a portrait sheet comfortably. A CD project broke that: its
+    folded slim-case insert is 242mm wide, which no portrait sheet can take
+    upright at all. Worth knowing that even landscape does not let a CD
+    label and that insert share one A4 -- 242 + 3 + 118 exceeds 287mm
+    either way round, which is what `build_sheet_layout()` is for.
+    """
+    width_mm, height_mm = page_size_mm
+    if orientation == LANDSCAPE:
+        return height_mm, width_mm
+    return width_mm, height_mm
+
+
+def build_sheet_layout(
+    size_mm: tuple[float, float],
+    copies: int,
+    page_size_mm: tuple[float, float],
+    margin_mm: float,
+) -> PlacedCopies:
+    """Packs `copies` of a *single* label onto a page of its own.
+
+    The plain-grid half of build_copies_layout() without the
+    arrangement/rotation search across two label types, because there is
+    only one here: try it upright, and turn it a quarter turn only if that
+    is what makes it fit -- the same "rotation is a fallback, never a
+    default" rule the two-label layout follows.
+
+    Raises PrintLayoutError when not even one copy fits, which is a real
+    answer rather than a failure to try: a 242mm insert does not go on a
+    portrait A4 at all.
+    """
+    available_width_mm = page_size_mm[0] - 2 * margin_mm
+    available_height_mm = page_size_mm[1] - 2 * margin_mm
+
+    for rotated in (False, True):
+        width_mm, height_mm = (size_mm[1], size_mm[0]) if rotated else size_mm
+        if width_mm > available_width_mm or height_mm > available_height_mm:
+            continue
+        grid = _pack_grid(width_mm, height_mm, copies, available_width_mm)
+        if grid.height_mm > available_height_mm:
+            continue
+        positions = _grid_positions(
+            (margin_mm, margin_mm), grid.columns, (width_mm, height_mm), copies
+        )
+        return PlacedCopies(positions=positions, rotated=rotated)
+
+    raise PrintLayoutError(
+        f"{copies} copies of a {size_mm[0]:.1f}x{size_mm[1]:.1f}mm label do not fit this page"
+    )
+
+
+def max_copies_on_sheet(
+    size_mm: tuple[float, float], page_size_mm: tuple[float, float], margin_mm: float
+) -> int:
+    """How many copies of one label a sheet of its own can hold."""
+    fitting = 0
+    for count in range(1, MAX_COPIES + 1):
+        try:
+            build_sheet_layout(size_mm, count, page_size_mm, margin_mm)
+        except PrintLayoutError:
+            break
+        fitting = count
+    return fitting
+
+
 def build_copies_layout(
     disc_size_mm: tuple[float, float],
     cover_size_mm: tuple[float, float],
@@ -427,6 +499,41 @@ def print_placements(printer: QPrinter, placements: list[PrintPlacement]) -> Non
                 QRectF(placement.x_mm, placement.y_mm, placement.width_mm, placement.height_mm),
                 placement.image,
             )
+    finally:
+        painter.end()
+
+
+def print_sheets(printer: QPrinter, sheets: list[list[PrintPlacement]]) -> None:
+    """Prints several pages in one job, one list of placements per page.
+
+    A single painter across the whole job with `newPage()` between sheets,
+    rather than one `print_placements()` call per page: a QPainter can only
+    be opened on a QPrinter once, and starting a second job would ask the
+    user's printer dialog again -- or, worse on a PDF, overwrite the file
+    that was just written.
+
+    Empty sheets are skipped rather than emitted blank, so a two-sheet
+    layout with nothing on the second one still prints one page.
+    """
+    pages = [placements for placements in sheets if placements]
+    if not pages:
+        return
+
+    painter = QPainter(printer)
+    try:
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        scale = printer.resolution() / MM_PER_INCH
+        for index, placements in enumerate(pages):
+            if index:
+                printer.newPage()
+            painter.save()
+            painter.scale(scale, scale)
+            for placement in placements:
+                painter.drawImage(
+                    QRectF(placement.x_mm, placement.y_mm, placement.width_mm, placement.height_mm),
+                    placement.image,
+                )
+            painter.restore()
     finally:
         painter.end()
 

@@ -9,33 +9,40 @@ zrzuty ekranu w tej wersji też są polskie, więc rozjazd byłby widoczny od
 razu. Źródłem prawdy jest src/mdtools/i18n/mdtools_pl.ts.
 """
 
-TITLE = "MDTools"
-SUBTITLE = "Studio MiniDisc — instrukcja obsługi"
-TITLE_NOTE = "Projektowanie etykiet, nagrywanie płyt i nadawanie tytułów — z przystawką MDRem"
+TITLE = "xD-Tools"
+SUBTITLE = "Studio MiniDisc i CD — instrukcja obsługi"
+TITLE_NOTE = "Projektowanie etykiet, nagrywanie MiniDisców, wypalanie CD-R i nadawanie tytułów"
 COVER_CAPTION = "Co z czym rozmawia: komendy przez USB, klawisze przez podczerwień, dźwięk przez S/PDIF."
-VERSION_LINE = "Wersja 0.1.0"
+VERSION_LINE = "Wersja 0.2.0"
 AUTHOR_LINE = 'Artur "Screemer" Jakubowicz'
 DATE_LINE = "Sierpień 2026"
 TOC_TITLE = "Spis treści"
-FOOTER_LEFT = "MDTools — Studio MiniDisc — instrukcja obsługi"
+FOOTER_LEFT = "xD-Tools — Studio MiniDisc i CD — instrukcja obsługi"
 
 BOOK = [
     # ------------------------------------------------------------------
     {
         "title": "Czym to jest",
         "blocks": [
-            {"p": "MDTools to warsztat do MiniDisc na komputer. Zaczęło się od projektanta etykiet, a "
-                  "wyrosły z tego cztery narzędzia dzielące jeden plik projektu:"},
+            {"p": "xD-Tools to warsztat do MiniDisc i CD-R na komputer. (Za x podstaw M albo C — "
+                  "zaczęło się jako żart, a wyszło z tego opis). Zaczęło się od projektanta etykiet, a "
+                  "wyrosło z tego kilka narzędzi dzielących jeden plik projektu:"},
             {"ul": [
-                "**Projektowanie** naklejki na płytę i wkładki J-card do pudełka, wraz z eksportem "
-                "gotowym do druku i cięcia.",
+                "**Projektowanie** etykiet: naklejki na MiniDisc i wkładki J-card albo pierścienia na "
+                "płytę CD i wkładki do pudełka slim — wraz z eksportem gotowym do druku i cięcia.",
                 "**Nagrywanie** całego albumu z foobar2000 na MiniDisc, ze znacznikiem przy każdym "
                 "utworze.",
-                "**Nadawanie tytułów**: zapisanie nazwy albumu i wszystkich utworów na samej płycie, tak "
-                "żeby pokazywał je wyświetlacz magnetofonu.",
+                "**Wypalanie** płyty audio CD-R z folderu albo z playlisty foobara, razem z tytułami "
+                "w CD-Text.",
+                "**Nadawanie tytułów** MiniDiscowi: zapisanie nazwy albumu i wszystkich utworów na samej "
+                "płycie, tak żeby pokazywał je wyświetlacz magnetofonu.",
                 "**Sterowanie magnetofonem** z programowego pilota — transport, numery ścieżek, tryby "
                 "odtwarzania.",
             ]},
+            {"p": "**Nośnik wybierasz raz, przy zakładaniu projektu**, i wszystko dalej z tego wynika: "
+                  "jakie szablony dostajesz do wyboru, jak nazywa się druga strona i które pozycje "
+                  "pokazuje menu Nagrywanie. Projekt MiniDisc nigdy nie dostaje wypalania CD, a projekt "
+                  "CD — pilota do magnetofonu."},
             {"p": "Pierwsze z nich nie wymaga niczego poza komputerem. Pozostałe trzy potrzebują "
                   "**MDRem**: małej płytki RP2040, która udaje pilota Sony RM-D10P i wpina się w USB. "
                   "Wszystko, co dotyczy MDRem, jest opcjonalne i wyłączone, dopóki go nie włączysz."},
@@ -48,7 +55,7 @@ BOOK = [
             {"table": {
                 "head": ["Do czego", "Co potrzeba"],
                 "rows": [
-                    ["Projektowanie i druk", "MDTools, drukarka, a do cięcia — ploter Cricut albo pewna "
+                    ["Projektowanie i druk", "xD-Tools, drukarka, a do cięcia — ploter Cricut albo pewna "
                                              "ręka i nożyczki."],
                     ["Nadawanie tytułów", "Przystawka MDRem w porcie USB i magnetofon MiniDisc Sony, w "
                                           "który da się nią wycelować."],
@@ -62,7 +69,7 @@ BOOK = [
                      "zwłaszcza czasy zmierzono właśnie na tym modelu."},
             {"h2": "Jedna rzecz do zrozumienia na starcie"},
             {"p": "Magnetofon nie może odpowiedzieć. Podczerwień działa tylko w jedną stronę, a magistrala "
-                  "Control A1 nie jest w tym modelu podłączona. MDTools może więc wysłać polecenie, ale "
+                  "Control A1 nie jest w tym modelu podłączona. xD-Tools może więc wysłać polecenie, ale "
                   "nigdy nie dowie się, czy magnetofon je wykonał."},
             {"p": "To kształtuje całą część programu związaną z MDRem: pokazuje dokładnie, co zamierza "
                   "zrobić, zanim to zrobi; woli zrobić za dużo niż za mało (kasuje stary tytuł większą "
@@ -76,7 +83,7 @@ BOOK = [
         "title": "Pierwsze kroki",
         "blocks": [
             {"h2": "Instalacja"},
-            {"p": "Jeżeli masz gotową paczkę, uruchom `MDTools.exe`. Ze źródeł:"},
+            {"p": "Jeżeli masz gotową paczkę, uruchom `xD-Tools.exe`. Ze źródeł:"},
             {"ul": [
                 "`python -m venv .venv`",
                 "`.venv\\Scripts\\pip install -e \".[dev]\"`",
@@ -86,7 +93,7 @@ BOOK = [
             {"p": "**Pomoc > Język** daje English, Polski i japoński. Zmiana wymaga restartu, a program "
                   "sam proponuje, że go wykona."},
             {"h2": "Ekran powitalny"},
-            {"p": "MDTools zaczyna od krótkiej listy tego, co możesz chcieć zrobić: wrócić do jednego z "
+            {"p": "xD-Tools zaczyna od krótkiej listy tego, co możesz chcieć zrobić: wrócić do jednego z "
                   "ostatnich projektów, wskazać inny albo zacząć nowy."},
             {"fig": ("startup", "Ekran powitalny. Przycisk Pilot... pojawia się dopiero po włączeniu przystawki.")},
             {"ul": [
@@ -111,10 +118,10 @@ BOOK = [
                   "powitalny — przejście do kolejnej płyty nie wymaga więc ponownego uruchamiania. "
                   "Krzyżyk okna robi to samo. Jeżeli są niezapisane zmiany, program najpierw o nie "
                   "zapyta."},
-            {"p": "Żeby wyjść z MDTools na dobre, użyj **Plik > Zakończ** albo anuluj ekran powitalny, "
+            {"p": "Żeby wyjść z xD-Tools na dobre, użyj **Plik > Zakończ** albo anuluj ekran powitalny, "
                   "kiedy się pojawi."},
             {"h2": "Gdzie zapisywane są projekty"},
-            {"p": "Przy pierwszym zapisie MDTools proponuje **Dokumenty\\MiniDiscProjects** i nazwę pliku "
+            {"p": "Przy pierwszym zapisie xD-Tools proponuje **Dokumenty\\MiniDiscProjects** i nazwę pliku "
                   "zbudowaną z samego albumu - `Skillet - Unleashed (2016).mdproj`. To ten sam napis, "
                   "który dostaje magnetofon, więc plik na komputerze i tytuł na płycie się zgadzają."},
             {"p": "Pozostałe okna plików też startują w sensownym miejscu: **Dodaj obraz...** i okładka "
@@ -171,7 +178,7 @@ BOOK = [
         "title": "Szablony",
         "blocks": [
             {"p": "Szablon to fizyczny kształt drukowanej rzeczy: rozmiar, narożniki i miejsca zagięć. "
-                  "MDTools ma sześć wbudowanych."},
+                  "xD-Tools ma sześć wbudowanych."},
             {"table": {
                 "head": ["Szablon", "Co to jest"],
                 "rows": [
@@ -243,7 +250,7 @@ BOOK = [
                     "zgadują i przy wznowieniu, składance albo zespole o popularnej nazwie regularnie "
                     "zgadują źle — wyszukiwarka nie ma jak wiedzieć, które tłoczenie trzymasz w ręku."},
             {"h2": "Gdy nie ma czego znaleźć"},
-            {"p": "MDTools woli nie pokazać żadnej okładki niż złą. Wynik musi zgadzać się i z "
+            {"p": "xD-Tools woli nie pokazać żadnej okładki niż złą. Wynik musi zgadzać się i z "
                   "tytułem albumu, **i** z wykonawcą: sam tytuł nie wystarcza, bo przeróbka "
                   "tytułowego utworu nagrana przez kogoś innego pasuje do niego idealnie. Kiedy nic "
                   "nie przechodzi progu, podgląd zostaje pusty — to uczciwa odpowiedź, a do "
@@ -308,7 +315,7 @@ BOOK = [
         "title": "Druk i cięcie",
         "blocks": [
             {"h2": "Dwa eksporty"},
-            {"p": "Projekt opuszcza MDTools jako dwa pliki opisujące ten sam przedmiot na dwa sposoby."},
+            {"p": "Projekt opuszcza xD-Tools jako dwa pliki opisujące ten sam przedmiot na dwa sposoby."},
             {"table": {
                 "head": ["Eksport", "Zawiera", "Do czego"],
                 "rows": [
@@ -332,6 +339,19 @@ BOOK = [
             ]},
             {"p": "SVG niesie rzeczywiste milimetry, więc po drugiej stronie nie trzeba niczego skalować "
                   "ręcznie."},
+            {"h2": "Orientacja i osobne arkusze"},
+            {"p": "Okno druku ma **Rozmiar strony** i **Orientację**. Pozioma nie jest ozdobnikiem: "
+                  "składana wkładka do slima ma 242 mm szerokości i na pionowej kartce nie mieści się "
+                  "prosto — na pionowym A4 da się ją wydrukować wyłącznie obróconą o ćwierć obrotu."},
+            {"p": "**Każda etykieta na osobnym arkuszu** robi dokładnie to, co mówi, a dla projektu CD "
+                  "włącza się sama. Powód jest arytmetyczny, nie estetyczny: etykieta płyty (118 mm) obok "
+                  "tej wkładki (242 mm) potrzebuje 363 mm z arkusza, który daje 287 mm — więc razem nie "
+                  "zmieszczą się w żadnym ułożeniu. Przy włączonej opcji podgląd pokazuje jeden arkusz "
+                  "naraz (wybierasz go polem **Pokazywany**), a druk, eksport PDF i eksport PNG obchodzą "
+                  "oba. PNG mieści jedną stronę, więc eksport dwóch arkuszy zapisuje dwa ponumerowane "
+                  "pliki."},
+            {"fig": ("cd-print", "Układ druku projektu CD: etykieta płyty na jednym arkuszu, składana "
+                                 "wkładka na drugim.")},
             {"h2": "Druk bezpośrednio"},
             {"p": "**Plik > Drukuj...** pomija etap eksportu: układa kilka kopii obu stron na jednej "
                   "kartce A4 albo Letter, automatycznie w siatkę, którą potem możesz poprzesuwać myszą. "
@@ -380,7 +400,7 @@ BOOK = [
                     ["Fioletowy", "Nie udało się zainicjować sprzętu — przystawka nie działa."],
                 ],
             }},
-            {"h2": "Włączenie w MDTools"},
+            {"h2": "Włączenie w xD-Tools"},
             {"p": "**Okno > Ustawienia...**, zaznacz **Włącz przystawkę MDRem (pilot na podczerwień)** i "
                   "wybierz port szeregowy."},
             {"fig": ("settings", "Okno > Ustawienia. Adres foobar2000 jest niezależny od przystawki.")},
@@ -490,18 +510,18 @@ BOOK = [
                      "w Okno > Ustawienia...** To przystawka wprowadza magnetofon w nagrywanie i to ona "
                      "stawia znaczniki ścieżek. Bez niej nagrywanie oznacza samodzielne wciśnięcie "
                      "Record na magnetofonie i pozostawienie podziału na ścieżki jego własnemu "
-                     "LEVEL-SYNC — MDTools nie ma w tym udziału."},
+                     "LEVEL-SYNC — xD-Tools nie ma w tym udziału."},
             {"h2": "Przygotowanie"},
             {"ol": [
                 "Zainstaluj w foobar2000 komponent **Beefweb Remote Control** (`foo_beefweb`). Tak "
-                "MDTools czyta playlistę i śledzi, co gra. Domyślny adres `http://localhost:8880` jest "
-                "tym, czego MDTools oczekuje; zmień go w Okno > Ustawienia..., jeżeli go przestawiłeś.",
+                "xD-Tools czyta playlistę i śledzi, co gra. Domyślny adres `http://localhost:8880` jest "
+                "tym, czego xD-Tools oczekuje; zmień go w Okno > Ustawienia..., jeżeli go przestawiłeś.",
                 "Połącz wyjście **S/PDIF** komputera — optyczne albo koncentryczne — z wejściem cyfrowym "
                 "magnetofonu. To ono niesie dźwięk; USB niesie wyłącznie komendy.",
                 "Ustaw wyjście foobara na **44,1 kHz, 16 bitów, stereo** — patrz niżej.",
                 "Wczytaj album do bieżącej playlisty foobara, w kolejności, jaką chcesz mieć na płycie.",
                 "Włóż czystą albo kasowalną płytę z zamkniętym suwakiem i ustaw tryb nagrywania (SP albo "
-                "LP2) **na magnetofonie** — MDTools nie potrafi go odczytać ani zmienić.",
+                "LP2) **na magnetofonie** — xD-Tools nie potrafi go odczytać ani zmienić.",
                 "**Wyłącz LEVEL-SYNC** na magnetofonie. Patrz niżej.",
                 "Wyceluj przystawkę w czujnik magnetofonu i zostaw ją tak.",
             ]},
@@ -510,14 +530,14 @@ BOOK = [
                   "właśnie zostanie nakarmione. Podaj mu strumień 96 kHz albo 24-bitowy — a to właśnie "
                   "wystawi współczesny odtwarzacz, jeśli pliki są wysokiej rozdzielczości i nikt nie każe "
                   "ich przekonwertować — i magnetofon może go po prostu odrzucić albo wypaść w trakcie. "
-                  "I też nie ma jak powiedzieć o tym MDTools."},
+                  "I też nie ma jak powiedzieć o tym xD-Tools."},
             {"p": "Konwertuj więc na komputerze, gdzie można to zrobić dobrze bez kosztów: zainstaluj w "
                   "foobar2000 komponent **Resampler (SoX)**, dodaj go do łańcucha DSP i ustaw na "
                   "**44100 Hz**, a wyjście na **16 bitów stereo**. Pliki już w 44,1/16 przechodzą "
                   "nietknięte, więc przy zwykłym zripowanym CD nic to nie kosztuje, a ratuje ten "
                   "niewygodny przypadek."},
             {"h2": "Analogowo, jeśli trzeba"},
-            {"p": "Wejścia **analogowe** magnetofonu też działają, a MDTools prowadzi nagranie dokładnie "
+            {"p": "Wejścia **analogowe** magnetofonu też działają, a xD-Tools prowadzi nagranie dokładnie "
                   "tak samo — naciska klawisze magnetofonu, co nie zależy od tego, jak dochodzi dźwięk. "
                   "**Jakość jest jednak znacznie słabsza**, i to nieuchronnie: dźwięk wychodzi z karty "
                   "jako analogowy i zostaje ponownie scyfrowany przez magnetofon, więc łapie dwie "
@@ -533,11 +553,11 @@ BOOK = [
                   "powodu okładka szukana jest przy otwarciu okna, a nie po skończeniu albumu. W "
                   "chwili startu nagrywania wszystko zamarza."},
             {"p": "Kolumnę **Wykonawca** wypełniaj tylko wtedy, gdy utwory są różnych artystów. Na "
-                  "zwykłym albumie zostaje pusta; przy składance to właśnie ona mówi MDTools, że "
+                  "zwykłym albumie zostaje pusta; przy składance to właśnie ona mówi xD-Tools, że "
                   "płyta nią jest."},
             {"h2": "Co się dzieje"},
             {"ol": [
-                "MDTools pokazuje playlistę i jej łączny czas, i ostrzega, jeśli nie zmieści się na "
+                "xD-Tools pokazuje playlistę i jej łączny czas, i ostrzega, jeśli nie zmieści się na "
                 "80-minutowej płycie w SP.",
                 "Ustawia foobara na odtworzenie wszystkiego raz, po kolei — bez losowania i powtarzania — "
                 "żeby płyta nie skończyła w innej kolejności niż tytuły, oraz ustawia głośność foobara "
@@ -564,13 +584,13 @@ BOOK = [
             {"p": "To zawodzi na każdym albumie, w którym jeden utwór przechodzi w drugi. Dwa utwory bez "
                   "przerwy między nimi nagrają się jako jedna długa ścieżka i żadna późniejsza edycja "
                   "tego nie naprawi po dobroci."},
-            {"p": "Dlatego MDTools sam wysyła znacznik dokładnie w chwili, gdy foobar zmienia utwór — to "
+            {"p": "Dlatego xD-Tools sam wysyła znacznik dokładnie w chwili, gdy foobar zmienia utwór — to "
                   "pole **Znaczniki ścieżek przez przystawkę** i powinno zostać zaznaczone."},
             {"warn": "**Wyłącz wtedy LEVEL-SYNC na magnetofonie.** Jedno i drugie naraz oznacza tę samą "
                      "granicę dwa razy, o ułamek sekundy obok siebie, i zostawia między nimi szczątkową "
                      "ścieżkę. One się kłócą, a nie uzupełniają."},
             {"h2": "Tryb nagrywania i długość"},
-            {"p": "MD mieści 80 minut w SP. MDTools ostrzega, gdy playlista jest dłuższa, ale może "
+            {"p": "MD mieści 80 minut w SP. xD-Tools ostrzega, gdy playlista jest dłuższa, ale może "
                   "wyłącznie ostrzec — LP2 i LP4 trzeba ustawić na samym magnetofonie i nie da się "
                   "odczytać, w którym trybie jest."},
         ],
@@ -593,15 +613,15 @@ BOOK = [
                   "- napęd potykający się o rysę w 31. minucie zapisze to potknięcie na MiniDisc, a "
                   "nagrania na MiniDisc nie da się potem załatać."},
             {"p": "Wcześniejsza kopia przenosi każdy błąd odczytu w miejsce, gdzie kosztuje tylko "
-                  "ponowną próbę. MDTools używa do tego **cdparanoi**, zbudowanej właśnie po to, by "
+                  "ponowną próbę. xD-Tools używa do tego **cdparanoi**, zbudowanej właśnie po to, by "
                   "męczyć uszkodzoną płytę aż do poprawnego odczytu, oraz **flac** do zapisu wyniku. "
-                  "Oba narzędzia są dołączone do MDTools; nie trzeba niczego instalować."},
+                  "Oba narzędzia są dołączone do xD-Tools; nie trzeba niczego instalować."},
             {"fig": ("cd-rip", "Płyta odczytana, rozpoznana i gotowa do zgrania.")},
             {"h2": "Krok po kroku"},
             {"ol": [
                 "Włóż płytę do napędu i wybierz napęd z listy. **Odśwież** szuka ponownie, jeśli "
                 "podłączyłeś napęd już po otwarciu okna.",
-                "Naciśnij **Odczytaj płytę**. MDTools czyta spis treści i wyszukuje płytę w "
+                "Naciśnij **Odczytaj płytę**. xD-Tools czyta spis treści i wyszukuje płytę w "
                 "MusicBrainz, który rozpoznaje ją po długościach ścieżek - sama płyta CD nie zawiera "
                 "żadnego tekstu.",
                 "Sprawdź, co wróciło. Jeśli pasuje kilka wydań, wybierz właściwe z pola **Wydanie**; "
@@ -624,7 +644,7 @@ BOOK = [
                   "płyta dostaje nazwę od tego utworu, który akurat był pierwszy, J-card przypisuje "
                   "dwanaście utworów jednemu wykonawcy, a wyszukiwanie okładki zwraca okładkę zupełnie "
                   "innej płyty."},
-            {"p": "Dlatego MDTools to sprawdza. Jeśli większości ścieżek nie da się przypisać jednemu "
+            {"p": "Dlatego xD-Tools to sprawdza. Jeśli większości ścieżek nie da się przypisać jednemu "
                   "wykonawcy, podpisuje płytę jako **Various Artists**, nazywa ją `Mixtape` (chyba że "
                   "wydanie ma własną nazwę), wypisuje wykonawcę przy każdym utworze na J-card i "
                   "**rysuje okładkę na podstawie listy utworów** zamiast jej szukać."},
@@ -636,7 +656,7 @@ BOOK = [
             {"p": "To samo dotyczy nagrywania z foobar2000: playlista złożona z niepowiązanych utworów "
                   "jest rozpoznawana tak samo i z tym samym skutkiem."},
             {"h2": "Gdzie trafiają zgrane pliki"},
-            {"p": "Domyślnie do folderu tymczasowego, do `MDTools CD Rip`, po jednym folderze na album. "
+            {"p": "Domyślnie do folderu tymczasowego, do `xD-Tools CD Rip`, po jednym folderze na album. "
                   "Jeśli go nie ma, zostanie utworzony, więc folder tylko wpisany w Ustawieniach i nigdy "
                   "nie założony nie jest problemem. To półprodukt do nagrania, a nie kolekcja muzyki - "
                   "jeden album to kilkaset megabajtów - a Okno > Ustawienia... pozwala wskazać inne "
@@ -650,10 +670,69 @@ BOOK = [
         ],
     },
     {
+        "title": "Wypalanie płyty audio CD",
+        "blocks": [
+            {"p": "Nagrywanie > **Wypal płytę audio CD z folderu...** albo **z foobar2000...** zapisuje "
+                  "prawdziwą płytę audio CD-R w standardzie Red Book — taką, jaką odtworzy każdy "
+                  "odtwarzacz CD — z plików, które już masz. Podczerwień nie bierze w tym udziału: to "
+                  "robota napędu, więc te dwie pozycje zostają dostępne nawet przy wyłączonym MDRem."},
+            {"fig": ("burn", "Okno wypalania: co zostanie zapisane i jak będzie się nazywać.")},
+            {"h2": "Co pokazuje okno"},
+            {"p": "Nazwę albumu, wykonawcę i rok, edytowalny tytuł i wykonawcę przy każdej ścieżce oraz "
+                  "okładkę, którą można kliknąć i podmienić — to samo okno co przy nagrywaniu i ta sama "
+                  "zasada: **to, co jest na ekranie w chwili naciśnięcia Wypal, trafia na płytę**, "
+                  "zarówno jako CD-Text, jak i do projektu, z którego zaprojektujesz etykietę."},
+            {"p": "Linia pod listą podaje długość albumu wobec pojemności płyty. Kolumna **Status** to "
+                  "ta część, którą warto przeczytać, zanim cokolwiek naciśniesz."},
+            {"h2": "Dlaczego ścieżka może zostać odrzucona"},
+            {"p": "Płyta CD przyjmuje wyłącznie dźwięk 44,1 kHz, 16-bitowy, stereo. Dwie reguły Red "
+                  "Booka mogą zatrzymać wypalanie i okno mówi o nich przy konkretnej ścieżce, zamiast "
+                  "pozwolić Ci odkryć to przy odtwarzaniu:"},
+            {"ul": [
+                "ścieżka krótsza niż **cztery sekundy**, której część odtwarzaczy nie zagra;",
+                "więcej niż **99 ścieżek** albo album dłuższy niż płyta.",
+            ]},
+            {"note": "Plik o innej częstotliwości to nie jest odmowa. Pobrany album 48 kHz / 24 bity — "
+                     "czyli to, czym zwykle jest — dostaje wpis „zostanie przekonwertowane na 44100 Hz / "
+                     "16 bitów” i po drodze na płytę przechodzi przez dołączony SoX. Konwersja idzie do "
+                     "folderu roboczego; Twoje własne pliki nie są ruszane."},
+            {"h2": "Tytuły na płycie: CD-Text"},
+            {"p": "Nazwa albumu i nazwy ścieżek są zapisywane na płycie jako CD-Text, który pokażą "
+                  "odtwarzacze go obsługujące. Niesie czyste ASCII, więc polskie znaki tracą ogonki tak "
+                  "samo jak w tytułach na MiniDiscu — a to, co nie ma żadnego odpowiednika, okno wypisuje "
+                  "**przed** wypaleniem, zamiast po cichu pominąć."},
+            {"h2": "Najpierw symulacja, jeśli chcesz"},
+            {"p": "**Tylko symulacja** przechodzi całą procedurę z wyłączonym laserem. Trwa tyle co "
+                  "prawdziwe wypalanie i sprawdza napęd, prędkość oraz pliki, nie zużywając płyty. Warto "
+                  "zrobić to raz na nowym napędzie."},
+            {"warn": "Płyty CD-R nie da się nadpisać. Gdy zapis ruszy, płyta będzie albo gotowa, albo "
+                     "zmarnowana — dlatego okno pyta przed startem i pyta drugi raz, jeśli naciśniesz "
+                     "Zatrzymaj przy pracującym laserze. Przerwanie na wcześniejszym etapie "
+                     "„Przygotowywanie dźwięku” nie kosztuje nic."},
+            {"h2": "Etykieta, potem"},
+            {"p": "Po wypaleniu dane albumu są proponowane otwartemu projektowi, jeśli jest to projekt "
+                  "CD. Zgódź się, a automatyczny układ z panelu Narzędzia ma wszystko, czego potrzebuje: "
+                  "okładkę, wykonawcę, rok i listę utworów."},
+            {"fig": ("cd-label", "Etykieta płyty: rozjaśniona okładka na całym pierścieniu, wycięty "
+                                 "otwór na trzpień i znak Digital Audio u dołu.")},
+            {"fig": ("cd-insert", "Składana wkładka do slima: okładka na prawym panelu, spis utworów na "
+                                  "lewym. Po złożeniu na pół lewa połowa widoczna jest przez tył "
+                                  "pudełka.")},
+            {"h2": "Czego potrzebujesz"},
+            {"ul": [
+                "Nagrywarki CD. Jest wykrywana przez zapytanie cdrecorda, nie zgadywana — jeśli pole "
+                "**Nagrywarka** jest puste, sprawdź podłączenie napędu i naciśnij **Odśwież**.",
+                "Czystej płyty CD-R. Płyta, na której już coś jest, nie przyjmie nowego zapisu.",
+                "Niczego więcej: cdrecord i SoX są dołączone w wersji na Windows.",
+            ]},
+        ],
+    },
+    # ------------------------------------------------------------------
+    {
         "title": "Nagrywanie z folderu",
         "blocks": [
             {"p": "**Nagrywanie > Nagraj folder na MiniDisc...** nagrywa album, który masz już na "
-                  "dysku. Wskaż folder, w którym leży, a MDTools wczyta te pliki do foobar2000 we "
+                  "dysku. Wskaż folder, w którym leży, a xD-Tools wczyta te pliki do foobar2000 we "
                   "właściwej kolejności i przekaże sterowanie nagrywaniu, które już znasz — to samo "
                   "uzbrajanie, te same znaczniki utworów, to samo nadawanie tytułów."},
             {"note": "**To także wymaga przystawki MDRem** — pozycja pojawia się dopiero po jej "
@@ -678,7 +757,7 @@ BOOK = [
                 "ścieżki przyjmie.",
             ]},
             {"h2": "Skąd biorą się tytuły"},
-            {"p": "Z plików — odczytanych przez foobar2000, a nie przez MDTools: z tych dwóch to on "
+            {"p": "Z plików — odczytanych przez foobar2000, a nie przez xD-Tools: z tych dwóch to on "
                   "lepiej czyta znaczniki, a i tak musi je odczytać, żeby cokolwiek zagrać. Plik bez "
                   "znacznika tytułu zostanie nagrany pod nazwą swojego pliku. To uczciwa odpowiedź i "
                   "zwykle wystarczająca."},
@@ -688,7 +767,7 @@ BOOK = [
             {"h2": "Podfolder na płytę"},
             {"p": "Folder, w którym leżą utwory, *jest* albumem, a jego podfoldery są pomijane — "
                   "katalog ze skanami czy bonusami nie dołącza do listy. Dopiero gdy w samym folderze "
-                  "nie ma żadnego dźwięku, MDTools zagląda głębiej — i dzięki temu album dwupłytowy "
+                  "nie ma żadnego dźwięku, xD-Tools zagląda głębiej — i dzięki temu album dwupłytowy "
                   "trzymany jako `CD1` i `CD2` wychodzi w kolejności płyt."},
             {"warn": "Wczytanie folderu **czyści bieżącą playlistę foobar2000**, dokładnie tak samo "
                      "jak nagrywanie z CD. Jeśli miałeś tam coś przygotowane, przenieś to wcześniej "
@@ -702,25 +781,25 @@ BOOK = [
             {"p": "**Nagrywanie > Skasuj MiniDisc...** czyści płytę w magnetofonie. Działa na tym, co "
                   "fizycznie jest w środku, więc nie ma znaczenia, który projekt jest otwarty ani czy "
                   "w ogóle jakiś jest."},
-            {"warn": "Nie da się tego cofnąć, a MDTools nie widzi wyniku. Upewnij się, że w "
+            {"warn": "Nie da się tego cofnąć, a xD-Tools nie widzi wyniku. Upewnij się, że w "
                      "magnetofonie jest ta płyta, o którą Ci chodzi, i że jej suwak zabezpieczający "
                      "jest zamknięty."},
             {"h2": "Dlaczego pyta, co widzisz"},
-            {"p": "To jedyna operacja, przy której MDTools nie wie, co robi jego własna komenda. "
+            {"p": "To jedyna operacja, przy której xD-Tools nie wie, co robi jego własna komenda. "
                   "Klawisz **Erase** jest rozpoznawany przez magnetofon jako polecenie zapisu - tyle "
                   "udało się potwierdzić - ale nie ustalono, które menu edycji otwiera, bo klawisze "
                   "zapisu dało się bezpiecznie testować tylko na płycie zabezpieczonej, gdzie "
                   "magnetofon odpowiada na każdy z nich tym samym komunikatem."},
-            {"p": "Zamiast zgadywać Twoim nagraniem, MDTools wysyła Erase i pyta, co pokazuje "
+            {"p": "Zamiast zgadywać Twoim nagraniem, xD-Tools wysyła Erase i pyta, co pokazuje "
                   "wyświetlacz. Jeśli widzisz pytanie w rodzaju **All Erase?**, naciśnij **Wyślij "
                   "Enter** i patrz na wyświetlacz — okienko zostaje otwarte, więc można nacisnąć "
-                  "jeszcze raz. Niektóre magnetofony chcą tego kilka razy, a MDTools nie ma jak tego "
+                  "jeszcze raz. Niektóre magnetofony chcą tego kilka razy, a xD-Tools nie ma jak tego "
                   "sprawdzić: magnetofon nigdy nie odpowiada. Naciśnij **Gotowe**, gdy płyta jest już "
                   "pusta, albo **Nic się nie stało**, żeby wycofać magnetofon z menu, w którym "
                   "akurat stoi."},
             {"fig": ("erase", "Wysyła komendę, a potem pyta, co pokazuje magnetofon.")},
             {"note": "Tak jak przy tytułach, skasowanie żyje w pamięci magnetofonu do chwili "
-                     "wysunięcia płyty. MDTools proponuje potem wysunięcie - skorzystaj, bo inaczej "
+                     "wysunięcia płyty. xD-Tools proponuje potem wysunięcie - skorzystaj, bo inaczej "
                      "przy zaniku zasilania płyta zachowa starą zawartość."},
         ],
     },
@@ -731,7 +810,7 @@ BOOK = [
             {"warn": "Wszystko w tym rozdziale jest **eksperymentalne** i ukryte, dopóki samemu się o to "
                      "nie poprosi. Działa, ale jest nowsze i mniej sprawdzone niż reszta programu, a sposób "
                      "podania może się jeszcze zmienić."},
-            {"p": "MDTools potrafi rozmawiać z botem Telegrama, **którego prowadzisz sam**, pobrać "
+            {"p": "xD-Tools potrafi rozmawiać z botem Telegrama, **którego prowadzisz sam**, pobrać "
                   "przysłane pliki i przekazać wynik do Nagrywania z folderu — dzięki czemu pobranie staje "
                   "się nagraną i zatytułowaną płytą bez wychodzenia z programu."},
             {"warn": "To jest do bota, którego kontrolujesz. Pobieranie albumów z publicznego bota, który "
@@ -751,11 +830,11 @@ BOOK = [
                 "systemu, z założenia, że pobranie jest materiałem do nagrania, a nie kolekcją muzyki. "
                 "Można go ustawić gdziekolwiek.",
             ]},
-            {"note": "Nie ma tu żadnego API ID ani API Hash do wpisania. MDTools nosi własne, więc "
+            {"note": "Nie ma tu żadnego API ID ani API Hash do wpisania. xD-Tools nosi własne, więc "
                      "jedynym krokiem jest zalogowanie. Gdyby jakaś wersja programu została zbudowana bez "
                      "nich, powie to wprost, zamiast nie umieć się połączyć."},
             {"h2": "Logowanie"},
-            {"p": "MDTools loguje się na **Twoje własne konto Telegrama**, nie jako bot. Nie jest to "
+            {"p": "xD-Tools loguje się na **Twoje własne konto Telegrama**, nie jako bot. Nie jest to "
                   "kwestia gustu: Bot API Telegrama zabrania botowi pisać do innego bota, więc jedynym "
                   "sposobem rozmawiania z własnym botem tak jak człowiek jest być człowiekiem."},
             {"fig": ("telegram-login", "Logowanie do Telegrama. Numer telefonu, potem kod przysłany przez "
@@ -764,19 +843,19 @@ BOOK = [
                   "na Twoje pozostałe urządzenia, a potem — jeśli masz włączoną weryfikację dwuetapową — o "
                   "hasło. Dokładnie ta sama kolejność co w samej aplikacji Telegrama."},
             {"warn": "Zalogowanie jest zapisywane lokalnie, w pliku `telegram.session` obok ustawień "
-                     "MDTools. Ten plik jest równoważny byciu zalogowanym na Twoje konto: nie jest "
+                     "xD-Tools. Ten plik jest równoważny byciu zalogowanym na Twoje konto: nie jest "
                      "zaszyfrowany i nie jest czymś, co należy kopiować na inny komputer albo komukolwiek "
                      "wysyłać."},
             {"h2": "Rozmowa"},
             {"p": "**Eksperymentalne > Pobierz album z bota Telegram...** otwiera zwykły czat. Pojawia się "
                   "dopiero wtedy, gdy zalogowanie zostało zapisane."},
             {"fig": ("telegram-chat", "Czat, z kolejką pobierań po prawej."),},
-            {"p": "Celowo zwykły czat, a nie pole wyszukiwania: komendy Twojego bota są Twoje i MDTools nie "
+            {"p": "Celowo zwykły czat, a nie pole wyszukiwania: komendy Twojego bota są Twoje i xD-Tools nie "
                   "może ich znać. Pokazuje więc to, co bot przysyła, i pozwala go obsługiwać — tekst, jego "
                   "przyciski inline i każdy dołączony plik. **Szybkie komendy** wysyłają `/start` albo "
                   "`/help` jednym kliknięciem, bo rozumie je niemal każdy bot."},
             {"p": "Dwie wygody warte uwagi. To, co pisze bot, jest **tłumaczone pod oryginałem**, na język "
-                  "ustawiony w MDTools — oryginał zostaje, bo tłumaczenie może być błędne, a dokładną "
+                  "ustawiony w xD-Tools — oryginał zostaje, bo tłumaczenie może być błędne, a dokładną "
                   "komendę czy nazwę pliku lepiej czytać tak, jak przyszła. A bot, który buduje menu, "
                   "podmieniając własną wiadomość zamiast wysyłać nową, jest obsługiwany poprawnie: "
                   "wiadomość zmienia się na miejscu, tak jak na telefonie."},
@@ -824,7 +903,7 @@ BOOK = [
             ]},
             {"h2": "„Nie połączono” w oknie pilota"},
             {"p": "Coś innego trzyma już otwarty port szeregowy. Naraz może go mieć tylko jeden program — "
-                  "zamknij drugie okno MDTools, okno dialogowe albo terminal, który go używa."},
+                  "zamknij drugie okno xD-Tools, okno dialogowe albo terminal, który go używa."},
             {"h2": "Nowy tytuł ma doklejony ogon starego"},
             {"p": "Pole **Najpierw skasuj istniejące tytuły** było odznaczone albo stary tytuł był dłuższy, "
                   "niż przewidywało kasowanie. Uruchom wysyłkę jeszcze raz z zaznaczonym polem."},
@@ -860,7 +939,7 @@ BOOK = [
                   "Każda komenda kończy się jedną linią — `OK`, `PONG` albo `ERR <powód>` — więc program "
                   "może parsować odpowiedź, nie znając komendy. Linie zaczynające się od `;` to "
                   "diagnostyka."},
-            {"p": "MDTools obsługuje to wszystko za ciebie. Opis jest tu dla kogoś, kto chce rozmawiać z "
+            {"p": "xD-Tools obsługuje to wszystko za ciebie. Opis jest tu dla kogoś, kto chce rozmawiać z "
                   "przystawką wprost — z terminala albo z własnego skryptu."},
             {"table": {
                 "head": ["Komenda", "Działanie"],

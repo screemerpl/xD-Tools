@@ -40,6 +40,17 @@ class DiscTemplate:
     buffered width, forming one continuous cutout: the slot the slider tab
     travels through as it's slid open/closed.
 
+    shape == "cd_label" switches to a CD/CD-R disc label: a plain annulus
+    (one circle with the spindle hole subtracted out of it), built the same
+    subtracted-path way "full_label" builds its notch, so template_clip_path()
+    excludes the hole with no extra union/subtract logic anywhere else.
+    outer_diameter_mm is the label's own outer edge and hole_diameter_mm the
+    hole punched for the disc's hub; width_mm/height_mm stay equal to
+    outer_diameter_mm so everything that reasons about a template's physical
+    footprint (printing, copy packing, crop_to_template_bounds) keeps working
+    unchanged. Every slider_* field is unused for this shape -- a CD has no
+    cartridge and no shutter.
+
     slider_width_mm/slider_height_mm/slider_corner_radius_mm do double duty:
     for shape == "sticker" they describe the adjacent slider-label shape
     described above; for shape == "full_label" they instead describe a
@@ -60,7 +71,7 @@ class DiscTemplate:
     slider_height_mm: float = 0.0
     slider_corner_radius_mm: float = 0.0
     slider_gap_mm: float = 3.0
-    shape: str = "sticker"  # "sticker" (chamfer+fillet) or "full_label" (rounded rect + slider notch)
+    shape: str = "sticker"  # "sticker" (chamfer+fillet), "full_label" (rounded rect + slider notch), "cd_label" (annulus)
     corner_radius_mm: float = 0.0  # used only when shape == "full_label"
     slider_notch_width_mm: float = 0.0
     slider_notch_height_mm: float = 0.0
@@ -68,7 +79,15 @@ class DiscTemplate:
     slider_notch_top_mm: float = 0.0
     slider_notch_buffer_mm: float = 0.0
     slider_travel_mm: float = 0.0
+    # used only when shape == "cd_label"
+    outer_diameter_mm: float = 0.0
+    hole_diameter_mm: float = 0.0
     kind: str = "disc"
+    # Which physical medium this template is for: "md" (MiniDisc) or "cd"
+    # (CD-R). File > New offers only the templates matching the medium the
+    # project is being started for. Defaults to "md" so every template
+    # written before CD support existed stays a MiniDisc one.
+    medium: str = "md"
     # False for the built-in defaults: measure your own media/case and
     # correct these numbers (or clone+edit via the Template Manager)
     # before cutting anything for real.
@@ -116,6 +135,8 @@ class CoverTemplate:
     cutout_from_bottom_mm: float = 0.0
     cutout_side: str = "left"  # "left" or "right" -- which fold line it's measured from
     kind: str = "cover"
+    # See DiscTemplate.medium.
+    medium: str = "md"
     verified: bool = False
     builtin: bool = False
     # Pre-made print layers (text/shapes/images), captured via Tools >

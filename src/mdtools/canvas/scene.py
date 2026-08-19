@@ -69,6 +69,9 @@ class DesignScene(QGraphicsScene):
         if t.shape == "full_label":
             self._build_full_label_outline(t)
             return
+        if t.shape == "cd_label":
+            self._build_cd_label_outline(t)
+            return
 
         w, h = mm_to_px(t.width_mm), mm_to_px(t.height_mm)
         path = chamfered_fillet_rect(w, h, mm_to_px(t.chamfer_mm), mm_to_px(t.fillet_mm))
@@ -137,6 +140,36 @@ class DesignScene(QGraphicsScene):
             self._outline_items.append(slider_outline)
 
         self.setSceneRect(QRectF(-10, -10, w + 20, h + 20))
+
+    def _build_cd_label_outline(self, t: DiscTemplate) -> None:
+        """A CD/CD-R disc label (shape == "cd_label"): one circle with the
+        spindle hole subtracted out of it.
+
+        Built with QPainterPath.subtracted() -- the same single-cut-shape-
+        with-a-hole approach _build_full_label_outline() uses for the
+        shutter notch, rather than two independent LAYER_CUT shapes -- so
+        template_clip_path() already refuses to print into the hole with no
+        extra handling anywhere. Falls back to width_mm/height_mm when
+        outer_diameter_mm hasn't been filled in, so a half-configured
+        template still draws something rather than nothing.
+        """
+        diameter = mm_to_px(t.outer_diameter_mm) if t.outer_diameter_mm > 0 else mm_to_px(t.width_mm)
+        path = QPainterPath()
+        path.addEllipse(QRectF(0, 0, diameter, diameter))
+
+        if t.hole_diameter_mm > 0:
+            hole = mm_to_px(t.hole_diameter_mm)
+            hole_path = QPainterPath()
+            # concentric with the label: a hole punched anywhere else would
+            # not fit over the disc's hub.
+            hole_path.addEllipse(QRectF((diameter - hole) / 2, (diameter - hole) / 2, hole, hole))
+            path = path.subtracted(hole_path)
+
+        outline = make_template_outline(path, LAYER_CUT)
+        self.addItem(outline)
+        self._outline_items.append(outline)
+
+        self.setSceneRect(QRectF(-10, -10, diameter + 20, diameter + 20))
 
     def _build_cover_outline(self, t: CoverTemplate) -> None:
         w, h = mm_to_px(t.width_mm), mm_to_px(t.height_mm)
@@ -254,7 +287,16 @@ class DesignScene(QGraphicsScene):
     def seed_disc_defaults(self) -> None:
         """Add the conventional "insert this end first" triangle + label
         near the top of a fresh disc label. Both are ordinary, fully-editable
-        text items -- move, restyle, or delete them like anything else."""
+        text items -- move, restyle, or delete them like anything else.
+
+        A CD label gets nothing: the insertion mark is a MiniDisc convention
+        (a cartridge goes into the deck one way round), and a disc that drops
+        onto a spindle has no end to insert first. Gated on the template's
+        medium rather than its shape, since that is the actual reason.
+        """
+        if getattr(self.template, "medium", "md") == "cd":
+            return
+
         triangle = self.add_text("▲")
         triangle_font = triangle.font()
         triangle_font.setPointSizeF(20)

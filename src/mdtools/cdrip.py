@@ -69,7 +69,9 @@ _LOG_TAIL_CHARS = 4000
 # Windows only: keep every child process from flashing up its own console
 # window. A frozen GUI build has no console of its own, so without this a
 # 12-track rip would pop 24 black windows in the user's face.
-_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+# Public because cdburn.py drives its own child processes and needs the
+# same "don't flash a console window" flag -- one definition, not two.
+NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 _INVALID_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 
@@ -356,7 +358,7 @@ def read_toc(device: str, run=subprocess.run) -> DiscToc:
                 text=True,
                 errors="replace",
                 timeout=TOC_TIMEOUT_S,
-                creationflags=_NO_WINDOW,
+                creationflags=NO_WINDOW,
             )
         except subprocess.TimeoutExpired as exc:
             raise CdRipError(f"the drive did not answer within {TOC_TIMEOUT_S:.0f}s") from exc
@@ -574,7 +576,7 @@ def rip_track(
             rip_command(tool, device, task.number, task.wav_path),
             stdout=subprocess.DEVNULL,
             stderr=log,
-            creationflags=_NO_WINDOW,
+            creationflags=NO_WINDOW,
         )
         while process.poll() is None:
             if should_cancel is not None and should_cancel():
@@ -632,7 +634,7 @@ def encode_track(task: RipTask, *, run=subprocess.run, keep_wav: bool = False) -
             text=True,
             errors="replace",
             timeout=ENCODE_TIMEOUT_S,
-            creationflags=_NO_WINDOW,
+            creationflags=NO_WINDOW,
         )
     except subprocess.TimeoutExpired as exc:
         raise CdRipError(f"encoding track {task.number} timed out") from exc

@@ -431,7 +431,7 @@ def test_cancelling_the_save_path_prompt_exports_nothing(qt_app, monkeypatch):
     def fail_if_called(*a, **k):
         raise AssertionError("nothing should be written without a chosen path")
 
-    monkeypatch.setattr(print_dialog_module, "print_placements", fail_if_called)
+    monkeypatch.setattr(print_dialog_module, "print_sheets", fail_if_called)
 
     dialog = PrintDialog(_project())
     dialog._on_export_pdf()  # must not raise
@@ -451,3 +451,132 @@ def test_exporting_in_grayscale_saves_the_adjustment_onto_the_project(qt_app, tm
     dialog._on_export_pdf()
 
     assert project.grayscale_adjustment == GrayscaleAdjustment(brightness=25, contrast=10)
+
+
+# -- orientation and separate sheets -------------------------------------
+
+
+def test_the_page_can_be_turned_and_everything_asks_one_place_for_it(qt_app):
+    dialog = PrintDialog(_project())
+
+    assert dialog.page_size_mm() == (210.0, 297.0)
+    dialog.orientation_combo.setCurrentIndex(1)
+    assert dialog.page_size_mm() == (297.0, 210.0)
+    # the preview's own paper follows, rather than keeping its own idea
+    assert dialog._page_rect_item.rect().width() > dialog._page_rect_item.rect().height()
+
+
+def test_the_printer_is_turned_the_same_way_as_the_preview(qt_app):
+    from PySide6.QtGui import QPageLayout
+
+    dialog = PrintDialog(_project())
+    dialog.orientation_combo.setCurrentIndex(1)
+
+    assert dialog._new_printer().pageLayout().orientation() == QPageLayout.Orientation.Landscape
+
+
+def test_separate_sheets_puts_each_label_on_its_own_page(qt_app):
+    dialog = PrintDialog(_project())
+    assert len(dialog.sheets()) == 1
+
+    dialog.separate_sheets_check.setChecked(True)
+
+    sheets = dialog.sheets()
+    assert len(sheets) == 2
+    assert all(item in dialog._disc_items for item in sheets[0])
+    assert all(item in dialog._cover_items for item in sheets[1])
+
+
+def test_the_preview_shows_one_sheet_at_a_time(qt_app):
+    """What is on screen has to be a page that will come out, not a
+    composite of two that will not."""
+    dialog = PrintDialog(_project())
+    dialog.separate_sheets_check.setChecked(True)
+
+    assert all(item.isVisible() for item in dialog._disc_items)
+    assert not any(item.isVisible() for item in dialog._cover_items)
+
+    dialog.sheet_combo.setCurrentIndex(1)
+
+    assert not any(item.isVisible() for item in dialog._disc_items)
+    assert all(item.isVisible() for item in dialog._cover_items)
+
+
+def test_turning_separate_sheets_off_again_shows_everything(qt_app):
+    dialog = PrintDialog(_project())
+    dialog.separate_sheets_check.setChecked(True)
+    dialog.sheet_combo.setCurrentIndex(1)
+
+    dialog.separate_sheets_check.setChecked(False)
+
+    assert all(item.isVisible() for item in dialog._all_items())
+
+
+def test_exporting_two_sheets_writes_two_pngs(qt_app, tmp_path, monkeypatch):
+    """A PNG holds one page; exporting only the first would silently lose
+    half the project."""
+    target = tmp_path / "labels.png"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(target), "")))
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a, **k: None))
+
+    dialog = PrintDialog(_project())
+    dialog.separate_sheets_check.setChecked(True)
+    dialog._on_export_png()
+
+    assert (tmp_path / "labels-1.png").is_file()
+    assert (tmp_path / "labels-2.png").is_file()
+    assert not target.exists()
+
+
+def test_one_sheet_still_writes_the_file_that_was_asked_for(qt_app, tmp_path, monkeypatch):
+    target = tmp_path / "sheet.png"
+    monkeypatch.setattr(QFileDialog, "getSaveFileName", staticmethod(lambda *a, **k: (str(target), "")))
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a, **k: None))
+
+    PrintDialog(_project())._on_export_png()
+
+    assert target.is_file()
+
+
+def _cd_project():
+    """A project on the CD templates, whose two pages cannot share a sheet."""
+    from mdtools.app_window import CD_INSERT_TEMPLATE, CD_LABEL_TEMPLATE, MainWindow
+    from mdtools.project import MEDIUM_CD, PAGE_COVER, PAGE_DISC
+    from mdtools.templates import registry
+
+    registry.sync_builtin_templates()
+    templates = registry.load_templates()
+    window = MainWindow(show_startup_dialog=False)
+    window.project.medium = MEDIUM_CD
+    window.apply_template(PAGE_DISC, next(t for t in templates["disc"] if t.name == CD_LABEL_TEMPLATE))
+    window.apply_template(PAGE_COVER, next(t for t in templates["cover"] if t.name == CD_INSERT_TEMPLATE))
+    return window.project
+
+
+def test_a_project_whose_labels_cannot_share_a_sheet_switches_by_itself(qt_app, monkeypatch):
+    """Opening Print on a CD project used to greet the user with a warning
+    box: its 242mm insert and 118mm label need 363mm of a 287mm sheet, so
+    the shared-sheet packer placed nothing. The answer was one checkbox
+    away, so it gets checked rather than explained."""
+    monkeypatch.setattr(
+        QMessageBox, "warning", staticmethod(lambda *a, **k: pytest.fail("nothing to warn about"))
+    )
+
+    dialog = PrintDialog(_cd_project())
+
+    assert dialog.separate_sheets_check.isChecked() is True
+    assert [len(sheet) for sheet in dialog.sheets()] == [1, 1]
+
+
+def test_a_partial_fit_still_says_so(qt_app, monkeypatch):
+    """The auto-switch is only for "nothing fits at all". When some copies
+    do fit, the overflow corner and its explanation are still the right
+    answer."""
+    warned = []
+    monkeypatch.setattr(QMessageBox, "warning", staticmethod(lambda *a, **k: warned.append(a)))
+
+    dialog = PrintDialog(_project())
+    dialog.copies_spin.setValue(9)
+
+    assert warned
+    assert dialog.separate_sheets_check.isChecked() is False

@@ -121,12 +121,24 @@ class GrayscaleAdjustment:
     contrast: int = 0
 
 
+# The physical medium a project is for. Chosen once, when the project is
+# created, and it decides which templates File > New offers and which
+# recording/burning flow applies to it -- not anything about how a page is
+# drawn, which follows from the templates themselves.
+MEDIUM_MD = "md"
+MEDIUM_CD = "cd"
+
+
 @dataclass
 class Project:
     metadata: ProjectMetadata
     pages: dict[str, DesignScene]  # keys: PAGE_DISC, PAGE_COVER
     default_text_style: TextStyle = field(default_factory=TextStyle)
     grayscale_adjustment: GrayscaleAdjustment = field(default_factory=GrayscaleAdjustment)
+    # MEDIUM_MD for every project saved before CD-R support existed -- they
+    # were MiniDisc projects, so loading them as such is not a default, it
+    # is the truth about them.
+    medium: str = MEDIUM_MD
 
 
 # What a mixtape is called when its own tags do not name it. Deliberately

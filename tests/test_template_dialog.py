@@ -67,7 +67,13 @@ def test_shape_combo_toggles_between_sticker_and_full_label_fields(qt_app, tmp_p
     )
     dialog._refresh_list(select_index=len(dialog.templates["disc"]) - 1)
 
-    shape_combo = next(c for c in dialog.editor_container.findChildren(QComboBox) if c.count() == 2)
+    # identified by what it holds, not by how many entries it has -- the
+    # editor grew a second combo (Medium) and the shape combo a third entry.
+    shape_combo = next(
+        c
+        for c in dialog.editor_container.findChildren(QComboBox)
+        if "sticker" in [c.itemData(i) for i in range(c.count())]
+    )
     assert shape_combo.currentData() == "full_label"
 
     form = shape_combo.parentWidget().layout()

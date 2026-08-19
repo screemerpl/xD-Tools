@@ -10,7 +10,8 @@
       "fillet_mm": 1.0,
       "safe_margin_mm": 1.5,
       "verified": true,
-      "builtin": true
+      "builtin": true,
+      "medium": "md"
     },
     {
       "name": "MiniDisc Disc Label (with Slider)",
@@ -25,7 +26,8 @@
       "slider_corner_radius_mm": 2.5,
       "slider_gap_mm": 3.0,
       "verified": true,
-      "builtin": true
+      "builtin": true,
+      "medium": "md"
     },
     {
       "name": "Full disc label",
@@ -41,7 +43,8 @@
       "slider_notch_buffer_mm": 0.8,
       "slider_travel_mm": 18.0,
       "verified": true,
-      "builtin": true
+      "builtin": true,
+      "medium": "md"
     },
     {
       "name": "Full disc label (with Slider)",
@@ -60,6 +63,20 @@
       "slider_height_mm": 17.5,
       "slider_corner_radius_mm": 2.5,
       "verified": true,
+      "builtin": true,
+      "medium": "md"
+    },
+    {
+      "name": "CD Disc Label (Standard Hub)",
+      "kind": "disc",
+      "medium": "cd",
+      "shape": "cd_label",
+      "width_mm": 118.0,
+      "height_mm": 118.0,
+      "outer_diameter_mm": 118.0,
+      "hole_diameter_mm": 41.0,
+      "safe_margin_mm": 2.0,
+      "verified": false,
       "builtin": true
     }
   ],
@@ -70,10 +87,14 @@
       "width_mm": 126.0,
       "height_mm": 73.0,
       "corner_radius_mm": 2.0,
-      "fold_offsets_mm": [58.85, 67.15],
+      "fold_offsets_mm": [
+        58.85,
+        67.15
+      ],
       "safe_margin_mm": 1.5,
       "verified": true,
-      "builtin": true
+      "builtin": true,
+      "medium": "md"
     },
     {
       "name": "MiniDisc Cover (J-Card + Window)",
@@ -81,7 +102,10 @@
       "width_mm": 126.0,
       "height_mm": 73.0,
       "corner_radius_mm": 2.0,
-      "fold_offsets_mm": [58.85, 67.15],
+      "fold_offsets_mm": [
+        58.85,
+        67.15
+      ],
       "safe_margin_mm": 1.5,
       "cutout_width_mm": 40.0,
       "cutout_height_mm": 40.0,
@@ -90,6 +114,33 @@
       "cutout_from_bottom_mm": 3.45,
       "cutout_side": "right",
       "verified": true,
+      "builtin": true,
+      "medium": "md"
+    },
+    {
+      "name": "CD Slim Case Insert (Front)",
+      "kind": "cover",
+      "medium": "cd",
+      "width_mm": 120.0,
+      "height_mm": 120.0,
+      "corner_radius_mm": 0.0,
+      "fold_offsets_mm": [],
+      "safe_margin_mm": 3.0,
+      "verified": false,
+      "builtin": true
+    },
+    {
+      "name": "CD Slim Case Insert (Folded, 2 Panels)",
+      "kind": "cover",
+      "medium": "cd",
+      "width_mm": 242.0,
+      "height_mm": 120.0,
+      "corner_radius_mm": 0.0,
+      "fold_offsets_mm": [
+        121.0
+      ],
+      "safe_margin_mm": 3.0,
+      "verified": false,
       "builtin": true
     }
   ]

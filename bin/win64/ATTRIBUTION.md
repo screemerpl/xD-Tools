@@ -1,12 +1,13 @@
 # Bundled command line tools (Windows, x86-64)
 
-MDTools ships these to read and encode audio CDs (Project > Record CD to
-MiniDisc...). They are unmodified upstream binaries, executed as separate
-programs via `subprocess` -- see `src/mdtools/cdrip.py`, which locates them
-through `tools_dir()`.
+MDTools ships these to read and encode audio CDs (Recording > Record CD to
+MiniDisc...) and to write them (Recording > Burn Audio CD...). They are
+unmodified upstream binaries, executed as separate programs via
+`subprocess` -- see `src/mdtools/cdrip.py` and `src/mdtools/cdburn.py`,
+which locate them through `cdrip.tools_dir()`.
 
-Nothing is bundled for Linux: both tools are packaged by every distribution,
-and `cdrip.find_tool()` falls through to `PATH` there.
+Nothing is bundled for Linux: all three tools are packaged by every
+distribution, and `cdrip.find_tool()` falls through to `PATH` there.
 
 ## cd-paranoia (libcdio-paranoia)
 
@@ -44,8 +45,78 @@ flac 1.5.0, the reference FLAC encoder from Xiph.Org.
 - Licence: the `flac` command line tool is GPL-2.0-or-later; `libFLAC` is
   BSD-3-Clause.
 
+## cdrecord (cdrtools)
+
+cdrecord 3.02a10, built 2021-07-23 for Windows (a Cygwin build -- hence
+`cygwin1.dll` below). Writes the audio CD-R, disc-at-once, with CD-Text.
+
+cdrdao was the first choice for this and was abandoned for a plain reason:
+it has no maintained Windows build. Its last official win32 package is
+1.1.5 from around 2004, Cygwin- and ASPI-based, in an OldFiles folder, and
+upstream's own Windows instructions are stale. cdrtools is still built for
+Windows, and is what the cdrtfe project ships.
+
+- Upstream: <https://sourceforge.net/projects/cdrtools/> (Joerg Schilling)
+- Binary taken from the cdrtfe project's own tools folder, which is where
+  current Windows builds of cdrtools are published:
+  <https://sourceforge.net/projects/cdrtfe/files/tools/binaries/cdrtools/>
+  - `cdrtools-3.02a10-bin-win32.rar`
+    (SHA-256 `4d6b68e50e26f5826a6b6286a927570457178257d4005f5c5bd8615593f58d02`)
+    -- `cdrecord.exe`
+    (SHA-256 `4586c7f68ff97b6d0323e761971311e16e54663d946d9c6de0584e6de28d3505`)
+- Licence: CDDL-1.0 (cdrecord itself; other cdrtools components are GPL).
+
+### Its runtime dependency
+
+- `cygwin1.dll` -- Cygwin 2.3.1, the POSIX compatibility layer this build of
+  cdrecord links against. Taken from the same place,
+  <https://sourceforge.net/projects/cdrtfe/files/tools/binaries/cygwin/>,
+  `cygwin1.dll_2.3.1.rar`
+  (SHA-256 `8dbe90f7050ae53f6eda19cc4a4a6e1057903a763ecee189f69bfa0f09db05eb`),
+  giving `cygwin1.dll`
+  (SHA-256 `4f7a2e8c5d627cd053850a57fa266271ef6bce01d127d89c222ec3d8db159a47`).
+- Licence: GPL-3.0-or-later with the Cygwin linking exception (this predates
+  Cygwin's move to LGPL-3.0 in 2.5.2). Upstream: <https://cygwin.com/>.
+
+## SoX
+
+SoX 14.4.2, the Sound eXchange resampler. A CD holds 44.1 kHz / 16-bit
+stereo and nothing else; `flac.exe` cannot resample, so this is what turns
+an ordinary 48 kHz / 24-bit download into something that can be written.
+
+ffmpeg was the first choice and was measured rather than assumed: its
+Windows builds are ~128 MB of DLLs (`avcodec` alone 68 MB, past the size
+GitHub warns about), against 6 MB for SoX, which does the one thing needed.
+The cost is breadth -- **this package cannot read MP3**. The format is in
+SoX's own list, but decoding one needs `libmad-0.dll` loaded at runtime and
+the official package does not ship it (confirmed by running it: writing an
+MP3 fails with "Unable to load LAME encoder library"). Dropping a 32-bit
+`libmad-0.dll` in beside `sox.exe` would enable it with no code change.
+
+- Upstream: <https://sox.sourceforge.net/>
+- Binaries taken from the official Windows package,
+  <https://sourceforge.net/projects/sox/files/sox/14.4.2/sox-14.4.2-win32.zip>
+  (SHA-256 `8072cc147cf1a3b3713b8b97d6844bb9389e211ab9e1101e432193fad6ae6662`)
+  -- `sox.exe` and the DLLs beside it (`libsox-3`, `libflac-8`, `libogg-0`,
+  `libvorbis*`, `libwavpack-1`, `libid3tag-0`, `libpng16-16`, `zlib1`,
+  `libgomp-1`, `libgcc_s_sjlj-1`, `libssp-0`, `libwinpthread-1`).
+  `wget.exe` and the PDF manuals from that package are deliberately not
+  bundled.
+- **In the `sox/` subfolder, not here**, because this build is 32-bit while
+  cd-paranoia and flac are 64-bit: unpacking it alongside them overwrote
+  `libwinpthread-1.dll` with a 32-bit copy of the same name. That happened
+  not to break anything, since cd-paranoia does not import that DLL
+  directly -- but `zlib1.dll` and `libpng16-16.dll` collide just as easily.
+  Windows resolves an executable's DLLs from its own directory first, so a
+  folder per architecture keeps each set with its own binary.
+- Licence: GPL-2.0-or-later (`sox.exe`); `libsox` itself is
+  LGPL-2.1-or-later.
+
 ## Source code
 
-Both GPL tools' complete corresponding source is published by their upstream
-projects at the addresses above, and by MSYS2 alongside the binary packages
-listed here. Neither binary has been modified.
+Every GPL and CDDL tool here has its complete corresponding source published
+by its upstream project at the addresses above, and by MSYS2 (for the
+libcdio and flac packages) alongside the binaries listed. cdrtools' source
+is on its SourceForge project page and mirrored in the same cdrtfe tools
+folder the binary came from, under `tools/source/cdrtools`. No binary here
+has been modified.

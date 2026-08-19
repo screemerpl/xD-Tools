@@ -43,6 +43,8 @@ src/mdtools/
   mdrem.py                  MDRem IR adapter: serial protocol, transliteration, upload plan (no Qt UI)
   foobar.py                 foobar2000 via its Beefweb REST API *and* its command line (no Qt UI)
   cdrip.py                  audio CD: drives, TOC, disc ids, rip plan, cdparanoia/flac (no Qt UI)
+  decode.py                 what an audio file is, and Red Book PCM out of it (no Qt)
+  cdburn.py                 audio CD-R: burn plan, *.inf CD-Text, cdrecord (no Qt UI)
   musicbrainz.py            identifying a CD from its TOC alone -- a CD carries no text (no Qt UI)
   audio_folder.py           which files in a folder are the album, and in what order (no Qt)
   embedded_cover.py         the cover art inside a FLAC file, as a last resort (no Qt)
@@ -50,6 +52,7 @@ src/mdtools/
   user_paths.py             where every file dialog starts: Documents/MiniDiscProjects, Pictures
   auto_layout.py            places cover art on a disc label and the logo on its slider (no Qt UI beyond items)
   jcard_layout.py           builds the three J-card panels: front cover, spine band, track list (no Qt UI)
+  cd_layout.py              the CD ring and the folded slim-case insert (no Qt UI)
   palette.py                background/accent/text colours pulled out of a cover image (Pillow, no Qt)
   i18n/
     __init__.py               language setting persistence + QTranslator install
@@ -79,6 +82,7 @@ src/mdtools/
     cd_rip_dialog.py            Recording > Record CD to MiniDisc: read TOC, identify, rip, fill playlist, hand off
     cover_preview.py            the cover thumbnail that is also the button for replacing it, plus its lookup
     folder_record_dialog.py     Recording > Record Folder to MiniDisc: a folder of files into that playlist instead
+    burn_dialog.py              Recording > Burn Audio CD: the plan, the verdicts, and cdrdao behind a worker
     erase_dialog.py             Recording > Erase MiniDisc: a guided, ask-the-user-what-you-see erase
     about_dialog.py             Help > About MDTools
     asset_gallery_dialog.py     Insert Asset: pick one of the bundled gallery images
@@ -104,7 +108,8 @@ scripts/
 ## Domain model
 
 A **Project** = exactly one Disc Label page + one Cover/J-Card page + metadata
-(album/artist/year/tracks) + a project-wide default text style, switchable via
+(album/artist/year/tracks) + a project-wide default text style + the physical
+**medium** it is for (`Project.medium`, `MEDIUM_MD` / `MEDIUM_CD`), switchable via
 a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
 (images embedded as base64 PNG, not file paths).
 
@@ -198,6 +203,49 @@ a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
   rounded-rect (1mm radius) cutout on the *right* side, 10.3mm from the
   right fold line and 3.45mm from the bottom. User-confirmed against their
   physical case, `verified: true`.
+- **CD-R support: the medium is a project-level choice, not a per-page one.**
+  `Project.medium` is picked once in `NewDesignDialog` (a combo above the two
+  template pickers) and decides which templates that dialog and Templates >
+  "Change Template for This Page..." offer at all -- `DiscTemplate.medium` /
+  `CoverTemplate.medium` carry the same value, defaulting to `"md"` so every
+  template and every `.mdproj` written before CD support existed stays a
+  MiniDisc one (that is the truth about them, not a fallback). A project holds
+  exactly one disc page and one cover page, so an unfiltered picker would let
+  a J-card onto a CD project -- two pages describing different physical
+  objects, with nothing to notice it until something got cut.
+- **CD disc label (`shape == "cd_label"`)**: a plain annulus -- one circle with
+  the spindle hole `subtracted()` out of it, the same single-cut-shape-with-a-
+  hole approach `full_label` uses for its shutter notch (and *not* the additive
+  two-shapes approach the slider variant uses), so `template_clip_path()`
+  refuses to print into the hole with no extra handling anywhere.
+  `outer_diameter_mm` / `hole_diameter_mm` define it; `width_mm`/`height_mm` are
+  kept equal to the outer diameter so everything that reasons about a
+  template's physical footprint (printing, copy packing,
+  `crop_to_template_bounds()`) keeps working untouched. Every `slider_*` field
+  is meaningless here -- a CD has no cartridge -- and the Template Manager
+  hides those rows for this shape. `seed_disc_defaults()` also returns early
+  for a CD medium: the "▲ INSERT THIS END" mark says which end of a *cartridge*
+  goes into the deck, and a disc dropped onto a spindle has no such end.
+- **Where the CD dimensions came from, and the correction they carried.** The
+  user delegated the measuring ("to mozesz sobie znalezc sam w internecie"), so
+  unlike every MiniDisc template here these start from industry sources rather
+  than their own ruler, and are `verified: false` until they cut one. Full-size
+  CD labels are 118mm outer (4.65"), standard-hub hole 41mm. **A slim jewel
+  case takes only a front insert, 120 x 120mm -- not 124 x 124, and it has no
+  tray card at all**: 124mm is the height of the case body, not of the paper
+  (which sits under tabs), and the back of a slim case is the bare plastic
+  tray, with no pocket and no spine. So the track list gets a *folded* insert
+  instead -- "CD Slim Case Insert (Folded, 2 Panels)", 242 x 120mm with one
+  fold at 121mm: right panel is the cover, left panel the track list, folded
+  once and read through the clear back of the case. That maps straight onto
+  the existing `fold_offsets_mm` machinery, so it needed no new page-count
+  concept (a project still has exactly two pages).
+- **The automatic layout branches on the medium** (`_auto_layout_project()`):
+  a MiniDisc project gets the full-face label and the J-card, a CD project
+  gets `_auto_layout_cd_disc_label()` and `_auto_layout_cd_insert()`. Both
+  halves of each target templates *by name*, so the branch is not cosmetic --
+  running the MiniDisc layout on a CD project would replace its pages with
+  MiniDisc shapes rather than laying them out.
 - Built-in templates can be edited but not deleted.
 - **New built-in templates reach existing installs via
   `registry.sync_builtin_templates()`, called once from `main()` on every
@@ -571,6 +619,36 @@ small fixed margin around the actual cut shape (see `_build_disc_outline`/
 `_build_cover_outline`'s `setSceneRect(QRectF(-10, -10, w + 20, h + 20))`)
 -- so this is exactly the same physical footprint Export Print PNG's own
 output image already has, not a bug introduced by printing.
+
+**Landscape, and a sheet per label -- both forced by a CD project.**
+Printing was portrait-only, on the stated reasoning that both MiniDisc
+designs fit a portrait sheet comfortably. A CD project breaks that twice
+over: its folded slim-case insert is 242mm wide, which no portrait sheet
+takes upright (it fits only turned a quarter turn), and the disc label plus
+that insert exceed A4's 287mm printable length side by side, so **they
+cannot share one sheet in either orientation** -- 242 + 3 + 118 = 363.
+`oriented_page_size()` is the one place the paper is turned, so the preview,
+`_new_printer()`'s `setPageOrientation()` and a PNG export can never disagree
+about which way round it is.
+
+`build_sheet_layout()` packs one label type alone on a page -- the plain-grid
+half of `build_copies_layout()` without the two-label arrangement search,
+keeping the same "rotation is a fallback, never a default" rule -- and
+raises `PrintLayoutError` when not even one copy fits, which is a real
+answer rather than a failure to try. `print_sheets()` then prints several
+pages in **one** job with `newPage()` between them: a QPainter can only be
+opened on a QPrinter once, and starting a second job would ask the printer
+dialog again or overwrite the PDF just written. Empty sheets are skipped
+rather than emitted blank.
+
+**The preview shows one sheet at a time** (`PrintDialog.sheets()` /
+`_show_current_sheet()`), because what is on screen has to be a page that
+will actually come out, not a composite of two that will not. Items on the
+other sheet are *hidden*, never removed, so flipping back and forth keeps
+their positions, rotations and images. Export PNG writes one file per sheet
+(`name-1.png`, `name-2.png`) since a PNG holds one page and exporting only
+the first would silently lose half a project; a single sheet still writes
+exactly the filename that was asked for.
 
 **The actual print -- `printing.print_placements()` -- must run with
 `printer.setFullPage(True)` already set by the caller**, so the printer's
@@ -2332,6 +2410,256 @@ this feature exists for. If it ever needs to be faster, the lever is `-Z`
 preferable to letting foobar play the disc live, so it should be a visible
 choice, never a quiet default.
 
+**Burning an audio CD-R (`decode.py` + `cdburn.py`) is the same
+plan-then-execute split as ripping, and the planning half is where every
+decision lives.** `build_burn_plan()` needs no drive, no QApplication and no
+files beyond the ones being burned; it returns every reason a disc cannot be
+written *attached to the plan* rather than raised, because the dialog has to
+show them all at once, next to the tracks they are about -- stopping at the
+first bad file would make fixing an album a matter of one failed attempt per
+problem. Those reasons are **codes, not sentences** (`NOT_RED_BOOK`,
+`TOO_SHORT`, `TOO_LONG_FOR_DISC`, ...), for the same reason
+`decode.AudioProperties.mismatches()` returns bare field names: the wording
+has to be translated and neither module has any Qt in it.
+
+**Reading a file's properties is deliberately separate from decoding it.** A
+CD-R holds 44.1kHz/16-bit stereo and nothing else, so every source file is
+measured against that *before* the disc is committed. `decode._ensure_pcm()`
+is the single place that decides which tool runs; every caller above it
+thinks only in terms of "a path to Red Book WAV".
+
+**Resampling is SoX, and the choice was measured rather than assumed.** A
+48kHz/24-bit album is what a download normally is -- the first real burn
+attempt hit exactly that and was refused, because `flac.exe` cannot
+resample. ffmpeg was chosen first (it would have brought MP3/M4A/Opus), then
+measured: its Windows builds are ~128MB of DLLs, `avcodec` alone 68MB, past
+the size GitHub warns about and in every clone forever. SoX does the one
+thing needed in 6MB. `convert_command()` is `rate -v` (high-quality
+resampler) plus `dither`, which is what makes 24->16 bits sound like the
+recording rather than like quantisation noise; effects come *after* the
+output file, which is SoX's own argument order.
+
+**What that costs, stated plainly because it was got wrong once:** this SoX
+package **cannot read MP3**. The format is in its own list, but decoding one
+needs `libmad-0.dll` loaded at runtime and the official release does not ship
+it -- established by running it (writing an MP3 fails with "Unable to load
+LAME encoder library"). `CONVERTIBLE_SUFFIXES` therefore excludes `.mp3` on
+purpose: promising it would turn a clear "unsupported" into a failure half
+way through a burn. Dropping a **32-bit** `libmad-0.dll` beside `sox.exe`
+would enable it with no code change.
+
+**SoX lives in `bin/win64/sox/`, not beside the other tools, and that is
+load-bearing.** It is a 32-bit build; cd-paranoia and flac are 64-bit MSYS2
+builds. Unpacking it alongside them overwrote `libwinpthread-1.dll` with a
+32-bit copy of the same name -- which happened not to break cd-paranoia only
+because it does not import that DLL directly. `zlib1.dll` and
+`libpng16-16.dll` collide just as easily. Windows resolves an executable's
+DLLs from its own directory first, so one folder per architecture keeps each
+set with its own binary; `decode.sox_path()` looks there before falling back
+to PATH, and `test_sox_is_kept_apart_from_the_64_bit_tools` guards it.
+
+**A wrong sample rate is a *note*, not a problem, when something can fix
+it.** `BurnPlan.notes` is a second list beside `problems`, because `can_burn`
+hangs on the latter and a note must never disable the button: with SoX
+present a 48kHz track shows "will be converted to 44100 Hz / 16-bit" and the
+burn proceeds; without it, the same track is `NOT_RED_BOOK` and blocks.
+
+**CD-Text goes through `mdrem.transliterate()` -- the MiniDisc titler's own
+function.** The spec allows ISO-8859-1 (and MS-JIS), but what a given player
+does with either is a guess, and that function's contract is already exactly
+the one wanted: strip to ASCII and *report* what had no equivalent instead of
+dropping it silently. A Japanese title therefore comes back empty with its
+characters listed, before the disc is written rather than after -- the same
+promise `MDRemUploadDialog` makes about a title going onto a MiniDisc.
+
+**The burner is cdrecord, not cdrdao, and that was forced rather than
+chosen.** cdrdao's `.toc` file is a nicer fit for describing a whole disc,
+but it has no maintained Windows build: the last official win32 package is
+1.1.5 from around 2004 (Cygwin + ASPI, in an OldFiles folder), and
+upstream's Windows instructions are stale. cdrecord (cdrtools 3.02a10) is
+still built for Windows -- the cdrtfe project publishes those builds -- does
+disc-at-once audio with CD-Text, and is packaged by every Linux
+distribution, so one tool covers both platforms. See
+`bin/win64/ATTRIBUTION.md` for provenance and licence (CDDL, plus GPL
+`cygwin1.dll`: that build is a Cygwin one).
+
+**CD-Text goes in through a `*.inf` file beside each WAV** (`-text
+-useinfo`), whose field names come from cdrecord's own manual page shipped
+in that same package, not from guesswork. Two rules that manual states and
+`_inf_quote()` follows: a value runs from the *first* single quote on the
+line to the *last*, and **needs no escaping in between** -- so an apostrophe
+inside a title must be left alone (escaping it would put a backslash on the
+disc), while one at the very end has to be dropped, since there is no escape
+sequence to reach for. Filenames stay bare and cdrecord runs with the work
+folder as its working directory: the Windows build is a Cygwin one, so
+handing it native paths invites translation surprises for nothing, and each
+`.inf` has to sit beside its WAV regardless.
+
+**What was established by running the bundled binary, not read anywhere.**
+The same discipline cd-paranoia's own surprises taught this project:
+- `-scanbus` prints the device list on **stdout** while its warnings go to
+  stderr, and two thirds of the lines it prints are not drives (`*` for an
+  empty slot, plus a `HOST ADAPTOR` entry).
+- The six **"Insufficient privileges" warnings are noise**: `-checkdrive`
+  still talked to the drive, and a `-eject` run physically opened the tray.
+  The drive obeys cdrecord with no elevation. Reporting one of those lines
+  as the reason a burn failed would send the user chasing a permissions
+  problem they do not have, which is what `_NOISE` in `_last_useful_line()`
+  is for.
+- An empty drive answers `-minfo` with "medium not present" and exits 255.
+- **`-eject` opens the tray even when the run fails** -- seen on a dry run
+  that stopped at "No disk". So it belongs only on the burn command;
+  `scan_command()` and `disc_info_command()` must never carry it, or merely
+  looking at the drive would spit the disc out.
+The real output of the first two is checked in as fixtures in
+`test_cdburn.py` (`REAL_SCANBUS_OUTPUT`, `REAL_NO_DISC_OUTPUT`), the same
+reason `test_cdrip.py` keeps `REAL_TOC_OUTPUT`. **Still an assumption**,
+marked at its own site: the shape of the progress line during an actual
+write.
+
+**`burn()` mirrors `cdrip.rip_track()` exactly** -- child output to a *file*
+rather than a pipe (an undrained pipe blocks the child; reading it line by
+line makes cancelling depend on a line arriving), poll the clock, keep the
+log on failure and delete it on success. **The one thing that is not the same
+is what cancelling costs**: stopping a rip leaves nothing anywhere, while
+stopping a burn leaves a disc that is neither blank nor finished and a CD-R
+cannot be rewritten. `burn()` still does what it is told immediately -- the
+warning belongs to the dialog. `simulate=True` (cdrdao's `--simulate`) is a
+real dry run and exists at this level, not only in the UI, because a wasted
+CD-R is this feature's version of a bad cut.
+
+**Verified end to end on real hardware, on 2026-08-19**: a 12-track
+48kHz/24-bit album resampled by SoX, written disc-at-once by cdrecord to a
+CD-R in an HL-DT-ST DVDRAM GP20N, and read back with `cdrecord -vv -toc` --
+12 tracks, lead-out at 41:47, and **`CD-Text len: 634`**, which is the one
+thing a `-dummy` run could never show. The scratch WAVs and their `.inf`
+files were still in the burn folder afterwards and `burn.log` was gone,
+which is only true on the success path.
+
+**One real bug came out of that first burn, and only from comparing the two
+halves against each other:** `BurnTrack.sectors` counted `frames / 588`,
+which is only true at 44.1 kHz -- so a 48 kHz album was planned as taking
+8.8% more disc than it does (45:29 against the 41:45 that came off it). It
+now counts `duration_seconds * 75`, because what reaches the CD is the
+*resampled* audio. The two agree exactly at 44.1 kHz, which is why it hid
+until a hi-res album turned up. It only ever overestimated, so nothing was
+ever written past the end of a disc -- but it would have refused an album
+that fits.
+
+**Everything that cannot be verified without a disc degrades to "unknown",
+never to an error.** `list_burners()` asks cdrecord itself for device names
+instead of constructing them (`0,0,0` is scsibus,target,lun as libscg
+numbers them -- not derivable from a drive letter), `parse_disc_info()`
+treats an unrecognised field as unknown and lets the burn try anyway, and
+`parse_progress()` returning None means "no progress information", never a
+failure. A burn that finishes correctly with a motionless progress bar is a
+cosmetic problem; one that stops because the output read differently would
+be a wasted disc. `build_windows.ps1` needed no change for the new binaries
+-- it already `--add-data`s the whole `bin/win64` folder.
+
+**`BurnDialog` is `RecordDialog`'s sibling, and the two differences are
+both consequences of the disc being one-shot.** Same editable
+album/artist/year, same clickable cover, same editable Title/Artist columns,
+same rule that what is on screen when the button is pressed is what gets
+written (`track_sources()` reads the *widgets*, never the list it was
+constructed with). But: **everything knowable is shown before the button** --
+per-track verdicts for anything that is not Red Book or is shorter than the
+standard's four seconds, the album's length against the disc's, and every
+character CD-Text will have to drop -- because a CD-R cannot be edited after
+the fact the way a MiniDisc's TOC can, so "find out on playback" is not a
+place to learn any of it. And **stopping is offered but never quietly**:
+cancelling during the decode stage costs a scratch folder, cancelling while
+the laser is writing leaves a disc that is neither blank nor finished, so
+`reject()` asks in those words first. It still never calls `worker.wait()`
+on the GUI thread -- the rule the MDRem upload dialog established the hard
+way. "Simulate" (cdrdao's own `--simulate`) is offered directly rather than
+buried: it is the only way to rehearse a burn without spending a disc.
+
+**`BurnDialog._ensure_cover()` looks the artwork up, which the burn flow did
+not do at all at first** -- reported directly ("czemu tu nie ma okladki w
+oknie burn?"). The folder gave it names and a year and nothing else, so the
+cover box sat empty even for files that carried one, and the album reached
+the label with no artwork. It now follows exactly the order `RecordDialog`
+established: a search first (iTunes returns a clean 600x600, which is what a
+printed label wants), then the sleeve embedded in the files, and never a
+search at all for a compilation -- "Various Artists" returns somebody else's
+record.
+
+**The tool warning and the plan summary are two labels, deliberately.** A
+missing cdrdao must not hide what the plan says about the album -- installing
+a tool and re-encoding a hi-res track are separate jobs, and the user may do
+them in either order.
+
+**Burning is not gated behind `mdrem_enabled()`**, unlike every other entry
+in the Recording menu: it needs the drive, not the infrared adapter. The two
+entries (`_burn_cd_from_folder`, `_burn_cd_from_foobar`) both end in
+`_run_burn_dialog()`, which after a successful burn *offers* the album to
+the open project rather than applying it -- this is reachable with any
+project open, including one that has nothing to do with the disc just
+written, so unlike the post-recording layout (which follows a flow already
+confirmed several times over) it asks, and it does nothing at all unless the
+open project is a CD one.
+
+**`audio_folder.album_from_folder()` is the one place in this project that
+reads tags without foobar2000, and the module's own docstring used to swear
+it never would.** That rule was written for the *recording* path, where the
+files go into foobar's playlist first and every title comes back out of
+Beefweb -- foobar has to read them to play them, so adding a tag library for
+that would have been a dependency for nothing. A burn has no player in the
+loop at all: the files go straight to cdrdao, so there is nothing else to
+ask what a track is called. It reads FLAC's comment block through
+`embedded_cover.flac_tags()` (the parser this project already owns) and
+falls back to the filename stem for anything else -- a disc of blank track
+names being a worse outcome than one named after its files. Album, artist
+and year are decided by majority vote over the files that actually carry the
+tag, so one guest-credited track cannot rename the record (the same rule
+`foobar.album_title()` and `album_sort._group_display_name()` already
+follow), falling back to `guess_from_folder_name()`.
+
+**The Recording menu follows two things now: the adapter setting *and* the
+open project's medium** (`_sync_mdrem_actions()`, re-run after Window >
+Settings closes and after every File > New / Open, since that is when a
+medium can change). A MiniDisc project is not offered "Burn Audio CD"; a CD
+project is offered neither the remote, nor erasing, nor the three
+record-to-MiniDisc entries. **This is a change of principle, not tidying**:
+erasing, the remote and recording all act on whatever disc is physically in
+the deck, which has nothing to do with which label is open -- an
+independence that was itself deliberate (see the erase dialog's notes). It
+loses to a menu that matches the project in front of you, which is what was
+asked for. With no project open at all -- only reachable before the startup
+screen is answered -- nothing is hidden on medium grounds, because there is
+no medium yet.
+
+**Burning is the exception that keeps its own rule**: `burn_folder_action`
+and `burn_foobar_action` follow the medium but *not* the adapter, because a
+burn needs the drive and not the infrared. The same rule governs the
+Telegram entries -- `_burn_from_telegram_downloads()` and the chat dialog's
+own "Burn Downloaded Album to CD..." button are ungated, while their
+recording twins stay behind `mdrem_enabled()`. Copying the recording gate
+across would have hidden CD burning from exactly the person most likely to
+want it: somebody with no adapter at all.
+
+`TelegramChatDialog` therefore reports *which* button finished it
+(`downloaded_action`, `RECORD` / `BURN`) alongside `downloaded_folder` -- a
+folder alone cannot say, since a downloaded album can go to either medium --
+and both buttons share `_finish_with()`, so the auto-sort that stops a
+multi-album folder being treated as one album cannot apply to one and not
+the other. `app_window._burn_folder()` was split out of
+`_burn_cd_from_folder()` for that hand-off exactly as `_record_folder_dialog()`
+was, and `_burn_cd_from_folder()` stays zero-argument so the menu action
+cannot hand it `QAction.triggered`'s `checked` bool.
+
+**Two names were wrong and are fixed.** The page switcher said "Cover /
+J-Card" on a CD project, naming a MiniDisc part that project does not have;
+`_relabel_cover_page()` rides along on the same medium sync and says "Case
+Insert" there. And every pixmap layer read as "DesignPixmap" in the Layers
+panel: `layers_panel._label_for()`'s fallback stripped "QGraphics"/"Item"
+off the class name, which was right while these were plain Qt classes and
+broke silently when they became `DesignPixmapItem` and friends (added to
+suppress Qt's own selection decoration -- see canvas/items.py). It now names
+what an item *is*, by isinstance, and falls back to the old trick only for
+anything unrecognised.
+
 **The Project menu became "Recording", and the metadata editor moved out of
 it onto the Tools panel.** The menu held the one dialog used while *designing
 a label* next to three that drive a tape deck; nothing but recording is in it
@@ -2768,6 +3096,69 @@ the disc label. Nothing on it overhangs by more than a pen width (and
 export clips to the cut path anyway), while clipping would rasterise the
 panel blocks and the track list -- turning text still worth editing into a
 flat image.
+
+**`cd_layout.py` lays out a CD project's two pages, and leans on the
+MiniDisc layouts rather than restating them.** `auto_layout.place_cover_on_label()`
+already scales artwork to cover a cut shape (deliberately overshooting, since
+Clip Layers is what trims it), and `jcard_layout.place_back()` already builds
+a track-list panel out of the cover's own colours. What is genuinely
+different is physical, and each difference is one decision:
+
+- **The disc is a ring.** Nothing can be printed across the hub, so text
+  lives in bands above and below it, each only as wide as the circle is at
+  that height -- `_chord_rect()` takes the chord at whichever band edge is
+  *further* from the centre, since using the nearer one would push text past
+  the cut line. `test_a_band_never_reaches_outside_the_circle` checks the
+  corners against the radius rather than trusting an inset.
+- **The label's artwork is lightened** (`lighten()`, Pillow, blend towards
+  white) rather than having a translucent white rectangle laid over it: the
+  result is one ordinary image layer that can be moved or replaced, not two
+  layers whose stacking order quietly matters. It is the same problem
+  `recolour_insertion_mark()` solves for a MiniDisc, at a scale where
+  recolouring the text is not enough.
+- **The accent is scored against white, not against the sleeve's dominant
+  colour** -- because white is what it will be read on once the artwork
+  underneath has been lightened. Scoring it the J-card's way picked a pale
+  yellow: correct against dark navy, invisible on the label.
+- **The insert is read upright**, unlike a J-card, which goes into its case a
+  quarter turn round. That is the only reason `place_back()` grew a `turned`
+  flag instead of this module getting a second copy of the panel logic. It
+  also grew `heading_scale`, because those heading bands are millimetre
+  constants chosen for a J-card's narrow panel, and a slim-case insert is
+  twice as wide -- at 1.0 the heading looked lost above a full-height track
+  list.
+- **Which panel is which follows from the fold**: crease in the middle, left
+  half folded behind the right, so the right half faces out at the front and
+  the left half through the clear back of the tray. Both stay upright --
+  folding about a vertical crease and then reading the other side flips
+  left-right twice, which cancels.
+
+**Two bugs here were found by looking at the render, not by reading the
+code, and they share one cause.** An item scaled by `set_item_scale()`
+carries a transform anchored at its own centre, so `pos()` is *not* its
+visible top-left. Placing by `pos()` put the Digital Audio mark half off the
+disc -- where Clip Layers removed it outright as being outside the cut shape,
+so it did not look misplaced, it was simply absent -- and left the insert's
+cover floating in the middle of its panel with white either side. Everything
+in this module now positions by the item's real footprint
+(`item.mapToScene(item.boundingRect()).boundingRect()`), the same technique
+`auto_layout._move_centre_to()` documents, and the tests assert on where
+items *land*.
+
+**The "Compact Disc Digital Audio" mark is a real asset, not a drawing.** An
+attempt to draw it from memory produced something that plainly was not the
+logo (reported in one sentence: "to twoje logo w ogole nie przypomina
+oryginalu"). It now comes from Wikimedia Commons' `CDDAlogo.svg`, downloaded
+unmodified -- SHA-1 verified against what Commons publishes -- with
+provenance, the public-domain-as-a-text-logo status and the trademark note in
+`assets/img/ATTRIBUTION.md`. `scripts/make_cd_logo.py` renders it to the PNG
+the app actually loads, because `gallery.py` lists raster files only and
+`QPixmap` cannot be relied on to read SVG in a frozen build (the same
+reasoning `panels/icons.py` gives for going through `QSvgRenderer`). **That
+script must not be run under `QT_QPA_PLATFORM=offscreen`** if it ever draws
+text again: PySide6 ships no fonts and offscreen finds no system font
+directory, so text comes out as empty boxes -- which is exactly how the first
+version rendered.
 
 **Unsaved work is guarded by a plain `_dirty` flag, not
 `QUndoStack.isClean()`.** Metadata edits, template changes and the automatic
@@ -3680,7 +4071,7 @@ it is perfectly literal.
   `scripts/manual/make_screenshots.py`, which builds a demo project and
   grabs each dialog rather than anyone capturing them by hand. Two things
   follow. First, a UI change that renames a menu item or moves a control
-  invalidates **fifty-seven screenshots** (nineteen figures x three
+  invalidates **sixty-nine screenshots** (twenty-three figures x three
   languages), not one -- rerun the generator
   rather than patching a figure. Second, the Polish and Japanese manuals
   show Polish and Japanese screenshots, so the menu names quoted in their

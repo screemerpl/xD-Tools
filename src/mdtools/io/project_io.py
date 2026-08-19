@@ -29,7 +29,16 @@ from mdtools.canvas.items import (
     set_item_scale,
 )
 from mdtools.canvas.scene import DesignScene
-from mdtools.project import PAGE_COVER, PAGE_DISC, GrayscaleAdjustment, Project, ProjectMetadata, TextStyle, Track
+from mdtools.project import (
+    MEDIUM_MD,
+    PAGE_COVER,
+    PAGE_DISC,
+    GrayscaleAdjustment,
+    Project,
+    ProjectMetadata,
+    TextStyle,
+    Track,
+)
 from mdtools.templates.models import CoverTemplate, DiscTemplate
 
 PROJECT_VERSION = 5
@@ -258,6 +267,7 @@ def project_to_dict(project: Project) -> dict:
         "pages": {key: _scene_to_dict(scene) for key, scene in project.pages.items()},
         "default_text_style": _text_style_to_dict(project.default_text_style),
         "grayscale_adjustment": _grayscale_adjustment_to_dict(project.grayscale_adjustment),
+        "medium": project.medium,
     }
 
 
@@ -275,5 +285,11 @@ def load_project(path: str | Path) -> Project:
     default_text_style = _text_style_from_dict(data.get("default_text_style", {}))
     grayscale_adjustment = _grayscale_adjustment_from_dict(data.get("grayscale_adjustment", {}))
     return Project(
-        metadata=metadata, pages=pages, default_text_style=default_text_style, grayscale_adjustment=grayscale_adjustment
+        metadata=metadata,
+        pages=pages,
+        default_text_style=default_text_style,
+        grayscale_adjustment=grayscale_adjustment,
+        # A project file written before CD-R support existed has no medium
+        # in it and is a MiniDisc project.
+        medium=data.get("medium", MEDIUM_MD),
     )

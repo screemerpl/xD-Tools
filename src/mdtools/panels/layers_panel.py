@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from PySide6.QtCore import QCoreApplication, Signal
 from PySide6.QtWidgets import (
+    QGraphicsEllipseItem,
+    QGraphicsPixmapItem,
+    QGraphicsRectItem,
     QGraphicsTextItem,
     QHBoxLayout,
     QListWidget,
@@ -25,6 +28,18 @@ def _label_for(item) -> str:
     if isinstance(item, QGraphicsTextItem):
         text = item.toPlainText().strip() or QCoreApplication.translate("LayersPanel", "(empty)")
         return QCoreApplication.translate("LayersPanel", "Text: {text}").format(text=text[:24])
+    # Named by what the item *is*, not by its class name. The fallback used
+    # to strip "QGraphics"/"Item" off the type, which was fine while these
+    # were plain Qt classes -- since they became DesignPixmapItem and
+    # friends (to suppress Qt's own selection decoration, see
+    # canvas/items.py) it produced "DesignPixmap" in the panel.
+    for kind, name in (
+        (QGraphicsPixmapItem, "Image"),
+        (QGraphicsEllipseItem, "Ellipse"),
+        (QGraphicsRectItem, "Rectangle"),
+    ):
+        if isinstance(item, kind):
+            return QCoreApplication.translate("LayersPanel", name)
     return type(item).__name__.replace("QGraphics", "").replace("Item", "")
 
 

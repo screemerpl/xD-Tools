@@ -229,7 +229,13 @@ def build_html(content, lang: str, toc_pages: dict[str, int] | None) -> tuple[st
 
     # Title page. The page break belongs to the *next* heading (every h1
     # carries page-break-before), so nothing is needed at the end here.
-    logo = ROOT / "assets" / "img" / "mdlogo.png"
+    # The application's own icon, not the MiniDisc logo: this manual has
+    # covered CD-R as well since 0.2.0, and a MiniDisc on the cover said
+    # otherwise. Falls back to the old logo if the icon has not been
+    # generated (scripts/make_app_icon.py writes it).
+    logo = ROOT / "assets" / "img" / "xdtools.png"
+    if not logo.exists():
+        logo = ROOT / "assets" / "img" / "mdlogo.png"
     if logo.exists():
         image = QImage(str(logo))
         if not image.isNull():
@@ -386,7 +392,7 @@ def build(lang: str) -> None:
     else:
         print("  ! contents page numbers did not settle; using the last measurement")
 
-    out = OUT_DIR / f"MDTools-Manual-{lang.upper()}.pdf"
+    out = OUT_DIR / f"xD-Tools-Manual-{lang.upper()}.pdf"
     pages = paint(doc, out, module, body_size, footer_height)
     print(f"  {out.relative_to(ROOT)} -- {pages} pages")
 

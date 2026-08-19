@@ -17,7 +17,7 @@ Grayscale/color and, when grayscale, brightness/contrast reuse the exact
 same mdtools.grayscale.apply_grayscale() the canvas preview and Export
 Print PNG (Grayscale) already use, so what's shown here can never look
 different from Export Print PNG's own output for the same settings.
-Physical accuracy is enforced by mdtools.printing.print_placements() at
+Physical accuracy is enforced by mdtools.printing.print_sheets() at
 the moment of the real print, not by anything drawn in this dialog's own
 (purely visual, fit-to-dialog) preview -- see image_physical_size_mm()'s
 docstring for why the actual mm size is derived from the rendered image's
@@ -27,7 +27,17 @@ pixel count and DPI, not from on-screen scene coordinates.
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QBrush, QColor, QImage, QPageSize, QPainter, QPen, QPixmap, QTransform
+from PySide6.QtGui import (
+    QBrush,
+    QColor,
+    QImage,
+    QPageLayout,
+    QPageSize,
+    QPainter,
+    QPen,
+    QPixmap,
+    QTransform,
+)
 from PySide6.QtPrintSupport import QPrintDialog, QPrinter
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -53,16 +63,21 @@ from mdtools.grayscale import BRIGHTNESS_RANGE, CONTRAST_RANGE, apply_grayscale
 from mdtools.io.png_export import render_scene_to_image
 from mdtools.io.project_io import load_project
 from mdtools.printing import (
+    LANDSCAPE,
     MAX_COPIES,
     PAGE_SIZES_MM,
+    PORTRAIT,
     PlacedCopies,
     PrintLayoutError,
     PrintPlacement,
     build_copies_layout,
+    build_sheet_layout,
     crop_to_template_bounds,
     image_physical_size_mm,
+    max_copies_on_sheet,
     max_copies_that_fit,
-    print_placements,
+    oriented_page_size,
+    print_sheets,
     render_page_to_image,
 )
 from mdtools.project import PAGE_COVER, PAGE_DISC, GrayscaleAdjustment, Project
@@ -185,6 +200,27 @@ class _PrintDialogBase(QDialog):
         self.page_size_combo.currentTextChanged.connect(self._on_page_size_changed)
         self._options_form.addRow(self.tr("Page Size"), self.page_size_combo)
 
+        # Landscape was not offered at first. A CD project's folded insert
+        # is 242mm wide, which no portrait sheet takes upright at all.
+        self.orientation_combo = QComboBox()
+        self.orientation_combo.addItem(self.tr("Portrait"), PORTRAIT)
+        self.orientation_combo.addItem(self.tr("Landscape"), LANDSCAPE)
+        self.orientation_combo.currentIndexChanged.connect(self._on_page_size_changed)
+        self._options_form.addRow(self.tr("Orientation"), self.orientation_combo)
+
+    def page_size_mm(self) -> tuple[float, float]:
+        """The chosen page, already turned the way the user asked -- the one
+        place that decides it, so a preview, a printer and a PNG can never
+        disagree about which way round the paper is."""
+        return oriented_page_size(
+            PAGE_SIZES_MM[self.page_size_combo.currentText()], self.orientation_combo.currentData()
+        )
+
+    def sheets(self) -> list[list[_LabelItem]]:
+        """The items grouped into physical pages. One page unless a
+        subclass says otherwise (see PrintDialog's separate-sheets mode)."""
+        return [self._all_items()]
+
     def _all_items(self) -> list[_LabelItem]:
         raise NotImplementedError
 
@@ -242,7 +278,7 @@ class _PrintDialogBase(QDialog):
         self._update_page_background()
 
     def _update_page_background(self) -> None:
-        width_mm, height_mm = PAGE_SIZES_MM[self.page_size_combo.currentText()]
+        width_mm, height_mm = self.page_size_mm()
         width_px = width_mm * self.PREVIEW_PX_PER_MM
         height_px = height_mm * self.PREVIEW_PX_PER_MM
         self._page_rect_item.setRect(0, 0, width_px, height_px)
@@ -279,9 +315,9 @@ class _PrintDialogBase(QDialog):
         self._options_form.setRowVisible(self.brightness_slider, checked)
         self._options_form.setRowVisible(self.contrast_slider, checked)
 
-    def _build_placements(self) -> list[PrintPlacement]:
+    def _build_placements(self, items=None) -> list[PrintPlacement]:
         placements = []
-        for item in self._all_items():
+        for item in self._all_items() if items is None else items:
             placements.append(
                 PrintPlacement(
                     image=item.display_image,
@@ -296,8 +332,19 @@ class _PrintDialogBase(QDialog):
     def _new_printer(self) -> QPrinter:
         printer = QPrinter(QPrinter.PrinterMode.HighResolution)
         printer.setPageSize(QPageSize(_PAGE_SIZE_IDS[self.page_size_combo.currentText()]))
+        # The page size above is always the portrait one; this is what
+        # turns the paper, and it has to agree with page_size_mm() or every
+        # placement lands rotated against the sheet it was laid out on.
+        printer.setPageOrientation(
+            QPageLayout.Orientation.Landscape
+            if self.orientation_combo.currentData() == LANDSCAPE
+            else QPageLayout.Orientation.Portrait
+        )
         printer.setFullPage(True)
         return printer
+
+    def _sheet_placements(self) -> list[list[PrintPlacement]]:
+        return [self._build_placements(items) for items in self.sheets()]
 
     def _maybe_save_grayscale_adjustment(self) -> None:
         """No-op by default -- overridden by PrintDialog, which has a
@@ -314,7 +361,7 @@ class _PrintDialogBase(QDialog):
         if print_dialog.exec() != QPrintDialog.DialogCode.Accepted:
             return
 
-        print_placements(printer, self._build_placements())
+        print_sheets(printer, self._sheet_placements())
         self._maybe_save_grayscale_adjustment()
         self.accept()
 
@@ -322,7 +369,7 @@ class _PrintDialogBase(QDialog):
         """Exports exactly what the page preview currently shows to a
         standalone, high-DPI PNG -- reusing printing.render_page_to_image(),
         which shares the exact same per-placement paint logic as
-        print_placements()/Export PDF..., so this can never visually
+        print_sheets()/Export PDF..., so this can never visually
         diverge from either. Unlike a printed page or a PDF, a PNG has no
         physical "paper" to represent, so the page background is left
         fully transparent rather than painted white."""
@@ -332,18 +379,28 @@ class _PrintDialogBase(QDialog):
         if not path.lower().endswith(".png"):
             path += ".png"
 
-        page_size_mm = PAGE_SIZES_MM[self.page_size_combo.currentText()]
-        image = render_page_to_image(page_size_mm, self._build_placements(), self._dpi)
-        image.save(path, "PNG")
+        page_size_mm = self.page_size_mm()
+        sheets = self._sheet_placements()
+        # One file per sheet, numbered, because a PNG holds one page and
+        # silently exporting only the first would lose half a CD project.
+        written = []
+        for index, placements in enumerate(sheets, start=1):
+            if not placements:
+                continue
+            target = path if len(sheets) == 1 else f"{path[:-4]}-{index}.png"
+            render_page_to_image(page_size_mm, placements, self._dpi).save(target, "PNG")
+            written.append(target)
         self._maybe_save_grayscale_adjustment()
 
-        QMessageBox.information(self, self.tr("Export PNG"), self.tr("Exported to {path}").format(path=path))
+        QMessageBox.information(
+            self, self.tr("Export PNG"), self.tr("Exported to {path}").format(path="\n".join(written))
+        )
 
     def _on_export_pdf(self) -> None:
         """Exports exactly what the page preview currently shows -- same
         items, same dragged positions, same grayscale/color state -- to a
         standalone PDF file, without going through a system printer at
-        all. Reuses printing.print_placements() unchanged (a QPrinter
+        all. Reuses printing.print_sheets() unchanged (a QPrinter
         aimed at a PDF file paints through the exact same QPainter API as
         one aimed at a real printer), so this can never visually diverge
         from what Print... would produce for the same settings. "High
@@ -360,7 +417,7 @@ class _PrintDialogBase(QDialog):
         printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
         printer.setOutputFileName(path)
 
-        print_placements(printer, self._build_placements())
+        print_sheets(printer, self._sheet_placements())
         self._maybe_save_grayscale_adjustment()
 
         QMessageBox.information(self, self.tr("Export PDF"), self.tr("Exported to {path}").format(path=path))
@@ -394,6 +451,20 @@ class PrintDialog(_PrintDialogBase):
         self.copies_spin.setRange(1, MAX_COPIES)
         self.copies_spin.setValue(1)
         self.copies_spin.valueChanged.connect(self._relayout_copies)
+
+        # A CD project cannot put both its pages on one sheet at all: the
+        # folded insert is 242mm wide and the label 118mm, which exceeds
+        # A4's 287mm printable length even laid side by side in landscape.
+        # Rather than let that degrade into the overflow-corner fallback,
+        # each label can have a sheet of its own.
+        self.separate_sheets_check = QCheckBox(self.tr("Each label on its own sheet"))
+        self.separate_sheets_check.toggled.connect(self._on_separate_sheets_toggled)
+        self._options_form.addRow(self.separate_sheets_check)
+
+        self.sheet_combo = QComboBox()
+        self.sheet_combo.currentIndexChanged.connect(self._show_current_sheet)
+        self._options_form.addRow(self.tr("Showing"), self.sheet_combo)
+        self._options_form.setRowVisible(self.sheet_combo, False)
         self._options_form.addRow(self.tr("Copies"), self.copies_spin)
 
         self._build_grayscale_controls(project.grayscale_adjustment)
@@ -404,6 +475,49 @@ class PrintDialog(_PrintDialogBase):
 
     def _all_items(self) -> list[_LabelItem]:
         return self._disc_items + self._cover_items
+
+    def sheets(self) -> list[list[_LabelItem]]:
+        """One sheet, or one per label type.
+
+        The preview shows a single sheet at a time (the one the Showing box
+        names), but printing and both exports walk all of them -- so what
+        is on screen is always *a* page that will come out, never a
+        composite of pages that will not.
+        """
+        if not self.separate_sheets_check.isChecked():
+            return [self._all_items()]
+        return [list(self._disc_items), list(self._cover_items)]
+
+    def _on_separate_sheets_toggled(self) -> None:
+        separate = self.separate_sheets_check.isChecked()
+        self._options_form.setRowVisible(self.sheet_combo, separate)
+        self._relayout_copies()
+
+    def _refresh_sheet_combo(self) -> None:
+        previous = self.sheet_combo.currentIndex()
+        self.sheet_combo.blockSignals(True)
+        self.sheet_combo.clear()
+        self.sheet_combo.addItem(self.tr("Sheet 1 -- disc label"))
+        self.sheet_combo.addItem(self.tr("Sheet 2 -- cover"))
+        self.sheet_combo.setCurrentIndex(max(0, min(previous, 1)))
+        self.sheet_combo.blockSignals(False)
+
+    def _show_current_sheet(self) -> None:
+        """Hides the labels belonging to the other sheet.
+
+        Hidden rather than removed: they keep their positions, their
+        rotation and their images, so flipping back and forth costs
+        nothing and cannot lose a copy.
+        """
+        if not self.separate_sheets_check.isChecked():
+            for item in self._all_items():
+                item.setVisible(True)
+            return
+        showing_disc = self.sheet_combo.currentIndex() == 0
+        for item in self._disc_items:
+            item.setVisible(showing_disc)
+        for item in self._cover_items:
+            item.setVisible(not showing_disc)
 
     def _maybe_save_grayscale_adjustment(self) -> None:
         if self.grayscale_check.isChecked():
@@ -434,13 +548,32 @@ class PrintDialog(_PrintDialogBase):
         freeform arrangement a person can find manually, and there's no
         reason to block the user from reaching one themselves."""
         copies = self.copies_spin.value()
-        page_size_mm = PAGE_SIZES_MM[self.page_size_combo.currentText()]
+        page_size_mm = self.page_size_mm()
+
+        if self.separate_sheets_check.isChecked():
+            self._relayout_separate_sheets(copies, page_size_mm)
+            return
+
         try:
             disc_copies, cover_copies = build_copies_layout(
                 self._disc_size_mm, self._cover_size_mm, copies, page_size_mm, self.MARGIN_MM
             )
         except PrintLayoutError:
             fits = max_copies_that_fit(self._disc_size_mm, self._cover_size_mm, page_size_mm, self.MARGIN_MM)
+            if fits == 0:
+                # Not "we managed some of it": the two labels cannot share a
+                # sheet at all, which is the normal case for a CD project
+                # (a 242mm insert beside a 118mm label needs 363mm, and A4
+                # offers 287). Piling every copy in the corner and warning
+                # about it would be answering a question the user has not
+                # asked yet -- the answer is a sheet each, which is one
+                # checkbox away, so it gets checked rather than explained.
+                self.separate_sheets_check.blockSignals(True)
+                self.separate_sheets_check.setChecked(True)
+                self.separate_sheets_check.blockSignals(False)
+                self._options_form.setRowVisible(self.sheet_combo, True)
+                self._relayout_separate_sheets(copies, page_size_mm)
+                return
             disc_copies, cover_copies = self._layout_with_overflow_at_corner(copies, fits, page_size_mm)
             QMessageBox.warning(
                 self,
@@ -453,6 +586,49 @@ class PrintDialog(_PrintDialogBase):
             )
 
         self._rebuild_items(disc_copies, cover_copies)
+        self._show_current_sheet()
+
+    def _relayout_separate_sheets(self, copies: int, page_size_mm: tuple[float, float]) -> None:
+        """Each label packed onto a page of its own.
+
+        Simpler than the shared-sheet case in every way except one: a label
+        can be too big for the page even on its own (a 242mm insert on a
+        portrait A4 fits only turned a quarter turn, and would not fit at
+        all if it were any wider). That is reported once, naming the label
+        and suggesting the other orientation, rather than silently piling
+        copies in the corner -- there is nothing to drag them into.
+        """
+        placed = []
+        too_big = []
+        for name, size_mm in (
+            (self.tr("disc label"), self._disc_size_mm),
+            (self.tr("cover"), self._cover_size_mm),
+        ):
+            try:
+                placed.append(build_sheet_layout(size_mm, copies, page_size_mm, self.MARGIN_MM))
+                continue
+            except PrintLayoutError:
+                pass
+            fits = max_copies_on_sheet(size_mm, page_size_mm, self.MARGIN_MM)
+            if fits:
+                placed.append(build_sheet_layout(size_mm, fits, page_size_mm, self.MARGIN_MM))
+            else:
+                placed.append(PlacedCopies([], False))
+            too_big.append((name, fits))
+
+        self._rebuild_items(placed[0], placed[1])
+        self._refresh_sheet_combo()
+        self._show_current_sheet()
+
+        if too_big:
+            QMessageBox.warning(
+                self,
+                self.tr("Print"),
+                self.tr(
+                    "This page holds at most {fits} of the {label}, not {copies}. Try the other orientation, "
+                    "or print fewer at a time."
+                ).format(fits=too_big[0][1], label=too_big[0][0], copies=copies),
+            )
 
     def _layout_with_overflow_at_corner(
         self, copies: int, fits: int, page_size_mm: tuple[float, float]
