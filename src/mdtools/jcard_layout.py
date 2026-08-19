@@ -332,15 +332,23 @@ def place_spine(
 
     caption = spine_caption(metadata)
     text_height = max(inner.height() - logo_span - mm_to_px(SPINE_PADDING_MM), mm_to_px(10))
-    # Bold: at the size an 8.3mm spine allows, a regular weight is legible
-    # on screen and disappears once printed.
+    # Bold: at the size a spine allows, a regular weight is legible on
+    # screen and disappears once printed.
     item = _text(scene, caption, QRectF(0, 0, text_height, inner.width()), ink, wrap=False, bold=True)
     if item is not None:
         item.setTransformOriginPoint(item.boundingRect().center())
         # Clockwise, so the caption reads top-to-bottom with the case
         # standing upright -- the way a CD or MD spine conventionally does.
         item.setRotation(90)
-        _move_top_left_to(item, QPointF(inner.left(), inner.top()))
+        # Centred along the strip rather than pinned to its top. A short
+        # caption on a 118mm tray-card spine otherwise sat in the top
+        # two-thirds and left the rest looking empty -- reported directly.
+        # The logo is at the foot, so the space it takes is excluded before
+        # centring in what is left.
+        span = item.boundingRect().width()
+        available = inner.height() - logo_span
+        offset = max(0.0, (available - span) / 2)
+        _move_top_left_to(item, QPointF(inner.left(), inner.top() + offset))
         added.append(item)
     return added
 

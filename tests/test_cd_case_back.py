@@ -210,3 +210,20 @@ def test_a_project_without_a_case_back_lays_out_the_other_two_quietly(qt_app, mo
 
     assert PAGE_BACK not in window.project.pages
     assert window.project.pages[PAGE_DISC].print_items()
+
+
+def test_the_auto_layout_warning_names_the_pages_this_project_has(qt_app):
+    """It used to say "both pages -- the disc label and the J-card"
+    whatever the project was: a MiniDisc part a CD project does not have,
+    and the wrong count as soon as a case back existed."""
+    window = _cd_window(with_back=False)
+
+    without = window._auto_layout_page_names()
+    assert "J-Card" not in without
+    assert "Case Insert" in without
+
+    window.project.pages[PAGE_BACK] = DesignScene(_tray_template())
+    with_back = window._auto_layout_page_names()
+
+    assert "Case Back" in with_back
+    assert with_back.count(",") == 1, "three pages should read as a list, not a pair"

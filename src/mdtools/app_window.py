@@ -1967,15 +1967,42 @@ class MainWindow(QMainWindow):
             self,
             self.tr("Auto-Layout"),
             self.tr(
-                "This replaces everything on both pages -- the disc label and the J-card -- and resets the "
-                "undo history.\n\nThe project's metadata is left alone."
-            ),
+                "This replaces everything on {pages} and resets the undo history.\n\nThe project's "
+                "metadata is left alone."
+            ).format(pages=self._auto_layout_page_names()),
             QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel,
         )
         if answer != QMessageBox.StandardButton.Ok:
             return
         self._auto_layout_project(metadata)
+
+    def _auto_layout_page_names(self) -> str:
+        """The pages this layout is about to overwrite, by name.
+
+        It used to say "both pages -- the disc label and the J-card"
+        regardless: on a CD project that named a MiniDisc part the project
+        does not have, and it counted wrong the moment a case back existed.
+        Built from the project instead, so it cannot go stale again.
+        """
+        pages = [page for page in self.project.ordered_pages() if page in self._auto_layout_pages()]
+        names = [page_title(page, self.project.medium) for page in pages]
+        if len(names) > 1:
+            return self.tr("{first} and {last}").format(
+                first=", ".join(names[:-1]), last=names[-1]
+            )
+        return names[0] if names else ""
+
+    def _auto_layout_pages(self) -> set[str]:
+        """Which pages the automatic layout writes to.
+
+        The case back is included only when the project has one -- it is
+        optional, and the layout leaves it alone otherwise.
+        """
+        pages = {PAGE_DISC, PAGE_COVER}
+        if self.project.medium == MEDIUM_CD and PAGE_BACK in self.project.pages:
+            pages.add(PAGE_BACK)
+        return pages
 
     def _fetch_cover_into_metadata(self, metadata: ProjectMetadata) -> None:
         """Looks up cover art for metadata that has none yet, filling in a
@@ -2017,8 +2044,9 @@ class MainWindow(QMainWindow):
         return next((t for t in registry.load_templates()[kind] if t.name == name), None)
 
     def _auto_layout_project(self, metadata: ProjectMetadata) -> None:
-        """Turns an album into a first draft of both pages: the disc label
-        and the J-card.
+        """Turns an album into a first draft of the project's pages: the
+        disc label and the J-card, or a CD's ring label, case insert and --
+        if there is one -- its case back.
 
         After a recording this runs without asking. That is deliberate: the
         recording flow has already asked for confirmation several times

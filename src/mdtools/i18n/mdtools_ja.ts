@@ -1135,7 +1135,7 @@ Eject now to write them permanently?</source>
         <translation>編集中:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2132"/>
+        <location filename="../app_window.py" line="2160"/>
         <source>Disc Label</source>
         <translation>ディスクラベル</translation>
     </message>
@@ -1378,17 +1378,31 @@ Eject now to write them permanently?</source>
         <translation>「{page}」のページを削除しますか？そこにあるものはすべて消え、元に戻す履歴もリセットされます。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2156"/>
+        <location filename="../app_window.py" line="1970"/>
+        <source>This replaces everything on {pages} and resets the undo history.
+
+The project&apos;s metadata is left alone.</source>
+        <translation>{pages} の内容をすべて置き換え、元に戻す履歴もリセットします。
+
+プロジェクトのメタデータはそのままです。</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1991"/>
+        <source>{first} and {last}</source>
+        <translation>{first} と {last}</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="2184"/>
         <source>Lay Out Case Back</source>
         <translation>ケースの裏を配置</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2158"/>
+        <location filename="../app_window.py" line="2186"/>
         <source>Case Back</source>
         <translation>ケースの裏</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2181"/>
+        <location filename="../app_window.py" line="2209"/>
         <source>Lay Out Case Insert</source>
         <translation>ケースインサートを配置</translation>
     </message>
@@ -1695,7 +1709,7 @@ The other page and the project&apos;s metadata are left alone.</source>
         <translation>印刷用PNGを書き出す（グレースケール）</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2183"/>
+        <location filename="../app_window.py" line="2211"/>
         <source>Case Insert</source>
         <translation>ケースインサート</translation>
     </message>
@@ -1792,21 +1806,20 @@ The other page and the project&apos;s metadata are left alone.</source>
         <translation>自動配置</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1970"/>
         <source>This replaces everything on both pages -- the disc label and the J-card -- and resets the undo history.
 
 The project&apos;s metadata is left alone.</source>
-        <translation>ディスクラベルとJカードの両ページの内容がすべて置き換えられ、元に戻す履歴もリセットされます。
+        <translation type="vanished">ディスクラベルとJカードの両ページの内容がすべて置き換えられ、元に戻す履歴もリセットされます。
 
 プロジェクトのメタデータはそのまま残ります。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2101"/>
+        <location filename="../app_window.py" line="2129"/>
         <source>Lay Out J-Card</source>
         <translation>Jカードの配置</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2103"/>
+        <location filename="../app_window.py" line="2131"/>
         <source>J-Card</source>
         <translation>Jカード</translation>
     </message>
@@ -1819,18 +1832,18 @@ The cover page and the project&apos;s metadata are left alone.</source>
 カバーページとプロジェクトのメタデータはそのまま残ります。</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2062"/>
-        <location filename="../app_window.py" line="2130"/>
+        <location filename="../app_window.py" line="2090"/>
+        <location filename="../app_window.py" line="2158"/>
         <source>Lay Out Disc Label</source>
         <translation>ディスクラベルの配置</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2071"/>
+        <location filename="../app_window.py" line="2099"/>
         <source>Cover Art</source>
         <translation>カバーアート</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2075"/>
+        <location filename="../app_window.py" line="2103"/>
         <source>MiniDisc Logo</source>
         <translation>MiniDiscロゴ</translation>
     </message>

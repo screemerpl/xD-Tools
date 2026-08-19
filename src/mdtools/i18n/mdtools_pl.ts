@@ -1135,7 +1135,7 @@ Wysunąć teraz, żeby zapisać je trwale?</translation>
         <translation>Edycja:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2132"/>
+        <location filename="../app_window.py" line="2160"/>
         <source>Disc Label</source>
         <translation>Etykieta płyty</translation>
     </message>
@@ -1378,17 +1378,31 @@ Wysunąć teraz, żeby zapisać je trwale?</translation>
         <translation>Usunąć stronę „{page}”? Wszystko, co na niej jest, zostanie skasowane, a historia cofania wyzerowana.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2156"/>
+        <location filename="../app_window.py" line="1970"/>
+        <source>This replaces everything on {pages} and resets the undo history.
+
+The project&apos;s metadata is left alone.</source>
+        <translation>To zastąpi wszystko na stronach: {pages} — i wyzeruje historię cofania.
+
+Metadane projektu zostają nietknięte.</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1991"/>
+        <source>{first} and {last}</source>
+        <translation>{first} i {last}</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="2184"/>
         <source>Lay Out Case Back</source>
         <translation>Rozmieść tył pudełka</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2158"/>
+        <location filename="../app_window.py" line="2186"/>
         <source>Case Back</source>
         <translation>Tył pudełka</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2181"/>
+        <location filename="../app_window.py" line="2209"/>
         <source>Lay Out Case Insert</source>
         <translation>Rozmieść wkładkę</translation>
     </message>
@@ -1695,7 +1709,7 @@ Druga strona i metadane projektu pozostają nietknięte.</translation>
         <translation>Eksportuj wydruk PNG (skala szarości)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2183"/>
+        <location filename="../app_window.py" line="2211"/>
         <source>Case Insert</source>
         <translation>Wkładka</translation>
     </message>
@@ -1792,21 +1806,20 @@ Druga strona i metadane projektu pozostają nietknięte.</translation>
         <translation>Układ automatyczny</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1970"/>
         <source>This replaces everything on both pages -- the disc label and the J-card -- and resets the undo history.
 
 The project&apos;s metadata is left alone.</source>
-        <translation>To zastąpi całą zawartość obu stron — etykiety płyty i okładki J-card — oraz wyzeruje historię cofania.
+        <translation type="vanished">To zastąpi całą zawartość obu stron — etykiety płyty i okładki J-card — oraz wyzeruje historię cofania.
 
 Metadane projektu pozostaną nietknięte.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2101"/>
+        <location filename="../app_window.py" line="2129"/>
         <source>Lay Out J-Card</source>
         <translation>Ułożenie okładki J-card</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2103"/>
+        <location filename="../app_window.py" line="2131"/>
         <source>J-Card</source>
         <translation>Okładka J-card</translation>
     </message>
@@ -1819,18 +1832,18 @@ The cover page and the project&apos;s metadata are left alone.</source>
 Strona okładki i metadane projektu pozostaną nietknięte.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2062"/>
-        <location filename="../app_window.py" line="2130"/>
+        <location filename="../app_window.py" line="2090"/>
+        <location filename="../app_window.py" line="2158"/>
         <source>Lay Out Disc Label</source>
         <translation>Ułożenie etykiety płyty</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2071"/>
+        <location filename="../app_window.py" line="2099"/>
         <source>Cover Art</source>
         <translation>Okładka</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2075"/>
+        <location filename="../app_window.py" line="2103"/>
         <source>MiniDisc Logo</source>
         <translation>Logo MiniDisc</translation>
     </message>
