@@ -2616,6 +2616,50 @@ tag, so one guest-credited track cannot rename the record (the same rule
 `foobar.album_title()` and `album_sort._group_display_name()` already
 follow), falling back to `guess_from_folder_name()`.
 
+**The Recording menu follows two things now: the adapter setting *and* the
+open project's medium** (`_sync_mdrem_actions()`, re-run after Window >
+Settings closes and after every File > New / Open, since that is when a
+medium can change). A MiniDisc project is not offered "Burn Audio CD"; a CD
+project is offered neither the remote, nor erasing, nor the three
+record-to-MiniDisc entries. **This is a change of principle, not tidying**:
+erasing, the remote and recording all act on whatever disc is physically in
+the deck, which has nothing to do with which label is open -- an
+independence that was itself deliberate (see the erase dialog's notes). It
+loses to a menu that matches the project in front of you, which is what was
+asked for. With no project open at all -- only reachable before the startup
+screen is answered -- nothing is hidden on medium grounds, because there is
+no medium yet.
+
+**Burning is the exception that keeps its own rule**: `burn_folder_action`
+and `burn_foobar_action` follow the medium but *not* the adapter, because a
+burn needs the drive and not the infrared. The same rule governs the
+Telegram entries -- `_burn_from_telegram_downloads()` and the chat dialog's
+own "Burn Downloaded Album to CD..." button are ungated, while their
+recording twins stay behind `mdrem_enabled()`. Copying the recording gate
+across would have hidden CD burning from exactly the person most likely to
+want it: somebody with no adapter at all.
+
+`TelegramChatDialog` therefore reports *which* button finished it
+(`downloaded_action`, `RECORD` / `BURN`) alongside `downloaded_folder` -- a
+folder alone cannot say, since a downloaded album can go to either medium --
+and both buttons share `_finish_with()`, so the auto-sort that stops a
+multi-album folder being treated as one album cannot apply to one and not
+the other. `app_window._burn_folder()` was split out of
+`_burn_cd_from_folder()` for that hand-off exactly as `_record_folder_dialog()`
+was, and `_burn_cd_from_folder()` stays zero-argument so the menu action
+cannot hand it `QAction.triggered`'s `checked` bool.
+
+**Two names were wrong and are fixed.** The page switcher said "Cover /
+J-Card" on a CD project, naming a MiniDisc part that project does not have;
+`_relabel_cover_page()` rides along on the same medium sync and says "Case
+Insert" there. And every pixmap layer read as "DesignPixmap" in the Layers
+panel: `layers_panel._label_for()`'s fallback stripped "QGraphics"/"Item"
+off the class name, which was right while these were plain Qt classes and
+broke silently when they became `DesignPixmapItem` and friends (added to
+suppress Qt's own selection decoration -- see canvas/items.py). It now names
+what an item *is*, by isinstance, and falls back to the old trick only for
+anything unrecognised.
+
 **The Project menu became "Recording", and the metadata editor moved out of
 it onto the Tools panel.** The menu held the one dialog used while *designing
 a label* next to three that drive a tape deck; nothing but recording is in it

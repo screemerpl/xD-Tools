@@ -436,6 +436,12 @@ class _MessageWidget(QWidget):
         self.translation_label.setVisible(True)
 
 
+# What the dialog was closed *for*. The folder alone cannot say, since a
+# downloaded album can go to either medium.
+RECORD = "record"
+BURN = "burn"
+
+
 class _DownloadQueueItem(QWidget):
     """One row in the download queue panel -- the only place a file
     attachment's name/size/progress/speed is shown at all (see the module
@@ -554,8 +560,12 @@ class TelegramChatDialog(QDialog):
         # this is non-empty.
         self._active_downloads: set[int] = set()
         # Read by app_window.py after exec() == Accepted, and handed to
-        # _record_folder_dialog() exactly like a folder picked by hand.
+        # _record_folder_dialog()/_burn_folder() exactly like a folder
+        # picked by hand. `downloaded_action` says which of the two the
+        # user asked for -- the folder alone cannot, since a download can
+        # go to either medium.
         self.downloaded_folder: str | None = None
+        self.downloaded_action: str = RECORD
 
         layout = QVBoxLayout(self)
 
@@ -659,11 +669,16 @@ class TelegramChatDialog(QDialog):
         self.continue_btn.setEnabled(False)
         self.continue_btn.clicked.connect(self._on_continue_clicked)
         self.buttons.addButton(self.continue_btn, QDialogButtonBox.ButtonRole.AcceptRole)
+        self.burn_btn = QPushButton(self.tr("Burn Downloaded Album to CD..."))
+        self.burn_btn.setEnabled(False)
+        self.burn_btn.clicked.connect(self._on_burn_clicked)
+        self.buttons.addButton(self.burn_btn, QDialogButtonBox.ButtonRole.AcceptRole)
         self.close_btn = QPushButton(self.tr("Close"))
         self.close_btn.clicked.connect(self.reject)
         self.buttons.addButton(self.close_btn, QDialogButtonBox.ButtonRole.RejectRole)
         layout.addWidget(self.buttons)
         self._update_continue_button()
+        self._update_burn_button()
 
         # Deliberately *not* called here -- see start_connecting()'s own
         # docstring for why plain construction has to stay inert, and
@@ -725,6 +740,7 @@ class TelegramChatDialog(QDialog):
         # this session downloads anything at all.
         self._update_sort_button()
         self._update_continue_button()
+        self._update_burn_button()
 
     def _on_not_authorized(self) -> None:
         self.status_label.setText(self.tr("Not signed in to Telegram."))
@@ -843,6 +859,7 @@ class TelegramChatDialog(QDialog):
         self._active_downloads.add(message_id)
         self._update_sort_button()
         self._update_continue_button()
+        self._update_burn_button()
 
     def _on_download_progress(self, message_id: int, current: int, total: int) -> None:
         item = self._queue_items.get(message_id)
@@ -857,6 +874,7 @@ class TelegramChatDialog(QDialog):
         self._active_downloads.discard(message_id)
         self._update_sort_button()
         self._update_continue_button()
+        self._update_burn_button()
 
     def _on_download_failed(self, message_id: int, error: str) -> None:
         item = self._queue_items.get(message_id)
@@ -865,6 +883,7 @@ class TelegramChatDialog(QDialog):
         self._active_downloads.discard(message_id)
         self._update_sort_button()
         self._update_continue_button()
+        self._update_burn_button()
 
     # --- folder-level actions -------------------------------------------------
 
@@ -934,7 +953,29 @@ class TelegramChatDialog(QDialog):
             self.continue_btn.setEnabled(True)
             self.continue_btn.setToolTip("")
 
+    def _update_burn_button(self) -> None:
+        """The same reasons as the record button, minus one: **burning is
+        never gated on the MDRem adapter**, because it needs the drive and
+        not the infrared. Copying that gate over would have hidden CD
+        burning from exactly the person most likely to want it -- somebody
+        without an adapter."""
+        if self._active_downloads:
+            self.burn_btn.setEnabled(False)
+            self.burn_btn.setToolTip(self.tr("Wait for the current download(s) to finish first."))
+        elif not self._has_anything_to_record():
+            self.burn_btn.setEnabled(False)
+            self.burn_btn.setToolTip(self.tr("Download at least one file first."))
+        else:
+            self.burn_btn.setEnabled(True)
+            self.burn_btn.setToolTip("")
+
+    def _on_burn_clicked(self) -> None:
+        self._finish_with(BURN)
+
     def _on_continue_clicked(self) -> None:
+        self._finish_with(RECORD)
+
+    def _finish_with(self, action: str) -> None:
         if self._session_folder is None:
             return
         session_folder = Path(self._session_folder)
@@ -950,6 +991,7 @@ class TelegramChatDialog(QDialog):
         if not ok:
             return
         self.downloaded_folder = str(folder)
+        self.downloaded_action = action
         self.accept()
 
     def _open_download_folder(self) -> None:
@@ -980,6 +1022,7 @@ class TelegramChatDialog(QDialog):
         # showing the state from before the click.
         self._update_sort_button()
         self._update_continue_button()
+        self._update_burn_button()
 
     # --- photo previews / translation ---------------------------------------
 
