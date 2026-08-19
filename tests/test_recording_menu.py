@@ -101,7 +101,7 @@ def test_the_button_opens_the_metadata_dialog(qt_app, monkeypatch):
         DialogCode = QDialog.DialogCode
         result_metadata = None
 
-        def __init__(self, metadata, parent=None):
+        def __init__(self, metadata, parent=None, medium="md"):
             opened.append(metadata)
 
         def exec(self):

@@ -127,7 +127,10 @@ def pick_album_folder(parent, root: Path) -> tuple[Path, bool]:
         QCoreApplication.translate("TelegramChatDialog", "Choose Album"),
         QCoreApplication.translate(
             "TelegramChatDialog",
-            "More than one album was downloaded -- which one do you want to record?",
+            # Neutral about what happens next: this picker is shared by
+            # recording to MiniDisc and burning to CD, and said "record"
+            # in both -- caught on screen while burning.
+            "More than one album was downloaded -- which one do you want to use?",
         ),
         names,
         0,

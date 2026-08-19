@@ -2021,7 +2021,7 @@ class MainWindow(QMainWindow):
     def _edit_metadata(self) -> None:
         if self.project is None:
             return
-        dialog = MetadataDialog(self.project.metadata, self)
+        dialog = MetadataDialog(self.project.metadata, self, medium=self.project.medium)
         if dialog.exec() == MetadataDialog.DialogCode.Accepted and dialog.result_metadata is not None:
             self.project.metadata = dialog.result_metadata
             self._mark_dirty()

@@ -15,12 +15,28 @@
     </message>
     <message>
         <location filename="../panels/about_dialog.py" line="28"/>
+        <source>A desktop workbench for MiniDisc and CD-R.
+
+Design the labels for either: a MiniDisc&apos;s sticker and J-card, or a CD&apos;s ring label and slim-case insert -- and export them as cut-ready SVG and print-ready PNG, for a Cricut cutting machine plus a regular printer.
+
+Burn an audio CD-R from a folder or from foobar2000&apos;s playlist, with CD-Text titles, resampling anything that is not already 44.1 kHz / 16-bit on the way.
+
+With an MDRem infrared adapter it also drives a MiniDisc deck: record an album straight from foobar2000 with a track mark at every song, write the disc and track titles onto the MiniDisc, and stand in for the remote.</source>
+        <translation>Warsztat do MiniDisc i CD-R.
+
+Projektuj etykiety dla obu: naklejkę na MiniDisc i wkładkę J-card albo pierścień na płytę CD i wkładkę do pudełka slim — a potem eksportuj je jako SVG gotowe do cięcia i PNG gotowe do druku, na ploter Cricut i zwykłą drukarkę.
+
+Wypalaj płyty audio CD-R z folderu albo z playlisty foobara, razem z tytułami w CD-Text, przepróbkowując po drodze wszystko, co nie jest już 44,1 kHz / 16 bitów.
+
+Z przystawką MDRem na podczerwień steruje też magnetofonem MiniDisc: nagrywa album prosto z foobar2000, stawiając znacznik przy każdym utworze, zapisuje na płycie tytuł i nazwy ścieżek, a w razie potrzeby zastępuje pilota.</translation>
+    </message>
+    <message>
         <source>A desktop workbench for MiniDisc.
 
 Design disc labels and cover/J-card inserts and export them as cut-ready SVG and print-ready PNG, for a Cricut cutting machine plus a regular printer.
 
 With an MDRem infrared adapter it also drives the deck itself: record an album straight from foobar2000 with a track mark at every song, write the disc and track titles onto the MiniDisc, and stand in for the remote.</source>
-        <translation>Warsztat do MiniDisc.
+        <translation type="vanished">Warsztat do MiniDisc.
 
 Projektuj etykiety płyt i okładki J-card, a potem eksportuj je jako SVG gotowe do cięcia i PNG gotowe do druku — na ploter Cricut i zwykłą drukarkę.
 
@@ -31,12 +47,12 @@ Z przystawką MDRem na podczerwień steruje też samym magnetofonem: nagrywa alb
         <translation type="vanished">Aplikacja biurkowa do projektowania etykiet MiniDisc oraz wkładek okładki/J-card, eksportująca pliki SVG gotowe do cięcia i PNG gotowe do druku, do użytku z plotterem tnącym Cricut oraz zwykłą drukarką.</translation>
     </message>
     <message>
-        <location filename="../panels/about_dialog.py" line="39"/>
+        <location filename="../panels/about_dialog.py" line="42"/>
         <source>Author: {author}</source>
         <translation>Autor: {author}</translation>
     </message>
     <message>
-        <location filename="../panels/about_dialog.py" line="44"/>
+        <location filename="../panels/about_dialog.py" line="47"/>
         <source>Tool icons: &lt;a href=&quot;https://github.com/twitter/twemoji&quot;&gt;Twemoji&lt;/a&gt;, CC-BY 4.0, Copyright Twitter, Inc and other contributors.</source>
         <translation>Ikony narzędzi: &lt;a href=&quot;https://github.com/twitter/twemoji&quot;&gt;Twemoji&lt;/a&gt;, CC-BY 4.0, Copyright Twitter, Inc i inni współautorzy.</translation>
     </message>
@@ -1838,27 +1854,27 @@ Strona okładki i metadane projektu pozostaną nietknięte.</translation>
 <context>
     <name>MetadataDialog</name>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="58"/>
+        <location filename="../panels/metadata_dialog.py" line="64"/>
         <source>Project Metadata</source>
         <translation>Metadane projektu</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="66"/>
+        <location filename="../panels/metadata_dialog.py" line="72"/>
         <source>Album title</source>
         <translation>Tytuł albumu</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="69"/>
+        <location filename="../panels/metadata_dialog.py" line="75"/>
         <source>Artist</source>
         <translation>Wykonawca</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="96"/>
+        <location filename="../panels/metadata_dialog.py" line="102"/>
         <source>(unspecified)</source>
         <translation>(nieokreślony)</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="98"/>
+        <location filename="../panels/metadata_dialog.py" line="104"/>
         <source>Year of release</source>
         <translation>Rok wydania</translation>
     </message>
@@ -1869,24 +1885,24 @@ cover</source>
 okładki</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="71"/>
+        <location filename="../panels/metadata_dialog.py" line="77"/>
         <source>Lookup Track List...</source>
         <translation>Wyszukaj listę utworów...</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="74"/>
+        <location filename="../panels/metadata_dialog.py" line="80"/>
         <source>Fetch the track list, release year and cover art from the iTunes Search API, using Album + Artist above. A fetched cover is saved for Tools &gt; Insert Asset... to pick up.</source>
         <translation>Pobiera listę utworów, rok wydania i okładkę z iTunes Search API, korzystając z pól Album i Artysta powyżej. Pobrana okładka zostaje zapisana i będzie dostępna w Narzędzia &gt; Wstaw zasób...</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="84"/>
-        <location filename="../panels/metadata_dialog.py" line="222"/>
-        <location filename="../panels/metadata_dialog.py" line="230"/>
+        <location filename="../panels/metadata_dialog.py" line="90"/>
+        <location filename="../panels/metadata_dialog.py" line="228"/>
+        <location filename="../panels/metadata_dialog.py" line="236"/>
         <source>Load from foobar2000</source>
         <translation>Wczytaj z foobar2000</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="87"/>
+        <location filename="../panels/metadata_dialog.py" line="93"/>
         <source>Fills these fields from whatever is loaded in foobar2000&apos;s current playlist, then looks up its cover art. Needs the Beefweb Remote Control component (foo_beefweb).</source>
         <translation>Wypełnia te pola tym, co jest wczytane w bieżącej playliście foobar2000, a następnie wyszukuje okładkę. Wymaga komponentu Beefweb Remote Control (foo_beefweb).</translation>
     </message>
@@ -1895,84 +1911,84 @@ okładki</translation>
         <translation type="vanished">Kliknij, żeby samemu wskazać okładkę — przydaje się, gdy pobrana jest nie ta.</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="108"/>
+        <location filename="../panels/metadata_dialog.py" line="114"/>
         <source>Tracks:</source>
         <translation>Utwory:</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="112"/>
+        <location filename="../panels/metadata_dialog.py" line="118"/>
         <source>Title</source>
         <translation>Tytuł</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="112"/>
+        <location filename="../panels/metadata_dialog.py" line="118"/>
         <source>Time (mm:ss, optional)</source>
         <translation>Czas (mm:ss, opcjonalnie)</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="112"/>
+        <location filename="../panels/metadata_dialog.py" line="118"/>
         <source>Artist (only on a compilation)</source>
         <translation>Wykonawca (tylko na składance)</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="120"/>
+        <location filename="../panels/metadata_dialog.py" line="126"/>
         <source>Add Track</source>
         <translation>Dodaj utwór</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="122"/>
+        <location filename="../panels/metadata_dialog.py" line="128"/>
         <source>Remove Selected</source>
         <translation>Usuń zaznaczone</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="124"/>
+        <location filename="../panels/metadata_dialog.py" line="130"/>
         <source>Move Up</source>
         <translation>Przesuń w górę</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="126"/>
+        <location filename="../panels/metadata_dialog.py" line="132"/>
         <source>Move Down</source>
         <translation>Przesuń w dół</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="135"/>
+        <location filename="../panels/metadata_dialog.py" line="141"/>
         <source>Upload Tracklist</source>
         <translation>Wyślij listę utworów</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="138"/>
+        <location filename="../panels/metadata_dialog.py" line="144"/>
         <source>Writes the album title and every track name onto the MiniDisc itself, using the MDRem infrared adapter. Takes several minutes.</source>
         <translation>Zapisuje tytuł albumu i nazwy wszystkich utworów na samej płycie MiniDisc, przy pomocy przystawki MDRem na podczerwień. Trwa kilka minut.</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="156"/>
-        <location filename="../panels/metadata_dialog.py" line="166"/>
-        <location filename="../panels/metadata_dialog.py" line="302"/>
+        <location filename="../panels/metadata_dialog.py" line="162"/>
+        <location filename="../panels/metadata_dialog.py" line="172"/>
+        <location filename="../panels/metadata_dialog.py" line="308"/>
         <source>Lookup Track List</source>
         <translation>Wyszukaj listę utworów</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="156"/>
+        <location filename="../panels/metadata_dialog.py" line="162"/>
         <source>Fill in Album title and Artist first.</source>
         <translation>Najpierw wypełnij tytuł albumu i artystę.</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="167"/>
+        <location filename="../panels/metadata_dialog.py" line="173"/>
         <source>No album matching &quot;{album}&quot; by &quot;{artist}&quot; was found.</source>
         <translation>Nie znaleziono albumu &quot;{album}&quot; wykonawcy &quot;{artist}&quot;.</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="176"/>
+        <location filename="../panels/metadata_dialog.py" line="182"/>
         <source>Select Album</source>
         <translation>Wybierz album</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="177"/>
+        <location filename="../panels/metadata_dialog.py" line="183"/>
         <source>Multiple matches were found -- choose the correct one:</source>
         <translation>Znaleziono wiele wyników -- wybierz właściwy:</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="231"/>
+        <location filename="../panels/metadata_dialog.py" line="237"/>
         <source>foobar2000&apos;s current playlist is empty.</source>
         <translation>Bieżąca playlista w foobar2000 jest pusta.</translation>
     </message>
@@ -2036,33 +2052,33 @@ choose one)</source>
 <context>
     <name>MultiprintDialog</name>
     <message>
-        <location filename="../panels/print_dialog.py" line="694"/>
+        <location filename="../panels/print_dialog.py" line="708"/>
         <source>Multiprint</source>
         <translation>Multiprint</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="698"/>
+        <location filename="../panels/print_dialog.py" line="712"/>
         <source>Add...</source>
         <translation>Dodaj...</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="700"/>
+        <location filename="../panels/print_dialog.py" line="714"/>
         <source>Delete</source>
         <translation>Usuń</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="715"/>
-        <location filename="../panels/print_dialog.py" line="722"/>
+        <location filename="../panels/print_dialog.py" line="729"/>
+        <location filename="../panels/print_dialog.py" line="736"/>
         <source>Add Project</source>
         <translation>Dodaj projekt</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="715"/>
+        <location filename="../panels/print_dialog.py" line="729"/>
         <source>MDTools Project (*.mdproj)</source>
         <translation>Projekt MDTools (*.mdproj)</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="722"/>
+        <location filename="../panels/print_dialog.py" line="736"/>
         <source>Could not open project:
 {error}</source>
         <translation>Nie można otworzyć projektu:
@@ -2122,8 +2138,8 @@ choose one)</source>
     <name>PrintDialog</name>
     <message>
         <location filename="../panels/print_dialog.py" line="429"/>
-        <location filename="../panels/print_dialog.py" line="566"/>
-        <location filename="../panels/print_dialog.py" line="612"/>
+        <location filename="../panels/print_dialog.py" line="580"/>
+        <location filename="../panels/print_dialog.py" line="626"/>
         <source>Print</source>
         <translation>Drukuj</translation>
     </message>
@@ -2148,17 +2164,17 @@ choose one)</source>
         <translation>Arkusz 2 — okładka</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="590"/>
+        <location filename="../panels/print_dialog.py" line="604"/>
         <source>disc label</source>
         <translation>etykiety płyty</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="591"/>
+        <location filename="../panels/print_dialog.py" line="605"/>
         <source>cover</source>
         <translation>okładki</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="614"/>
+        <location filename="../panels/print_dialog.py" line="628"/>
         <source>This page holds at most {fits} of the {label}, not {copies}. Try the other orientation, or print fewer at a time.</source>
         <translation>Ta strona mieści najwyżej {fits} {label}, a nie {copies}. Spróbuj drugiej orientacji albo drukuj mniej naraz.</translation>
     </message>
@@ -2196,7 +2212,7 @@ choose one)</source>
         <translation type="vanished">Drukuj...</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="568"/>
+        <location filename="../panels/print_dialog.py" line="582"/>
         <source>Only {fits} of {copies} copies could be arranged automatically. The rest have been placed in the top-left corner -- drag them into place, and right-click a label to rotate it 90 degrees.</source>
         <translation>Tylko {fits} z {copies} kopii udało się rozmieścić automatycznie. Pozostałe umieszczono w lewym górnym rogu -- przeciągnij je na miejsce, a kliknięciem prawym przyciskiem myszy na etykiecie obróć ją o 90 stopni.</translation>
     </message>
@@ -2795,22 +2811,22 @@ Ustawienie i tak zostało zapisane, ale dopóki folder nie istnieje, nie da się
 <context>
     <name>TelegramChatDialog</name>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="533"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="536"/>
         <source>Telegram Bot</source>
         <translation>Bot Telegram</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="572"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="575"/>
         <source>Connecting...</source>
         <translation>Łączenie...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="630"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="633"/>
         <source>Quick commands:</source>
         <translation>Szybkie komendy:</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="646"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="649"/>
         <source>Send</source>
         <translation>Wyślij</translation>
     </message>
@@ -2819,102 +2835,107 @@ Ustawienie i tak zostało zapisane, ale dopóki folder nie istnieje, nie da się
         <translation type="vanished">Przejdź do Record Folder...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="944"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="947"/>
         <source>Enable the MDRem adapter in Window &gt; Settings to record.</source>
         <translation>Włącz adapter MDRem w Window &gt; Settings, aby nagrywać.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="676"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="679"/>
         <source>Close</source>
         <translation>Zamknij</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="605"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="128"/>
+        <source>More than one album was downloaded -- which one do you want to use?</source>
+        <translation>Pobrano więcej niż jeden album — którego chcesz użyć?</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="608"/>
         <source>Downloads</source>
         <translation>Pobierania</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="656"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="659"/>
         <source>Open Download Folder</source>
         <translation>Otwórz folder pobierania</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="660"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="1013"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="1017"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="663"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1016"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1020"/>
         <source>Sort into Album Folders</source>
         <translation>Posortuj na foldery albumów</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="668"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="671"/>
         <source>Record Downloaded Albums...</source>
         <translation>Nagraj pobrane albumy...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="672"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="675"/>
         <source>Burn Downloaded Album to CD...</source>
         <translation>Wypal pobrany album na CD...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="708"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="711"/>
         <source>The Telegram API ID must be a number.</source>
         <translation>Telegram API ID musi być liczbą.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="732"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="735"/>
         <source>Connected to {name}.</source>
         <translation>Połączono z {name}.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="746"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="749"/>
         <source>Not signed in to Telegram.</source>
         <translation>Niezalogowano do Telegrama.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="747"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="750"/>
         <source>Sign in...</source>
         <translation>Zaloguj się...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="757"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="760"/>
         <source>Could not connect: {error}</source>
         <translation>Nie udało się połączyć: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="838"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="841"/>
         <source>Could not send: {error}</source>
         <translation>Nie udało się wysłać: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="845"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="848"/>
         <source>Could not do that: {error}</source>
         <translation>Nie udało się tego wykonać: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="923"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="948"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="964"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="926"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="951"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="967"/>
         <source>Wait for the current download(s) to finish first.</source>
         <translation>Poczekaj, aż bieżące pobieranie się zakończy.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="926"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="929"/>
         <source>Nothing is waiting to be sorted.</source>
         <translation>Nie ma nic do posortowania.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="951"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="967"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="954"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="970"/>
         <source>Download at least one file first.</source>
         <translation>Najpierw pobierz co najmniej jeden plik.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1010"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1013"/>
         <source>These tracks all belong to one album -- there is nothing to separate.</source>
         <translation>Wszystkie te utwory należą do jednego albumu -- nie ma czego rozdzielać.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1012"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1015"/>
         <source>Everything is already sorted into album folders.</source>
         <translation>Wszystko jest już posortowane na foldery albumów.</translation>
     </message>
@@ -2924,21 +2945,20 @@ Ustawienie i tak zostało zapisane, ale dopóki folder nie istnieje, nie da się
         <translation>Wybierz album</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="128"/>
         <source>More than one album was downloaded -- which one do you want to record?</source>
-        <translation>Pobrano więcej niż jeden album -- który chcesz nagrać?</translation>
+        <translation type="vanished">Pobrano więcej niż jeden album -- który chcesz nagrać?</translation>
     </message>
     <message>
         <source>Only one album was detected -- nothing to sort.</source>
         <translation type="vanished">Wykryto tylko jeden album -- nie ma czego sortować.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1018"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1021"/>
         <source>Sorted into {count} album folders.</source>
         <translation>Posortowano na {count} folderów albumów.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1058"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1061"/>
         <source>Disconnecting...</source>
         <translation>Rozłączanie...</translation>
     </message>
@@ -3405,32 +3425,32 @@ Możesz spróbować ponownie.</translation>
 <context>
     <name>_DownloadQueueItem</name>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="478"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="481"/>
         <source>Queued</source>
         <translation>W kolejce</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="481"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="484"/>
         <source>Retry</source>
         <translation>Ponów</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="493"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="496"/>
         <source>Downloading...</source>
         <translation>Pobieranie...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="513"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="516"/>
         <source>Downloading... ({speed}/s)</source>
         <translation>Pobieranie... ({speed}/s)</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="517"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="520"/>
         <source>Saved</source>
         <translation>Zapisano</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="520"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="523"/>
         <source>Failed: {error}</source>
         <translation>Niepowodzenie: {error}</translation>
     </message>
@@ -3438,12 +3458,12 @@ Możesz spróbować ponownie.</translation>
 <context>
     <name>_MessageWidget</name>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="382"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="385"/>
         <source>You</source>
         <translation>Ty</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="407"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="410"/>
         <source>Loading image...</source>
         <translation>Wczytywanie obrazu...</translation>
     </message>
@@ -3460,12 +3480,12 @@ Możesz spróbować ponownie.</translation>
         <translation type="vanished">Niepowodzenie: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="426"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="429"/>
         <source>Could not display image</source>
         <translation>Nie udało się wyświetlić obrazu</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="435"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="438"/>
         <source>Translated: {text}</source>
         <translation>Tłumaczenie: {text}</translation>
     </message>

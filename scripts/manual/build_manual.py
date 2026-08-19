@@ -386,7 +386,7 @@ def build(lang: str) -> None:
     else:
         print("  ! contents page numbers did not settle; using the last measurement")
 
-    out = OUT_DIR / f"MDTools-Manual-{lang.upper()}.pdf"
+    out = OUT_DIR / f"xD-Tools-Manual-{lang.upper()}.pdf"
     pages = paint(doc, out, module, body_size, footer_height)
     print(f"  {out.relative_to(ROOT)} -- {pages} pages")
 

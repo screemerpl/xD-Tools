@@ -38,7 +38,7 @@ from mdtools.metadata_lookup import (
 from mdtools.panels.cover_preview import CoverPreview
 from mdtools.panels.mdrem_port import resolve_port
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
-from mdtools.project import ProjectMetadata, Track, format_time, parse_time
+from mdtools.project import MEDIUM_MD, ProjectMetadata, Track, format_time, parse_time
 
 # Artist sits between them: it belongs with the title it qualifies, and
 # is empty on an ordinary album (see ProjectMetadata.is_compilation).
@@ -53,7 +53,13 @@ def _sanitize_filename(text: str) -> str:
 
 
 class MetadataDialog(QDialog):
-    def __init__(self, metadata: ProjectMetadata, parent=None):
+    def __init__(self, metadata: ProjectMetadata, parent=None, medium: str = MEDIUM_MD):
+        """`medium` decides whether "Upload Tracklist" is offered at all.
+
+        That button writes titles onto a MiniDisc over infrared; on a CD
+        project there is no MiniDisc for it to write to, and the titles
+        went onto the disc as CD-Text when it was burned. It stayed visible
+        on CD projects at first -- reported directly."""
         super().__init__(parent)
         self.setWindowTitle(self.tr("Project Metadata"))
         self.resize(420, 480)
@@ -140,7 +146,7 @@ class MetadataDialog(QDialog):
             )
         )
         self.upload_btn.clicked.connect(self._upload_tracklist)
-        self.upload_btn.setVisible(app_settings.mdrem_enabled())
+        self.upload_btn.setVisible(app_settings.mdrem_enabled() and medium == MEDIUM_MD)
         layout.addWidget(self.upload_btn)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)

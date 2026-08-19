@@ -4071,7 +4071,7 @@ it is perfectly literal.
   `scripts/manual/make_screenshots.py`, which builds a demo project and
   grabs each dialog rather than anyone capturing them by hand. Two things
   follow. First, a UI change that renames a menu item or moves a control
-  invalidates **fifty-seven screenshots** (nineteen figures x three
+  invalidates **sixty-nine screenshots** (twenty-three figures x three
   languages), not one -- rerun the generator
   rather than patching a figure. Second, the Polish and Japanese manuals
   show Polish and Japanese screenshots, so the menu names quoted in their

@@ -4,9 +4,9 @@ The user manual, built from source rather than written here.
 
 | File | |
 |---|---|
-| `MDTools-Manual-EN.pdf` | English |
-| `MDTools-Manual-PL.pdf` | Polski |
-| `MDTools-Manual-JA.pdf` | 日本語 |
+| `xD-Tools-Manual-EN.pdf` | English |
+| `xD-Tools-Manual-PL.pdf` | Polski |
+| `xD-Tools-Manual-JA.pdf` | 日本語 |
 | `img/<lang>/` | screenshots, one set per language |
 | `img/ir-circuit.png` | the MDRem output stage (language-independent) |
 
@@ -32,7 +32,7 @@ way. Confirmed directly -- run under `QT_QPA_PLATFORM=offscreen`,
 included, painted as a solid black box instead of a character, in all
 three languages, with no error or warning of any kind. Rebuilding with the
 default platform plugin (i.e. no `QT_QPA_PLATFORM` override) produced
-correct text immediately. `build_manual.py` can still be run while MDTools
+correct text immediately. `build_manual.py` can still be run while xD-Tools
 itself is busy recording -- that part of the original reasoning holds --
 just not with the platform forced to offscreen.
 

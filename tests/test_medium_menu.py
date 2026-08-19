@@ -138,3 +138,36 @@ def test_burning_telegram_downloads_survives_the_adapter_being_off(window, monke
     window._sync_mdrem_actions()
 
     assert window.telegram_burn_action.isVisible()
+
+
+# --- dialogs that belong to one medium ----------------------------------
+
+
+def test_a_cd_project_is_not_offered_infrared_titling(qt_app, monkeypatch):
+    """"Upload Tracklist" writes titles onto a MiniDisc over infrared. On a
+    CD project there is no MiniDisc to write to, and the titles went on as
+    CD-Text when the disc was burned -- reported as still being offered."""
+    from mdtools.panels.metadata_dialog import MetadataDialog
+    from mdtools.project import ProjectMetadata
+
+    monkeypatch.setattr(app_settings, "mdrem_enabled", lambda: True)
+    metadata = ProjectMetadata(album="Album", artist="Artist")
+
+    on_md = MetadataDialog(metadata, medium=MEDIUM_MD)
+    on_cd = MetadataDialog(metadata, medium=MEDIUM_CD)
+
+    assert on_md.upload_btn.isVisibleTo(on_md) is True
+    assert on_cd.upload_btn.isVisibleTo(on_cd) is False
+
+
+def test_the_about_box_describes_both_media(qt_app):
+    from mdtools.panels.about_dialog import AboutDialog
+    from PySide6.QtWidgets import QLabel
+
+    # kept in a variable: an inline AboutDialog() is collected on the spot,
+    # taking its labels with it (see the PySide gotchas in CLAUDE.md)
+    dialog = AboutDialog()
+    texts = " ".join(label.text() for label in dialog.findChildren(QLabel))
+
+    assert "CD-R" in texts and "MiniDisc" in texts
+    assert "CD-Text" in texts

@@ -15,12 +15,28 @@
     </message>
     <message>
         <location filename="../panels/about_dialog.py" line="28"/>
+        <source>A desktop workbench for MiniDisc and CD-R.
+
+Design the labels for either: a MiniDisc&apos;s sticker and J-card, or a CD&apos;s ring label and slim-case insert -- and export them as cut-ready SVG and print-ready PNG, for a Cricut cutting machine plus a regular printer.
+
+Burn an audio CD-R from a folder or from foobar2000&apos;s playlist, with CD-Text titles, resampling anything that is not already 44.1 kHz / 16-bit on the way.
+
+With an MDRem infrared adapter it also drives a MiniDisc deck: record an album straight from foobar2000 with a track mark at every song, write the disc and track titles onto the MiniDisc, and stand in for the remote.</source>
+        <translation>MiniDisc と CD-R のためのデスクトップ作業台です。
+
+どちらのラベルも作れます。MiniDisc のステッカーと J カード、あるいは CD のリングラベルとスリムケースのインサート — そして Cricut カッティングマシンと普通のプリンター向けに、カット用の SVG と印刷用の PNG として書き出せます。
+
+フォルダーや foobar2000 のプレイリストから、CD-Text 付きのオーディオ CD-R を書き込みます。44.1 kHz / 16ビット でないものは、その途中で変換されます。
+
+MDRem 赤外線アダプターがあれば、MiniDisc デッキ自体も操作します。foobar2000 からアルバムをそのまま録音し、曲ごとにトラックマークを付け、ディスク名と曲名を MiniDisc に書き込み、リモコンの代わりも務めます。</translation>
+    </message>
+    <message>
         <source>A desktop workbench for MiniDisc.
 
 Design disc labels and cover/J-card inserts and export them as cut-ready SVG and print-ready PNG, for a Cricut cutting machine plus a regular printer.
 
 With an MDRem infrared adapter it also drives the deck itself: record an album straight from foobar2000 with a track mark at every song, write the disc and track titles onto the MiniDisc, and stand in for the remote.</source>
-        <translation>MiniDiscのためのデスクトップ作業台。
+        <translation type="vanished">MiniDiscのためのデスクトップ作業台。
 
 ディスクラベルとジャケット (Jカード) をデザインし、Cricutカッティングマシン用のカット可能なSVGと、通常のプリンター用の印刷可能なPNGとして書き出します。
 
@@ -31,12 +47,12 @@ MDRem赤外線アダプターがあれば、デッキ自体も操作します: f
         <translation type="vanished">MiniDiscのディスクラベルとカバー/Jカードのデスクトップデザインツール。Cricutカッティングマシンと通常のプリンターで使うために、カット用のSVGと印刷用のPNGを書き出します。</translation>
     </message>
     <message>
-        <location filename="../panels/about_dialog.py" line="39"/>
+        <location filename="../panels/about_dialog.py" line="42"/>
         <source>Author: {author}</source>
         <translation>作者: {author}</translation>
     </message>
     <message>
-        <location filename="../panels/about_dialog.py" line="44"/>
+        <location filename="../panels/about_dialog.py" line="47"/>
         <source>Tool icons: &lt;a href=&quot;https://github.com/twitter/twemoji&quot;&gt;Twemoji&lt;/a&gt;, CC-BY 4.0, Copyright Twitter, Inc and other contributors.</source>
         <translation>ツールアイコン: &lt;a href=&quot;https://github.com/twitter/twemoji&quot;&gt;Twemoji&lt;/a&gt;、CC-BY 4.0、Copyright Twitter, Inc and other contributors。</translation>
     </message>
@@ -1838,27 +1854,27 @@ The cover page and the project&apos;s metadata are left alone.</source>
 <context>
     <name>MetadataDialog</name>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="58"/>
+        <location filename="../panels/metadata_dialog.py" line="64"/>
         <source>Project Metadata</source>
         <translation>プロジェクトのメタデータ</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="66"/>
+        <location filename="../panels/metadata_dialog.py" line="72"/>
         <source>Album title</source>
         <translation>アルバム名</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="69"/>
+        <location filename="../panels/metadata_dialog.py" line="75"/>
         <source>Artist</source>
         <translation>アーティスト</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="96"/>
+        <location filename="../panels/metadata_dialog.py" line="102"/>
         <source>(unspecified)</source>
         <translation>(未指定)</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="98"/>
+        <location filename="../panels/metadata_dialog.py" line="104"/>
         <source>Year of release</source>
         <translation>発売年</translation>
     </message>
@@ -1869,24 +1885,24 @@ cover</source>
 なし</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="71"/>
+        <location filename="../panels/metadata_dialog.py" line="77"/>
         <source>Lookup Track List...</source>
         <translation>トラックリストを検索...</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="74"/>
+        <location filename="../panels/metadata_dialog.py" line="80"/>
         <source>Fetch the track list, release year and cover art from the iTunes Search API, using Album + Artist above. A fetched cover is saved for Tools &gt; Insert Asset... to pick up.</source>
         <translation>上記のアルバム名とアーティストを使って、iTunes Search APIからトラックリスト、発売年、カバーアートを取得します。取得したカバーはツール &gt; アセットを挿入...から選択できるように保存されます。</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="84"/>
-        <location filename="../panels/metadata_dialog.py" line="222"/>
-        <location filename="../panels/metadata_dialog.py" line="230"/>
+        <location filename="../panels/metadata_dialog.py" line="90"/>
+        <location filename="../panels/metadata_dialog.py" line="228"/>
+        <location filename="../panels/metadata_dialog.py" line="236"/>
         <source>Load from foobar2000</source>
         <translation>foobar2000から読み込む</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="87"/>
+        <location filename="../panels/metadata_dialog.py" line="93"/>
         <source>Fills these fields from whatever is loaded in foobar2000&apos;s current playlist, then looks up its cover art. Needs the Beefweb Remote Control component (foo_beefweb).</source>
         <translation>foobar2000の現在のプレイリストの内容でこれらの項目を埋め、続けてカバーアートを検索します。Beefweb Remote Control (foo_beefweb) コンポーネントが必要です。</translation>
     </message>
@@ -1895,84 +1911,84 @@ cover</source>
         <translation type="vanished">クリックすると自分でジャケット画像を選べます。取得された画像が違うときに使ってください。</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="108"/>
+        <location filename="../panels/metadata_dialog.py" line="114"/>
         <source>Tracks:</source>
         <translation>トラック:</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="112"/>
+        <location filename="../panels/metadata_dialog.py" line="118"/>
         <source>Title</source>
         <translation>タイトル</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="112"/>
+        <location filename="../panels/metadata_dialog.py" line="118"/>
         <source>Time (mm:ss, optional)</source>
         <translation>時間 (分:秒、任意)</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="112"/>
+        <location filename="../panels/metadata_dialog.py" line="118"/>
         <source>Artist (only on a compilation)</source>
         <translation>アーティスト (コンピレーションのみ)</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="120"/>
+        <location filename="../panels/metadata_dialog.py" line="126"/>
         <source>Add Track</source>
         <translation>トラックを追加</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="122"/>
+        <location filename="../panels/metadata_dialog.py" line="128"/>
         <source>Remove Selected</source>
         <translation>選択項目を削除</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="124"/>
+        <location filename="../panels/metadata_dialog.py" line="130"/>
         <source>Move Up</source>
         <translation>上へ移動</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="126"/>
+        <location filename="../panels/metadata_dialog.py" line="132"/>
         <source>Move Down</source>
         <translation>下へ移動</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="135"/>
+        <location filename="../panels/metadata_dialog.py" line="141"/>
         <source>Upload Tracklist</source>
         <translation>トラックリストを転送</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="138"/>
+        <location filename="../panels/metadata_dialog.py" line="144"/>
         <source>Writes the album title and every track name onto the MiniDisc itself, using the MDRem infrared adapter. Takes several minutes.</source>
         <translation>MDRem赤外線アダプターを使って、アルバム名とすべてのトラック名をMiniDisc本体に書き込みます。数分かかります。</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="156"/>
-        <location filename="../panels/metadata_dialog.py" line="166"/>
-        <location filename="../panels/metadata_dialog.py" line="302"/>
+        <location filename="../panels/metadata_dialog.py" line="162"/>
+        <location filename="../panels/metadata_dialog.py" line="172"/>
+        <location filename="../panels/metadata_dialog.py" line="308"/>
         <source>Lookup Track List</source>
         <translation>トラックリストを検索</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="156"/>
+        <location filename="../panels/metadata_dialog.py" line="162"/>
         <source>Fill in Album title and Artist first.</source>
         <translation>先にアルバム名とアーティストを入力してください。</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="167"/>
+        <location filename="../panels/metadata_dialog.py" line="173"/>
         <source>No album matching &quot;{album}&quot; by &quot;{artist}&quot; was found.</source>
         <translation>「{artist}」の「{album}」に一致するアルバムが見つかりませんでした。</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="176"/>
+        <location filename="../panels/metadata_dialog.py" line="182"/>
         <source>Select Album</source>
         <translation>アルバムを選択</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="177"/>
+        <location filename="../panels/metadata_dialog.py" line="183"/>
         <source>Multiple matches were found -- choose the correct one:</source>
         <translation>複数の候補が見つかりました。正しいものを選んでください:</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="231"/>
+        <location filename="../panels/metadata_dialog.py" line="237"/>
         <source>foobar2000&apos;s current playlist is empty.</source>
         <translation>foobar2000の現在のプレイリストが空です。</translation>
     </message>
@@ -2036,33 +2052,33 @@ choose one)</source>
 <context>
     <name>MultiprintDialog</name>
     <message>
-        <location filename="../panels/print_dialog.py" line="694"/>
+        <location filename="../panels/print_dialog.py" line="708"/>
         <source>Multiprint</source>
         <translation>Multiprint</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="698"/>
+        <location filename="../panels/print_dialog.py" line="712"/>
         <source>Add...</source>
         <translation>追加...</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="700"/>
+        <location filename="../panels/print_dialog.py" line="714"/>
         <source>Delete</source>
         <translation>削除</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="715"/>
-        <location filename="../panels/print_dialog.py" line="722"/>
+        <location filename="../panels/print_dialog.py" line="729"/>
+        <location filename="../panels/print_dialog.py" line="736"/>
         <source>Add Project</source>
         <translation>プロジェクトを追加</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="715"/>
+        <location filename="../panels/print_dialog.py" line="729"/>
         <source>MDTools Project (*.mdproj)</source>
         <translation>MDToolsプロジェクト (*.mdproj)</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="722"/>
+        <location filename="../panels/print_dialog.py" line="736"/>
         <source>Could not open project:
 {error}</source>
         <translation>プロジェクトを開けませんでした:
@@ -2122,8 +2138,8 @@ choose one)</source>
     <name>PrintDialog</name>
     <message>
         <location filename="../panels/print_dialog.py" line="429"/>
-        <location filename="../panels/print_dialog.py" line="566"/>
-        <location filename="../panels/print_dialog.py" line="612"/>
+        <location filename="../panels/print_dialog.py" line="580"/>
+        <location filename="../panels/print_dialog.py" line="626"/>
         <source>Print</source>
         <translation>印刷</translation>
     </message>
@@ -2148,17 +2164,17 @@ choose one)</source>
         <translation>シート2 — カバー</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="590"/>
+        <location filename="../panels/print_dialog.py" line="604"/>
         <source>disc label</source>
         <translation>ディスクラベル</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="591"/>
+        <location filename="../panels/print_dialog.py" line="605"/>
         <source>cover</source>
         <translation>カバー</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="614"/>
+        <location filename="../panels/print_dialog.py" line="628"/>
         <source>This page holds at most {fits} of the {label}, not {copies}. Try the other orientation, or print fewer at a time.</source>
         <translation>このページには{label}を最大 {fits} 枚しか置けません（{copies} 枚は入りません）。向きを変えるか、一度に印刷する枚数を減らしてください。</translation>
     </message>
@@ -2196,7 +2212,7 @@ choose one)</source>
         <translation type="vanished">印刷...</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="568"/>
+        <location filename="../panels/print_dialog.py" line="582"/>
         <source>Only {fits} of {copies} copies could be arranged automatically. The rest have been placed in the top-left corner -- drag them into place, and right-click a label to rotate it 90 degrees.</source>
         <translation>{copies}枚中{fits}枚のみ自動配置できました。残りは左上隅に配置されています -- ドラッグして配置し、ラベルを右クリックすると90度回転できます。</translation>
     </message>
@@ -2795,22 +2811,22 @@ The setting has been saved anyway, but a CD cannot be ripped there until it exis
 <context>
     <name>TelegramChatDialog</name>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="533"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="536"/>
         <source>Telegram Bot</source>
         <translation>Telegram ボット</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="572"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="575"/>
         <source>Connecting...</source>
         <translation>接続中...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="630"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="633"/>
         <source>Quick commands:</source>
         <translation>クイックコマンド:</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="646"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="649"/>
         <source>Send</source>
         <translation>送信</translation>
     </message>
@@ -2819,102 +2835,107 @@ The setting has been saved anyway, but a CD cannot be ripped there until it exis
         <translation type="vanished">Record Folder に進む...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="944"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="947"/>
         <source>Enable the MDRem adapter in Window &gt; Settings to record.</source>
         <translation>録音するには Window &gt; Settings で MDRem アダプターを有効にしてください。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="676"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="679"/>
         <source>Close</source>
         <translation>閉じる</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="605"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="128"/>
+        <source>More than one album was downloaded -- which one do you want to use?</source>
+        <translation>ダウンロードされたアルバムが複数あります。どれを使いますか？</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="608"/>
         <source>Downloads</source>
         <translation>ダウンロード</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="656"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="659"/>
         <source>Open Download Folder</source>
         <translation>ダウンロードフォルダを開く</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="660"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="1013"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="1017"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="663"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1016"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1020"/>
         <source>Sort into Album Folders</source>
         <translation>アルバムフォルダに振り分け</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="668"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="671"/>
         <source>Record Downloaded Albums...</source>
         <translation>ダウンロードしたアルバムを録音...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="672"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="675"/>
         <source>Burn Downloaded Album to CD...</source>
         <translation>ダウンロードしたアルバムをCDに書き込む...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="708"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="711"/>
         <source>The Telegram API ID must be a number.</source>
         <translation>Telegram の API ID は数値である必要があります。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="732"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="735"/>
         <source>Connected to {name}.</source>
         <translation>{name} に接続しました。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="746"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="749"/>
         <source>Not signed in to Telegram.</source>
         <translation>Telegram にサインインしていません。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="747"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="750"/>
         <source>Sign in...</source>
         <translation>サインイン...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="757"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="760"/>
         <source>Could not connect: {error}</source>
         <translation>接続できませんでした: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="838"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="841"/>
         <source>Could not send: {error}</source>
         <translation>送信できませんでした: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="845"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="848"/>
         <source>Could not do that: {error}</source>
         <translation>それを実行できませんでした: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="923"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="948"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="964"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="926"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="951"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="967"/>
         <source>Wait for the current download(s) to finish first.</source>
         <translation>現在のダウンロードが終わるまでお待ちください。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="926"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="929"/>
         <source>Nothing is waiting to be sorted.</source>
         <translation>振り分けを待っているファイルはありません。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="951"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="967"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="954"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="970"/>
         <source>Download at least one file first.</source>
         <translation>先に少なくとも1つのファイルをダウンロードしてください。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1010"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1013"/>
         <source>These tracks all belong to one album -- there is nothing to separate.</source>
         <translation>これらのトラックはすべて同じアルバムのものです -- 分ける必要はありません。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1012"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1015"/>
         <source>Everything is already sorted into album folders.</source>
         <translation>すべてすでにアルバムフォルダに振り分けられています。</translation>
     </message>
@@ -2924,21 +2945,20 @@ The setting has been saved anyway, but a CD cannot be ripped there until it exis
         <translation>アルバムを選択</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="128"/>
         <source>More than one album was downloaded -- which one do you want to record?</source>
-        <translation>複数のアルバムがダウンロードされました -- どちらを録音しますか？</translation>
+        <translation type="vanished">複数のアルバムがダウンロードされました -- どちらを録音しますか？</translation>
     </message>
     <message>
         <source>Only one album was detected -- nothing to sort.</source>
         <translation type="vanished">アルバムは1つしか検出されませんでした -- 振り分ける必要はありません。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1018"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1021"/>
         <source>Sorted into {count} album folders.</source>
         <translation>{count} 個のアルバムフォルダに振り分けました。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1058"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1061"/>
         <source>Disconnecting...</source>
         <translation>切断中...</translation>
     </message>
@@ -3405,32 +3425,32 @@ You can try again.</source>
 <context>
     <name>_DownloadQueueItem</name>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="478"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="481"/>
         <source>Queued</source>
         <translation>待機中</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="481"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="484"/>
         <source>Retry</source>
         <translation>再試行</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="493"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="496"/>
         <source>Downloading...</source>
         <translation>ダウンロード中...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="513"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="516"/>
         <source>Downloading... ({speed}/s)</source>
         <translation>ダウンロード中... ({speed}/s)</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="517"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="520"/>
         <source>Saved</source>
         <translation>保存済み</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="520"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="523"/>
         <source>Failed: {error}</source>
         <translation>失敗しました: {error}</translation>
     </message>
@@ -3438,12 +3458,12 @@ You can try again.</source>
 <context>
     <name>_MessageWidget</name>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="382"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="385"/>
         <source>You</source>
         <translation>あなた</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="407"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="410"/>
         <source>Loading image...</source>
         <translation>画像を読み込み中...</translation>
     </message>
@@ -3460,12 +3480,12 @@ You can try again.</source>
         <translation type="vanished">失敗しました: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="426"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="429"/>
         <source>Could not display image</source>
         <translation>画像を表示できませんでした</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="435"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="438"/>
         <source>Translated: {text}</source>
         <translation>翻訳: {text}</translation>
     </message>
