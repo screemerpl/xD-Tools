@@ -170,7 +170,7 @@
         77.8
       ],
       "safe_margin_mm": 2.0,
-      "verified": false,
+      "verified": true,
       "builtin": true
     }
   ],
@@ -184,7 +184,7 @@
       "corner_radius_mm": 1.5,
       "fold_offsets_mm": [],
       "safe_margin_mm": 2.0,
-      "verified": false,
+      "verified": true,
       "builtin": true,
       "hub_diameter_mm": 16.0,
       "hub_spacing_mm": 43.0,

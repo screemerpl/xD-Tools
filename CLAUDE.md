@@ -4119,6 +4119,41 @@ MiniDisc" in front of a cassette project tells the user something untrue.
 It also gates the 80-minute SP warning, which is a MiniDisc's answer and not
 a tape's.
 
+**The shell label, once it had been measured, and one thing it forced.**
+The guessed 88.9 x 42.9 rectangle with two round holes was wrong in kind,
+not only in size. Measured: **90 x 40.8mm** -- 15.5mm of material above the
+opening, the 16mm opening itself, 9.3 below, which is where the height
+comes from. Top corners cut off at 45 degrees (`top_chamfer_mm`, and the
+6mm is **the cut line itself**, so it takes 4.24 off each edge -- that is
+what a ruler laid along the cut reads), bottom ones rounded 1.5.
+
+**The opening is one shape, not two holes** -- a hole for each reel hub
+*and*, between them, the window the tape is watched through, so a label
+bridging that gap would cover the tape. `DesignScene.reel_window_path()`
+builds it as a rounded rectangle whose radius is half its height, which is
+exactly two half-circles joined by the rectangle between them, and
+subtracts it the same way the CD label's spindle hole is subtracted.
+
+That geometry moved the layout, and this is the part worth remembering:
+**the middle of the label no longer exists**, so the side letter cannot sit
+between the reels. `_label_bands()` now returns the band above the opening,
+the column *beside* it and the band below; the tracks take the deeper band
+(15.5mm) and the album's own name the shallower one (9.3). The top band is
+also inset by the chamfer's own leg on each side -- a full-width block at
+the very top would otherwise begin inside a corner that has been cut off,
+which is what `test_nothing_is_printed_where_the_reel_holes_are` caught.
+
+Both cassette templates are now **`verified: true`** -- the J-card was cut
+and fitted, the label measured off a real shell.
+
+**`PrintDialog` grew "Print This Sheet..."**, beside Print... and visible
+only while the labels are on separate sheets (`current_sheet_index()`
+returns None otherwise, and `MultiprintDialog` never has a choice to make).
+It exists because a printer's own dialog counts pages of a *job*, and each
+sheet only becomes a page once the job has been built -- so reprinting the
+one that jammed had meant printing the whole set again. `_on_print()` and
+`_on_print_current_sheet()` both go through one `_print(sheets)`.
+
 ## PySide6/Qt gotchas hit in this codebase
 
 - **Never construct a Qt GUI type (`QColor`/`QPen`/`QBrush`/`QFont`/...) at

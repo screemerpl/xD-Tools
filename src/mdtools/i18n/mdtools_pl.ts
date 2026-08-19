@@ -2214,33 +2214,33 @@ choose one)</source>
 <context>
     <name>MultiprintDialog</name>
     <message>
-        <location filename="../panels/print_dialog.py" line="821"/>
+        <location filename="../panels/print_dialog.py" line="864"/>
         <source>Multiprint</source>
         <translation>Multiprint</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="825"/>
+        <location filename="../panels/print_dialog.py" line="868"/>
         <source>Add...</source>
         <translation>Dodaj...</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="827"/>
+        <location filename="../panels/print_dialog.py" line="870"/>
         <source>Delete</source>
         <translation>Usuń</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="842"/>
-        <location filename="../panels/print_dialog.py" line="849"/>
+        <location filename="../panels/print_dialog.py" line="885"/>
+        <location filename="../panels/print_dialog.py" line="892"/>
         <source>Add Project</source>
         <translation>Dodaj projekt</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="842"/>
+        <location filename="../panels/print_dialog.py" line="885"/>
         <source>MDTools Project (*.mdproj)</source>
         <translation>Projekt MDTools (*.mdproj)</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="849"/>
+        <location filename="../panels/print_dialog.py" line="892"/>
         <source>Could not open project:
 {error}</source>
         <translation>Nie można otworzyć projektu:
@@ -2351,24 +2351,24 @@ choose one)</source>
 <context>
     <name>PrintDialog</name>
     <message>
-        <location filename="../panels/print_dialog.py" line="448"/>
-        <location filename="../panels/print_dialog.py" line="681"/>
-        <location filename="../panels/print_dialog.py" line="746"/>
+        <location filename="../panels/print_dialog.py" line="481"/>
+        <location filename="../panels/print_dialog.py" line="724"/>
+        <location filename="../panels/print_dialog.py" line="789"/>
         <source>Print</source>
         <translation>Drukuj</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="482"/>
+        <location filename="../panels/print_dialog.py" line="515"/>
         <source>Each label on its own sheet</source>
         <translation>Każda etykieta na osobnym arkuszu</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="488"/>
+        <location filename="../panels/print_dialog.py" line="521"/>
         <source>Showing</source>
         <translation>Pokazywany</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="505"/>
+        <location filename="../panels/print_dialog.py" line="538"/>
         <source>With more than two labels, each sheet holds one of them -- except a cassette&apos;s two shell labels, which share one.</source>
         <translation>Przy więcej niż dwóch etykietach na każdą kartkę idzie jedna z nich — poza dwiema naklejkami kasety, które dzielą jedną.</translation>
     </message>
@@ -2377,7 +2377,7 @@ choose one)</source>
         <translation type="vanished">Przy więcej niż dwóch etykietach każda potrzebuje własnego arkusza.</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="593"/>
+        <location filename="../panels/print_dialog.py" line="636"/>
         <source>Sheet {number} -- {label}</source>
         <translation>Arkusz {number} — {label}</translation>
     </message>
@@ -2398,7 +2398,7 @@ choose one)</source>
         <translation type="vanished">okładki</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="748"/>
+        <location filename="../panels/print_dialog.py" line="791"/>
         <source>This page holds at most {fits} of the {label}, not {copies}. Try the other orientation, or print fewer at a time.</source>
         <translation>Ta strona mieści najwyżej {fits} {label}, a nie {copies}. Spróbuj drugiej orientacji albo drukuj mniej naraz.</translation>
     </message>
@@ -2407,7 +2407,7 @@ choose one)</source>
         <translation type="vanished">Rozmiar strony</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="490"/>
+        <location filename="../panels/print_dialog.py" line="523"/>
         <source>Copies</source>
         <translation>Liczba kopii</translation>
     </message>
@@ -2436,7 +2436,7 @@ choose one)</source>
         <translation type="vanished">Drukuj...</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="683"/>
+        <location filename="../panels/print_dialog.py" line="726"/>
         <source>Only {fits} of {copies} copies could be arranged automatically. The rest have been placed in the top-left corner -- drag them into place, and right-click a label to rotate it 90 degrees.</source>
         <translation>Tylko {fits} z {copies} kopii udało się rozmieścić automatycznie. Pozostałe umieszczono w lewym górnym rogu -- przeciągnij je na miejsce, a kliknięciem prawym przyciskiem myszy na etykiecie obróć ją o 90 stopni.</translation>
     </message>
@@ -3035,7 +3035,7 @@ Ustawienie i tak zostało zapisane, ale dopóki folder nie istnieje, nie da się
 <context>
     <name>TapeLayout</name>
     <message>
-        <location filename="../tape_layout.py" line="95"/>
+        <location filename="../tape_layout.py" line="96"/>
         <source>SIDE {side}</source>
         <translation>STRONA {side}</translation>
     </message>
@@ -3117,7 +3117,7 @@ Musi być uruchomiony i mieć włączony komponent Beefweb Remote Control (foo_b
         <location filename="../panels/tape_record_dialog.py" line="226"/>
         <source>Playlist &quot;{playlist}&quot; -- {count} tracks, {total} total.
 It will be recorded in this order, in two sides, through the deck&apos;s line inputs.</source>
-        <translation>Playlista "{playlist}" — {count} utworów, łącznie {total}.
+        <translation>Playlista &quot;{playlist}&quot; — {count} utworów, łącznie {total}.
 Zostanie nagrana w tej kolejności, na dwie strony, przez wejścia liniowe magnetofonu.</translation>
     </message>
     <message>
@@ -3542,13 +3542,13 @@ Możesz spróbować ponownie.</translation>
     </message>
     <message>
         <location filename="../templates/template_dialog.py" line="125"/>
-        <location filename="../templates/template_dialog.py" line="415"/>
+        <location filename="../templates/template_dialog.py" line="419"/>
         <source>Disc: {name}</source>
         <translation>Płyta: {name}</translation>
     </message>
     <message>
         <location filename="../templates/template_dialog.py" line="126"/>
-        <location filename="../templates/template_dialog.py" line="417"/>
+        <location filename="../templates/template_dialog.py" line="421"/>
         <source>Cover: {name}</source>
         <translation>Okładka: {name}</translation>
     </message>
@@ -3633,7 +3633,7 @@ Możesz spróbować ponownie.</translation>
     </message>
     <message>
         <location filename="../templates/template_dialog.py" line="127"/>
-        <location filename="../templates/template_dialog.py" line="416"/>
+        <location filename="../templates/template_dialog.py" line="420"/>
         <source>Label: {name}</source>
         <translation>Etykieta: {name}</translation>
     </message>
@@ -3816,21 +3816,38 @@ Możesz spróbować ponownie.</translation>
     </message>
     <message>
         <location filename="../templates/template_dialog.py" line="389"/>
-        <source>Hub hole diameter (0 = none)</source>
-        <translation>Średnica otworu szpuli (0 = brak)</translation>
+        <source>Top corner chamfer (cut line)</source>
+        <translation>Ścięcie górnych narożników (linia cięcia)</translation>
     </message>
     <message>
         <location filename="../templates/template_dialog.py" line="393"/>
-        <source>Hub hole spacing (centres)</source>
-        <translation>Rozstaw otworów szpul (środki)</translation>
+        <source>Reel hole diameter (0 = no opening)</source>
+        <translation>Średnica otworu szpuli (0 = brak wycięcia)</translation>
     </message>
     <message>
         <location filename="../templates/template_dialog.py" line="397"/>
-        <source>Hub centres from top (0 = middle)</source>
-        <translation>Środki otworów od góry (0 = środek)</translation>
+        <source>Reel hole spacing (centres)</source>
+        <translation>Rozstaw otworów szpul (środki)</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="404"/>
+        <location filename="../templates/template_dialog.py" line="401"/>
+        <source>Reel centres from top (0 = middle)</source>
+        <translation>Środki szpul od góry (0 = środek)</translation>
+    </message>
+    <message>
+        <source>Hub hole diameter (0 = none)</source>
+        <translation type="vanished">Średnica otworu szpuli (0 = brak)</translation>
+    </message>
+    <message>
+        <source>Hub hole spacing (centres)</source>
+        <translation type="vanished">Rozstaw otworów szpul (środki)</translation>
+    </message>
+    <message>
+        <source>Hub centres from top (0 = middle)</source>
+        <translation type="vanished">Środki otworów od góry (0 = środek)</translation>
+    </message>
+    <message>
+        <location filename="../templates/template_dialog.py" line="408"/>
         <source>Verified against real media/case</source>
         <translation>Zweryfikowano względem rzeczywistego nośnika/pudełka</translation>
     </message>
@@ -4038,35 +4055,40 @@ Możesz spróbować ponownie.</translation>
         <translation>Eksportuj PDF...</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="268"/>
+        <location filename="../panels/print_dialog.py" line="273"/>
+        <source>Print This Sheet...</source>
+        <translation>Drukuj ten arkusz...</translation>
+    </message>
+    <message>
+        <location filename="../panels/print_dialog.py" line="276"/>
         <source>Print...</source>
         <translation>Drukuj...</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="378"/>
-        <location filename="../panels/print_dialog.py" line="398"/>
+        <location filename="../panels/print_dialog.py" line="411"/>
+        <location filename="../panels/print_dialog.py" line="431"/>
         <source>Export PNG</source>
         <translation>Eksportuj PNG</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="378"/>
+        <location filename="../panels/print_dialog.py" line="411"/>
         <source>PNG (*.png)</source>
         <translation>PNG (*.png)</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="398"/>
-        <location filename="../panels/print_dialog.py" line="425"/>
+        <location filename="../panels/print_dialog.py" line="431"/>
+        <location filename="../panels/print_dialog.py" line="458"/>
         <source>Exported to {path}</source>
         <translation>Wyeksportowano do {path}</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="412"/>
-        <location filename="../panels/print_dialog.py" line="425"/>
+        <location filename="../panels/print_dialog.py" line="445"/>
+        <location filename="../panels/print_dialog.py" line="458"/>
         <source>Export PDF</source>
         <translation>Eksportuj PDF</translation>
     </message>
     <message>
-        <location filename="../panels/print_dialog.py" line="412"/>
+        <location filename="../panels/print_dialog.py" line="445"/>
         <source>PDF (*.pdf)</source>
         <translation>PDF (*.pdf)</translation>
     </message>
