@@ -171,6 +171,26 @@ class DesignScene(QGraphicsScene):
 
         self.setSceneRect(QRectF(-10, -10, diameter + 20, diameter + 20))
 
+    @staticmethod
+    def _hub_paths(t: CoverTemplate, w_px: float, h_px: float) -> list[QPainterPath]:
+        """The two reel-hub openings a cassette shell label is cut around.
+
+        Symmetric about the label's own centre line: whatever the sticker's
+        width, the holes have to line up with the shell underneath it, and
+        a shell is symmetric.
+        """
+        if t.hub_diameter_mm <= 0 or t.hub_spacing_mm <= 0:
+            return []
+        diameter = mm_to_px(t.hub_diameter_mm)
+        spacing = mm_to_px(t.hub_spacing_mm)
+        centre_y = mm_to_px(t.hub_centre_from_top_mm) if t.hub_centre_from_top_mm > 0 else h_px / 2
+        paths = []
+        for centre_x in (w_px / 2 - spacing / 2, w_px / 2 + spacing / 2):
+            hub = QPainterPath()
+            hub.addEllipse(QRectF(centre_x - diameter / 2, centre_y - diameter / 2, diameter, diameter))
+            paths.append(hub)
+        return paths
+
     def _build_cover_outline(self, t: CoverTemplate) -> None:
         w, h = mm_to_px(t.width_mm), mm_to_px(t.height_mm)
         path = QPainterPath()
@@ -181,6 +201,13 @@ class DesignScene(QGraphicsScene):
 
         if t.cutout_width_mm > 0 and t.cutout_height_mm > 0 and t.fold_offsets_mm:
             path = path.subtracted(self._cutout_path(t, h_px=h))
+
+        # One subtracted path with holes in it, the way the CD label's
+        # spindle hole and the full disc label's shutter notch are done --
+        # so template_clip_path() refuses to print into a hub opening with
+        # no extra handling anywhere.
+        for hub in self._hub_paths(t, w_px=w, h_px=h):
+            path = path.subtracted(hub)
 
         outline = make_template_outline(path, LAYER_CUT)
         self.addItem(outline)

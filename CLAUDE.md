@@ -4034,6 +4034,65 @@ Japanese translations of everything added here, and the manual** (its
 text in all three languages plus regenerated screenshots -- the New
 Project dialog, the page dropdown and the Recording menu all changed).
 
+### Round two on the cassette (same branch)
+
+Five things, all from looking at the real thing:
+
+**A shell label is cut around the reel hubs**, and until it was, it was a
+plain rectangle with a track list on it -- reported in one sentence
+("przecież kaseta ma wycięcia okrągłe gdzie wchodzą rolki"). `CoverTemplate`
+gained `hub_diameter_mm` / `hub_spacing_mm` / `hub_centre_from_top_mm`, and
+`_build_cover_outline()` subtracts the two circles from the cut path -- one
+path with holes in it, the way `cd_label`'s spindle hole and `full_label`'s
+shutter notch already are, so `template_clip_path()` refuses to print into a
+hub opening with nothing else to change. `Cassette Shell Label` is now
+90 x 46mm with 24mm holes 45mm apart (still `verified: false`).
+
+**The label carries the sleeve, and its text runs across.** The artwork is
+the whole sticker, washed towards white by `cd_layout.lighten()` (at 0.68 --
+heavier than a CD label's, because the type on this one is smaller), and
+`_auto_layout_tape()` now runs Clip Layers over each side page: that is what
+trims the deliberate overhang *and* punches the hub holes through the
+artwork. `tape_layout._label_bands()` returns the three pieces of a label
+that are not a hole -- the band above the openings, the gutter between them,
+the band below -- computed from the template's own hub geometry, so a
+corrected measurement moves the text with it. Artist + album go on top, the
+side letter fills the gutter (`_fill()`, grown *after* fitting: the font
+search caps at `MAX_POINT_SIZE`, which is right for a track list and leaves
+a single letter rattling around), and the tracks run along the bottom as one
+horizontal line rather than a column -- a label four times wider than it is
+tall has no room for a list.
+
+**"label" is a third template family** (`registry.KINDS`), because the side
+pages took the "cover" family and File > New would happily give a cassette
+three J-cards -- reported directly. Same `CoverTemplate` dataclass, a
+different family; `PAGE_KINDS` maps both side pages to it, and the Template
+Manager grows an Add > Shell label entry plus the three hub rows (visible
+only for that kind). `registry._rehome_moved_builtins()` moves a built-in
+whose family changed, **replacing it with the bundled version rather than
+carrying the old one across** -- a built-in that changed family here also
+changed shape, so its old dimensions describe nothing. This is the one place
+sync overwrites instead of appending.
+
+**Every recording source reaches whichever medium is open.** There is no
+separate cassette entry any more: `record_cd_action` / `record_folder_action`
+/ `record_action` / `telegram_record_action` rename themselves in
+`_sync_mdrem_actions()` ("Record CD to Cassette...") and are visible for a
+cassette *without* the adapter, because a cassette deck is driven by hand.
+`_run_record_dialog()` branches on the project's medium -- a rip is a rip
+whichever machine it ends up on, so the branch belongs there and not in four
+callers. `_resolve_recording_port()` returns `""` (a real answer) when no
+port is needed, which is why callers test it with `is None`.
+
+**A cassette's two shell labels share a sheet; the J-card gets its own.**
+`PrintDialog._sheet_groups()` is the general form of "one sheet per label":
+a pair that belongs together goes through the same two-label arrangement
+search a MiniDisc project's own pages use. Placements are keyed by page
+(`by_page`) before being handed to `_rebuild_items()`, since grouping means
+the order they are computed in no longer matches `self._labels`.
+
+**Still outstanding: the Polish and Japanese translations, and the manual.**
+
 ## PySide6/Qt gotchas hit in this codebase
 
 - **Never construct a Qt GUI type (`QColor`/`QPen`/`QBrush`/`QFont`/...) at

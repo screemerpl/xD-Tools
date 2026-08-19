@@ -172,18 +172,22 @@
       "safe_margin_mm": 2.0,
       "verified": false,
       "builtin": true
-    },
+    }
+  ],
+  "label": [
     {
       "name": "Cassette Shell Label",
-      "kind": "cover",
+      "kind": "label",
       "medium": "tape",
-      "width_mm": 88.9,
-      "height_mm": 42.9,
-      "corner_radius_mm": 1.0,
+      "width_mm": 90.0,
+      "height_mm": 46.0,
+      "corner_radius_mm": 1.5,
       "fold_offsets_mm": [],
       "safe_margin_mm": 2.0,
       "verified": false,
-      "builtin": true
+      "builtin": true,
+      "hub_diameter_mm": 24.0,
+      "hub_spacing_mm": 45.0
     }
   ]
 }

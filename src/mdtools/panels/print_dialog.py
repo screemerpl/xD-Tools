@@ -82,7 +82,7 @@ from mdtools.printing import (
     print_sheets,
     render_page_to_image,
 )
-from mdtools.project import GrayscaleAdjustment, Project, page_title
+from mdtools.project import PAGE_SIDE_A, PAGE_SIDE_B, GrayscaleAdjustment, Project, page_title
 
 _PAGE_SIZE_IDS = {
     "A4": QPageSize.PageSizeId.A4,
@@ -501,15 +501,55 @@ class PrintDialog(_PrintDialogBase):
             self.separate_sheets_check.setChecked(True)
             self.separate_sheets_check.setEnabled(False)
             self.separate_sheets_check.setToolTip(
-                self.tr("With more than two labels, each one needs a sheet of its own.")
+                self.tr(
+                    "With more than two labels, each sheet holds one of them -- except a cassette's two "
+                    "shell labels, which share one."
+                )
             )
             self._options_form.setRowVisible(self.sheet_combo, True)
 
         self._relayout_copies()
 
     def _can_share_a_sheet(self) -> bool:
-        """Whether the two-label packer applies at all."""
+        """Whether the two-label packer applies to the project as a whole."""
         return len(self._labels) == 2
+
+    def _sheet_groups(self) -> list[list[_Label]]:
+        """Which labels go on a sheet together, when they are not all on one.
+
+        One each, except for a pair that belongs together: a cassette's two
+        shell labels are the same sticker printed twice, cut at the same
+        time and stuck on opposite faces of the same tape, so putting them
+        on one sheet is what the user asked for and also what anyone would
+        do by hand. The J-card follows on its own sheet, being four times
+        the size.
+
+        Grouping rather than a cassette special case in three places: the
+        two-label packer these pairs go through is the same one a MiniDisc
+        project's own two pages use.
+        """
+        pairs = [(PAGE_SIDE_A, PAGE_SIDE_B)]
+        grouped: list[list[_Label]] = []
+        taken: set[str] = set()
+        for label in self._labels:
+            if label.page in taken:
+                continue
+            partner = next(
+                (
+                    other
+                    for pair in pairs
+                    if label.page in pair
+                    for other in self._labels
+                    if other.page in pair and other.page != label.page
+                ),
+                None,
+            )
+            if partner is None:
+                grouped.append([label])
+                continue
+            grouped.append([label, partner])
+            taken.update({label.page, partner.page})
+        return grouped
 
     def _all_items(self) -> list[_LabelItem]:
         return [item for label in self._labels for item in label.items]
@@ -536,7 +576,7 @@ class PrintDialog(_PrintDialogBase):
         """
         if not self.separate_sheets_check.isChecked():
             return [self._all_items()]
-        return [list(label.items) for label in self._labels]
+        return [[item for label in group for item in label.items] for group in self._sheet_groups()]
 
     def _on_separate_sheets_toggled(self) -> None:
         separate = self.separate_sheets_check.isChecked()
@@ -547,11 +587,14 @@ class PrintDialog(_PrintDialogBase):
         previous = self.sheet_combo.currentIndex()
         self.sheet_combo.blockSignals(True)
         self.sheet_combo.clear()
-        for number, label in enumerate(self._labels, start=1):
+        groups = self._sheet_groups()
+        for number, group in enumerate(groups, start=1):
             self.sheet_combo.addItem(
-                self.tr("Sheet {number} -- {label}").format(number=number, label=label.title)
+                self.tr("Sheet {number} -- {label}").format(
+                    number=number, label=" + ".join(label.title for label in group)
+                )
             )
-        self.sheet_combo.setCurrentIndex(max(0, min(previous, len(self._labels) - 1)))
+        self.sheet_combo.setCurrentIndex(max(0, min(previous, len(groups) - 1)))
         self.sheet_combo.blockSignals(False)
 
     def _show_current_sheet(self) -> None:
@@ -566,9 +609,10 @@ class PrintDialog(_PrintDialogBase):
                 item.setVisible(True)
             return
         showing = self.sheet_combo.currentIndex()
-        for index, label in enumerate(self._labels):
-            for item in label.items:
-                item.setVisible(index == showing)
+        for index, group in enumerate(self._sheet_groups()):
+            for label in group:
+                for item in label.items:
+                    item.setVisible(index == showing)
 
     def _maybe_save_grayscale_adjustment(self) -> None:
         if self.grayscale_check.isChecked():
@@ -656,22 +700,43 @@ class PrintDialog(_PrintDialogBase):
         and suggesting the other orientation, rather than silently piling
         copies in the corner -- there is nothing to drag them into.
         """
-        placed = []
+        by_page: dict[str, PlacedCopies] = {}
         too_big = []
-        for label in self._labels:
-            try:
-                placed.append(build_sheet_layout(label.size_mm, copies, page_size_mm, self.MARGIN_MM))
-                continue
-            except PrintLayoutError:
-                pass
-            fits = max_copies_on_sheet(label.size_mm, page_size_mm, self.MARGIN_MM)
-            if fits:
-                placed.append(build_sheet_layout(label.size_mm, fits, page_size_mm, self.MARGIN_MM))
-            else:
-                placed.append(PlacedCopies([], False))
-            too_big.append((label.title, fits))
+        for group in self._sheet_groups():
+            if len(group) == 2:
+                # A pair that shares a sheet goes through the same
+                # two-label arrangement search a MiniDisc project's pages
+                # do -- there is nothing about a cassette's two stickers
+                # that needs its own packer.
+                first, second = group
+                try:
+                    for label, grid in zip(
+                        group,
+                        build_copies_layout(
+                            first.size_mm, second.size_mm, copies, page_size_mm, self.MARGIN_MM
+                        ),
+                    ):
+                        by_page[label.page] = grid
+                    continue
+                except PrintLayoutError:
+                    pass  # fall through to a sheet each, below
+            for label in group:
+                try:
+                    by_page[label.page] = build_sheet_layout(
+                        label.size_mm, copies, page_size_mm, self.MARGIN_MM
+                    )
+                    continue
+                except PrintLayoutError:
+                    pass
+                fits = max_copies_on_sheet(label.size_mm, page_size_mm, self.MARGIN_MM)
+                by_page[label.page] = (
+                    build_sheet_layout(label.size_mm, fits, page_size_mm, self.MARGIN_MM)
+                    if fits
+                    else PlacedCopies([], False)
+                )
+                too_big.append((label.title, fits))
 
-        self._rebuild_items(placed)
+        self._rebuild_items([by_page[label.page] for label in self._labels])
         self._refresh_sheet_combo()
         self._show_current_sheet()
 

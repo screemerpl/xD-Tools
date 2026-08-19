@@ -35,8 +35,8 @@ def _cover(colour=(20, 60, 140)) -> bytes:
     return out.getvalue()
 
 
-def _template(name: str):
-    template = next(t for t in registry.load_templates()["cover"] if t.name == name)
+def _template(name: str, kind: str = "cover"):
+    template = next(t for t in registry.load_templates()[kind] if t.name == name)
     return copy.deepcopy(template)
 
 
@@ -70,7 +70,7 @@ def test_the_j_card_folds_into_three_panels(qt_app):
 
 
 def test_a_shell_label_has_no_folds(qt_app):
-    assert DesignScene(_template(SHELL_LABEL)).fold_panel_rects() == []
+    assert DesignScene(_template(SHELL_LABEL, "label")).fold_panel_rects() == []
 
 
 # -- the J-card ----------------------------------------------------------
@@ -88,7 +88,7 @@ def test_the_j_card_lists_the_whole_album_not_one_side(qt_app):
 
 
 def test_the_j_card_refuses_a_page_that_is_not_a_three_panel_card(qt_app):
-    scene = DesignScene(_template(SHELL_LABEL))
+    scene = DesignScene(_template(SHELL_LABEL, "label"))
 
     with pytest.raises(tape_layout.TapeLayoutError):
         tape_layout.build_jcard(scene, _album())
@@ -111,7 +111,7 @@ def test_each_side_label_carries_only_its_own_tracks(qt_app):
     plan = tape.split_sides(metadata.tracks, 60)
     assert len(plan.sides[0].tracks) == 3, "sanity: an even split to tell the halves apart"
 
-    scene = DesignScene(_template(SHELL_LABEL))
+    scene = DesignScene(_template(SHELL_LABEL, "label"))
     tape_layout.build_side_label(scene, metadata, plan.sides[0])
     printed = "\n".join(_texts(scene.print_items()))
 
@@ -126,7 +126,7 @@ def test_a_side_label_says_which_side_it_is(qt_app):
     plan = tape.split_sides(metadata.tracks, 60)
 
     for side in plan.sides:
-        scene = DesignScene(_template(SHELL_LABEL))
+        scene = DesignScene(_template(SHELL_LABEL, "label"))
         tape_layout.build_side_label(scene, metadata, side)
         assert side.label in _texts(scene.print_items())
 
@@ -135,7 +135,7 @@ def test_the_side_letter_is_the_biggest_thing_on_the_label(qt_app):
     """It is read while the tape is halfway into the deck."""
     metadata = _album(6)
     plan = tape.split_sides(metadata.tracks, 60)
-    scene = DesignScene(_template(SHELL_LABEL))
+    scene = DesignScene(_template(SHELL_LABEL, "label"))
 
     tape_layout.build_side_label(scene, metadata, plan.sides[0])
 
@@ -151,7 +151,7 @@ def test_a_side_labels_tracks_are_numbered_from_one(qt_app):
     counter will say when it plays it."""
     metadata = _album(6)
     plan = tape.split_sides(metadata.tracks, 60)
-    scene = DesignScene(_template(SHELL_LABEL))
+    scene = DesignScene(_template(SHELL_LABEL, "label"))
 
     tape_layout.build_side_label(scene, metadata, plan.sides[1])
 
@@ -160,19 +160,67 @@ def test_a_side_labels_tracks_are_numbered_from_one(qt_app):
     assert f"1. {first_on_b}" in printed or f"1 {first_on_b}" in printed
 
 
-def test_everything_a_side_label_prints_lands_on_the_sticker(qt_app):
+def test_every_word_on_a_side_label_lands_on_the_sticker(qt_app):
     metadata = _album(8)
     plan = tape.split_sides(metadata.tracks, 60)
-    scene = DesignScene(_template(SHELL_LABEL))
+    scene = DesignScene(_template(SHELL_LABEL, "label"))
 
     items = tape_layout.build_side_label(scene, metadata, plan.sides[0])
 
     cut = scene.cut_shape_rects()[0]
     for item in items:
+        if not hasattr(item, "toPlainText"):
+            continue  # the sleeve overhangs on purpose -- see below
         placed = item.mapToScene(item.boundingRect()).boundingRect()
         # a hair of tolerance for antialiased text bounds, not a whole
         # millimetre of it
-        assert cut.adjusted(-1, -1, 1, 1).contains(placed), item
+        assert cut.adjusted(-1, -1, 1, 1).contains(placed), item.toPlainText()
+
+
+def test_nothing_is_printed_where_the_reel_holes_are(qt_app):
+    """The openings the deck's spindles come up through are cut out of the
+    label, so anything laid over one is printed onto a hole."""
+    metadata = _album(8)
+    plan = tape.split_sides(metadata.tracks, 60)
+    scene = DesignScene(_template(SHELL_LABEL, "label"))
+    template = scene.template
+    assert template.hub_diameter_mm > 0, "sanity: this label has holes in it"
+
+    items = tape_layout.build_side_label(scene, metadata, plan.sides[0])
+
+    clip = scene.template_clip_path()
+    for item in items:
+        if not hasattr(item, "toPlainText"):
+            continue
+        placed = item.mapToScene(item.boundingRect()).boundingRect()
+        assert not clip.intersects(_hole_paths(scene, placed)), item.toPlainText()
+
+
+def _hole_paths(scene, rect):
+    """The part of `rect` that falls outside the label's own cut shape --
+    empty when everything on it is on material."""
+    from PySide6.QtGui import QPainterPath
+
+    box = QPainterPath()
+    box.addRect(rect)
+    return box.subtracted(scene.template_clip_path())
+
+
+def test_the_sleeve_covers_the_whole_sticker(qt_app):
+    """Deliberately oversized: the overhang is what Clip Layers trims, and
+    trimming is also what punches the hub holes through the artwork."""
+    metadata = _album(6)
+    plan = tape.split_sides(metadata.tracks, 60)
+    scene = DesignScene(_template(SHELL_LABEL, "label"))
+
+    items = tape_layout.build_side_label(scene, metadata, plan.sides[0])
+
+    cut = scene.cut_shape_rects()[0]
+    art = next(item for item in items if not hasattr(item, "toPlainText"))
+    placed = art.mapToScene(art.boundingRect()).boundingRect()
+    # a hair of tolerance: a square sleeve scaled to cover a wider label
+    # matches its width exactly, and exactly is not "contains"
+    assert placed.adjusted(-0.5, -0.5, 0.5, 0.5).contains(cut)
 
 
 def test_a_folded_page_is_refused_as_a_shell_label(qt_app):

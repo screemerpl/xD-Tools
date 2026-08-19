@@ -51,7 +51,7 @@ def _tape_window() -> MainWindow:
     window = MainWindow(show_startup_dialog=False)
     window.project.medium = MEDIUM_TAPE
     jcard = next(t for t in templates["cover"] if t.name == TAPE_JCARD_TEMPLATE)
-    label = next(t for t in templates["cover"] if t.name == TAPE_LABEL_TEMPLATE)
+    label = next(t for t in templates["label"] if t.name == TAPE_LABEL_TEMPLATE)
     window.apply_template(PAGE_COVER, copy.deepcopy(jcard))
     del window.project.pages[PAGE_DISC]
     for page in (PAGE_SIDE_A, PAGE_SIDE_B):
@@ -165,3 +165,106 @@ def test_the_pages_a_cassette_lays_out_include_no_disc(qt_app):
     window = _tape_window()
 
     assert window._auto_layout_pages() == {PAGE_COVER, PAGE_SIDE_A, PAGE_SIDE_B}
+
+
+# -- recording onto it ---------------------------------------------------
+
+
+def test_every_recording_source_is_offered_for_a_cassette_without_an_adapter(qt_app, monkeypatch):
+    """A cassette deck is driven by hand, so none of the three sources
+    needs the infrared adapter -- and a CD rip is a CD rip whichever
+    machine it ends up on."""
+    from mdtools import app_settings
+
+    monkeypatch.setattr(app_settings, "mdrem_enabled", lambda: False)
+    window = _tape_window()
+    window._sync_mdrem_actions()
+
+    for action in (window.record_cd_action, window.record_folder_action, window.record_action):
+        assert action.isVisible(), action.text()
+        assert "Cassette" in action.text()
+    assert window.telegram_record_action.isVisible()
+    # the deck's own keys still need the adapter, and a cassette has none
+    assert not window.erase_disc_action.isVisible()
+    assert not window.remote_action.isVisible()
+
+
+def test_the_same_entries_still_say_minidisc_on_a_minidisc_project(qt_app, monkeypatch):
+    from mdtools import app_settings
+
+    monkeypatch.setattr(app_settings, "mdrem_enabled", lambda: True)
+    window = MainWindow(show_startup_dialog=False)
+    window._sync_mdrem_actions()
+
+    assert "MiniDisc" in window.record_cd_action.text()
+    assert "Cassette" not in window.record_action.text()
+
+
+def test_a_cassette_project_records_through_the_cassette_dialog(qt_app, monkeypatch):
+    """The source decides what is in the playlist; the project decides
+    which machine it goes to."""
+    from mdtools import app_window as app_window_module
+
+    opened = {}
+
+    class FakeTapeDialog:
+        def __init__(self, *args, **kwargs):
+            opened["kwargs"] = kwargs
+            self.result_metadata = None
+            self.total_minutes = 60.0
+
+        def exec(self):
+            opened["ran"] = True
+            return 0
+
+    monkeypatch.setattr(app_window_module, "TapeRecordDialog", FakeTapeDialog)
+    monkeypatch.setattr(
+        app_window_module, "RecordDialog", lambda *a, **k: pytest.fail("that is a MiniDisc deck")
+    )
+    window = _tape_window()
+
+    window._run_record_dialog("", metadata=_metadata())
+
+    assert opened.get("ran") is True
+    assert opened["kwargs"]["metadata"] is not None, "a folder's own corrections have to reach the labels"
+
+
+def test_recording_a_cassette_resolves_no_port_at_all(qt_app, monkeypatch):
+    """Not "resolves one and ignores it": asking for a port would put a
+    warning about missing hardware in front of a flow that needs none."""
+    from mdtools import app_window as app_window_module
+
+    monkeypatch.setattr(
+        app_window_module, "resolve_port", lambda *a, **k: pytest.fail("no adapter is involved")
+    )
+    window = _tape_window()
+
+    assert window._resolve_recording_port() == ""
+
+
+# -- printing it ---------------------------------------------------------
+
+
+def test_both_shell_labels_share_a_sheet_and_the_j_card_gets_its_own(qt_app):
+    """They are the same sticker printed twice, cut at the same time and
+    stuck on opposite faces of one tape."""
+    from mdtools.panels.print_dialog import PrintDialog
+
+    window = _tape_window()
+    dialog = PrintDialog(window.project)
+
+    sheets = [sorted(map(id, sheet)) for sheet in dialog.sheets()]
+    assert len(sheets) == 2
+    side_items = sorted(map(id, dialog.items_for(PAGE_SIDE_A) + dialog.items_for(PAGE_SIDE_B)))
+    assert side_items in sheets
+    assert sorted(map(id, dialog.items_for(PAGE_COVER))) in sheets
+
+
+def test_the_two_shell_labels_do_not_overlap_on_their_shared_sheet(qt_app):
+    from mdtools.panels.print_dialog import PrintDialog
+
+    window = _tape_window()
+    dialog = PrintDialog(window.project)
+
+    a, b = dialog.items_for(PAGE_SIDE_A)[0], dialog.items_for(PAGE_SIDE_B)[0]
+    assert not a.sceneBoundingRect().intersects(b.sceneBoundingRect())

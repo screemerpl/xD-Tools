@@ -36,11 +36,13 @@ import dataclasses
 from PySide6.QtCore import QPointF, QRectF
 from PySide6.QtWidgets import QGraphicsItem
 
+from mdtools.auto_layout import place_cover_on_label
+from mdtools.canvas.items import set_item_scale
 from mdtools.canvas.scene import DesignScene
+from mdtools.cd_layout import lighten
 from mdtools.constants import mm_to_px
 from mdtools.jcard_layout import (
     JCARD_BACK_HEIGHT_MM,
-    _filled_rect,
     _move_top_left_to,
     _text,
     place_back,
@@ -48,21 +50,26 @@ from mdtools.jcard_layout import (
     place_spine,
 )
 from mdtools.palette import accent_colour, dominant_colour, readable_text_colour
-from mdtools.project import ProjectMetadata
+from mdtools.project import ProjectMetadata, numbered_track_lines
 from mdtools.tape import SidePlan
-
-# The shell label's own rhythm, in millimetres. It is a small, wide sticker
-# -- roughly 89 x 43mm -- so the side letter takes a fixed column down the
-# left and everything else shares what is left.
-LABEL_PADDING_MM = 2.5
-SIDE_LETTER_WIDTH_MM = 14.0
-SIDE_LETTER_HEIGHT_MM = 16.0
-LABEL_TITLE_MM = 4.2
-LABEL_SUBTITLE_MM = 3.4
-LABEL_GAP_MM = 1.0
 
 # How many columns the inlay's tuck-in flap deals the track list into.
 FLAP_COLUMNS = 3
+
+# The shell label's own rhythm, in millimetres. The label is cut around the
+# two reel-hub openings, so the only unbroken space on it is the band above
+# them, the band below, and the gutter between -- which is what everything
+# here is laid into.
+LABEL_PADDING_MM = 1.6
+# Clearance around a hub opening, so nothing is printed right up against a
+# cut edge (and so a sticker applied a millimetre out still reads).
+HUB_MARGIN_MM = 1.2
+
+# How far the sleeve is washed towards white before the text goes over it.
+# Heavier than the CD label's, because a shell label is smaller and its
+# type is smaller with it -- there is less of each letter to survive a
+# busy background.
+LABEL_LIGHTEN = 0.68
 
 
 class TapeLayoutError(Exception):
@@ -134,18 +141,27 @@ def build_side_label(
     metadata: ProjectMetadata,
     side: SidePlan,
 ) -> list[QGraphicsItem]:
-    """One face of the cassette: the side letter, the album, and that side's
-    tracks.
+    """One face of the cassette: the sleeve, the side letter, and that
+    side's tracks.
 
-    Built out of `place_back()` with the side's own tracks substituted, so a
-    shell label reads as part of the same set as the J-card's flap -- same
-    colours, same heading, same numbered list -- rather than as a third
-    design. The side letter is then laid over it, which is the one thing
-    that is genuinely this page's own.
+    Laid out around the holes, not on top of them. A full-face shell label
+    is cut with an opening for each reel hub -- the deck's spindles come up
+    through them -- so the unbroken space is three pieces: the band above
+    the openings, the band below, and the gutter between them. Text in any
+    other position would be printed onto something that gets cut away.
+
+    - **The artwork is the whole label**, washed towards white the way a CD
+      label's is (`cd_layout.lighten`), because there is text over it and a
+      dark sleeve leaves that text invisible. One ordinary image layer,
+      movable and replaceable like any other.
+    - **The titles run across, not down.** A cassette label is four times
+      wider than it is tall; a list turned on its side to fit would be read
+      with the tape held sideways, which is not how anybody holds one.
+    - **The tracks are this side's, numbered from one**, which is what the
+      deck's counter will agree with once it is playing them.
 
     An unfolded page is required rather than merely expected: a shell label
-    with a crease in it would be a J-card, and printing half a track list
-    either side of a fold nobody is going to fold is worse than saying so.
+    with a crease in it would be a J-card.
     """
     if scene.fold_panel_rects():
         raise TapeLayoutError("a shell label is a single unfolded page")
@@ -154,64 +170,110 @@ def build_side_label(
 
     panel = _page_rect(scene)
     background = dominant_colour(metadata.cover_art)
-    accent = accent_colour(metadata.cover_art, against=background)
+    # Scored against white rather than against the sleeve's own dominant
+    # colour, because white is what it will be read on once the artwork
+    # underneath has been washed out -- the same correction cd_layout's own
+    # disc label needed.
+    accent = accent_colour(metadata.cover_art, against="#ffffff")
+    ink = readable_text_colour("#ffffff")
 
-    letter_width = mm_to_px(SIDE_LETTER_WIDTH_MM)
-    text_panel = QRectF(
-        panel.left() + letter_width,
-        panel.top(),
-        max(0.0, panel.width() - letter_width),
-        panel.height(),
-    )
+    added: list[QGraphicsItem] = []
+    cover = place_cover_on_label(scene, lighten(metadata.cover_art, LABEL_LIGHTEN))
+    if cover is not None:
+        added.append(cover)
 
-    # Numbered from one *for this side*: that is what the deck's own counter
-    # will say when it plays them, and a label that started at seven would
-    # disagree with the machine in front of you.
-    side_metadata = dataclasses.replace(metadata, tracks=list(side.tracks))
-    added: list[QGraphicsItem] = list(
-        place_back(
-            scene,
-            text_panel,
-            side_metadata,
-            background,
-            accent,
-            turned=False,
-            heading_scale=text_panel.height() / mm_to_px(JCARD_BACK_HEIGHT_MM),
-        )
-    )
+    top, gutter, bottom = _label_bands(scene, panel)
 
-    # The block behind the letter is drawn over the panel block place_back
-    # already laid down, so the letter has its own field of colour rather
-    # than sitting on whatever the track list's background happens to be.
-    letter_area = QRectF(panel.left(), panel.top(), letter_width, panel.height())
-    added.append(_filled_rect(scene, letter_area, accent))
-    letter = _side_letter(scene, letter_area, side.label, readable_text_colour(accent))
+    letter = _text(scene, side.label, gutter, accent, wrap=False, bold=True)
     if letter is not None:
+        # Grown to the gutter afterwards rather than fitted into it: the
+        # font search is capped at MAX_POINT_SIZE, which is right for a
+        # track list and leaves a single letter rattling around in a space
+        # it is supposed to fill. This is the one piece of text on the
+        # label read from across the room, or with the tape already half
+        # into the deck.
+        _fill(letter, gutter)
+        _centre_in(letter, gutter)
         added.append(letter)
+
+    heading = " · ".join(part for part in (metadata.artist.strip(), metadata.album.strip()) if part)
+    title = _text(scene, heading, top, ink, wrap=False, bold=True)
+    if title is not None:
+        _move_top_left_to(title, top.topLeft())
+        added.append(title)
+
+    if side.tracks:
+        # One run of titles rather than a column of them: the band is 9mm
+        # deep and 86mm across, so a list would be the one shape that
+        # cannot be fitted into it.
+        listing = "   ".join(numbered_track_lines(_side_metadata(metadata, side)))
+        tracks = _text(scene, listing, bottom, ink)
+        if tracks is not None:
+            _move_top_left_to(tracks, bottom.topLeft())
+            added.append(tracks)
     return added
 
 
-def _side_letter(scene: DesignScene, area: QRectF, label: str, ink: str) -> QGraphicsItem | None:
-    """A single big A or B, centred in its column.
+def _label_bands(scene: DesignScene, panel: QRectF) -> tuple[QRectF, QRectF, QRectF]:
+    """The three pieces of a shell label that are not a hole: the band
+    above the reel openings, the gutter between them, and the band below.
 
-    Fitted to a box rather than given a point size: the label's own size
-    comes from the template, which is unverified and may well be measured
-    and changed, and a hardcoded 40pt would then either overflow the sticker
-    or rattle around inside it.
+    Measured from the template's own hub geometry rather than from
+    fractions of the label, so a corrected hub size or spacing moves the
+    text with it -- and a label with no holes at all (any other sticker)
+    still gets three sensible bands out of it.
     """
-    box = QRectF(0, 0, area.width() * 0.8, mm_to_px(SIDE_LETTER_HEIGHT_MM))
-    item = _text(scene, label, box, ink, wrap=False, bold=True)
-    if item is None:
-        return None
-    bounds = item.boundingRect()
-    _move_top_left_to(
-        item,
-        QPointF(
-            area.center().x() - bounds.width() / 2,
-            area.center().y() - bounds.height() / 2,
-        ),
+    template = scene.template
+    pad = mm_to_px(LABEL_PADDING_MM)
+    inner = panel.adjusted(pad, pad, -pad, -pad)
+
+    diameter = mm_to_px(getattr(template, "hub_diameter_mm", 0.0) or 0.0)
+    spacing = mm_to_px(getattr(template, "hub_spacing_mm", 0.0) or 0.0)
+    if diameter <= 0 or spacing <= 0:
+        third = inner.height() / 3
+        return (
+            QRectF(inner.left(), inner.top(), inner.width(), third),
+            QRectF(inner.left(), inner.top() + third, inner.width(), third),
+            QRectF(inner.left(), inner.bottom() - third, inner.width(), third),
+        )
+
+    margin = mm_to_px(HUB_MARGIN_MM)
+    from_top = getattr(template, "hub_centre_from_top_mm", 0.0) or 0.0
+    centre_y = panel.top() + (mm_to_px(from_top) if from_top > 0 else panel.height() / 2)
+    hub_top = centre_y - diameter / 2 - margin
+    hub_bottom = centre_y + diameter / 2 + margin
+
+    top = QRectF(inner.left(), inner.top(), inner.width(), max(0.0, hub_top - inner.top()))
+    bottom = QRectF(inner.left(), hub_bottom, inner.width(), max(0.0, inner.bottom() - hub_bottom))
+    gutter = QRectF(
+        panel.center().x() - (spacing - diameter) / 2 + margin,
+        hub_top,
+        max(0.0, spacing - diameter - 2 * margin),
+        hub_bottom - hub_top,
     )
-    return item
+    return top, gutter, bottom
+
+
+def _fill(item: QGraphicsItem, area: QRectF) -> None:
+    """Scales an item up until one of its sides meets the area's."""
+    bounds = item.boundingRect()
+    if bounds.width() <= 0 or bounds.height() <= 0:
+        return
+    scale = min(area.width() / bounds.width(), area.height() / bounds.height())
+    if scale > 1.0:
+        set_item_scale(item, scale, scale)
+
+
+def _centre_in(item: QGraphicsItem, area: QRectF) -> None:
+    # By its footprint, not its own rect: an item scaled by set_item_scale
+    # carries a transform anchored at its centre, so pos() is not where its
+    # top-left is on the page (the mistake cd_layout documents twice).
+    placed = item.mapToScene(item.boundingRect()).boundingRect()
+    item.setPos(item.pos() + (area.center() - placed.center()))
+
+
+def _side_metadata(metadata: ProjectMetadata, side: SidePlan) -> ProjectMetadata:
+    return dataclasses.replace(metadata, tracks=list(side.tracks))
 
 
 def _page_rect(scene: DesignScene) -> QRectF:
@@ -231,7 +293,7 @@ def _page_rect(scene: DesignScene) -> QRectF:
 def label_metadata(metadata: ProjectMetadata, side: SidePlan) -> ProjectMetadata:
     """The album as one side of it sees itself -- exposed for the caller so
     a preview and the layout cannot disagree about what a side contains."""
-    return dataclasses.replace(metadata, tracks=list(side.tracks))
+    return _side_metadata(metadata, side)
 
 
 __all__ = [

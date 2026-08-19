@@ -57,10 +57,11 @@ PAGE_KINDS: dict[str, PageKind] = {
     PAGE_DISC: PageKind(PAGE_DISC, "disc"),
     PAGE_COVER: PageKind(PAGE_COVER, "cover"),
     PAGE_BACK: PageKind(PAGE_BACK, "cover"),
-    # Plain rectangles, so they take cover-shaped templates: "cover" here
-    # is the template *family*, not a claim about what the page is for.
-    PAGE_SIDE_A: PageKind(PAGE_SIDE_A, "cover"),
-    PAGE_SIDE_B: PageKind(PAGE_SIDE_B, "cover"),
+    # Their own family, not "cover": a J-card and a shell sticker are both
+    # rectangles, and offering one where the other belongs is how a
+    # cassette project ended up able to hold three J-cards.
+    PAGE_SIDE_A: PageKind(PAGE_SIDE_A, "label"),
+    PAGE_SIDE_B: PageKind(PAGE_SIDE_B, "label"),
 }
 
 # The order pages are offered in, for any project that has them. A project
