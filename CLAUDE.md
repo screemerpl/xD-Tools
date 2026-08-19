@@ -3935,6 +3935,105 @@ that same rule -- the *call itself* also can't be indirected through
 nesting inside an f-string, even though the string argument right next to
 it is perfectly literal.
 
+## Compact cassette (feature/compact-cassette)
+
+**The third medium, and the first that cannot hold an album in one piece
+or be driven at all.** `MEDIUM_TAPE`, three pages (`PAGE_COVER` J-card +
+`PAGE_SIDE_A` + `PAGE_SIDE_B`), a recording flow where **the deck is
+operated by the user and MDTools only says what to press**.
+
+**`project.MEDIUM_PAGES` is what made a third medium data rather than a
+change everywhere.** A medium declares its pages as `MediumPage(page,
+optional=False)` tuples; `medium_pages(medium)` reads it.
+`NewDesignDialog` builds one template row per page from that (rows created
+once for every page *any* medium can have, hidden via
+`QFormLayout.setRowVisible` for the ones this medium lacks) and reports
+**`selected_templates: dict[page, template]`** -- this replaced the old
+`selected_disc_template`/`selected_cover_template`/`selected_back_template`
+trio, so anything faking that dialog in a test sets the dict.
+`disc_combo`/`cover_combo`/`back_combo`/`disc_label`/`cover_label` remain as
+named properties onto `_rows`, because "the disc row" is still worth
+naming. `app_window._new_design()`, Add Page... and Remove Page all read
+`medium_pages()` now: a cassette is offered no disc page, and which pages
+cannot be removed is "the ones this medium marks required", not a
+hardcoded (disc, cover) pair.
+
+**`tape.py` decides where the album is turned over -- pure logic, no Qt,
+shared by the labels and the recording.** `split_sides(tracks,
+total_minutes)` tries every possible break in the *unchanged* running
+order and takes the most balanced one that fits; if none fits it returns
+the least-overrunning break with `fits` False, because running a few
+seconds into the run-out is the user's call (same rule as the MiniDisc
+flow's 80-minute warning). Two physical facts drive it:
+- **A stated length is both sides together**: a C60 is 30 minutes a side,
+  so `side_seconds()` halves it and every check is per side.
+- **Every side starts with leader tape, which is not magnetic.**
+  `LEADER_SECONDS` (10, the user's own number) of silence is recorded
+  first, on *each* side, and comes out of that side's usable time.
+`suggested_length()` offers the shortest stocked cassette that fits, and
+returns None for an untimed track list rather than guessing. C120 is
+deliberately not offered -- the tape is thin enough to stretch and jam.
+
+**Which tape a project is for is saved on the project
+(`Project.tape_total_minutes`, round-tripped by `project_io`), not asked
+for twice.** The recording dialog writes back the length actually used, so
+the shell labels split exactly where the recording did. A label that says
+side B starts at track seven, and a recording that turned over after track
+six, would each be defensible alone and wrong together.
+
+**`tape_layout.py`: the inlay card is `jcard_layout`'s own card.** A
+cassette J-card folds about *vertical* creases into front / spine / flap
+and is read a quarter turn round on the sheet -- structurally identical to
+the MiniDisc J-card, so `place_front_cover`/`place_spine`/`place_back` are
+reused rather than restated. Two things are its own:
+- **`build_side_label()`** -- `place_back()` with that side's tracks
+  substituted (so a label reads as part of the same set as the flap), plus
+  a big side letter in the accent colour down the left. **Each side's
+  tracks are numbered from one**, which is what the deck's own counter
+  will agree with. It refuses a folded page, and `_page_rect()` uses
+  `cut_shape_rects()`, not `sceneRect()`, or everything would be laid out
+  against the outline builder's transparent margin.
+- **The flap takes three columns** (`FLAP_COLUMNS`), because it is 102mm
+  along and 24mm deep: in two columns a normal album's list bottomed out
+  at `MIN_POINT_SIZE` and rendered as a grey band. `place_back()` gained a
+  `columns` parameter (0 = decide from the track count, as before) and
+  `project.track_list_columns(metadata, n)` generalised
+  `track_list_two_columns`, which now delegates to it.
+- No format logo on the card: a cassette's own marks belong to the shell,
+  and inventing one would put a badge on the paper that no real inlay has.
+
+**`TapeRecordDialog` (`panels/tape_record_dialog.py`) needs no adapter and
+no drive, so `_sync_mdrem_actions()` gates `record_tape_action` on the
+medium alone** -- like the burning entries, never on `mdrem_enabled()`.
+Per side: the user presses RECORD and clicks (the only confirmation that
+exists), ten seconds of silence run down, foobar plays that side, the user
+is told to stop and flip. Three details worth keeping:
+- **`FoobarClient.set_stop_after_current_track()`** is new, and it is what
+  makes the side break clean. Armed on the transition *into* the side's
+  last track, never at the start (the flag applies to whatever is playing
+  when it is read). Watching for the playlist to move past the boundary
+  instead always records the first fraction of the next track onto the end
+  of the side, because a poll can only notice a change after it happened.
+- **The cassette length is frozen with the other fields once recording
+  starts** -- changing it would move a side break that is already half on
+  the tape.
+- **Cancelling stops foobar and then says the deck is still recording**,
+  because there is no second end to stop from here.
+
+**Templates are unverified standards, not measurements**
+(`verified: false`): `Cassette J-Card` 101.6 x 101.6mm, folds at 65.1 and
+77.8 (the 4" x 4" flat card every cassette printer works to: front
+2 9/16", spine 1/2", tuck-in flap 15/16"), and `Cassette Shell Label`
+88.9 x 42.9mm. Both are `medium: "tape"` and reach existing installs
+through `registry.sync_builtin_templates()`.
+
+**The app describes itself as three media now** -- window title
+("xD-Tools - Retro Media Studio"), Help > About, README and
+`pyproject.toml`. **Still outstanding for the next session: the Polish and
+Japanese translations of everything added here, and the manual** (its
+text in all three languages plus regenerated screenshots -- the New
+Project dialog, the page dropdown and the Recording menu all changed).
+
 ## PySide6/Qt gotchas hit in this codebase
 
 - **Never construct a Qt GUI type (`QColor`/`QPen`/`QBrush`/`QFont`/...) at

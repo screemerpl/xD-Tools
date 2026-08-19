@@ -61,6 +61,9 @@ LABEL_TITLE_MM = 4.2
 LABEL_SUBTITLE_MM = 3.4
 LABEL_GAP_MM = 1.0
 
+# How many columns the inlay's tuck-in flap deals the track list into.
+FLAP_COLUMNS = 3
+
 
 class TapeLayoutError(Exception):
     """The page could not be laid out -- a wrong template, or no artwork."""
@@ -109,6 +112,11 @@ def build_jcard(scene: DesignScene, metadata: ProjectMetadata, logo_path: str = 
             # the sheet -- that is what the heading bands are measured
             # against.
             heading_scale=flap.width() / mm_to_px(JCARD_BACK_HEIGHT_MM),
+            # Three, because the flap is 102mm along and 24mm deep: in two
+            # columns a normal album's list bottoms out at the smallest type
+            # that still prints, and reads as a grey band rather than as
+            # track names.
+            columns=FLAP_COLUMNS,
         )
     )
     added.extend(place_spine(scene, spine, metadata, accent, logo_path))

@@ -31,7 +31,7 @@ from mdtools.canvas.items import SCALE_ROLE, set_item_scale
 from mdtools.canvas.scene import DesignScene
 from mdtools.constants import mm_to_px
 from mdtools.palette import accent_colour, dominant_colour, readable_text_colour
-from mdtools.project import ProjectMetadata, numbered_track_lines, track_list_two_columns
+from mdtools.project import ProjectMetadata, numbered_track_lines, track_list_columns
 
 # Breathing room inside a panel, in millimetres. The back panel's text needs
 # more than the spine's, which has barely 8.3mm to work with.
@@ -370,6 +370,7 @@ def place_back(
     *,
     turned: bool = True,
     heading_scale: float = 1.0,
+    columns: int = 0,
 ) -> list[QGraphicsItem]:
     """The back of the case: the cover's dominant colour, a heading, a rule
     in the accent colour, the numbered track list, and the running time.
@@ -385,6 +386,12 @@ def place_back(
     two-column threshold and the centring of the list in its leftover space
     are the same job either way, and keeping them in one function is what
     stops the two cards drifting apart.
+
+    `columns` forces how many side-by-side columns the track list is dealt
+    into; 0 means "decide from the track count" (one, or two past
+    TWO_COLUMN_THRESHOLD), which is what every caller wanted until a panel
+    turned up that is four times wider than it is deep -- see
+    tape_layout.build_jcard.
 
     `heading_scale` multiplies the heading, rule and footer bands, which
     are millimetre constants chosen for a J-card's own narrow panel. A CD
@@ -450,13 +457,14 @@ def place_back(
         # shorter than the space it was given. Centring what it produced in
         # that space spreads the slack above and below instead of leaving
         # one dead band at the bottom.
-        if len(metadata.tracks) > TWO_COLUMN_THRESHOLD:
+        column_count = columns or (2 if len(metadata.tracks) > TWO_COLUMN_THRESHOLD else 1)
+        if column_count > 1:
             gap = mm_to_px(BACK_PADDING_MM)
-            column_width = (content_width - gap) / 2
+            column_width = (content_width - gap * (column_count - 1)) / column_count
             column_area = QRectF(0, 0, column_width, tracks_height)
             columns = [
                 _text(scene, column, column_area, ink, fit=False)
-                for column in track_list_two_columns(metadata)
+                for column in track_list_columns(metadata, column_count)
             ]
             # One size across both, rather than one per column: they are
             # read side by side, and fitting them separately made the

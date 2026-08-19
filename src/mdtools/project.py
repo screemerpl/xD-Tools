@@ -362,16 +362,29 @@ def metadata_menu_entries(metadata: ProjectMetadata) -> list[tuple[str, str]]:
     return entries
 
 
-def track_list_two_columns(metadata: ProjectMetadata) -> list[str]:
-    """Splits the numbered track list into two side-by-side columns -- the
-    first half of tracks in the first column, continuing the same numbering
-    into the second -- handy for a J-card layout where one long list would
-    run too tall. Returns [] if there are no tracks to split."""
+def track_list_columns(metadata: ProjectMetadata, count: int = 2) -> list[str]:
+    """The numbered track list dealt into `count` side-by-side columns.
+
+    Filled column by column, not row by row, so the numbering still reads
+    downwards -- the first column holds the first tracks, and each one
+    continues where the last left off.
+
+    More than two is for a panel that is much wider than it is tall: a
+    cassette inlay's tuck-in flap is 102mm across and 24mm deep, where two
+    columns of six leave the type at the smallest size that still prints.
+    Returns [] if there are no tracks.
+    """
     if not metadata.tracks:
         return []
-    midpoint = math.ceil(len(metadata.tracks) / 2)
+    count = max(1, count)
     lines = numbered_track_lines(metadata)
-    return ["\n".join(lines[:midpoint]), "\n".join(lines[midpoint:])]
+    per_column = math.ceil(len(lines) / count)
+    return ["\n".join(lines[start : start + per_column]) for start in range(0, len(lines), per_column)]
+
+
+def track_list_two_columns(metadata: ProjectMetadata) -> list[str]:
+    """The two-column form, which is what the Metadata menu inserts."""
+    return track_list_columns(metadata, 2)
 
 
 def metadata_column_entries(metadata: ProjectMetadata) -> list[tuple[str, list[str]]]:
