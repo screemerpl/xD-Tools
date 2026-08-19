@@ -4190,6 +4190,30 @@ right first time. Its own two corrections are worth keeping:
   item's footprint rather than `pos()`, like everything else scaled by
   `set_item_scale()` here.
 
+**The Windows installer -- `scripts/build_installer.ps1` +
+`scripts/installer/mdtools.nsi`.** NSIS (zlib licence, `winget install
+NSIS.NSIS`) rather than WiX or Inno Setup: it packages a plain directory
+tree, which is exactly what PyInstaller's onedir mode produces, and an MSI
+would buy Group Policy deployment nobody asked for at the price of a much
+heavier toolchain. The build script reads `__version__` out of the package
+rather than restating it, and reduces it to numbers for NSIS's
+`VIProductVersion`, which takes four numeric parts and would refuse
+"0.3.0-rc2". 144MB of onedir compresses to ~43MB solid LZMA.
+
+Two things are deliberately absent, and both would be easy to add wrongly:
+- **No licence page** -- this repo has no LICENSE file, and an installer is
+  not the place to invent one.
+- **No `.mdproj` file association** -- `main.py` ignores `sys.argv`, so
+  double-clicking a project would open the app on its startup screen rather
+  than on that project. Worth adding the day the app learns to open a file
+  it was handed, and not before.
+
+Uninstalling removes the install directory (guarded on `MDTools.exe`
+actually being in it, so a hand-edited `$INSTDIR` cannot take a recursive
+delete with it), the shortcuts and the registry keys -- and leaves
+`%LOCALAPPDATA%/MDTools` alone, since the templates, settings and Telegram
+session in there are the user's, not the installer's.
+
 ## PySide6/Qt gotchas hit in this codebase
 
 - **Never construct a Qt GUI type (`QColor`/`QPen`/`QBrush`/`QFont`/...) at

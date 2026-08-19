@@ -53,6 +53,23 @@ languages the app itself speaks:
 It is generated -- text and screenshots both -- see [`doc/README.md`](doc/README.md)
 for how to rebuild it.
 
+## Installing on Windows
+
+`scripts/build_installer.ps1` wraps the PyInstaller build in an NSIS
+installer -- `dist/xD-Tools-<version>-setup.exe`, one file, no Python and
+no Qt to install first. It puts the app in `Program Files`, adds a Start
+Menu entry (and optionally a desktop shortcut), and registers a proper
+entry in Add/Remove Programs.
+
+```powershell
+winget install NSIS.NSIS          # once
+./scripts/build_installer.ps1     # builds the app, then the installer
+./scripts/build_installer.ps1 -SkipBuild   # installer only, reusing dist/
+```
+
+Uninstalling leaves `%LOCALAPPDATA%\MDTools` alone -- your templates,
+settings and language choice survive a reinstall.
+
 ## Stack
 
 - **PySide6 (Qt for Python)** for the GUI. Chosen over Tkinter/CustomTkinter
