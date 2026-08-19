@@ -169,7 +169,9 @@ def test_save_as_proposes_the_album_in_the_projects_folder(qt_app, fake_home, mo
 
     window._save_project_as()
 
-    assert seen == [str(user_paths.projects_dir() / "Skillet - Unleashed (2016).mdproj")]
+    # the medium is part of the name now: the same album routinely exists
+    # on both, and one filename cannot serve two projects
+    assert seen == [str(user_paths.projects_dir() / "Skillet - Unleashed (2016) -MD.mdproj")]
 
 
 def test_open_project_starts_in_the_projects_folder(qt_app, fake_home, monkeypatch):
@@ -223,3 +225,29 @@ def test_no_dialog_is_left_starting_on_the_working_directory(qt_app, fake_home, 
     window._export_png()
 
     assert all(directory for directory in saves + opens), (saves, opens)
+
+
+def test_the_proposed_project_name_says_which_medium_it_is(qt_app):
+    """The same album very often exists on both a MiniDisc and a CD, and
+    two projects for it would otherwise be offered the one filename."""
+    from mdtools.app_window import MainWindow
+    from mdtools.project import MEDIUM_CD, ProjectMetadata
+
+    window = MainWindow(show_startup_dialog=False)
+    window.project.metadata = ProjectMetadata(album="Unleashed", artist="Skillet", year=2016)
+
+    assert window._suggested_project_name() == "Skillet - Unleashed (2016) -MD"
+
+    window.project.medium = MEDIUM_CD
+    assert window._suggested_project_name() == "Skillet - Unleashed (2016) -CD"
+
+
+def test_an_empty_project_still_proposes_no_name_at_all(qt_app):
+    """Rather than a bare " -MD.mdproj", which names nothing."""
+    from mdtools.app_window import MainWindow
+    from mdtools.project import ProjectMetadata
+
+    window = MainWindow(show_startup_dialog=False)
+    window.project.metadata = ProjectMetadata()
+
+    assert window._suggested_project_name() == ""

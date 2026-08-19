@@ -1159,13 +1159,16 @@ class MainWindow(QMainWindow):
     def _save_project_as(self) -> bool:
         if self.project is None:
             return False
-        # First save proposes "Artist - Album (Year).mdproj" in the
-        # projects folder, using the same disc_title() the deck is told, so
-        # the file and the disc cannot end up named differently.
+        # First save proposes "Artist - Album (Year) -CD.mdproj" in the
+        # projects folder: disc_title() is the same string the deck is
+        # told, so the file and the disc cannot end up named differently,
+        # and the medium is appended because the same album is very likely
+        # to exist on both -- two files that would otherwise collide on the
+        # one name.
         path, _ = QFileDialog.getSaveFileName(
             self,
             self.tr("Save Project As"),
-            user_paths.project_start_path(self.current_project_path, disc_title(self.project.metadata)),
+            user_paths.project_start_path(self.current_project_path, self._suggested_project_name()),
             self._project_file_filter(),
         )
         if not path:
@@ -1238,6 +1241,18 @@ class MainWindow(QMainWindow):
             return
         dialog = PrintDialog(self.project, self, self._export_start_path())
         dialog.exec()
+
+    def _suggested_project_name(self) -> str:
+        """"Artist - Album (Year) -MD", or -CD.
+
+        Empty when the metadata is empty: user_paths.project_start_path()
+        treats that as "suggest no filename at all" rather than offering a
+        bare " -MD.mdproj".
+        """
+        title = disc_title(self.project.metadata)
+        if not title:
+            return ""
+        return f"{title} -{'CD' if self.project.medium == MEDIUM_CD else 'MD'}"
 
     def _project_file_filter(self) -> str:
         # a module-level constant can't use self.tr(), so this is computed

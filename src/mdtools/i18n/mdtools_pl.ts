@@ -1135,7 +1135,7 @@ Wysunąć teraz, żeby zapisać je trwale?</translation>
         <translation>Edycja:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2006"/>
+        <location filename="../app_window.py" line="2021"/>
         <source>Disc Label</source>
         <translation>Etykieta płyty</translation>
     </message>
@@ -1324,7 +1324,7 @@ Wysunąć teraz, żeby zapisać je trwale?</translation>
         <translation>O programie xD-Tools...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2031"/>
+        <location filename="../app_window.py" line="2046"/>
         <source>Lay Out Case Insert</source>
         <translation>Rozmieść wkładkę</translation>
     </message>
@@ -1601,43 +1601,43 @@ Druga strona i metadane projektu pozostają nietknięte.</translation>
     </message>
     <message>
         <location filename="../app_window.py" line="1156"/>
-        <location filename="../app_window.py" line="1177"/>
+        <location filename="../app_window.py" line="1180"/>
         <source>Saved {path}</source>
         <translation>Zapisano {path}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1167"/>
+        <location filename="../app_window.py" line="1170"/>
         <source>Save Project As</source>
         <translation>Zapisz projekt jako</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1185"/>
+        <location filename="../app_window.py" line="1188"/>
         <source>Export Cut SVG</source>
         <translation>Eksportuj cięcie SVG</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1185"/>
+        <location filename="../app_window.py" line="1188"/>
         <source>SVG (*.svg)</source>
         <translation>SVG (*.svg)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1190"/>
+        <location filename="../app_window.py" line="1193"/>
         <source>Exported cut outline to {path}</source>
         <translation>Wyeksportowano kontur cięcia do {path}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1225"/>
+        <location filename="../app_window.py" line="1228"/>
         <source>Export Print PNG (Grayscale)</source>
         <translation>Eksportuj wydruk PNG (skala szarości)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2033"/>
+        <location filename="../app_window.py" line="2048"/>
         <source>Case Insert</source>
         <translation>Wkładka</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1387"/>
-        <location filename="../app_window.py" line="1394"/>
+        <location filename="../app_window.py" line="1402"/>
+        <location filename="../app_window.py" line="1409"/>
         <source>Download Album from Telegram Bot</source>
         <translation>Pobierz album z bota Telegram</translation>
     </message>
@@ -1646,8 +1646,8 @@ Druga strona i metadane projektu pozostają nietknięte.</translation>
         <translation type="vanished">Najpierw ustaw API ID, API Hash i nazwę użytkownika bota w Experimental &gt; Experimental Settings...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1445"/>
-        <location filename="../app_window.py" line="1449"/>
+        <location filename="../app_window.py" line="1460"/>
+        <location filename="../app_window.py" line="1464"/>
         <source>Sort into Album Folders</source>
         <translation>Posortuj na foldery albumów</translation>
     </message>
@@ -1656,61 +1656,61 @@ Druga strona i metadane projektu pozostają nietknięte.</translation>
         <translation type="vanished">Wykryto tylko jeden album -- nie ma czego sortować.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1450"/>
+        <location filename="../app_window.py" line="1465"/>
         <source>Sorted into {count} album folders.</source>
         <translation>Posortowano na {count} folderów albumów.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1560"/>
+        <location filename="../app_window.py" line="1575"/>
         <source>Restart Now</source>
         <translation>Uruchom ponownie teraz</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1561"/>
+        <location filename="../app_window.py" line="1576"/>
         <source>Later</source>
         <translation>Później</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1684"/>
+        <location filename="../app_window.py" line="1699"/>
         <source>Choose Album Folder</source>
         <translation>Wybierz folder albumu</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1702"/>
-        <location filename="../app_window.py" line="1727"/>
-        <location filename="../app_window.py" line="1734"/>
-        <location filename="../app_window.py" line="1760"/>
+        <location filename="../app_window.py" line="1717"/>
+        <location filename="../app_window.py" line="1742"/>
+        <location filename="../app_window.py" line="1749"/>
+        <location filename="../app_window.py" line="1775"/>
         <source>Burn Audio CD</source>
         <translation>Wypal płytę audio CD</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1703"/>
+        <location filename="../app_window.py" line="1718"/>
         <source>There are no audio files in that folder.</source>
         <translation>W tym folderze nie ma plików dźwiękowych.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1735"/>
+        <location filename="../app_window.py" line="1750"/>
         <source>foobar2000&apos;s playlist is empty, or its files are not reachable from here.</source>
         <translation>Playlista foobar2000 jest pusta albo jej pliki są stąd nieosiągalne.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1761"/>
+        <location filename="../app_window.py" line="1776"/>
         <source>Put this album&apos;s details into the open project, ready to design its label?</source>
         <translation>Wstawić dane tego albumu do otwartego projektu, żeby zaprojektować etykietę?</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1827"/>
-        <location filename="../app_window.py" line="1837"/>
+        <location filename="../app_window.py" line="1842"/>
+        <location filename="../app_window.py" line="1852"/>
         <source>Auto-Layout Disc Label</source>
         <translation>Ułóż etykietę płyty automatycznie</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1828"/>
+        <location filename="../app_window.py" line="1843"/>
         <source>Fill in the album and artist in the Tools panel&apos;s Metadata... first.</source>
         <translation>Uzupełnij najpierw album i wykonawcę w Metadanych... na panelu narzędzi.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1839"/>
+        <location filename="../app_window.py" line="1854"/>
         <source>No cover art could be found for this album, and the layout is built around it. Add an image yourself, or fetch one with the Metadata dialog&apos;s lookup.</source>
         <translation>Nie udało się znaleźć okładki dla tego albumu, a cały układ jest na niej oparty. Dodaj obraz samodzielnie albo pobierz okładkę wyszukiwarką w oknie Metadane...</translation>
     </message>
@@ -1723,12 +1723,12 @@ Druga strona i metadane projektu pozostają nietknięte.</translation>
         <translation type="vanished">Nie udało się znaleźć okładki dla tego albumu, a cały układ jest na niej oparty. Dodaj obraz samodzielnie albo pobierz okładkę wyszukiwarką w Projekt &gt; Metadane...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1847"/>
+        <location filename="../app_window.py" line="1862"/>
         <source>Auto-Layout</source>
         <translation>Układ automatyczny</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1849"/>
+        <location filename="../app_window.py" line="1864"/>
         <source>This replaces everything on both pages -- the disc label and the J-card -- and resets the undo history.
 
 The project&apos;s metadata is left alone.</source>
@@ -1737,12 +1737,12 @@ The project&apos;s metadata is left alone.</source>
 Metadane projektu pozostaną nietknięte.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1975"/>
+        <location filename="../app_window.py" line="1990"/>
         <source>Lay Out J-Card</source>
         <translation>Ułożenie okładki J-card</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1977"/>
+        <location filename="../app_window.py" line="1992"/>
         <source>J-Card</source>
         <translation>Okładka J-card</translation>
     </message>
@@ -1755,23 +1755,23 @@ The cover page and the project&apos;s metadata are left alone.</source>
 Strona okładki i metadane projektu pozostaną nietknięte.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1936"/>
-        <location filename="../app_window.py" line="2004"/>
+        <location filename="../app_window.py" line="1951"/>
+        <location filename="../app_window.py" line="2019"/>
         <source>Lay Out Disc Label</source>
         <translation>Ułożenie etykiety płyty</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1945"/>
+        <location filename="../app_window.py" line="1960"/>
         <source>Cover Art</source>
         <translation>Okładka</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1949"/>
+        <location filename="../app_window.py" line="1964"/>
         <source>MiniDisc Logo</source>
         <translation>Logo MiniDisc</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1197"/>
+        <location filename="../app_window.py" line="1200"/>
         <source>Export Print PNG</source>
         <translation>Eksportuj wydruk PNG</translation>
     </message>
@@ -1780,69 +1780,69 @@ Strona okładki i metadane projektu pozostaną nietknięte.</translation>
         <translation type="vanished">MDTools - Studio MiniDisc</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1197"/>
-        <location filename="../app_window.py" line="1225"/>
+        <location filename="../app_window.py" line="1200"/>
+        <location filename="../app_window.py" line="1228"/>
         <source>PNG (*.png)</source>
         <translation>PNG (*.png)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1202"/>
-        <location filename="../app_window.py" line="1230"/>
+        <location filename="../app_window.py" line="1205"/>
+        <location filename="../app_window.py" line="1233"/>
         <source>Exported print artwork to {path}</source>
         <translation>Wyeksportowano grafikę do druku do {path}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1245"/>
+        <location filename="../app_window.py" line="1260"/>
         <source>MDTools Project (*.mdproj)</source>
         <translation>Projekt MDTools (*.mdproj)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1388"/>
+        <location filename="../app_window.py" line="1403"/>
         <source>Set the bot username first, in Experimental &gt; Experimental Settings...</source>
         <translation>Najpierw ustaw nazwę użytkownika bota w Experimental &gt; Experimental Settings...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1396"/>
+        <location filename="../app_window.py" line="1411"/>
         <source>This build has no Telegram API credentials. Register an app at my.telegram.org and add its API ID and API Hash to settings.ini to sign in.</source>
         <translation>Ta wersja nie ma danych dostępowych API Telegrama. Zarejestruj aplikację na my.telegram.org i dodaj jej API ID oraz API Hash do settings.ini, aby móc się zalogować.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1442"/>
+        <location filename="../app_window.py" line="1457"/>
         <source>These tracks all belong to one album -- there is nothing to separate.</source>
         <translation>Wszystkie te utwory należą do jednego albumu -- nie ma czego rozdzielać.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1444"/>
+        <location filename="../app_window.py" line="1459"/>
         <source>Everything is already sorted into album folders.</source>
         <translation>Wszystko jest już posortowane na foldery albumów.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1509"/>
+        <location filename="../app_window.py" line="1524"/>
         <source>Save as Template</source>
         <translation>Zapisz jako szablon</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1509"/>
+        <location filename="../app_window.py" line="1524"/>
         <source>Template name:</source>
         <translation>Nazwa szablonu:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1528"/>
+        <location filename="../app_window.py" line="1543"/>
         <source>Saved template &apos;{name}&apos;</source>
         <translation>Zapisano szablon &apos;{name}&apos;</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1537"/>
+        <location filename="../app_window.py" line="1552"/>
         <source>Language</source>
         <translation>Język</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1556"/>
+        <location filename="../app_window.py" line="1571"/>
         <source>Language Changed</source>
         <translation>Zmieniono język</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1557"/>
+        <location filename="../app_window.py" line="1572"/>
         <source>Restart MDTools for the new language to take full effect.</source>
         <translation>Uruchom ponownie MDTools, aby nowy język w pełni obowiązywał.</translation>
     </message>
@@ -3100,262 +3100,288 @@ Możesz spróbować ponownie.</translation>
 <context>
     <name>TemplateManagerDialog</name>
     <message>
-        <location filename="../templates/template_dialog.py" line="31"/>
+        <location filename="../templates/template_dialog.py" line="32"/>
         <source>Template Manager</source>
         <translation>Menedżer szablonów</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="44"/>
         <source>+ Disc</source>
-        <translation>+ Płyta</translation>
+        <translation type="vanished">+ Płyta</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="46"/>
         <source>+ Cover</source>
-        <translation>+ Okładka</translation>
+        <translation type="vanished">+ Okładka</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="48"/>
+        <location filename="../templates/template_dialog.py" line="75"/>
         <source>Delete</source>
         <translation>Usuń</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="58"/>
-        <location filename="../templates/template_dialog.py" line="119"/>
+        <location filename="../templates/template_dialog.py" line="83"/>
+        <location filename="../templates/template_dialog.py" line="169"/>
         <source>Select a template to edit.</source>
         <translation>Wybierz szablon do edycji.</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="73"/>
+        <location filename="../templates/template_dialog.py" line="105"/>
         <source> [built-in]</source>
         <translation> [wbudowany]</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="79"/>
-        <location filename="../templates/template_dialog.py" line="331"/>
+        <location filename="../templates/template_dialog.py" line="119"/>
+        <location filename="../templates/template_dialog.py" line="381"/>
         <source>Disc: {name}</source>
         <translation>Płyta: {name}</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="83"/>
-        <location filename="../templates/template_dialog.py" line="331"/>
+        <location filename="../templates/template_dialog.py" line="119"/>
+        <location filename="../templates/template_dialog.py" line="381"/>
         <source>Cover: {name}</source>
         <translation>Okładka: {name}</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="91"/>
+        <location filename="../templates/template_dialog.py" line="144"/>
         <source>New Disc</source>
         <translation>Nowa płyta</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="96"/>
+        <location filename="../templates/template_dialog.py" line="146"/>
         <source>New Cover</source>
         <translation>Nowa okładka</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="107"/>
+        <location filename="../templates/template_dialog.py" line="157"/>
         <source>Can&apos;t Delete</source>
         <translation>Nie można usunąć</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="107"/>
+        <location filename="../templates/template_dialog.py" line="157"/>
         <source>Built-in templates can&apos;t be deleted, only edited.</source>
         <translation>Wbudowanych szablonów nie można usuwać, tylko edytować.</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="129"/>
+        <location filename="../templates/template_dialog.py" line="179"/>
         <source>Name</source>
         <translation>Nazwa</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="136"/>
+        <location filename="../templates/template_dialog.py" line="54"/>
+        <location filename="../templates/template_dialog.py" line="186"/>
         <source>MiniDisc</source>
         <translation>MiniDisc</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="137"/>
+        <location filename="../templates/template_dialog.py" line="55"/>
+        <location filename="../templates/template_dialog.py" line="187"/>
         <source>CD-R</source>
         <translation>CD-R</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="143"/>
+        <location filename="../templates/template_dialog.py" line="51"/>
+        <location filename="../templates/template_dialog.py" line="193"/>
         <source>Medium</source>
         <translation>Nośnik</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="147"/>
+        <location filename="../templates/template_dialog.py" line="53"/>
+        <source>All</source>
+        <translation>Wszystkie</translation>
+    </message>
+    <message>
+        <location filename="../templates/template_dialog.py" line="69"/>
+        <source>Add...</source>
+        <translation>Dodaj...</translation>
+    </message>
+    <message>
+        <location filename="../templates/template_dialog.py" line="71"/>
+        <source>Disc label</source>
+        <translation>Etykieta płyty</translation>
+    </message>
+    <message>
+        <location filename="../templates/template_dialog.py" line="71"/>
+        <source>Cover or insert</source>
+        <translation>Okładka lub wkładka</translation>
+    </message>
+    <message>
+        <location filename="../templates/template_dialog.py" line="92"/>
+        <source>Writes every change in this window to your template file.</source>
+        <translation>Zapisuje wszystkie zmiany z tego okna do Twojego pliku szablonów.</translation>
+    </message>
+    <message>
+        <location filename="../templates/template_dialog.py" line="197"/>
         <source>Layers</source>
         <translation>Warstwy</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="148"/>
+        <location filename="../templates/template_dialog.py" line="198"/>
         <source>{count} pre-made layer(s) included</source>
         <translation>Zawiera {count} gotowych warstw</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="162"/>
-        <location filename="../templates/template_dialog.py" line="270"/>
+        <location filename="../templates/template_dialog.py" line="212"/>
+        <location filename="../templates/template_dialog.py" line="320"/>
         <source>Width</source>
         <translation>Szerokość</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="166"/>
-        <location filename="../templates/template_dialog.py" line="274"/>
+        <location filename="../templates/template_dialog.py" line="216"/>
+        <location filename="../templates/template_dialog.py" line="324"/>
         <source>Height</source>
         <translation>Wysokość</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="169"/>
+        <location filename="../templates/template_dialog.py" line="219"/>
         <source>Sticker (chamfer + fillet)</source>
         <translation>Naklejka (ścięcie + zaokrąglenie)</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="170"/>
+        <location filename="../templates/template_dialog.py" line="220"/>
         <source>Full disc label (rounded rect + slider notch)</source>
         <translation>Pełna etykieta dysku (zaokrąglony prostokąt + wycięcie suwaka)</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="171"/>
+        <location filename="../templates/template_dialog.py" line="221"/>
         <source>CD disc label (circle + spindle hole)</source>
         <translation>Etykieta płyty CD (koło + otwór na trzpień)</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="179"/>
+        <location filename="../templates/template_dialog.py" line="229"/>
         <source>Shape</source>
         <translation>Kształt</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="183"/>
+        <location filename="../templates/template_dialog.py" line="233"/>
         <source>Top-left chamfer</source>
         <translation>Ścięcie lewego górnego rogu</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="187"/>
+        <location filename="../templates/template_dialog.py" line="237"/>
         <source>Other corners&apos; fillet</source>
         <translation>Zaokrąglenie pozostałych rogów</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="191"/>
+        <location filename="../templates/template_dialog.py" line="241"/>
         <source>Slider label width (0 = none)</source>
         <translation>Szerokość etykiety suwaka (0 = brak)</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="195"/>
+        <location filename="../templates/template_dialog.py" line="245"/>
         <source>Slider label height (0 = none)</source>
         <translation>Wysokość etykiety suwaka (0 = brak)</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="199"/>
+        <location filename="../templates/template_dialog.py" line="249"/>
         <source>Slider label corner radius (left corners)</source>
         <translation>Promień zaokrąglenia etykiety suwaka (lewe rogi)</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="203"/>
+        <location filename="../templates/template_dialog.py" line="253"/>
         <source>Slider label gap from disc</source>
         <translation>Odstęp etykiety suwaka od płyty</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="207"/>
+        <location filename="../templates/template_dialog.py" line="257"/>
         <source>Corner radius (full disc label)</source>
         <translation>Radius zaokrąglenia (pełna etykieta dysku)</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="211"/>
+        <location filename="../templates/template_dialog.py" line="261"/>
         <source>Slider notch width (0 = none)</source>
         <translation>Szerokość wycięcia suwaka (0 = brak)</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="215"/>
+        <location filename="../templates/template_dialog.py" line="265"/>
         <source>Slider notch height (0 = none)</source>
         <translation>Wysokość wycięcia suwaka (0 = brak)</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="219"/>
+        <location filename="../templates/template_dialog.py" line="269"/>
         <source>Slider notch corner radius (left corners)</source>
         <translation>Radius zaokrąglenia wycięcia suwaka (lewe rogi)</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="223"/>
+        <location filename="../templates/template_dialog.py" line="273"/>
         <source>Slider notch distance from top</source>
         <translation>Odległość wycięcia suwaka od góry</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="227"/>
+        <location filename="../templates/template_dialog.py" line="277"/>
         <source>Slider notch clearance buffer</source>
         <translation>Bufor tolerancji wycięcia suwaka</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="231"/>
+        <location filename="../templates/template_dialog.py" line="281"/>
         <source>Slider travel channel length</source>
         <translation>Długość kanału przesuwu suwaka</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="235"/>
+        <location filename="../templates/template_dialog.py" line="285"/>
         <source>Outer diameter (CD label)</source>
         <translation>Średnica zewnętrzna (etykieta CD)</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="239"/>
+        <location filename="../templates/template_dialog.py" line="289"/>
         <source>Spindle hole diameter (0 = none)</source>
         <translation>Średnica otworu na trzpień (0 = brak)</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="278"/>
+        <location filename="../templates/template_dialog.py" line="328"/>
         <source>Corner radius</source>
         <translation>Promień zaokrąglenia rogów</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="281"/>
+        <location filename="../templates/template_dialog.py" line="331"/>
         <source>e.g. 68, 73  (fold-line positions from the left edge)</source>
         <translation>np. 68, 73  (pozycje linii złożenia od lewej krawędzi)</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="290"/>
+        <location filename="../templates/template_dialog.py" line="340"/>
         <source>Fold lines (mm)</source>
         <translation>Linie złożenia (mm)</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="294"/>
+        <location filename="../templates/template_dialog.py" line="344"/>
         <source>Cutout width (0 = none)</source>
         <translation>Szerokość wycięcia (0 = brak)</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="298"/>
+        <location filename="../templates/template_dialog.py" line="348"/>
         <source>Cutout height (0 = none)</source>
         <translation>Wysokość wycięcia (0 = brak)</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="302"/>
+        <location filename="../templates/template_dialog.py" line="352"/>
         <source>Cutout corner radius</source>
         <translation>Promień zaokrąglenia wycięcia</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="305"/>
+        <location filename="../templates/template_dialog.py" line="355"/>
         <source>Left of left fold</source>
         <translation>Na lewo od lewej linii złożenia</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="306"/>
+        <location filename="../templates/template_dialog.py" line="356"/>
         <source>Right of right fold</source>
         <translation>Na prawo od prawej linii złożenia</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="311"/>
+        <location filename="../templates/template_dialog.py" line="361"/>
         <source>Cutout side</source>
         <translation>Strona wycięcia</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="315"/>
+        <location filename="../templates/template_dialog.py" line="365"/>
         <source>Cutout distance from that fold</source>
         <translation>Odległość wycięcia od tej linii złożenia</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="319"/>
+        <location filename="../templates/template_dialog.py" line="369"/>
         <source>Cutout distance from bottom</source>
         <translation>Odległość wycięcia od dołu</translation>
     </message>
     <message>
-        <location filename="../templates/template_dialog.py" line="321"/>
+        <location filename="../templates/template_dialog.py" line="371"/>
         <source>Verified against real media/case</source>
         <translation>Zweryfikowano względem rzeczywistego nośnika/pudełka</translation>
     </message>
