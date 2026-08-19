@@ -72,7 +72,7 @@ def test_the_tray_card_is_a_138mm_panel_between_two_spines():
     assert first == 6.5 and template.width_mm - second == 6.5, "the spines"
     assert second - first == 138.0, "the panel behind the disc"
     assert template.medium == MEDIUM_CD
-    assert template.verified is False, "nobody has held a ruler to it yet"
+    assert template.verified is True, "cut, fitted to a real case, and confirmed"
 
 
 def test_the_tray_card_has_three_panels(qt_app):
