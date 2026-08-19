@@ -384,21 +384,25 @@ class TemplateManagerDialog(QDialog):
             cutout_from_bottom.valueChanged.connect(lambda v: setattr(template, "cutout_from_bottom_mm", v))
             form.addRow(self.tr("Cutout distance from bottom"), cutout_from_bottom)
 
+            chamfer = spin(template.top_chamfer_mm, maximum=100.0)
+            chamfer.valueChanged.connect(lambda v: setattr(template, "top_chamfer_mm", v))
+            form.addRow(self.tr("Top corner chamfer (cut line)"), chamfer)
+
             hub_d = spin(template.hub_diameter_mm, maximum=100.0)
             hub_d.valueChanged.connect(lambda v: setattr(template, "hub_diameter_mm", v))
-            form.addRow(self.tr("Hub hole diameter (0 = none)"), hub_d)
+            form.addRow(self.tr("Reel hole diameter (0 = no opening)"), hub_d)
 
             hub_gap = spin(template.hub_spacing_mm, maximum=200.0)
             hub_gap.valueChanged.connect(lambda v: setattr(template, "hub_spacing_mm", v))
-            form.addRow(self.tr("Hub hole spacing (centres)"), hub_gap)
+            form.addRow(self.tr("Reel hole spacing (centres)"), hub_gap)
 
             hub_top = spin(template.hub_centre_from_top_mm, maximum=200.0)
             hub_top.valueChanged.connect(lambda v: setattr(template, "hub_centre_from_top_mm", v))
-            form.addRow(self.tr("Hub centres from top (0 = middle)"), hub_top)
+            form.addRow(self.tr("Reel centres from top (0 = middle)"), hub_top)
 
             # A cover or insert is a solid sheet; only a sticker that goes
             # onto a cassette has to be cut around the reels.
-            for row_widget in (hub_d, hub_gap, hub_top):
+            for row_widget in (chamfer, hub_d, hub_gap, hub_top):
                 form.setRowVisible(row_widget, kind == "label")
 
         verified = QCheckBox(self.tr("Verified against real media/case"))

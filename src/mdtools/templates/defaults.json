@@ -1,5 +1,5 @@
 {
-  "_readme": "All dimensions were provided directly by the user (measured from real media/cases) and are trusted as-is, except slider_gap_mm on the disc-with-slider template (canvas layout spacing between the two independent cut shapes, not a measured part dimension), and on the two Full disc label templates: width_mm/height_mm (69.4x66.4) is the MD's own 71x68mm size inset by a 0.8mm margin on all sides, and slider_notch_top_mm (25.2) is the user's '26mm from the MD's top edge' adjusted for that same 0.8mm label margin -- both are derived, not independently measured, numbers. On the (with Slider) variant, slider_width_mm/slider_height_mm/slider_corner_radius_mm intentionally match slider_notch_width_mm/slider_notch_height_mm/slider_notch_corner_radius_mm exactly, so the printable sticker shape nests inside the notch it's meant to sit on.",
+  "_readme": "All dimensions were provided directly by the user (measured from real media/cases) and are trusted as-is, except slider_gap_mm on the disc-with-slider template (canvas layout spacing between the two independent cut shapes, not a measured part dimension), and on the two Full disc label templates: width_mm/height_mm (69.4x66.4) is the MD's own 71x68mm size inset by a 0.8mm margin on all sides, and slider_notch_top_mm (24.3) places the cut's own top edge 23.5mm below the label's top, which is where the user measured the shutter opening after cutting one -- the first reading, 26mm from the MD's own top edge, put it 1mm too low. slider_travel_mm (19.4) then ends the channel 62mm below the label's top, measured the same way. On the (with Slider) variant, slider_width_mm/slider_height_mm/slider_corner_radius_mm intentionally match slider_notch_width_mm/slider_notch_height_mm/slider_notch_corner_radius_mm exactly, so the printable sticker shape nests inside the notch it's meant to sit on.",
   "disc": [
     {
       "name": "MiniDisc Disc Label",
@@ -39,9 +39,9 @@
       "slider_notch_width_mm": 27.5,
       "slider_notch_height_mm": 17.5,
       "slider_notch_corner_radius_mm": 2.5,
-      "slider_notch_top_mm": 25.2,
+      "slider_notch_top_mm": 24.3,
       "slider_notch_buffer_mm": 0.8,
-      "slider_travel_mm": 18.0,
+      "slider_travel_mm": 19.4,
       "verified": true,
       "builtin": true,
       "medium": "md"
@@ -56,9 +56,9 @@
       "slider_notch_width_mm": 27.5,
       "slider_notch_height_mm": 17.5,
       "slider_notch_corner_radius_mm": 2.5,
-      "slider_notch_top_mm": 25.2,
+      "slider_notch_top_mm": 24.3,
       "slider_notch_buffer_mm": 0.8,
-      "slider_travel_mm": 18.0,
+      "slider_travel_mm": 19.4,
       "slider_width_mm": 27.5,
       "slider_height_mm": 17.5,
       "slider_corner_radius_mm": 2.5,
@@ -71,12 +71,12 @@
       "kind": "disc",
       "medium": "cd",
       "shape": "cd_label",
-      "width_mm": 118.0,
-      "height_mm": 118.0,
-      "outer_diameter_mm": 118.0,
-      "hole_diameter_mm": 41.0,
+      "width_mm": 117.0,
+      "height_mm": 117.0,
+      "outer_diameter_mm": 117.0,
+      "hole_diameter_mm": 35.0,
       "safe_margin_mm": 2.0,
-      "verified": false,
+      "verified": true,
       "builtin": true
     }
   ],
@@ -126,36 +126,36 @@
       "corner_radius_mm": 0.0,
       "fold_offsets_mm": [],
       "safe_margin_mm": 3.0,
-      "verified": false,
+      "verified": true,
       "builtin": true
     },
     {
       "name": "CD Slim Case Insert (Folded, 2 Panels)",
       "kind": "cover",
       "medium": "cd",
-      "width_mm": 242.0,
+      "width_mm": 240.0,
       "height_mm": 120.0,
       "corner_radius_mm": 0.0,
       "fold_offsets_mm": [
-        121.0
+        120.0
       ],
       "safe_margin_mm": 3.0,
-      "verified": false,
+      "verified": true,
       "builtin": true
     },
     {
       "name": "CD Jewel Case Back (Tray Card)",
       "kind": "cover",
       "medium": "cd",
-      "width_mm": 150.0,
-      "height_mm": 118.0,
+      "width_mm": 151.0,
+      "height_mm": 117.5,
       "corner_radius_mm": 0.0,
       "fold_offsets_mm": [
         6.5,
-        143.5
+        144.5
       ],
       "safe_margin_mm": 3.0,
-      "verified": false,
+      "verified": true,
       "builtin": true
     },
     {
@@ -170,7 +170,7 @@
         77.8
       ],
       "safe_margin_mm": 2.0,
-      "verified": false,
+      "verified": true,
       "builtin": true
     }
   ],
@@ -180,14 +180,16 @@
       "kind": "label",
       "medium": "tape",
       "width_mm": 90.0,
-      "height_mm": 46.0,
+      "height_mm": 40.8,
       "corner_radius_mm": 1.5,
       "fold_offsets_mm": [],
       "safe_margin_mm": 2.0,
-      "verified": false,
+      "verified": true,
       "builtin": true,
-      "hub_diameter_mm": 24.0,
-      "hub_spacing_mm": 45.0
+      "hub_diameter_mm": 16.0,
+      "hub_spacing_mm": 43.0,
+      "top_chamfer_mm": 6.0,
+      "hub_centre_from_top_mm": 23.5
     }
   ]
 }

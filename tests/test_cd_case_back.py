@@ -60,15 +60,19 @@ def _cd_window(with_back: bool) -> MainWindow:
 # -- the template --------------------------------------------------------
 
 
-def test_the_tray_card_is_150_by_118_with_two_spines():
-    """The measurement chosen for it: the outer strips show down the sides
-    of the closed case, the panel between them sits behind the disc."""
+def test_the_tray_card_is_a_138mm_panel_between_two_spines():
+    """Measured off a real case: the outer strips show down the sides of
+    the closed case, and the panel between them -- 138mm fold to fold --
+    sits behind the disc."""
     template = _tray_template()
 
-    assert (template.width_mm, template.height_mm) == (150.0, 118.0)
-    assert template.fold_offsets_mm == [6.5, 143.5]
+    assert (template.width_mm, template.height_mm) == (151.0, 117.5)
+    assert template.fold_offsets_mm == [6.5, 144.5]
+    first, second = template.fold_offsets_mm
+    assert first == 6.5 and template.width_mm - second == 6.5, "the spines"
+    assert second - first == 138.0, "the panel behind the disc"
     assert template.medium == MEDIUM_CD
-    assert template.verified is False, "nobody has held a ruler to it yet"
+    assert template.verified is True, "cut, fitted to a real case, and confirmed"
 
 
 def test_the_tray_card_has_three_panels(qt_app):
@@ -227,3 +231,56 @@ def test_the_auto_layout_warning_names_the_pages_this_project_has(qt_app):
 
     assert "Case Back" in with_back
     assert with_back.count(",") == 1, "three pages should read as a list, not a pair"
+
+
+def test_the_track_list_does_not_fill_the_whole_tray_card(qt_app):
+    """138mm of tracks across a tray card read as a poster, not a sleeve --
+    reported directly. The list is fitted into a share of the panel and
+    then centred in all of it, so the slack is shared top and bottom."""
+    scene = DesignScene(_tray_template())
+
+    cd_layout.build_case_back(scene, _metadata())
+
+    panel = scene.fold_panel_rects()[1]
+    tracks = max(
+        (item for item in scene.print_items() if hasattr(item, "toPlainText")),
+        key=lambda item: item.boundingRect().height(),
+    )
+    used = item_height = tracks.mapToScene(tracks.boundingRect()).boundingRect().height()
+    assert used < panel.height() * cd_layout.BACK_TRACK_FILL + 1, "it still fills everything"
+    assert item_height > 0
+
+
+def test_the_digital_audio_mark_takes_the_corner_the_footer_does_not(qt_app, tmp_path):
+    """The bottom-left of that panel already carries the year and the
+    running time."""
+    from PIL import Image
+
+    logo = tmp_path / "cdda.png"
+    Image.new("RGBA", (120, 40), (0, 0, 0, 255)).save(logo)
+    scene = DesignScene(_tray_template())
+
+    items = cd_layout.build_case_back(scene, _metadata(), str(logo))
+
+    # The pixmap items are the marks -- the panel blocks and the accent
+    # rule are filled rects, and the spines' own blocks sit further right
+    # than the middle panel does.
+    from PySide6.QtWidgets import QGraphicsPixmapItem
+
+    panel = scene.fold_panel_rects()[1]
+    marks = [item for item in items if isinstance(item, QGraphicsPixmapItem)]
+    assert marks, "no mark was placed at all"
+    placed = marks[0].mapToScene(marks[0].boundingRect()).boundingRect()
+
+    assert panel.contains(placed), "the mark hangs off the panel"
+    assert placed.center().x() > panel.center().x(), "it belongs on the right"
+    assert placed.center().y() > panel.center().y(), "...at the foot"
+    footer = min(
+        (
+            item.mapToScene(item.boundingRect()).boundingRect()
+            for item in items
+            if hasattr(item, "toPlainText") and item.toPlainText().strip()
+        ),
+        key=lambda r: -r.bottom(),
+    )
+    assert footer.left() < placed.left(), "the year and running time keep the other corner"

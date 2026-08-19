@@ -265,8 +265,17 @@ class _PrintDialogBase(QDialog):
         self.export_png_button.clicked.connect(self._on_export_png)
         self.export_pdf_button = buttons.addButton(self.tr("Export PDF..."), QDialogButtonBox.ButtonRole.ActionRole)
         self.export_pdf_button.clicked.connect(self._on_export_pdf)
+        # Only worth offering when there is more than one sheet to choose
+        # between; a subclass that always shows everything at once (see
+        # current_sheet_index) leaves it hidden rather than offering a
+        # narrower version of the button beside it.
+        self.print_sheet_button = buttons.addButton(
+            self.tr("Print This Sheet..."), QDialogButtonBox.ButtonRole.ActionRole
+        )
+        self.print_sheet_button.clicked.connect(self._on_print_current_sheet)
         self.print_button = buttons.addButton(self.tr("Print..."), QDialogButtonBox.ButtonRole.AcceptRole)
         self.print_button.clicked.connect(self._on_print)
+        self.print_sheet_button.setVisible(self.current_sheet_index() is not None)
         buttons.rejected.connect(self.reject)
         self._layout.addWidget(buttons)
 
@@ -348,6 +357,12 @@ class _PrintDialogBase(QDialog):
     def _sheet_placements(self) -> list[list[PrintPlacement]]:
         return [self._build_placements(items) for items in self.sheets()]
 
+    def current_sheet_index(self) -> int | None:
+        """Which sheet the preview is showing, or None when the question
+        does not arise -- a dialog with everything on one page has no
+        current sheet, it has the sheet."""
+        return None
+
     def _maybe_save_grayscale_adjustment(self) -> None:
         """No-op by default -- overridden by PrintDialog, which has a
         single owning project to persist brightness/contrast onto.
@@ -357,13 +372,31 @@ class _PrintDialogBase(QDialog):
         .mdproj file just because Print... was clicked)."""
 
     def _on_print(self) -> None:
+        self._print(self._sheet_placements())
+
+    def _on_print_current_sheet(self) -> None:
+        """Prints only the sheet the preview is showing.
+
+        The one thing a printer's own dialog cannot express here: it counts
+        pages of a job, and each sheet is only a page once the job has been
+        built. Reprinting a single sheet -- the one whose labels were
+        misaligned, or the one that jammed -- otherwise means printing the
+        whole set again.
+        """
+        index = self.current_sheet_index()
+        sheets = self._sheet_placements()
+        if index is None or not 0 <= index < len(sheets):
+            return
+        self._print([sheets[index]])
+
+    def _print(self, sheets: list[list[PrintPlacement]]) -> None:
         printer = self._new_printer()
 
         print_dialog = QPrintDialog(printer, self)
         if print_dialog.exec() != QPrintDialog.DialogCode.Accepted:
             return
 
-        print_sheets(printer, self._sheet_placements())
+        print_sheets(printer, sheets)
         self._maybe_save_grayscale_adjustment()
         self.accept()
 
@@ -508,6 +541,7 @@ class PrintDialog(_PrintDialogBase):
             )
             self._options_form.setRowVisible(self.sheet_combo, True)
 
+        self.print_sheet_button.setVisible(self.separate_sheets_check.isChecked())
         self._relayout_copies()
 
     def _can_share_a_sheet(self) -> bool:
@@ -578,9 +612,18 @@ class PrintDialog(_PrintDialogBase):
             return [self._all_items()]
         return [[item for label in group for item in label.items] for group in self._sheet_groups()]
 
+    def current_sheet_index(self) -> int | None:
+        """The sheet the Showing box names -- but only while the labels are
+        actually on separate sheets. Sharing one, there is nothing to
+        narrow the print down to."""
+        if not self.separate_sheets_check.isChecked():
+            return None
+        return self.sheet_combo.currentIndex()
+
     def _on_separate_sheets_toggled(self) -> None:
         separate = self.separate_sheets_check.isChecked()
         self._options_form.setRowVisible(self.sheet_combo, separate)
+        self.print_sheet_button.setVisible(separate)
         self._relayout_copies()
 
     def _refresh_sheet_combo(self) -> None:

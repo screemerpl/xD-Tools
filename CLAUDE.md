@@ -1,21 +1,31 @@
-# MDTools
+# xD-Tools
 
-A PySide6 desktop workbench for MiniDisc. It began as a label designer and
-outgrew the name -- **"MDTools - MiniDisc Studio"**, not "Label Designer":
+A PySide6 desktop workbench for three retro music media -- MiniDisc, CD-R
+and compact cassette. It has outgrown its own name twice: first as a
+MiniDisc "label designer" that had started recording and titling discs,
+then as "MDTools" once CD-R and cassette arrived. **"xD-Tools - Retro
+Media Studio"**, with the x standing in for M or C.
 
-- designs disc labels and cover/J-card inserts, exporting SVG (cut/fold
-  shapes only) and PNG (print artwork, clipped to the cut outline) for a
-  Cricut cutting machine plus a regular printer;
+- designs disc labels, J-cards, case inserts, tray cards and cassette
+  shell labels, exporting SVG (cut/fold shapes only) and PNG (print
+  artwork, clipped to the cut outline) for a Cricut cutting machine plus a
+  regular printer, and prints or exports whole sheets of them itself;
 - with an MDRem infrared adapter, records an album from foobar2000 onto a
-  deck with a track mark at every song, writes the disc and track titles
-  onto the MiniDisc, and stands in for the deck's remote;
+  MiniDisc deck with a track mark at every song, writes the disc and track
+  titles onto the disc, and stands in for the deck's remote;
 - rips an audio CD to FLAC, identifies it on MusicBrainz from its table of
-  contents, loads it into foobar2000 in disc order, and records that.
+  contents, loads it into foobar2000 in disc order, and records that;
+- burns an audio CD-R with CD-Text, resampling to Red Book on the way;
+- records a cassette side by side, splitting the album where the tape runs
+  out -- a deck nothing here can drive, so it tells the user what to press.
 
 Keep the window title, Help > About, the README, `pyproject.toml`'s
 `description` and the user manual in step when that scope shifts again --
 every one of them described a "label designer" long after it stopped being
-only that, and each was found separately, at a different time.
+only that, and each was found separately, at a different time. This file
+is the same kind of hazard: the notes below outlive the state they were
+written about, so when one says work is outstanding, check before
+believing it.
 
 **Treat physical accuracy as load-bearing.** Output gets cut with a blade —
 mm dimensions and the cut-vs-print separation are not cosmetic details, they
@@ -24,9 +34,15 @@ without checking.
 
 ## Stack
 
-- PySide6 (`QGraphicsView`/`QGraphicsScene` as the vector canvas, `QtSvg` for export)
-- Pillow (grayscale PNG conversion)
-- PyInstaller for standalone builds (`scripts/build_windows.ps1`, `scripts/build_linux.sh`)
+- PySide6 (`QGraphicsView`/`QGraphicsScene` as the vector canvas, `QtSvg`
+  for export, `QtSerialPort` for the MDRem adapter, `QtPrintSupport` for
+  printing -- all of it inside the one wheel, which is why none of those
+  features added a dependency)
+- Pillow (grayscale conversion, cover palettes, opaque-content bounds)
+- Telethon (the Telegram bot integration, an experimental feature)
+- PyInstaller for standalone builds (`scripts/build_windows.ps1`,
+  `scripts/build_linux.sh`), NSIS for the Windows installer
+  (`scripts/build_installer.ps1`)
 - pytest + pytest-qt, run via `.venv/Scripts/python.exe -m pytest -q`
 
 ## Layout
@@ -35,27 +51,39 @@ without checking.
 src/mdtools/
   main.py                  entry point
   app_window.py             MainWindow: page switcher, menus, docks, undo group, wiring
-  project.py                Project / ProjectMetadata / Track / TextStyle dataclasses
+  project.py                Project / ProjectMetadata / Track / TextStyle, media and their pages
+  constants.py              MM_PER_INCH plus mm_to_px()/px_to_mm(), which read the DPI setting
+  app_settings.py           every global setting: DPI, MDRem, foobar, rip folder, Telegram
+  recent_projects.py        the last five projects, for File > Open Recent and the startup screen
+  user_paths.py             where every file dialog starts: Documents/MiniDiscProjects, Pictures
+  theme.py                  the flat dark theme: one palette and one stylesheet, sharing their colours
   commands.py               QUndoCommand subclasses (add/delete/reorder/transform/property-edit)
   clipboard.py              in-memory copy/cut/paste (reuses project_io's item (de)serialization)
+  grayscale.py              the desaturation + brightness/contrast maths, shared by preview and export
+  printing.py               sheet layout: pack copies, search arrangements, paint placements (no Qt UI)
   gallery.py                bundled asset gallery (assets/img) + per-user downloaded-covers cache, merged
   metadata_lookup.py         iTunes Search API: track list + release year + cover art, given Album + Artist
+  musicbrainz.py            identifying a CD from its TOC alone -- a CD carries no text (no Qt UI)
+  embedded_cover.py         the cover art and tags inside a FLAC file, as a last resort (no Qt)
+  mixtape_cover.py          draws a cover for a compilation, which by definition has none
+  palette.py                background/accent/text colours pulled out of a cover image (Pillow, no Qt)
   mdrem.py                  MDRem IR adapter: serial protocol, transliteration, upload plan (no Qt UI)
   foobar.py                 foobar2000 via its Beefweb REST API *and* its command line (no Qt UI)
   cdrip.py                  audio CD: drives, TOC, disc ids, rip plan, cdparanoia/flac (no Qt UI)
   decode.py                 what an audio file is, and Red Book PCM out of it (no Qt)
   cdburn.py                 audio CD-R: burn plan, *.inf CD-Text, cdrecord (no Qt UI)
-  musicbrainz.py            identifying a CD from its TOC alone -- a CD carries no text (no Qt UI)
   audio_folder.py           which files in a folder are the album, and in what order (no Qt)
-  embedded_cover.py         the cover art inside a FLAC file, as a last resort (no Qt)
-  mixtape_cover.py          draws a cover for a compilation, which by definition has none
-  user_paths.py             where every file dialog starts: Documents/MiniDiscProjects, Pictures
+  album_sort.py             one folder of downloads split into one folder per album (no Qt)
+  tape.py                   where a cassette is turned over: sides, leader tape, lengths (no Qt)
+  telegram_bot.py           Telethon behind one class: sign-in, chat, downloads (experimental)
+  translate.py              MyMemory, for showing a bot's message in the user's language
   auto_layout.py            places cover art on a disc label and the logo on its slider (no Qt UI beyond items)
   jcard_layout.py           builds the three J-card panels: front cover, spine band, track list (no Qt UI)
-  cd_layout.py              the CD ring and the folded slim-case insert (no Qt UI)
-  palette.py                background/accent/text colours pulled out of a cover image (Pillow, no Qt)
+  cd_layout.py              the CD ring, the folded slim-case insert and the jewel case tray card
+  tape_layout.py            the cassette inlay (jcard_layout's own card) and a label per side
+  _build_credentials.py     gitignored, written by the build scripts -- the Telegram API id/hash
   i18n/
-    __init__.py               language setting persistence + QTranslator install
+    __init__.py               language setting persistence + QTranslator install (ours and Qt's own)
     mdtools_pl.ts / .qm       Polish translation (pyside6-lupdate/-lrelease output, hand-translated)
     mdtools_ja.ts / .qm       Japanese translation (pyside6-lupdate/-lrelease output, hand-translated)
   canvas/
@@ -69,36 +97,47 @@ src/mdtools/
     defaults.json              built-in templates
     template_dialog.py         Template Manager UI
   panels/
-    icons.py                     self-drawn QIcon glyphs for the Tools panel's icon-only buttons
+    icons.py                     bundled Twemoji SVGs, rendered through QSvgRenderer
     tool_panel.py               icon-only add text/rectangle/image buttons + "insert from metadata" menu + Clip/Bake Layers
     properties_panel.py         edit selected item (position, rotation, multiline text, font, color/probe, reset)
     layers_panel.py             list + select + reorder + rename + delete items
-    new_design_dialog.py        disc+cover template pickers for File > New
+    startup_dialog.py           the first screen: recent projects, open, new, multiprint, remote
+    new_design_dialog.py        File > New: the medium, then one template picker per page it has
+    settings_dialog.py          Window > Settings: DPI, MDRem port, foobar, rip folder, experimental
+    experimental_settings_dialog.py   whatever an experimental feature needs, kept out of the stable one
     metadata_dialog.py          album/artist/year/track-list editor + "Lookup Track List..." + "Upload Tracklist"
+    cover_preview.py            the cover thumbnail that is also the button for replacing it, plus its lookup
+    asset_gallery_dialog.py     Insert Asset: pick one of the bundled gallery images
+    grayscale_export_dialog.py  brightness/contrast, previewed against the real scene, before the save path
+    print_dialog.py             PrintDialog and MultiprintDialog over one shared base: sheets, PDF, PNG
     mdrem_port.py               resolve_port(): the saved port, a probe, or a warning -- shared by both entry points
     mdrem_upload_dialog.py      preview-then-write dialog + the worker thread driving an upload
-    remote_dialog.py            software Sony MD remote, opened from the startup screen
-    record_dialog.py            Recording > Record to MiniDisc from foobar2000: arm, play, watch, hand off to titling
-    cd_rip_dialog.py            Recording > Record CD to MiniDisc: read TOC, identify, rip, fill playlist, hand off
-    cover_preview.py            the cover thumbnail that is also the button for replacing it, plus its lookup
-    folder_record_dialog.py     Recording > Record Folder to MiniDisc: a folder of files into that playlist instead
-    burn_dialog.py              Recording > Burn Audio CD: the plan, the verdicts, and cdrdao behind a worker
+    remote_dialog.py            software Sony MD remote, from the startup screen or the Recording menu
+    record_dialog.py            Recording > Record from foobar2000: arm, play, watch, hand off to titling
+    cd_rip_dialog.py            Recording > Record CD: read TOC, identify, rip, fill playlist, hand off
+    folder_record_dialog.py     Recording > Record Folder: a folder of files into that playlist instead
+    tape_record_dialog.py       Recording > Record Cassette: a side at a time, with the user working the deck
+    burn_dialog.py              Recording > Burn Audio CD: the plan, the verdicts, and cdrecord behind a worker
     erase_dialog.py             Recording > Erase MiniDisc: a guided, ask-the-user-what-you-see erase
-    about_dialog.py             Help > About MDTools
-    asset_gallery_dialog.py     Insert Asset: pick one of the bundled gallery images
+    telegram_login_dialog.py    signing in as a user account, over a worker with a live asyncio loop
+    telegram_chat_dialog.py     the bot conversation, its download queue, and the hand-off to recording
+    about_dialog.py             Help > About xD-Tools
   io/
     svg_export.py               exports just the cut/fold shapes as physically-accurate SVG
     png_export.py               exports print artwork as PNG, clipped to the template outline
     project_io.py               save/load a whole project as one self-contained .mdproj JSON
 assets/
-  img/                      bundled asset gallery (currently just the MDTools logo) -- see gallery.py
+  img/                      gallery images, the CD Digital Audio mark and the app icons -- see gallery.py
+  icons/                    the Twemoji button icons -- see panels/icons.py and ATTRIBUTION.md
 bin/
-  win64/                    bundled cdparanoia + flac + their DLLs -- see cdrip.py and its ATTRIBUTION.md
-tests/          910+ tests, all offscreen via QT_QPA_PLATFORM=offscreen
-doc/            the built user manual (PDF x3) + its generated screenshots -- see doc/README.md
+  win64/                    bundled cd-paranoia + flac + cdrecord + sox, with their DLLs -- see ATTRIBUTION.md
+tests/          1360+ tests, all offscreen via QT_QPA_PLATFORM=offscreen
+doc/            the built user manual (PDF x3) + doc/img, its generated screenshots -- see doc/README.md
 scripts/
   build_windows.ps1 / build_linux.sh   PyInstaller onedir build
+  build_installer.ps1 + installer/mdtools.nsi   the Windows installer, NSIS over that build
   clean_windows.ps1 / clean_linux.sh   remove build/dist/__pycache__/etc.
+  make_app_icon.py / make_cd_logo.py   the .ico and the Digital Audio PNG, generated once each
   manual/
     make_screenshots.py      drives every dialog and grabs it, once per language
     build_manual.py           blocks -> QTextDocument -> QPdfWriter, with a measured TOC
@@ -120,10 +159,11 @@ medium: a MiniDisc's second page is a J-card, a CD's is a case insert).
 order, with anything unrecognised appended rather than dropped. Adding a
 page is then an entry in `PAGE_KINDS` plus a template, which is exactly
 what **`PAGE_BACK`** turned out to cost when it arrived a day later: the
-jewel case tray card, 150x118mm with two 6.5mm spine folds (the strips that
-show down the sides of a closed case, with the 137mm panel between them
-sitting behind the disc). It is `verified: false` until somebody measures a
-real case.
+jewel case tray card, 151x117.5mm with two 6.5mm spine folds (the strips
+that show down the sides of a closed case, with the 138mm panel between
+them sitting behind the disc). Measured off a real case -- the first
+guess was 150x118 with a 137mm panel -- and `verified: true` since one was
+cut and fitted.
 
 Three consequences worth knowing:
 - `MainWindow._refresh_page_combo()` fills the dropdown from the project;
@@ -193,20 +233,27 @@ a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
   The notch is `slider_notch_width_mm`/`slider_notch_height_mm` (27.5mm x
   17.5mm, same footprint as the other slider label, left corners rounded
   `slider_notch_corner_radius_mm` = 2.5mm), flush against the label's right
-  edge, positioned `slider_notch_top_mm` (25.2mm) below the label's own top
-  edge — that's the user's measured "26mm from the MD's top edge",
-  adjusted for the label's own 0.8mm margin, since the notch position has
-  to be expressed in the label's local coordinates, not the MD's.
+  edge, positioned `slider_notch_top_mm` (24.3mm) below the label's own top
+  edge. **These two numbers are set by where the cut lands, not by what
+  they are called** — the buffer below moves the actual edge 0.8mm up from
+  whatever this says, so 24.3 puts the cut at **23.5mm** below the label's
+  top, which is what the user measured off a cut label. The first reading
+  (26mm from the MD's own top edge, converted to 25.2 in label
+  coordinates) put the top of the notch 1mm too low, and was reported
+  after cutting one. So: change either number and check the *edge*, which
+  is what `test_builtin_defaults_include_a_full_disc_label_variant` now
+  asserts rather than the raw fields.
   `slider_notch_buffer_mm` (0.8mm) then physically enlarges the notch by
   that amount on its top/bottom/left sides (its right side is already
   flush with the label edge, so there's no material there to clear) — a
   real clearance cut, not a print-only keep-out zone, confirmed explicitly
   by the user ("it needs to be cut as well") after an initial ambiguous
   reading of "not printable" as a print-exclusion concept. `slider_travel_mm`
-  (18mm) then extends that already-buffered notch further down by the same
+  (19.4mm) then extends that already-buffered notch further down by the same
   buffered width (confirmed: "it needs to include a buffer"), forming one
   continuous cutout (see `DesignScene._build_full_label_outline`) — the
-  channel the shutter sweeps through as the deck pushes it open.
+  channel the shutter sweeps through as the deck pushes it open. It ends
+  **62mm** below the label's top, measured the same way as the 23.5 above.
   Built via `QPainterPath.subtracted()` (one `LAYER_CUT` shape with a hole
   in it), unlike the additive slider variant, so `template_clip_path()`
   already excludes the notch correctly with no extra union logic needed.
@@ -283,20 +330,32 @@ a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
   hides those rows for this shape. `seed_disc_defaults()` also returns early
   for a CD medium: the "▲ INSERT THIS END" mark says which end of a *cartridge*
   goes into the deck, and a disc dropped onto a spindle has no such end.
-- **Where the CD dimensions came from, and the correction they carried.** The
-  user delegated the measuring ("to mozesz sobie znalezc sam w internecie"), so
-  unlike every MiniDisc template here these start from industry sources rather
-  than their own ruler, and are `verified: false` until they cut one. Full-size
-  CD labels are 118mm outer (4.65"), standard-hub hole 41mm. **A slim jewel
-  case takes only a front insert, 120 x 120mm -- not 124 x 124, and it has no
-  tray card at all**: 124mm is the height of the case body, not of the paper
-  (which sits under tabs), and the back of a slim case is the bare plastic
-  tray, with no pocket and no spine. So the track list gets a *folded* insert
-  instead -- "CD Slim Case Insert (Folded, 2 Panels)", 242 x 120mm with one
-  fold at 121mm: right panel is the cover, left panel the track list, folded
-  once and read through the clear back of the case. That maps straight onto
-  the existing `fold_offsets_mm` machinery, so it needed no new page-count
-  concept (a project still has exactly two pages).
+- **Where the CD dimensions came from, and the corrections they carried.**
+  The user delegated the first pass ("to mozesz sobie znalezc sam w
+  internecie"), so unlike every MiniDisc template these started from
+  industry sources rather than a ruler: 118mm outer, standard-hub hole
+  41mm, and a folded insert of 242 x 120mm folded at 121. **All three of
+  those numbers were later replaced by measured ones** and the templates
+  are now `verified: true`: the disc label is **117mm outer with a 35mm
+  hole**, and the folded insert **240 x 120mm folded at 120** -- two panels
+  the same size as the front insert, which is what it always should have
+  been (120 beside 121 described one case in two ways, and was spotted
+  while reviewing what was still unverified). Its name still says
+  "(Standard Hub)" though the hole is no longer the 41mm standard one:
+  `sync_builtin_templates()` matches built-ins **by name**, so renaming one
+  hands every existing install a duplicate beside the copy they may have
+  customised -- the same reason the "... (with Slider)" names were left
+  alone. **A slim jewel case takes only a front insert, 120 x 120mm -- not
+  124 x 124, and it has no tray card at all**: 124mm is the height of the
+  case body, not of the paper (which sits under tabs), and the back of a
+  slim case is the bare plastic tray, with no pocket and no spine. So the
+  track list gets a *folded* insert instead: right panel is the cover, left
+  panel the track list, folded once and read through the clear back of the
+  case. That maps straight onto the existing `fold_offsets_mm` machinery,
+  so it needed no new page-count concept. The jewel case tray card
+  (151 x 117.5, a 138mm panel between two 6.5mm spines) was the last CD
+  template to be verified; every built-in template is `verified: true`
+  now.
 - **The automatic layout branches on the medium** (`_auto_layout_project()`):
   a MiniDisc project gets the full-face label and the J-card, a CD project
   gets `_auto_layout_cd_disc_label()` and `_auto_layout_cd_insert()`. Both
@@ -2581,7 +2640,7 @@ log on failure and delete it on success. **The one thing that is not the same
 is what cancelling costs**: stopping a rip leaves nothing anywhere, while
 stopping a burn leaves a disc that is neither blank nor finished and a CD-R
 cannot be rewritten. `burn()` still does what it is told immediately -- the
-warning belongs to the dialog. `simulate=True` (cdrdao's `--simulate`) is a
+warning belongs to the dialog. `simulate=True` (cdrecord's `-dummy`) is a
 real dry run and exists at this level, not only in the UI, because a wasted
 CD-R is this feature's version of a bad cut.
 
@@ -2629,7 +2688,7 @@ cancelling during the decode stage costs a scratch folder, cancelling while
 the laser is writing leaves a disc that is neither blank nor finished, so
 `reject()` asks in those words first. It still never calls `worker.wait()`
 on the GUI thread -- the rule the MDRem upload dialog established the hard
-way. "Simulate" (cdrdao's own `--simulate`) is offered directly rather than
+way. "Simulate" (cdrecord's own `-dummy`, the laser off) is offered rather than
 buried: it is the only way to rehearse a burn without spending a disc.
 
 **`BurnDialog._ensure_cover()` looks the artwork up, which the burn flow did
@@ -2643,7 +2702,7 @@ search at all for a compilation -- "Various Artists" returns somebody else's
 record.
 
 **The tool warning and the plan summary are two labels, deliberately.** A
-missing cdrdao must not hide what the plan says about the album -- installing
+missing cdrecord must not hide what the plan says about the album -- installing
 a tool and re-encoding a hi-res track are separate jobs, and the user may do
 them in either order.
 
@@ -2663,7 +2722,7 @@ it never would.** That rule was written for the *recording* path, where the
 files go into foobar's playlist first and every title comes back out of
 Beefweb -- foobar has to read them to play them, so adding a tag library for
 that would have been a dependency for nothing. A burn has no player in the
-loop at all: the files go straight to cdrdao, so there is nothing else to
+loop at all: the files go straight to cdrecord, so there is nothing else to
 ask what a track is called. It reads FLAC's comment block through
 `embedded_cover.flac_tags()` (the parser this project already owns) and
 falls back to the filename stem for anything else -- a disc of blank track
@@ -3326,9 +3385,10 @@ experimental feature later gets its own section in the same dialog instead
 of either one accumulating unrelated checkboxes.
 
 **Telegram bot integration (`telegram_bot.py` + `panels/telegram_login_dialog.py`
-+ `panels/experimental_settings_dialog.py`) -- Phase 1 only: account
-settings and sign-in, no search/download yet.** The intended feature is
-searching/downloading an album from a Telegram bot the *user runs
++ `panels/experimental_settings_dialog.py` + `panels/telegram_chat_dialog.py`).**
+Built in two phases -- account settings and sign-in first, then the chat
+dialog itself -- and both are described below, in that order. The feature
+is searching/downloading an album from a Telegram bot the *user runs
 themselves*, then handing the files to the existing Record Folder to
 MiniDisc flow exactly like any other folder of files. **Explicitly
 declined, discussed and refused outright**: any integration with public
@@ -3935,7 +3995,7 @@ that same rule -- the *call itself* also can't be indirected through
 nesting inside an f-string, even though the string argument right next to
 it is perfectly literal.
 
-## Compact cassette (feature/compact-cassette)
+## Compact cassette
 
 **The third medium, and the first that cannot hold an album in one piece
 or be driven at all.** `MEDIUM_TAPE`, three pages (`PAGE_COVER` J-card +
@@ -4020,21 +4080,25 @@ is told to stop and flip. Three details worth keeping:
 - **Cancelling stops foobar and then says the deck is still recording**,
   because there is no second end to stop from here.
 
-**Templates are unverified standards, not measurements**
-(`verified: false`): `Cassette J-Card` 101.6 x 101.6mm, folds at 65.1 and
-77.8 (the 4" x 4" flat card every cassette printer works to: front
-2 9/16", spine 1/2", tuck-in flap 15/16"), and `Cassette Shell Label`
-88.9 x 42.9mm. Both are `medium: "tape"` and reach existing installs
-through `registry.sync_builtin_templates()`.
+**The templates started as unverified standards rather than
+measurements**: `Cassette J-Card` 101.6 x 101.6mm, folds at 65.1 and 77.8
+(the 4" x 4" flat card every cassette printer works to: front 2 9/16",
+spine 1/2", tuck-in flap 15/16"), and `Cassette Shell Label` 88.9 x
+42.9mm. Both are `medium: "tape"` and reach existing installs through
+`registry.sync_builtin_templates()`. **The shell label's numbers above are
+the guess, not what shipped** -- see "The shell label, once it had been
+measured" at the end of this section for the 90 x 40.8mm it actually is,
+and why a rectangle with two round holes was wrong in kind. Both are
+`verified: true` now.
 
 **The app describes itself as three media now** -- window title
 ("xD-Tools - Retro Media Studio"), Help > About, README and
-`pyproject.toml`. **Still outstanding for the next session: the Polish and
-Japanese translations of everything added here, and the manual** (its
-text in all three languages plus regenerated screenshots -- the New
-Project dialog, the page dropdown and the Recording menu all changed).
+`pyproject.toml`. The Polish and Japanese translations and the manual
+(all three languages, with regenerated screenshots) were carried through
+with it and are current -- `pyside6-lupdate` reports no new strings, and
+`defaults.json` holds no `verified: false` template.
 
-### Round two on the cassette (same branch)
+### Round two on the cassette
 
 Five things, all from looking at the real thing:
 
@@ -4045,8 +4109,10 @@ gained `hub_diameter_mm` / `hub_spacing_mm` / `hub_centre_from_top_mm`, and
 `_build_cover_outline()` subtracts the two circles from the cut path -- one
 path with holes in it, the way `cd_label`'s spindle hole and `full_label`'s
 shutter notch already are, so `template_clip_path()` refuses to print into a
-hub opening with nothing else to change. `Cassette Shell Label` is now
-90 x 46mm with 24mm holes 45mm apart (still `verified: false`).
+hub opening with nothing else to change. `Cassette Shell Label` became
+90 x 46mm with 24mm holes 45mm apart at this point -- **superseded again**
+once it was measured properly: see "The shell label, once it had been
+measured" below, where the two holes turn out to be one opening.
 
 **The label carries the sleeve, and its text runs across.** The artwork is
 the whole sticker, washed towards white by `cd_layout.lighten()` (at 0.68 --
@@ -4091,8 +4157,6 @@ search a MiniDisc project's own pages use. Placements are keyed by page
 (`by_page`) before being handed to `_rebuild_items()`, since grouping means
 the order they are computed in no longer matches `self._labels`.
 
-**Still outstanding: the Polish and Japanese translations, and the manual.**
-
 **Two more from looking at it: the inlay is split by side, and the dialogs
 on the way to a recording name the right machine.**
 
@@ -4118,6 +4182,81 @@ wording -- the work is identical, but a window headed "Record CD to
 MiniDisc" in front of a cassette project tells the user something untrue.
 It also gates the 80-minute SP warning, which is a MiniDisc's answer and not
 a tape's.
+
+**The shell label, once it had been measured, and one thing it forced.**
+The guessed 88.9 x 42.9 rectangle with two round holes was wrong in kind,
+not only in size. Measured: **90 x 40.8mm** -- 15.5mm of material above the
+opening, the 16mm opening itself, 9.3 below, which is where the height
+comes from. Top corners cut off at 45 degrees (`top_chamfer_mm`, and the
+6mm is **the cut line itself**, so it takes 4.24 off each edge -- that is
+what a ruler laid along the cut reads), bottom ones rounded 1.5.
+
+**The opening is one shape, not two holes** -- a hole for each reel hub
+*and*, between them, the window the tape is watched through, so a label
+bridging that gap would cover the tape. `DesignScene.reel_window_path()`
+builds it as a rounded rectangle whose radius is half its height, which is
+exactly two half-circles joined by the rectangle between them, and
+subtracts it the same way the CD label's spindle hole is subtracted.
+
+That geometry moved the layout, and this is the part worth remembering:
+**the middle of the label no longer exists**, so the side letter cannot sit
+between the reels. `_label_bands()` now returns the band above the opening,
+the column *beside* it and the band below; the tracks take the deeper band
+(15.5mm) and the album's own name the shallower one (9.3). The top band is
+also inset by the chamfer's own leg on each side -- a full-width block at
+the very top would otherwise begin inside a corner that has been cut off,
+which is what `test_nothing_is_printed_where_the_reel_holes_are` caught.
+
+Both cassette templates are now **`verified: true`** -- the J-card was cut
+and fitted, the label measured off a real shell.
+
+**`PrintDialog` grew "Print This Sheet..."**, beside Print... and visible
+only while the labels are on separate sheets (`current_sheet_index()`
+returns None otherwise, and `MultiprintDialog` never has a choice to make).
+It exists because a printer's own dialog counts pages of a *job*, and each
+sheet only becomes a page once the job has been built -- so reprinting the
+one that jammed had meant printing the whole set again. `_on_print()` and
+`_on_print_current_sheet()` both go through one `_print(sheets)`.
+
+**The tray card, after it was measured and looked at.** 151 x 117.5mm --
+a 138mm panel fold to fold, between the two 6.5mm spines, which were
+right first time. Its own two corrections are worth keeping:
+- **`place_back()` grew `track_fill`** (default 1.0, the tray card passes
+  `BACK_TRACK_FILL` = 0.7). The list is fitted into that share of the
+  leftover space and then centred in *all* of it, so the slack is shared
+  above and below. At 1.0 a twelve-track album stretched across 138mm read
+  as a poster rather than as a sleeve -- reported directly. Every other
+  caller is unchanged: on a J-card flap or a shell label the list has to
+  work to fit at all, and there is no slack to leave.
+- **`cd_layout.place_back_logo()`** puts the Digital Audio mark in the
+  panel's bottom-*right* corner, because place_back's own footer (the year
+  and the running time) already holds the bottom-left. Positioned by the
+  item's footprint rather than `pos()`, like everything else scaled by
+  `set_item_scale()` here.
+
+**The Windows installer -- `scripts/build_installer.ps1` +
+`scripts/installer/mdtools.nsi`.** NSIS (zlib licence, `winget install
+NSIS.NSIS`) rather than WiX or Inno Setup: it packages a plain directory
+tree, which is exactly what PyInstaller's onedir mode produces, and an MSI
+would buy Group Policy deployment nobody asked for at the price of a much
+heavier toolchain. The build script reads `__version__` out of the package
+rather than restating it, and reduces it to numbers for NSIS's
+`VIProductVersion`, which takes four numeric parts and would refuse
+"0.3.0-rc2". 144MB of onedir compresses to ~43MB solid LZMA.
+
+Two things are deliberately absent, and both would be easy to add wrongly:
+- **No licence page** -- this repo has no LICENSE file, and an installer is
+  not the place to invent one.
+- **No `.mdproj` file association** -- `main.py` ignores `sys.argv`, so
+  double-clicking a project would open the app on its startup screen rather
+  than on that project. Worth adding the day the app learns to open a file
+  it was handed, and not before.
+
+Uninstalling removes the install directory (guarded on `MDTools.exe`
+actually being in it, so a hand-edited `$INSTDIR` cannot take a recursive
+delete with it), the shortcuts and the registry keys -- and leaves
+`%LOCALAPPDATA%/MDTools` alone, since the templates, settings and Telegram
+session in there are the user's, not the installer's.
 
 ## PySide6/Qt gotchas hit in this codebase
 

@@ -581,3 +581,52 @@ def test_a_partial_fit_still_says_so(qt_app, monkeypatch):
 
     assert warned
     assert dialog.separate_sheets_check.isChecked() is False
+
+
+# --- printing one sheet ----------------------------------------------------
+
+
+def test_print_this_sheet_prints_only_the_sheet_on_screen(qt_app, tmp_path, monkeypatch):
+    """A printer's own dialog counts pages of a job, and each sheet only
+    becomes a page once the job is built -- so reprinting the one that
+    jammed has to be asked for here."""
+    printed: list[list] = []
+    monkeypatch.setattr(print_dialog_module, "QPrinter", _make_fake_printer(tmp_path / "printed.pdf"))
+    monkeypatch.setattr(QPrintDialog, "exec", lambda self: QPrintDialog.DialogCode.Accepted)
+    monkeypatch.setattr(print_dialog_module, "print_sheets", lambda printer, sheets: printed.append(sheets))
+
+    dialog = PrintDialog(_project())
+    dialog.separate_sheets_check.setChecked(True)
+    assert len(dialog.sheets()) == 2, "sanity: there is a second sheet to leave out"
+    dialog.sheet_combo.setCurrentIndex(1)
+
+    dialog._on_print_current_sheet()
+
+    assert len(printed) == 1
+    assert len(printed[0]) == 1, "one sheet, not both"
+    assert printed[0][0] == dialog._sheet_placements()[1]
+
+
+def test_print_this_sheet_is_offered_only_when_there_is_a_choice(qt_app):
+    dialog = PrintDialog(_project())
+
+    dialog.separate_sheets_check.setChecked(False)
+    assert dialog.current_sheet_index() is None
+    assert not dialog.print_sheet_button.isVisibleTo(dialog)
+
+    dialog.separate_sheets_check.setChecked(True)
+    assert dialog.current_sheet_index() == dialog.sheet_combo.currentIndex()
+    assert dialog.print_sheet_button.isVisibleTo(dialog)
+
+
+def test_the_plain_print_button_still_prints_every_sheet(qt_app, tmp_path, monkeypatch):
+    printed: list[list] = []
+    monkeypatch.setattr(print_dialog_module, "QPrinter", _make_fake_printer(tmp_path / "printed.pdf"))
+    monkeypatch.setattr(QPrintDialog, "exec", lambda self: QPrintDialog.DialogCode.Accepted)
+    monkeypatch.setattr(print_dialog_module, "print_sheets", lambda printer, sheets: printed.append(sheets))
+
+    dialog = PrintDialog(_project())
+    dialog.separate_sheets_check.setChecked(True)
+    dialog._on_print()
+
+    assert len(printed[0]) == len(dialog.sheets())

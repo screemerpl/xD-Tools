@@ -172,29 +172,63 @@ class DesignScene(QGraphicsScene):
         self.setSceneRect(QRectF(-10, -10, diameter + 20, diameter + 20))
 
     @staticmethod
-    def _hub_paths(t: CoverTemplate, w_px: float, h_px: float) -> list[QPainterPath]:
-        """The two reel-hub openings a cassette shell label is cut around.
+    def reel_window_path(t: CoverTemplate, w_px: float, h_px: float) -> QPainterPath | None:
+        """The opening a cassette shell label is cut around.
+
+        One shape, not two: a hole for each reel hub *and* the window
+        between them that the tape is watched through -- a label bridging
+        the gap would cover the tape itself. Two half-circles joined by the
+        rectangle between them, which is exactly a rounded rectangle whose
+        radius is half its height.
 
         Symmetric about the label's own centre line: whatever the sticker's
-        width, the holes have to line up with the shell underneath it, and
+        width, the opening has to line up with the shell underneath it, and
         a shell is symmetric.
         """
         if t.hub_diameter_mm <= 0 or t.hub_spacing_mm <= 0:
-            return []
-        diameter = mm_to_px(t.hub_diameter_mm)
+            return None
+        radius = mm_to_px(t.hub_diameter_mm) / 2
         spacing = mm_to_px(t.hub_spacing_mm)
         centre_y = mm_to_px(t.hub_centre_from_top_mm) if t.hub_centre_from_top_mm > 0 else h_px / 2
-        paths = []
-        for centre_x in (w_px / 2 - spacing / 2, w_px / 2 + spacing / 2):
-            hub = QPainterPath()
-            hub.addEllipse(QRectF(centre_x - diameter / 2, centre_y - diameter / 2, diameter, diameter))
-            paths.append(hub)
-        return paths
+        window = QPainterPath()
+        window.addRoundedRect(
+            QRectF(w_px / 2 - spacing / 2 - radius, centre_y - radius, spacing + 2 * radius, 2 * radius),
+            radius,
+            radius,
+        )
+        return window
+
+    @staticmethod
+    def _chamfered_top_rect(w: float, h: float, radius: float, chamfer_line: float) -> QPainterPath:
+        """A rectangle with its top corners cut off and its bottom ones
+        rounded -- the shape of a cassette shell label.
+
+        `chamfer_line` is the length of the cut itself, so at 45 degrees it
+        takes `chamfer_line / sqrt(2)` off each edge. That is the number a
+        ruler laid along the cut reads, which is the one that was measured.
+        """
+        leg = chamfer_line / math.sqrt(2)
+        radius = max(0.0, min(radius, h / 2))
+        path = QPainterPath()
+        path.moveTo(leg, 0)
+        path.lineTo(w - leg, 0)
+        path.lineTo(w, leg)
+        path.lineTo(w, h - radius)
+        if radius > 0:
+            path.arcTo(QRectF(w - 2 * radius, h - 2 * radius, 2 * radius, 2 * radius), 0, -90)
+        path.lineTo(radius, h)
+        if radius > 0:
+            path.arcTo(QRectF(0, h - 2 * radius, 2 * radius, 2 * radius), 270, -90)
+        path.lineTo(0, leg)
+        path.closeSubpath()
+        return path
 
     def _build_cover_outline(self, t: CoverTemplate) -> None:
         w, h = mm_to_px(t.width_mm), mm_to_px(t.height_mm)
         path = QPainterPath()
-        if t.corner_radius_mm > 0:
+        if getattr(t, "top_chamfer_mm", 0.0) > 0:
+            path = self._chamfered_top_rect(w, h, mm_to_px(t.corner_radius_mm), mm_to_px(t.top_chamfer_mm))
+        elif t.corner_radius_mm > 0:
             path.addRoundedRect(QRectF(0, 0, w, h), mm_to_px(t.corner_radius_mm), mm_to_px(t.corner_radius_mm))
         else:
             path.addRect(QRectF(0, 0, w, h))
@@ -202,12 +236,13 @@ class DesignScene(QGraphicsScene):
         if t.cutout_width_mm > 0 and t.cutout_height_mm > 0 and t.fold_offsets_mm:
             path = path.subtracted(self._cutout_path(t, h_px=h))
 
-        # One subtracted path with holes in it, the way the CD label's
+        # One subtracted path with a hole in it, the way the CD label's
         # spindle hole and the full disc label's shutter notch are done --
-        # so template_clip_path() refuses to print into a hub opening with
-        # no extra handling anywhere.
-        for hub in self._hub_paths(t, w_px=w, h_px=h):
-            path = path.subtracted(hub)
+        # so template_clip_path() refuses to print into the reel opening
+        # with no extra handling anywhere.
+        window = self.reel_window_path(t, w_px=w, h_px=h)
+        if window is not None:
+            path = path.subtracted(window)
 
         outline = make_template_outline(path, LAYER_CUT)
         self.addItem(outline)
