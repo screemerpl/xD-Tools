@@ -2393,14 +2393,46 @@ problem. Those reasons are **codes, not sentences** (`NOT_RED_BOOK`,
 has to be translated and neither module has any Qt in it.
 
 **Reading a file's properties is deliberately separate from decoding it.** A
-CD-R holds 44.1kHz/16-bit stereo and nothing else, and the bundled `flac.exe`
-cannot resample -- so a 96kHz or 24-bit source is *reported per track before
-the disc is committed*, never silently converted. This is the same truth as
-the manual's note about feeding the MiniDisc deck's digital input, except
-here it can actually be checked in advance, because the files are on disk
-rather than streaming past. `decode._ensure_pcm()` is the single place a
-bundled ffmpeg would slot in if MP3/M4A support is ever wanted; every caller
-above it already thinks only in terms of "a path to Red Book WAV".
+CD-R holds 44.1kHz/16-bit stereo and nothing else, so every source file is
+measured against that *before* the disc is committed. `decode._ensure_pcm()`
+is the single place that decides which tool runs; every caller above it
+thinks only in terms of "a path to Red Book WAV".
+
+**Resampling is SoX, and the choice was measured rather than assumed.** A
+48kHz/24-bit album is what a download normally is -- the first real burn
+attempt hit exactly that and was refused, because `flac.exe` cannot
+resample. ffmpeg was chosen first (it would have brought MP3/M4A/Opus), then
+measured: its Windows builds are ~128MB of DLLs, `avcodec` alone 68MB, past
+the size GitHub warns about and in every clone forever. SoX does the one
+thing needed in 6MB. `convert_command()` is `rate -v` (high-quality
+resampler) plus `dither`, which is what makes 24->16 bits sound like the
+recording rather than like quantisation noise; effects come *after* the
+output file, which is SoX's own argument order.
+
+**What that costs, stated plainly because it was got wrong once:** this SoX
+package **cannot read MP3**. The format is in its own list, but decoding one
+needs `libmad-0.dll` loaded at runtime and the official release does not ship
+it -- established by running it (writing an MP3 fails with "Unable to load
+LAME encoder library"). `CONVERTIBLE_SUFFIXES` therefore excludes `.mp3` on
+purpose: promising it would turn a clear "unsupported" into a failure half
+way through a burn. Dropping a **32-bit** `libmad-0.dll` beside `sox.exe`
+would enable it with no code change.
+
+**SoX lives in `bin/win64/sox/`, not beside the other tools, and that is
+load-bearing.** It is a 32-bit build; cd-paranoia and flac are 64-bit MSYS2
+builds. Unpacking it alongside them overwrote `libwinpthread-1.dll` with a
+32-bit copy of the same name -- which happened not to break cd-paranoia only
+because it does not import that DLL directly. `zlib1.dll` and
+`libpng16-16.dll` collide just as easily. Windows resolves an executable's
+DLLs from its own directory first, so one folder per architecture keeps each
+set with its own binary; `decode.sox_path()` looks there before falling back
+to PATH, and `test_sox_is_kept_apart_from_the_64_bit_tools` guards it.
+
+**A wrong sample rate is a *note*, not a problem, when something can fix
+it.** `BurnPlan.notes` is a second list beside `problems`, because `can_burn`
+hangs on the latter and a note must never disable the button: with SoX
+present a 48kHz track shows "will be converted to 44100 Hz / 16-bit" and the
+burn proceeds; without it, the same track is `NOT_RED_BOOK` and blocks.
 
 **CD-Text goes through `mdrem.transliterate()` -- the MiniDisc titler's own
 function.** The spec allows ISO-8859-1 (and MS-JIS), but what a given player
@@ -2466,6 +2498,24 @@ warning belongs to the dialog. `simulate=True` (cdrdao's `--simulate`) is a
 real dry run and exists at this level, not only in the UI, because a wasted
 CD-R is this feature's version of a bad cut.
 
+**Verified end to end on real hardware, on 2026-08-19**: a 12-track
+48kHz/24-bit album resampled by SoX, written disc-at-once by cdrecord to a
+CD-R in an HL-DT-ST DVDRAM GP20N, and read back with `cdrecord -vv -toc` --
+12 tracks, lead-out at 41:47, and **`CD-Text len: 634`**, which is the one
+thing a `-dummy` run could never show. The scratch WAVs and their `.inf`
+files were still in the burn folder afterwards and `burn.log` was gone,
+which is only true on the success path.
+
+**One real bug came out of that first burn, and only from comparing the two
+halves against each other:** `BurnTrack.sectors` counted `frames / 588`,
+which is only true at 44.1 kHz -- so a 48 kHz album was planned as taking
+8.8% more disc than it does (45:29 against the 41:45 that came off it). It
+now counts `duration_seconds * 75`, because what reaches the CD is the
+*resampled* audio. The two agree exactly at 44.1 kHz, which is why it hid
+until a hi-res album turned up. It only ever overestimated, so nothing was
+ever written past the end of a disc -- but it would have refused an album
+that fits.
+
 **Everything that cannot be verified without a disc degrades to "unknown",
 never to an error.** `list_burners()` asks cdrecord itself for device names
 instead of constructing them (`0,0,0` is scsibus,target,lun as libscg
@@ -2494,6 +2544,16 @@ the laser is writing leaves a disc that is neither blank nor finished, so
 on the GUI thread -- the rule the MDRem upload dialog established the hard
 way. "Simulate" (cdrdao's own `--simulate`) is offered directly rather than
 buried: it is the only way to rehearse a burn without spending a disc.
+
+**`BurnDialog._ensure_cover()` looks the artwork up, which the burn flow did
+not do at all at first** -- reported directly ("czemu tu nie ma okladki w
+oknie burn?"). The folder gave it names and a year and nothing else, so the
+cover box sat empty even for files that carried one, and the album reached
+the label with no artwork. It now follows exactly the order `RecordDialog`
+established: a search first (iTunes returns a clean 600x600, which is what a
+printed label wants), then the sleeve embedded in the files, and never a
+search at all for a compilation -- "Various Artists" returns somebody else's
+record.
 
 **The tool warning and the plan summary are two labels, deliberately.** A
 missing cdrdao must not hide what the plan says about the album -- installing

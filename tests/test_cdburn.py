@@ -646,3 +646,26 @@ def test_a_note_never_disables_the_burn_button(tmp_path, monkeypatch):
     plan = cdburn.build_burn_plan(sources)
 
     assert plan.notes and plan.can_burn is True
+
+
+def test_a_hi_res_track_takes_the_disc_space_it_will_take_after_conversion(tmp_path):
+    """Found by comparing a real burn with the dialog that planned it: the
+    plan said 45:29 for twelve tracks that came off the disc as 41:45 --
+    exactly 48000/44100. Sectors were being counted as frames/588, which
+    only holds at 44.1 kHz; what reaches the CD is the resampled audio."""
+    source = _write_wav(tmp_path / "hi.wav", seconds=60, rate=48000)
+    plan = cdburn.build_burn_plan([(source, "Hi-res", "A")])
+
+    # a minute of audio is a minute of disc, whatever it was sampled at
+    assert plan.tracks[0].sectors == 60 * cdburn.SECTORS_PER_SECOND
+    assert plan.total_seconds == pytest.approx(62.0, abs=0.1)  # plus the lead-in
+
+
+def test_a_44100_track_is_unaffected_by_that(tmp_path):
+    """The two ways of counting agree exactly at 44.1 kHz, which is why the
+    error hid until a hi-res album turned up."""
+    source = _write_wav(tmp_path / "ok.wav", seconds=10)
+    plan = cdburn.build_burn_plan([(source, "T", "A")])
+    properties = decode.analyze(source)
+
+    assert plan.tracks[0].sectors == properties.frames // cdburn.SAMPLES_PER_SECTOR

@@ -136,12 +136,21 @@ class BurnTrack:
     def sectors(self) -> int:
         """How much of the disc this track occupies.
 
-        Rounded *up*: a track ends on a sector boundary, so a file that
-        does not fill its last sector still costs the whole thing.
+        Computed from the track's *duration*, not from its sample count.
+        The 588-samples-per-sector figure only holds at 44.1 kHz, so
+        dividing a 48 kHz file's frames by it overstates the disc it needs
+        by 8.8% -- caught by comparing a real burn against the dialog that
+        planned it: twelve tracks the plan called 45:29 came off the disc
+        as 41:45, which is exactly that ratio. What lands on the CD is the
+        resampled audio, and a second of it is 75 sectors whatever the
+        source was.
+
+        Rounded *up*: a track ends on a sector boundary, so audio that does
+        not fill its last sector still costs the whole thing.
         """
         if self.properties is None:
             return 0
-        return math.ceil(self.properties.frames / SAMPLES_PER_SECTOR)
+        return math.ceil(self.properties.duration_seconds * SECTORS_PER_SECOND)
 
     @property
     def seconds(self) -> float:
