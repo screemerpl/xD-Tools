@@ -560,6 +560,20 @@ class PrintDialog(_PrintDialogBase):
             )
         except PrintLayoutError:
             fits = max_copies_that_fit(self._disc_size_mm, self._cover_size_mm, page_size_mm, self.MARGIN_MM)
+            if fits == 0:
+                # Not "we managed some of it": the two labels cannot share a
+                # sheet at all, which is the normal case for a CD project
+                # (a 242mm insert beside a 118mm label needs 363mm, and A4
+                # offers 287). Piling every copy in the corner and warning
+                # about it would be answering a question the user has not
+                # asked yet -- the answer is a sheet each, which is one
+                # checkbox away, so it gets checked rather than explained.
+                self.separate_sheets_check.blockSignals(True)
+                self.separate_sheets_check.setChecked(True)
+                self.separate_sheets_check.blockSignals(False)
+                self._options_form.setRowVisible(self.sheet_combo, True)
+                self._relayout_separate_sheets(copies, page_size_mm)
+                return
             disc_copies, cover_copies = self._layout_with_overflow_at_corner(copies, fits, page_size_mm)
             QMessageBox.warning(
                 self,

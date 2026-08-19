@@ -536,3 +536,47 @@ def test_one_sheet_still_writes_the_file_that_was_asked_for(qt_app, tmp_path, mo
     PrintDialog(_project())._on_export_png()
 
     assert target.is_file()
+
+
+def _cd_project():
+    """A project on the CD templates, whose two pages cannot share a sheet."""
+    from mdtools.app_window import CD_INSERT_TEMPLATE, CD_LABEL_TEMPLATE, MainWindow
+    from mdtools.project import MEDIUM_CD, PAGE_COVER, PAGE_DISC
+    from mdtools.templates import registry
+
+    registry.sync_builtin_templates()
+    templates = registry.load_templates()
+    window = MainWindow(show_startup_dialog=False)
+    window.project.medium = MEDIUM_CD
+    window.apply_template(PAGE_DISC, next(t for t in templates["disc"] if t.name == CD_LABEL_TEMPLATE))
+    window.apply_template(PAGE_COVER, next(t for t in templates["cover"] if t.name == CD_INSERT_TEMPLATE))
+    return window.project
+
+
+def test_a_project_whose_labels_cannot_share_a_sheet_switches_by_itself(qt_app, monkeypatch):
+    """Opening Print on a CD project used to greet the user with a warning
+    box: its 242mm insert and 118mm label need 363mm of a 287mm sheet, so
+    the shared-sheet packer placed nothing. The answer was one checkbox
+    away, so it gets checked rather than explained."""
+    monkeypatch.setattr(
+        QMessageBox, "warning", staticmethod(lambda *a, **k: pytest.fail("nothing to warn about"))
+    )
+
+    dialog = PrintDialog(_cd_project())
+
+    assert dialog.separate_sheets_check.isChecked() is True
+    assert [len(sheet) for sheet in dialog.sheets()] == [1, 1]
+
+
+def test_a_partial_fit_still_says_so(qt_app, monkeypatch):
+    """The auto-switch is only for "nothing fits at all". When some copies
+    do fit, the overflow corner and its explanation are still the right
+    answer."""
+    warned = []
+    monkeypatch.setattr(QMessageBox, "warning", staticmethod(lambda *a, **k: warned.append(a)))
+
+    dialog = PrintDialog(_project())
+    dialog.copies_spin.setValue(9)
+
+    assert warned
+    assert dialog.separate_sheets_check.isChecked() is False

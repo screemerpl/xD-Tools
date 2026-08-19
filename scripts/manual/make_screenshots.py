@@ -248,6 +248,23 @@ def _install_cd_stand_ins() -> None:
     musicbrainz.lookup_disc = lookup
 
 
+def _install_burner_stand_ins() -> None:
+    """A burner and its tools, stood in for exactly as the deck and the CD
+    drive already are -- otherwise every burn screenshot would show
+    "Missing tools" and an empty drive list, which is a picture of a
+    machine, not of the feature."""
+    from mdtools import cdburn, decode
+
+    cdburn.cdrecord_path = lambda: "cdrecord"
+    cdburn.missing_tools = lambda: []
+    cdburn.list_burners = lambda **_kwargs: [
+        cdburn.Burner(device="1,0,0", description="HL-DT-ST DVDRAM GP20N 1.02")
+    ]
+    # A hi-res album is what a download normally is, and the verdict column
+    # saying so is worth showing.
+    decode.can_convert = lambda: True
+
+
 def _install_cover_stand_in() -> None:
     """Stops the recording dialogs reaching iTunes, and gives them the demo
     sleeve instead.
@@ -662,6 +679,9 @@ def capture_language(app, code: str) -> None:
 
     save(AboutDialog(), out / "about.png")
 
+    # -- a CD project: the ring label, the folded insert, and the burn
+    _capture_cd(out, code, metadata)
+
     # -- everything MDRem, with the hardware and foobar2000 stood in for
     save(RemoteDialog("COM7"), out / "remote.png")
     save(MDRemUploadDialog(metadata, "COM7"), out / "upload.png", settle_ms=400)
@@ -709,6 +729,98 @@ _TELEGRAM_CHAT: dict[str, list[str]] = {
 # One row, two columns -- ChatMessage.buttons is a label *grid*, not a flat
 # list, since a position in it is what identifies a button to click.
 _TELEGRAM_BUTTONS = [["FLAC (312 MB)", "MP3 320 (98 MB)"]]
+
+
+# Windows captured here are kept alive for the life of the process. A
+# MainWindow collected while its scenes still have selectionChanged
+# connected prints "Internal C++ object (DesignScene) already deleted" at
+# interpreter shutdown -- harmless, since every file is written by then,
+# but it reads like a failed run.
+_KEEP_ALIVE: list = []
+
+
+def _capture_cd(out: Path, code: str, metadata) -> None:
+    """The CD half: a project on the CD templates with both pages laid out,
+    and the burn dialog over a folder of files.
+
+    The album is written to disk as real (empty) FLACs, because the burn
+    dialog reads its track lengths from the files themselves -- a list of
+    names alone would show a disc of zero-length tracks, which is a picture
+    of nothing.
+    """
+    import tempfile
+
+    from mdtools.app_window import CD_INSERT_TEMPLATE, CD_LABEL_TEMPLATE, MainWindow
+    from mdtools.panels.burn_dialog import BurnDialog
+    from mdtools.panels.print_dialog import PrintDialog
+    from mdtools.project import MEDIUM_CD, PAGE_COVER, PAGE_DISC
+    from mdtools.templates import registry
+
+    templates = registry.load_templates()
+    window = MainWindow(show_startup_dialog=False)
+    window.project.medium = MEDIUM_CD
+    window.apply_template(PAGE_DISC, next(t for t in templates["disc"] if t.name == CD_LABEL_TEMPLATE))
+    window.apply_template(PAGE_COVER, next(t for t in templates["cover"] if t.name == CD_INSERT_TEMPLATE))
+    window.project.metadata = metadata
+    window.show()
+    settle(300)
+    window._auto_layout_project(metadata)
+    settle(400)
+    save(window, out / "cd-label.png", settle_ms=500, before_grab=window.view.fit_to_window)
+
+    def show_insert() -> None:
+        window.page_combo.setCurrentIndex(window.page_combo.findData(PAGE_COVER))
+        settle(200)
+        window.view.fit_to_window()
+
+    save(window, out / "cd-insert.png", settle_ms=400, before_grab=show_insert)
+
+    def separate_sheets(dialog) -> None:
+        dialog.orientation_combo.setCurrentIndex(1)
+        dialog.separate_sheets_check.setChecked(True)
+
+    printing = PrintDialog(window.project)
+    separate_sheets(printing)
+    save(printing, out / "cd-print.png", settle_ms=600)
+    close_quietly(printing)
+    close_quietly(window)
+    _KEEP_ALIVE.append(window)
+
+    # The dialog reads each track's length from the file itself, so the
+    # album is stood in for the same way the deck and the CD drive are:
+    # decode.analyze answers with the demo album's real running times.
+    # Writing eight real WAVs would mean 300MB of silence, and putting them
+    # anywhere near the repo would be worse than that.
+    from mdtools import decode
+
+    lengths = {}
+    sources = []
+    scratch = Path(tempfile.gettempdir()) / "xdtools-manual-burn"
+    for index, track in enumerate(metadata.tracks[:8], start=1):
+        path = scratch / f"{index:02d}.flac"
+        lengths[str(path)] = track.time_seconds or 210
+        sources.append((path, track.title, track.artist or metadata.artist))
+
+    def stand_in(target):
+        seconds = lengths.get(str(target), 210)
+        return decode.AudioProperties(
+            sample_rate=44100, bits_per_sample=16, channels=2, frames=seconds * 44100
+        )
+
+    real_analyze = decode.analyze
+    decode.analyze = stand_in
+    try:
+        burn = BurnDialog(
+            sources,
+            album=metadata.album,
+            artist=metadata.artist,
+            year=metadata.year,
+            cover_art=metadata.cover_art,
+        )
+        save(burn, out / "burn.png", settle_ms=400)
+        close_quietly(burn)
+    finally:
+        decode.analyze = real_analyze
 
 
 def _capture_telegram(out: Path, code: str) -> None:
@@ -795,6 +907,7 @@ def main() -> int:
     mdrem.list_ports = _fake_ports
     foobar.FoobarClient = _make_fake_foobar()
     _install_cd_stand_ins()
+    _install_burner_stand_ins()
     _install_cover_stand_in()
     _install_folder_stand_in()
 

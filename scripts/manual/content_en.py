@@ -4,32 +4,38 @@ vocabulary ("p", "ul", "ol", "table", "fig", "note", "warn", "tip", "h2").
 Inline marks: **bold**, `literal`.
 """
 
-TITLE = "MDTools"
-SUBTITLE = "MiniDisc Studio - User Manual"
-TITLE_NOTE = "Designing labels, recording discs, and titling them - with the MDRem infrared adapter"
+TITLE = "xD-Tools"
+SUBTITLE = "MiniDisc & CD Studio - User Manual"
+TITLE_NOTE = "Designing labels, recording MiniDiscs, burning CD-Rs, and titling both"
 COVER_CAPTION = "What talks to what: commands over USB, keys over infrared, audio over S/PDIF."
 VERSION_LINE = "Version 0.1.0"
 AUTHOR_LINE = 'Artur "Screemer" Jakubowicz'
 DATE_LINE = "August 2026"
 TOC_TITLE = "Contents"
-FOOTER_LEFT = "MDTools - MiniDisc Studio - User Manual"
+FOOTER_LEFT = "xD-Tools - MiniDisc & CD Studio - User Manual"
 
 BOOK = [
     # ------------------------------------------------------------------
     {
         "title": "What this is",
         "blocks": [
-            {"p": "MDTools is a desktop workbench for MiniDisc. It started as a label designer and grew "
-                  "into four tools that share one project file:"},
+            {"p": "xD-Tools is a desktop workbench for MiniDisc and CD-R. (The x stands in for M or C - "
+                  "which began as a joke and turned out to be the description.) It started as a label "
+                  "designer and grew into a handful of tools that share one project file:"},
             {"ul": [
-                "**Design** the sticker that goes on the disc and the J-card insert that goes in the case, "
-                "and export them ready to print and cut.",
+                "**Design** the labels: a MiniDisc's sticker and J-card, or a CD's ring label and "
+                "slim-case insert - and export them ready to print and cut.",
                 "**Record** a whole album from foobar2000 onto a MiniDisc, with a proper track mark at "
                 "every song.",
-                "**Title** the disc: write the album name and every track name onto the MiniDisc itself, "
+                "**Burn** an audio CD-R from a folder or from foobar2000's playlist, with CD-Text titles.",
+                "**Title** a MiniDisc: write the album name and every track name onto the disc itself, "
                 "so the deck's own display shows them.",
                 "**Drive the deck** from a software remote - transport, track numbers, play modes.",
             ]},
+            {"p": "**Which medium a project is for is chosen once, when you create it**, and everything "
+                  "follows from that: which templates you are offered, what the second page is called, "
+                  "and which entries the Recording menu shows. A MiniDisc project is never offered CD "
+                  "burning, and a CD project is never offered the deck's remote."},
             {"p": "The first of those needs nothing but the computer. The other three need **MDRem**: a "
                   "small RP2040 board that pretends to be a Sony RM-D10P infrared remote and plugs into "
                   "USB. Everything MDRem-related is optional and switched off until you turn it on."},
@@ -42,7 +48,7 @@ BOOK = [
             {"table": {
                 "head": ["For", "You need"],
                 "rows": [
-                    ["Designing and printing", "MDTools, a printer, and - for cutting - a Cricut machine "
+                    ["Designing and printing", "xD-Tools, a printer, and - for cutting - a Cricut machine "
                                                "or a steady hand with scissors."],
                     ["Titling a disc", "An MDRem adapter on a USB port, and a Sony MiniDisc deck it can be "
                                        "aimed at."],
@@ -56,7 +62,7 @@ BOOK = [
                      "timings in particular were measured on that one."},
             {"h2": "One thing to understand up front"},
             {"p": "The deck cannot answer. Infrared only travels one way, and this model's Control A1 bus "
-                  "is not connected inside. So MDTools can send a command, but it can never find out "
+                  "is not connected inside. So xD-Tools can send a command, but it can never find out "
                   "whether the deck did it."},
             {"p": "That shapes the whole MDRem half of the program: it shows you exactly what it is about "
                   "to do before it does it, it errs on the side of doing too much rather than too little "
@@ -70,7 +76,7 @@ BOOK = [
         "title": "Getting started",
         "blocks": [
             {"h2": "Installing"},
-            {"p": "If you have the packaged build, run `MDTools.exe`. From source:"},
+            {"p": "If you have the packaged build, run `xD-Tools.exe`. From source:"},
             {"ul": [
                 "`python -m venv .venv`",
                 "`.venv\\Scripts\\pip install -e \".[dev]\"`",
@@ -80,7 +86,7 @@ BOOK = [
             {"p": "**Help > Language** offers English, Polski and Japanese. The change needs a restart, "
                   "and the dialog offers to do it for you."},
             {"h2": "The startup screen"},
-            {"p": "MDTools opens on a short list of what you might want to do: reopen one of the last few "
+            {"p": "xD-Tools opens on a short list of what you might want to do: reopen one of the last few "
                   "projects, browse for another one, or start a new one."},
             {"fig": ("startup", "The startup screen. Remote... only appears once the adapter is enabled.")},
             {"ul": [
@@ -106,10 +112,10 @@ BOOK = [
                   "so moving on to another disc is not a trip through relaunching the program. The "
                   "window's own close button does the same thing. If there are unsaved changes you are "
                   "asked about them first."},
-            {"p": "To leave MDTools altogether, use **File > Exit**, or cancel the startup screen when it "
+            {"p": "To leave xD-Tools altogether, use **File > Exit**, or cancel the startup screen when it "
                   "reappears."},
             {"h2": "Where your projects are saved"},
-            {"p": "The first time you save, MDTools proposes **Documents\\MiniDiscProjects** and a file "
+            {"p": "The first time you save, xD-Tools proposes **Documents\\MiniDiscProjects** and a file "
                   "name built from the album itself - `Skillet - Unleashed (2016).mdproj`. That is the "
                   "same line the deck is told to display, so the file on your computer and the title on "
                   "the disc agree with each other."},
@@ -169,7 +175,7 @@ BOOK = [
         "title": "Templates",
         "blocks": [
             {"p": "A template is the physical shape of the thing you are printing: its size, its corners, "
-                  "and where it folds. MDTools ships with six."},
+                  "and where it folds. xD-Tools ships with six."},
             {"table": {
                 "head": ["Template", "What it is"],
                 "rows": [
@@ -245,7 +251,7 @@ BOOK = [
                     "regularly guess wrong - a search has no way of knowing which pressing you are "
                     "holding."},
             {"h2": "When there is nothing good to be found"},
-            {"p": "MDTools would rather show no cover than the wrong one. A result has to match the "
+            {"p": "xD-Tools would rather show no cover than the wrong one. A result has to match the "
                   "album title **and** the artist before it is accepted: a title on its own is not "
                   "enough, because a cover version of the title track by somebody else matches that "
                   "perfectly. When nothing clears the bar, the preview stays empty - which is the "
@@ -311,7 +317,7 @@ BOOK = [
         "title": "Printing and cutting",
         "blocks": [
             {"h2": "The two exports"},
-            {"p": "The design leaves MDTools as two files that describe the same object in two ways."},
+            {"p": "The design leaves xD-Tools as two files that describe the same object in two ways."},
             {"table": {
                 "head": ["Export", "Contains", "For"],
                 "rows": [
@@ -333,6 +339,18 @@ BOOK = [
                 "SVG's outline exactly onto it.",
             ]},
             {"p": "The SVG carries real millimetres, so nothing needs scaling by hand at the other end."},
+            {"h2": "Orientation, and one label per sheet"},
+            {"p": "The Print window has a **Page Size** and an **Orientation**. Landscape is not "
+                  "decoration: a CD's folded slim-case insert is 242mm wide, and no portrait sheet takes "
+                  "it upright - on a portrait A4 it can only be printed turned a quarter turn."},
+            {"p": "**Each label on its own sheet** does what it says, and for a CD project it is switched "
+                  "on for you. The reason is arithmetic rather than taste: a CD label (118mm) beside that "
+                  "insert (242mm) needs 363mm of a sheet that offers 287mm, so the two cannot share one "
+                  "however they are turned. With the option on, the preview shows one sheet at a time - "
+                  "the **Showing** box picks which - and printing, Export PDF and Export PNG all walk both. "
+                  "A PNG holds one page, so exporting two sheets writes two files, numbered."},
+            {"fig": ("cd-print", "A CD project's print layout: the disc label on its own sheet, the "
+                                 "folded insert on another.")},
             {"h2": "Printing directly"},
             {"p": "**File > Print...** skips the export step: it lays several copies of both pages onto "
                   "one sheet of A4 or Letter, auto-arranged into a grid you can then drag around by hand. "
@@ -380,7 +398,7 @@ BOOK = [
                     ["Purple", "Hardware initialisation failed - the adapter is not working."],
                 ],
             }},
-            {"h2": "Turning it on in MDTools"},
+            {"h2": "Turning it on in xD-Tools"},
             {"p": "**Window > Settings...**, tick **Enable MDRem IR remote adapter**, and choose the "
                   "serial port."},
             {"fig": ("settings", "Window > Settings. The foobar2000 address is separate from the adapter.")},
@@ -488,20 +506,20 @@ BOOK = [
             {"note": "**This needs the MDRem adapter, and the menu entry only appears once it is enabled "
                      "in Window > Settings...** The adapter is what puts the deck into record and what "
                      "marks the tracks. Without one, recording means pressing record on the deck yourself "
-                     "and letting its own LEVEL-SYNC decide where the tracks begin - MDTools has no part "
+                     "and letting its own LEVEL-SYNC decide where the tracks begin - xD-Tools has no part "
                      "in that."},
             {"h2": "Setting up"},
             {"ol": [
                 "Install the **Beefweb Remote Control** component (`foo_beefweb`) in foobar2000. That is "
-                "how MDTools reads the playlist and follows what is playing. Its default address, "
-                "`http://localhost:8880`, is what MDTools expects; change it in Window > Settings... if "
+                "how xD-Tools reads the playlist and follows what is playing. Its default address, "
+                "`http://localhost:8880`, is what xD-Tools expects; change it in Window > Settings... if "
                 "you moved it.",
                 "Connect the computer's **S/PDIF** output - optical or coaxial - to the deck's digital "
                 "input. This carries the audio; the USB link carries only commands.",
                 "Set foobar2000's output to **44.1 kHz, 16-bit, stereo** - see below.",
                 "Load the album into foobar2000's current playlist, in the order you want it on the disc.",
                 "Put a blank or erasable disc in the deck, tab closed, and set the recording mode (SP or "
-                "LP2) **on the deck** - MDTools cannot read or change it.",
+                "LP2) **on the deck** - xD-Tools cannot read or change it.",
                 "Turn **LEVEL-SYNC off** on the deck. See below.",
                 "Aim the adapter at the deck's remote sensor and leave it there.",
             ]},
@@ -509,13 +527,13 @@ BOOK = [
             {"p": "A MiniDisc is 44.1 kHz, 16-bit stereo, and the deck's digital input expects to be fed "
                   "that. Hand it a 96 kHz or 24-bit stream - which is what a modern player happily outputs "
                   "if the files are high-resolution and nothing is told to convert them - and the deck may "
-                  "simply refuse it, or drop out partway. It cannot tell MDTools that it has, either."},
+                  "simply refuse it, or drop out partway. It cannot tell xD-Tools that it has, either."},
             {"p": "So convert on the computer, where it is free to get right: install foobar2000's "
                   "**Resampler (SoX)** component, add it to the DSP chain and set it to **44100 Hz**, and "
                   "set the output device to **16-bit stereo**. Files already at 44.1/16 pass through "
                   "untouched, so this costs nothing on an ordinary CD rip and saves the awkward case."},
             {"h2": "Analogue instead, if you have to"},
-            {"p": "The deck's **analogue** line inputs work too, and MDTools drives the recording exactly "
+            {"p": "The deck's **analogue** line inputs work too, and xD-Tools drives the recording exactly "
                   "the same way - it presses the deck's keys, which does not depend on how the audio "
                   "arrives. **The quality is considerably worse**, though, and unavoidably so: the sound "
                   "leaves the sound card as analogue and is digitised again by the deck, so it picks up "
@@ -531,11 +549,11 @@ BOOK = [
                   "disc. The cover is looked up as the window opens rather than when the album ends, "
                   "for the same reason. Everything freezes the moment recording starts."},
             {"p": "Fill in the **Artist** column only when the tracks are by different performers. On "
-                  "an ordinary album it stays empty; on a compilation it is what tells MDTools the "
+                  "an ordinary album it stays empty; on a compilation it is what tells xD-Tools the "
                   "disc is one."},
             {"h2": "What happens"},
             {"ol": [
-                "MDTools shows the playlist and its total time, and warns if it will not fit on an "
+                "xD-Tools shows the playlist and its total time, and warns if it will not fit on an "
                 "80-minute disc in SP.",
                 "It sets foobar to play straight through once - no shuffle, no repeat - so the disc "
                 "cannot end up in a different order than the titles, and sets foobar's own volume to "
@@ -561,13 +579,13 @@ BOOK = [
             {"p": "That fails on any album where one song runs into the next. Two songs with no gap "
                   "between them are recorded as one long track, and no amount of editing afterwards makes "
                   "that pleasant."},
-            {"p": "So MDTools sends a track mark itself, at the exact moment foobar changes track - that "
+            {"p": "So xD-Tools sends a track mark itself, at the exact moment foobar changes track - that "
                   "is the **Mark tracks through the adapter** checkbox, and it should stay ticked."},
             {"warn": "**Turn LEVEL-SYNC off on the deck when you use it.** Running both marks the same "
                      "boundary twice, a fraction of a second apart, and leaves a sliver of a track "
                      "stranded between them. They fight; they do not co-operate."},
             {"h2": "Recording mode and length"},
-            {"p": "An MD holds 80 minutes in SP. MDTools warns when the playlist is longer than that, but "
+            {"p": "An MD holds 80 minutes in SP. xD-Tools warns when the playlist is longer than that, but "
                   "it can only warn - LP2 and LP4 have to be set on the deck itself, and there is no way "
                   "to read back which mode it is in."},
         ],
@@ -589,15 +607,15 @@ BOOK = [
                   "on - a drive stumbling over a scratch at minute 31 puts that stumble on the "
                   "MiniDisc, and a MiniDisc recording is not something you can patch afterwards."},
             {"p": "Copying first moves every read error to a point where it costs a re-read and nothing "
-                  "else. MDTools uses **cdparanoia** for this, built precisely to keep working at a "
+                  "else. xD-Tools uses **cdparanoia** for this, built precisely to keep working at a "
                   "damaged disc until it gets the audio right, and **flac** to store the result. Both "
-                  "ship with MDTools; there is nothing to install."},
+                  "ship with xD-Tools; there is nothing to install."},
             {"fig": ("cd-rip", "The disc read, identified, and ready to copy.")},
             {"h2": "Step by step"},
             {"ol": [
                 "Put the CD in the drive and choose the drive from the list. **Refresh** looks again if "
                 "you plugged one in after opening the window.",
-                "Press **Read Disc**. MDTools reads the table of contents and looks the disc up on "
+                "Press **Read Disc**. xD-Tools reads the table of contents and looks the disc up on "
                 "MusicBrainz, which identifies it from the lengths of its tracks - a CD carries no text "
                 "of its own.",
                 "Check what came back. If several pressings match, pick the right one from "
@@ -620,7 +638,7 @@ BOOK = [
                   "disc gets named after whichever track happened to be first, the J-card credits one "
                   "performer for twelve, and a cover art search returns some unrelated record's "
                   "sleeve."},
-            {"p": "So MDTools checks. If most of the tracks cannot be attributed to a single artist, it "
+            {"p": "So xD-Tools checks. If most of the tracks cannot be attributed to a single artist, it "
                   "credits the disc to **Various Artists**, names it `Mixtape` unless the release has a "
                   "name of its own, prints each performer beside their track on the J-card, and "
                   "**draws a cover from the track list** instead of looking one up."},
@@ -632,7 +650,7 @@ BOOK = [
             {"p": "The same applies when recording from foobar2000: a playlist of unrelated tracks is "
                   "recognised the same way, with the same result."},
             {"h2": "Where the copied files go"},
-            {"p": "Into your temporary folder by default, under `MDTools CD Rip`, one folder per album. "
+            {"p": "Into your temporary folder by default, under `xD-Tools CD Rip`, one folder per album. "
                   "It is created if it is not there, so a folder you have only typed into Settings and "
                   "never made is not a problem. "
                   "They are raw material for a recording rather than a music collection - one album is "
@@ -646,10 +664,69 @@ BOOK = [
         ],
     },
     {
+        "title": "Burning an audio CD",
+        "blocks": [
+            {"p": "Recording > **Burn Audio CD from Folder...** or **from foobar2000...** writes a real "
+                  "Red Book audio CD-R - the kind any CD player will play - from files you already have. "
+                  "No infrared adapter is involved: this is the drive's job, so these two entries stay "
+                  "available even with MDRem switched off."},
+            {"fig": ("burn", "The burn window: what will be written, and what it will be called.")},
+            {"h2": "What the window shows"},
+            {"p": "The album's name, artist and year, an editable title and artist per track, and a cover "
+                  "you can click to replace - the same window the recording flow uses, and the same rule: "
+                  "**what is on screen when you press Burn is what gets written**, both onto the disc as "
+                  "CD-Text and into the project you design the label from."},
+            {"p": "The line under the track list gives the album's length against what the disc holds. "
+                  "The **Status** column is the part worth reading before you press anything."},
+            {"h2": "Why a track can refuse to be burned"},
+            {"p": "A CD holds 44.1 kHz, 16-bit, stereo audio and nothing else. Two Red Book rules can stop "
+                  "a burn outright, and the window says so per track rather than letting you find out on "
+                  "playback:"},
+            {"ul": [
+                "a track shorter than **four seconds**, which some players will not play;",
+                "more than **99 tracks**, or an album longer than the disc.",
+            ]},
+            {"note": "A file that is merely at the wrong rate is not a refusal. A 48 kHz / 24-bit download "
+                     "- which is what most of them are - says \"will be converted to 44100 Hz / 16-bit\" and "
+                     "is resampled on the way to the disc by the bundled SoX. The conversion happens in a "
+                     "scratch folder; your own files are never touched."},
+            {"h2": "Titles on the disc: CD-Text"},
+            {"p": "The album and track names are written onto the CD as CD-Text, which players that "
+                  "support it will show. It carries plain ASCII, so accented letters lose their marks the "
+                  "same way MiniDisc titles do - and anything with no equivalent at all is listed in the "
+                  "window **before** you burn, rather than quietly dropped."},
+            {"h2": "Simulate first, if you like"},
+            {"p": "**Simulate only** runs the whole sequence with the laser off. It takes as long as a real "
+                  "burn and proves the drive, the speed and the files, without spending a disc. Worth doing "
+                  "once on a new drive."},
+            {"warn": "A CD-R cannot be rewritten. Once writing starts, the disc is either finished or "
+                     "wasted - which is why the window asks before starting, and asks again if you press "
+                     "Stop while the laser is on. Stopping during the earlier \"Preparing audio\" stage "
+                     "costs nothing at all."},
+            {"h2": "The label, afterwards"},
+            {"p": "When the burn finishes, the album's details are offered to the open project if it is a "
+                  "CD one. Say yes and the Tools panel's automatic layout has everything it needs: the "
+                  "cover, the artist, the year and the track list."},
+            {"fig": ("cd-label", "The disc label: the cover lightened across the ring, with the hub cut "
+                                 "out and the Digital Audio mark at the foot.")},
+            {"fig": ("cd-insert", "The folded slim-case insert: cover on the right panel, track list on "
+                                  "the left. Folded down the middle, the left half shows through the back "
+                                  "of the case.")},
+            {"h2": "What you need"},
+            {"ul": [
+                "A CD writer. It is found by asking cdrecord, not by guessing - if the **Burner** box is "
+                "empty, check the drive is connected and press **Refresh**.",
+                "A blank CD-R. A disc that already holds something cannot take a fresh burn.",
+                "Nothing else: cdrecord and SoX are bundled on Windows.",
+            ]},
+        ],
+    },
+    # ------------------------------------------------------------------
+    {
         "title": "Recording a folder of files",
         "blocks": [
             {"p": "**Recording > Record Folder to MiniDisc...** records an album you already have on "
-                  "disk. Point it at the folder it is in, and MDTools loads those files into foobar2000 "
+                  "disk. Point it at the folder it is in, and xD-Tools loads those files into foobar2000 "
                   "in the right order and hands over to the recording you already know - the same "
                   "arming, the same track marks, the same titling."},
             {"note": "**This needs the MDRem adapter too**, and the entry only appears once it is "
@@ -674,7 +751,7 @@ BOOK = [
                 "tracks.",
             ]},
             {"h2": "Where the titles come from"},
-            {"p": "From the files - read by foobar2000 rather than by MDTools, which is the better tag "
+            {"p": "From the files - read by foobar2000 rather than by xD-Tools, which is the better tag "
                   "reader of the two and has to read them anyway in order to play them. A file with no "
                   "title tag is recorded under its filename: the honest answer, and usually a usable "
                   "one."},
@@ -684,7 +761,7 @@ BOOK = [
             {"h2": "A subfolder per disc"},
             {"p": "A folder with tracks in it *is* the album, and its subfolders are left alone - a "
                   "scans or bonus directory does not join the running order. Only when the folder "
-                  "itself holds no audio at all does MDTools look inside, which is what makes a "
+                  "itself holds no audio at all does xD-Tools look inside, which is what makes a "
                   "two-disc album kept as `CD1` and `CD2` come out in disc order."},
             {"warn": "Loading a folder **empties foobar2000's current playlist**, exactly as recording "
                      "a CD does. Move anything you had queued up there elsewhere first."},
@@ -696,23 +773,23 @@ BOOK = [
         "blocks": [
             {"p": "**Recording > Erase MiniDisc...** clears the disc in the deck. It works on whatever is "
                   "physically loaded, so it does not care which project is open, or whether one is."},
-            {"warn": "There is no undo, and MDTools cannot see the result. Make sure the disc in the "
+            {"warn": "There is no undo, and xD-Tools cannot see the result. Make sure the disc in the "
                      "deck is the one you mean, and that its write-protect tab is closed."},
             {"h2": "Why it asks what you can see"},
-            {"p": "This is the one operation where MDTools does not know what its own command does. The "
+            {"p": "This is the one operation where xD-Tools does not know what its own command does. The "
                   "**Erase** key is recognised by the deck as a write command - that much was confirmed "
                   "- but which editing menu it opens was never established, because the write keys "
                   "could only be tested safely on a protected disc, where the deck answers every one of "
                   "them with the same complaint."},
-            {"p": "Rather than guess with your recording, MDTools sends Erase and then asks what the "
+            {"p": "Rather than guess with your recording, xD-Tools sends Erase and then asks what the "
                   "deck's display says. If it is showing something like **All Erase?**, press **Send "
                   "Enter** and watch the display - the window stays open, so you can press it again. "
-                  "Some decks want it more than once, and there is no way for MDTools to find that "
+                  "Some decks want it more than once, and there is no way for xD-Tools to find that "
                   "out: the deck never answers back. Press **Done** when the disc is blank, or "
                   "**Nothing Happened** to back the deck out of whatever menu it is sitting in."},
             {"fig": ("erase", "It sends the command, then asks what the deck is showing.")},
             {"note": "As with titling, an erase lives in the deck's memory until the disc is ejected. "
-                     "MDTools offers to eject afterwards - take it, or the disc keeps its old contents "
+                     "xD-Tools offers to eject afterwards - take it, or the disc keeps its old contents "
                      "should the deck lose power."},
         ],
     },
@@ -723,7 +800,7 @@ BOOK = [
             {"warn": "Everything in this chapter is **experimental** and hidden until you ask for it. It "
                      "works, but it is newer and less exercised than the rest of the program, and the way "
                      "it is presented may still change."},
-            {"p": "MDTools can hold a conversation with a Telegram bot **you run yourself**, download the "
+            {"p": "xD-Tools can hold a conversation with a Telegram bot **you run yourself**, download the "
                   "files it sends, and hand the result to Record Folder to MiniDisc - so a download becomes "
                   "a recorded, titled disc without leaving the program."},
             {"warn": "This is for a bot you control. Downloading albums from a public bot that "
@@ -743,11 +820,11 @@ BOOK = [
                 "temporary directory, on the grounds that a download is raw material for a recording "
                 "rather than a music library. Point it anywhere you like.",
             ]},
-            {"note": "There is no API ID or API Hash to fill in. MDTools carries its own, so signing in is "
+            {"note": "There is no API ID or API Hash to fill in. xD-Tools carries its own, so signing in is "
                      "the only step. If a build ever ships without them it says so plainly instead of "
                      "failing to connect."},
             {"h2": "Signing in"},
-            {"p": "MDTools signs in as **your own Telegram account**, not as a bot. That is not a design "
+            {"p": "xD-Tools signs in as **your own Telegram account**, not as a bot. That is not a design "
                   "preference: Telegram's Bot API forbids one bot from messaging another, so the only way "
                   "to talk to your bot the way a person would is to be a person."},
             {"fig": ("telegram-login", "Sign in to Telegram. Phone number, then the code Telegram sends "
@@ -755,7 +832,7 @@ BOOK = [
             {"p": "**Sign in to Telegram...** asks for your phone number, then the code Telegram sends to "
                   "your other devices, then - if you have two-step verification on - your password. It is "
                   "the same sequence the Telegram app itself uses."},
-            {"warn": "The sign-in is saved locally, in `telegram.session` next to MDTools' own settings. "
+            {"warn": "The sign-in is saved locally, in `telegram.session` next to xD-Tools' own settings. "
                      "That file is equivalent to being logged in to your account: it is not encrypted, and "
                      "it is not something to copy onto another machine or send to anyone."},
             {"h2": "The conversation"},
@@ -763,11 +840,11 @@ BOOK = [
                   "only once a sign-in has been saved."},
             {"fig": ("telegram-chat", "The chat, with the download queue on the right."),},
             {"p": "Deliberately a plain chat rather than a search box: your bot's commands are yours, and "
-                  "MDTools cannot know them. So it shows whatever the bot sends and lets you drive it - "
+                  "xD-Tools cannot know them. So it shows whatever the bot sends and lets you drive it - "
                   "text, its inline buttons, and any file it attaches. **Quick commands** sends `/start` or "
                   "`/help` with one click, since almost every bot understands those."},
             {"p": "Two conveniences worth knowing. Whatever the bot writes is **translated underneath the "
-                  "original**, into whichever language MDTools is set to - the original stays, because a "
+                  "original**, into whichever language xD-Tools is set to - the original stays, because a "
                   "translation can be wrong and an exact command or filename is better read as sent. And a "
                   "bot that edits its own message to build a menu, rather than sending a new one each time, "
                   "is followed correctly: the message changes in place, as it does on your phone."},
@@ -816,7 +893,7 @@ BOOK = [
             ]},
             {"h2": "\"Not connected\" in the remote window"},
             {"p": "Something else already has the serial port open. Only one program can hold it at a "
-                  "time - close the other MDTools window, dialog, or terminal that is using it."},
+                  "time - close the other xD-Tools window, dialog, or terminal that is using it."},
             {"h2": "The new title has the old one stuck on the end"},
             {"p": "**Erase existing titles first** was unticked, or the old title was longer than the "
                   "clearing allowed for. Run the upload again with it ticked."},
@@ -850,7 +927,7 @@ BOOK = [
             {"p": "The adapter speaks plain text over its virtual serial port at 115200 baud. Every "
                   "command answers with a single line - `OK`, `PONG`, or `ERR <reason>` - so a program can "
                   "parse the reply without knowing the command. Lines beginning with `;` are diagnostics."},
-            {"p": "MDTools drives all of this for you. It is documented here for anyone wanting to talk to "
+            {"p": "xD-Tools drives all of this for you. It is documented here for anyone wanting to talk to "
                   "the adapter directly, from a terminal or their own script."},
             {"table": {
                 "head": ["Command", "Does"],
