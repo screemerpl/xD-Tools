@@ -58,7 +58,7 @@ from PySide6.QtWidgets import (
 
 from mdtools import app_settings, cdrip, foobar, mixtape_cover, musicbrainz
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
-from mdtools.project import ProjectMetadata, Track, apply_compilation_naming
+from mdtools.project import MEDIUM_MD, medium_name, ProjectMetadata, Track, apply_compilation_naming
 
 # An MD holds 80 minutes in SP -- the same limit RecordDialog warns about,
 # checked here as well because here it is still free to act on: the disc in
@@ -162,9 +162,16 @@ class _RipWorker(QThread):
 
 
 class CdRipDialog(QDialog):
-    def __init__(self, base_url: str = foobar.DEFAULT_BASE_URL, parent=None):
+    def __init__(self, base_url: str = foobar.DEFAULT_BASE_URL, parent=None, medium: str = MEDIUM_MD):
+        """`medium` is only ever wording: the rip itself is the same work
+        whichever machine the tracks are recorded onto afterwards, but a
+        window headed "Record CD to MiniDisc" in front of a cassette
+        project is telling the user something untrue about what they are
+        about to do."""
         super().__init__(parent)
-        self.setWindowTitle(self.tr("Record CD to MiniDisc"))
+        self._medium = medium
+        self._target = medium_name(medium)
+        self.setWindowTitle(self._window_title())
         self.resize(560, 560)
         self._client = foobar.FoobarClient(base_url)
         self._toc: cdrip.DiscToc | None = None
@@ -215,9 +222,9 @@ class CdRipDialog(QDialog):
         hint = QLabel(
             self.tr(
                 "Titles and artists can be edited here -- they are written into the ripped files, and are "
-                "what ends up on the MiniDisc. Fill the artist column in when the disc is a compilation: "
+                "what ends up on the {medium}. Fill the artist column in when the disc is a compilation: "
                 "MDTools then names it accordingly and draws it a cover of its own."
-            )
+            ).format(medium=self._target)
         )
         hint.setWordWrap(True)
         layout.addWidget(hint)
@@ -345,8 +352,14 @@ class CdRipDialog(QDialog):
         self.tree.resizeColumnToContents(3)
         self._warn_about_length(toc.total_seconds)
 
+    def _window_title(self) -> str:
+        return self.tr("Record CD to {medium}").format(medium=self._target)
+
     def _warn_about_length(self, total: float) -> None:
-        if total <= DISC_SP_SECONDS:
+        # A MiniDisc's 80-minute SP limit, and nothing else's: a cassette is
+        # measured against the tape that is actually in the deck, which
+        # TapeRecordDialog asks for and warns about itself.
+        if self._medium != MEDIUM_MD or total <= DISC_SP_SECONDS:
             self.warning_label.setVisible(False)
             return
         self.warning_label.setText(
@@ -499,7 +512,7 @@ class CdRipDialog(QDialog):
         except cdrip.CdRipError as exc:
             QMessageBox.warning(
                 self,
-                self.tr("Record CD to MiniDisc"),
+                self._window_title(),
                 self.tr(
                     "The rip folder could not be created: {error}\n\nChoose a different one in "
                     "Window > Settings..."
@@ -536,7 +549,7 @@ class CdRipDialog(QDialog):
             return exe
         QMessageBox.warning(
             self,
-            self.tr("Record CD to MiniDisc"),
+            self._window_title(),
             self.tr(
                 "foobar2000 could not be found. The ripped tracks are loaded into it through its own program "
                 "file, so its location has to be set in Window > Settings..."
@@ -550,7 +563,7 @@ class CdRipDialog(QDialog):
         except foobar.FoobarError as exc:
             QMessageBox.warning(
                 self,
-                self.tr("Record CD to MiniDisc"),
+                self._window_title(),
                 self.tr(
                     "Could not reach foobar2000: {error}\n\nIt must be running with the Beefweb Remote Control "
                     "component (foo_beefweb) enabled."

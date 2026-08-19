@@ -134,6 +134,19 @@ class CoverTemplate:
     cutout_from_fold_mm: float = 0.0
     cutout_from_bottom_mm: float = 0.0
     cutout_side: str = "left"  # "left" or "right" -- which fold line it's measured from
+    # A cassette shell label has two round holes in it, for the openings
+    # the deck's spindles reach the reel hubs through -- a full-face label
+    # without them would be stuck straight over the drive. Both are cut
+    # from the label's centre line: hub_spacing_mm apart, hub_diameter_mm
+    # across, hub_centre_from_top_mm down from the top edge (0 = centred).
+    # A diameter of 0 means no holes, which is every other label there is.
+    hub_diameter_mm: float = 0.0
+    hub_spacing_mm: float = 0.0
+    hub_centre_from_top_mm: float = 0.0
+    # "cover" (an insert or J-card) or "label" (a sticker that goes on the
+    # medium itself). Same dataclass, because the shape is the same
+    # rectangle -- but a different family, so File > New cannot offer a
+    # J-card where a shell label belongs.
     kind: str = "cover"
     # See DiscTemplate.medium.
     medium: str = "md"

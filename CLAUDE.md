@@ -3935,6 +3935,190 @@ that same rule -- the *call itself* also can't be indirected through
 nesting inside an f-string, even though the string argument right next to
 it is perfectly literal.
 
+## Compact cassette (feature/compact-cassette)
+
+**The third medium, and the first that cannot hold an album in one piece
+or be driven at all.** `MEDIUM_TAPE`, three pages (`PAGE_COVER` J-card +
+`PAGE_SIDE_A` + `PAGE_SIDE_B`), a recording flow where **the deck is
+operated by the user and MDTools only says what to press**.
+
+**`project.MEDIUM_PAGES` is what made a third medium data rather than a
+change everywhere.** A medium declares its pages as `MediumPage(page,
+optional=False)` tuples; `medium_pages(medium)` reads it.
+`NewDesignDialog` builds one template row per page from that (rows created
+once for every page *any* medium can have, hidden via
+`QFormLayout.setRowVisible` for the ones this medium lacks) and reports
+**`selected_templates: dict[page, template]`** -- this replaced the old
+`selected_disc_template`/`selected_cover_template`/`selected_back_template`
+trio, so anything faking that dialog in a test sets the dict.
+`disc_combo`/`cover_combo`/`back_combo`/`disc_label`/`cover_label` remain as
+named properties onto `_rows`, because "the disc row" is still worth
+naming. `app_window._new_design()`, Add Page... and Remove Page all read
+`medium_pages()` now: a cassette is offered no disc page, and which pages
+cannot be removed is "the ones this medium marks required", not a
+hardcoded (disc, cover) pair.
+
+**`tape.py` decides where the album is turned over -- pure logic, no Qt,
+shared by the labels and the recording.** `split_sides(tracks,
+total_minutes)` tries every possible break in the *unchanged* running
+order and takes the most balanced one that fits; if none fits it returns
+the least-overrunning break with `fits` False, because running a few
+seconds into the run-out is the user's call (same rule as the MiniDisc
+flow's 80-minute warning). Two physical facts drive it:
+- **A stated length is both sides together**: a C60 is 30 minutes a side,
+  so `side_seconds()` halves it and every check is per side.
+- **Every side starts with leader tape, which is not magnetic.**
+  `LEADER_SECONDS` (10, the user's own number) of silence is recorded
+  first, on *each* side, and comes out of that side's usable time.
+`suggested_length()` offers the shortest stocked cassette that fits, and
+returns None for an untimed track list rather than guessing. C120 is
+deliberately not offered -- the tape is thin enough to stretch and jam.
+
+**Which tape a project is for is saved on the project
+(`Project.tape_total_minutes`, round-tripped by `project_io`), not asked
+for twice.** The recording dialog writes back the length actually used, so
+the shell labels split exactly where the recording did. A label that says
+side B starts at track seven, and a recording that turned over after track
+six, would each be defensible alone and wrong together.
+
+**`tape_layout.py`: the inlay card is `jcard_layout`'s own card.** A
+cassette J-card folds about *vertical* creases into front / spine / flap
+and is read a quarter turn round on the sheet -- structurally identical to
+the MiniDisc J-card, so `place_front_cover`/`place_spine`/`place_back` are
+reused rather than restated. Two things are its own:
+- **`build_side_label()`** -- `place_back()` with that side's tracks
+  substituted (so a label reads as part of the same set as the flap), plus
+  a big side letter in the accent colour down the left. **Each side's
+  tracks are numbered from one**, which is what the deck's own counter
+  will agree with. It refuses a folded page, and `_page_rect()` uses
+  `cut_shape_rects()`, not `sceneRect()`, or everything would be laid out
+  against the outline builder's transparent margin.
+- **The flap takes three columns** (`FLAP_COLUMNS`), because it is 102mm
+  along and 24mm deep: in two columns a normal album's list bottomed out
+  at `MIN_POINT_SIZE` and rendered as a grey band. `place_back()` gained a
+  `columns` parameter (0 = decide from the track count, as before) and
+  `project.track_list_columns(metadata, n)` generalised
+  `track_list_two_columns`, which now delegates to it.
+- No format logo on the card: a cassette's own marks belong to the shell,
+  and inventing one would put a badge on the paper that no real inlay has.
+
+**`TapeRecordDialog` (`panels/tape_record_dialog.py`) needs no adapter and
+no drive, so `_sync_mdrem_actions()` gates `record_tape_action` on the
+medium alone** -- like the burning entries, never on `mdrem_enabled()`.
+Per side: the user presses RECORD and clicks (the only confirmation that
+exists), ten seconds of silence run down, foobar plays that side, the user
+is told to stop and flip. Three details worth keeping:
+- **`FoobarClient.set_stop_after_current_track()`** is new, and it is what
+  makes the side break clean. Armed on the transition *into* the side's
+  last track, never at the start (the flag applies to whatever is playing
+  when it is read). Watching for the playlist to move past the boundary
+  instead always records the first fraction of the next track onto the end
+  of the side, because a poll can only notice a change after it happened.
+- **The cassette length is frozen with the other fields once recording
+  starts** -- changing it would move a side break that is already half on
+  the tape.
+- **Cancelling stops foobar and then says the deck is still recording**,
+  because there is no second end to stop from here.
+
+**Templates are unverified standards, not measurements**
+(`verified: false`): `Cassette J-Card` 101.6 x 101.6mm, folds at 65.1 and
+77.8 (the 4" x 4" flat card every cassette printer works to: front
+2 9/16", spine 1/2", tuck-in flap 15/16"), and `Cassette Shell Label`
+88.9 x 42.9mm. Both are `medium: "tape"` and reach existing installs
+through `registry.sync_builtin_templates()`.
+
+**The app describes itself as three media now** -- window title
+("xD-Tools - Retro Media Studio"), Help > About, README and
+`pyproject.toml`. **Still outstanding for the next session: the Polish and
+Japanese translations of everything added here, and the manual** (its
+text in all three languages plus regenerated screenshots -- the New
+Project dialog, the page dropdown and the Recording menu all changed).
+
+### Round two on the cassette (same branch)
+
+Five things, all from looking at the real thing:
+
+**A shell label is cut around the reel hubs**, and until it was, it was a
+plain rectangle with a track list on it -- reported in one sentence
+("przecież kaseta ma wycięcia okrągłe gdzie wchodzą rolki"). `CoverTemplate`
+gained `hub_diameter_mm` / `hub_spacing_mm` / `hub_centre_from_top_mm`, and
+`_build_cover_outline()` subtracts the two circles from the cut path -- one
+path with holes in it, the way `cd_label`'s spindle hole and `full_label`'s
+shutter notch already are, so `template_clip_path()` refuses to print into a
+hub opening with nothing else to change. `Cassette Shell Label` is now
+90 x 46mm with 24mm holes 45mm apart (still `verified: false`).
+
+**The label carries the sleeve, and its text runs across.** The artwork is
+the whole sticker, washed towards white by `cd_layout.lighten()` (at 0.68 --
+heavier than a CD label's, because the type on this one is smaller), and
+`_auto_layout_tape()` now runs Clip Layers over each side page: that is what
+trims the deliberate overhang *and* punches the hub holes through the
+artwork. `tape_layout._label_bands()` returns the three pieces of a label
+that are not a hole -- the band above the openings, the gutter between them,
+the band below -- computed from the template's own hub geometry, so a
+corrected measurement moves the text with it. Artist + album go on top, the
+side letter fills the gutter (`_fill()`, grown *after* fitting: the font
+search caps at `MAX_POINT_SIZE`, which is right for a track list and leaves
+a single letter rattling around), and the tracks run along the bottom as one
+horizontal line rather than a column -- a label four times wider than it is
+tall has no room for a list.
+
+**"label" is a third template family** (`registry.KINDS`), because the side
+pages took the "cover" family and File > New would happily give a cassette
+three J-cards -- reported directly. Same `CoverTemplate` dataclass, a
+different family; `PAGE_KINDS` maps both side pages to it, and the Template
+Manager grows an Add > Shell label entry plus the three hub rows (visible
+only for that kind). `registry._rehome_moved_builtins()` moves a built-in
+whose family changed, **replacing it with the bundled version rather than
+carrying the old one across** -- a built-in that changed family here also
+changed shape, so its old dimensions describe nothing. This is the one place
+sync overwrites instead of appending.
+
+**Every recording source reaches whichever medium is open.** There is no
+separate cassette entry any more: `record_cd_action` / `record_folder_action`
+/ `record_action` / `telegram_record_action` rename themselves in
+`_sync_mdrem_actions()` ("Record CD to Cassette...") and are visible for a
+cassette *without* the adapter, because a cassette deck is driven by hand.
+`_run_record_dialog()` branches on the project's medium -- a rip is a rip
+whichever machine it ends up on, so the branch belongs there and not in four
+callers. `_resolve_recording_port()` returns `""` (a real answer) when no
+port is needed, which is why callers test it with `is None`.
+
+**A cassette's two shell labels share a sheet; the J-card gets its own.**
+`PrintDialog._sheet_groups()` is the general form of "one sheet per label":
+a pair that belongs together goes through the same two-label arrangement
+search a MiniDisc project's own pages use. Placements are keyed by page
+(`by_page`) before being handed to `_rebuild_items()`, since grouping means
+the order they are computed in no longer matches `self._labels`.
+
+**Still outstanding: the Polish and Japanese translations, and the manual.**
+
+**Two more from looking at it: the inlay is split by side, and the dialogs
+on the way to a recording name the right machine.**
+
+`place_back()` grew `track_columns` (text the caller has already arranged
+into columns, which sets the column count) and `heading` (drop the
+artist/album block and its rule). `tape_layout.side_track_columns()` builds
+a SIDE A block and a SIDE B block from the same `TapePlan` the shell labels
+use, so the card says where the tape is turned over -- the one thing it
+knows and the reader does not. `build_jcard(..., plan=...)`; without a plan
+the whole album is still listed straight through.
+
+The flap also stopped printing at `MIN_POINT_SIZE`, from two changes:
+`BACK_PADDING_MM` is now multiplied by `min(1.0, heading_scale)` (6mm of top
+and bottom margin is a quarter of a 24mm flap, and only a shallow panel
+shrinks -- a CD insert scales *up*, where a wider margin is right), and the
+flap passes `heading=False` since the spine beside it already names the
+album twice. 12 tracks went from 3.5pt (the floor, and overlapping the
+running-time footer) to 4.75pt with nothing overlapping.
+
+`project.medium_name()` is the one place a medium is named on screen, and
+`CdRipDialog`/`FolderRecordDialog` take a `medium` argument that is *only*
+wording -- the work is identical, but a window headed "Record CD to
+MiniDisc" in front of a cassette project tells the user something untrue.
+It also gates the 80-minute SP warning, which is a MiniDisc's answer and not
+a tape's.
+
 ## PySide6/Qt gotchas hit in this codebase
 
 - **Never construct a Qt GUI type (`QColor`/`QPen`/`QBrush`/`QFont`/...) at

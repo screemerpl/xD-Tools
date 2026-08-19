@@ -20,6 +20,7 @@ diagrams at doc/img/.
 
 from __future__ import annotations
 
+import copy
 import sys
 import tempfile
 import time
@@ -279,13 +280,13 @@ def _install_cover_stand_in() -> None:
     Patched per importing module rather than on cover_preview itself: each
     one did `from ... import fetch_into`, so its own name is what gets
     called."""
-    from mdtools.panels import cd_rip_dialog, folder_record_dialog, record_dialog
+    from mdtools.panels import cd_rip_dialog, folder_record_dialog, record_dialog, tape_record_dialog
 
     def fake_fetch(preview, artist, album, track_count=None):
         preview.set_cover(demo_cover_bytes())
         return None
 
-    for module in (record_dialog, cd_rip_dialog, folder_record_dialog):
+    for module in (record_dialog, cd_rip_dialog, folder_record_dialog, tape_record_dialog):
         module.fetch_into = fake_fetch
 
 
@@ -705,6 +706,9 @@ def capture_language(app, code: str) -> None:
 
     save(EraseDiscDialog("COM7"), out / "erase.png")
 
+    # -- a cassette project: the inlay, a shell label, and the recording
+    _capture_tape(out, code, metadata)
+
     _capture_telegram(out, code)
 
 
@@ -839,6 +843,62 @@ def _capture_cd(out: Path, code: str, metadata) -> None:
         close_quietly(burn)
     finally:
         decode.analyze = real_analyze
+
+
+def _capture_tape(out: Path, code: str, metadata) -> None:
+    """The cassette half: the inlay card, a shell label, and the recording.
+
+    The recording window is shown at rest rather than mid-side: what it
+    looks like while a side is running is one status line different, and
+    what the reader needs to see is the split, the tape they are choosing,
+    and the instruction telling them what to press.
+    """
+    from mdtools.app_window import TAPE_JCARD_TEMPLATE, TAPE_LABEL_TEMPLATE, MainWindow
+    from mdtools.canvas.scene import DesignScene
+    from mdtools.panels.print_dialog import PrintDialog
+    from mdtools.panels.tape_record_dialog import TapeRecordDialog
+    from mdtools.project import MEDIUM_TAPE, PAGE_COVER, PAGE_DISC, PAGE_SIDE_A, PAGE_SIDE_B
+    from mdtools.templates import registry
+
+    templates = registry.load_templates()
+    window = MainWindow(show_startup_dialog=False)
+    window.project.medium = MEDIUM_TAPE
+    window.apply_template(
+        PAGE_COVER, next(t for t in templates["cover"] if t.name == TAPE_JCARD_TEMPLATE)
+    )
+    del window.project.pages[PAGE_DISC]
+    label = next(t for t in templates["label"] if t.name == TAPE_LABEL_TEMPLATE)
+    for page in (PAGE_SIDE_A, PAGE_SIDE_B):
+        window.project.pages[page] = DesignScene(copy.deepcopy(label))
+    window.current_page = PAGE_COVER
+    window._refresh_page_combo()
+    window.project.metadata = metadata
+    window.show()
+    settle(300)
+    window._auto_layout_project(metadata)
+    settle(400)
+
+    def show(page):
+        def go() -> None:
+            window.page_combo.setCurrentIndex(window.page_combo.findData(page))
+            settle(200)
+            window.view.fit_to_window()
+
+        return go
+
+    save(window, out / "tape-jcard.png", settle_ms=500, before_grab=show(PAGE_COVER))
+    save(window, out / "tape-label.png", settle_ms=400, before_grab=show(PAGE_SIDE_A))
+
+    printing = PrintDialog(window.project)
+    printing.orientation_combo.setCurrentIndex(1)
+    save(printing, out / "tape-print.png", settle_ms=600)
+    close_quietly(printing)
+    close_quietly(window)
+    _KEEP_ALIVE.append(window)
+
+    record = TapeRecordDialog("http://localhost:8880")
+    save(record, out / "tape-record.png", settle_ms=400)
+    close_quietly(record)
 
 
 def _capture_telegram(out: Path, code: str) -> None:

@@ -257,6 +257,22 @@ class FoobarClient:
         {"options": {...}} body."""
         self._request("/api/player", body={"playbackMode": 0, "stopAfterCurrentTrack": False})
 
+    def set_stop_after_current_track(self, stop: bool) -> None:
+        """Makes foobar2000 stop when the playing track ends, instead of
+        going on to the next one.
+
+        This is how a cassette's side break is made clean. The alternative
+        -- watching for the playlist to move past the last track of the side
+        and stopping then -- always records the first fraction of a second
+        of the next track onto the end of the side, because a poll can only
+        notice a change after it has happened. Handing the boundary to
+        foobar2000 itself means playback simply ends where the side does.
+
+        Flat key, like prepare_for_recording()'s -- which is also what
+        clears it again at the start of every recording, so a side left
+        armed can never affect the next one."""
+        self._request("/api/player", body={"stopAfterCurrentTrack": bool(stop)})
+
     def set_volume(self, db: float) -> None:
         """Sets foobar's output volume, in dB -- confirmed live against a
         running foobar2000 2.25.10/foo_beefweb 0.10: GET /api/player's own

@@ -5,29 +5,33 @@ Inline marks: **bold**, `literal`.
 """
 
 TITLE = "xD-Tools"
-SUBTITLE = "MiniDisc & CD Studio - User Manual"
-TITLE_NOTE = "Designing labels, recording MiniDiscs, burning CD-Rs, and titling both"
+SUBTITLE = "Retro Media Studio - User Manual"
+TITLE_NOTE = "Designing labels, recording MiniDiscs and cassettes, burning CD-Rs, and titling discs"
 COVER_CAPTION = "What talks to what: commands over USB, keys over infrared, audio over S/PDIF."
-VERSION_LINE = "Version 0.2.0"
+VERSION_LINE = "Version 0.3.0"
 AUTHOR_LINE = 'Artur "Screemer" Jakubowicz'
 DATE_LINE = "August 2026"
 TOC_TITLE = "Contents"
-FOOTER_LEFT = "xD-Tools - MiniDisc & CD Studio - User Manual"
+FOOTER_LEFT = "xD-Tools - Retro Media Studio - User Manual"
 
 BOOK = [
     # ------------------------------------------------------------------
     {
         "title": "What this is",
         "blocks": [
-            {"p": "xD-Tools is a desktop workbench for MiniDisc and CD-R. (The x stands in for M or C - "
-                  "which began as a joke and turned out to be the description.) It started as a label "
-                  "designer and grew into a handful of tools that share one project file:"},
+            {"p": "xD-Tools is a desktop workbench for retro music media: MiniDisc, CD-R and compact "
+                  "cassette. (The x stands in for M or C - which began as a joke and turned out to be "
+                  "the description.) It started as a label designer and grew into a handful of tools "
+                  "that share one project file:"},
             {"ul": [
-                "**Design** the labels: a MiniDisc's sticker and J-card, or a CD's ring label and "
-                "slim-case insert - and export them ready to print and cut.",
+                "**Design** the labels: a MiniDisc's sticker and J-card, a CD's ring label and case "
+                "inserts, or a cassette's inlay card and a sticker for each side - and export them "
+                "ready to print and cut.",
                 "**Record** a whole album from foobar2000 onto a MiniDisc, with a proper track mark at "
                 "every song.",
                 "**Burn** an audio CD-R from a folder or from foobar2000's playlist, with CD-Text titles.",
+                "**Record a cassette** side by side, with the album split where it fits and the deck "
+                "left to you - xD-Tools says what to press.",
                 "**Title** a MiniDisc: write the album name and every track name onto the disc itself, "
                 "so the deck's own display shows them.",
                 "**Drive the deck** from a software remote - transport, track numbers, play modes.",
@@ -783,6 +787,92 @@ BOOK = [
                   "two-disc album kept as `CD1` and `CD2` come out in disc order."},
             {"warn": "Loading a folder **empties foobar2000's current playlist**, exactly as recording "
                      "a CD does. Move anything you had queued up there elsewhere first."},
+        ],
+    },
+    # ------------------------------------------------------------------
+    {
+        "title": "Recording a cassette",
+        "blocks": [
+            {"p": "**Recording > Record to Cassette from foobar2000...** records an album onto a "
+                  "compact cassette, one side at a time. It is the odd one out among the recording "
+                  "flows, and in a way that decides everything about it: **the deck is yours to "
+                  "operate**. There is no adapter for a tape deck and no cable that presses its "
+                  "buttons, so xD-Tools plays the right tracks at the right moment and tells you, in "
+                  "as many words, what to press and when."},
+            {"note": "This needs **no MDRem adapter** - only foobar2000. The entry appears whenever the "
+                     "open project is a cassette one, whether or not the adapter is switched on."},
+            {"fig": ("tape-record", "The split, the tape it was worked out for, and the instruction "
+                                    "waiting to be acted on.")},
+            {"h2": "Choosing the tape"},
+            {"p": "A stated length is both sides together: a C60 is thirty minutes a side, not sixty. "
+                  "Pick the cassette you actually have from the **Cassette** box and the album is split "
+                  "again as you do - the Side column in the track list, and the summary underneath it, "
+                  "both follow immediately."},
+            {"p": "The shortest tape the album fits is pre-selected when the window opens. That is a "
+                  "suggestion about the album, not about your shelf: change it to whatever is in the "
+                  "box."},
+            {"h2": "Where the tape is turned over"},
+            {"p": "xD-Tools never rearranges the running order. The only choice is which track the "
+                  "break falls after, and every possible break is tried: the one that leaves the two "
+                  "sides closest in length wins, among those that fit. Filling side A to the brim and "
+                  "leaving side B half empty saves no tape at all - the cassette is the same length "
+                  "either way - so there is nothing to be gained by it."},
+            {"p": "If nothing fits, the least-overrunning break is used anyway and the window says by "
+                  "how much. Running a few seconds into the run-out is your call to make, exactly as "
+                  "an album longer than a MiniDisc's eighty minutes is."},
+            {"warn": "Tracks with no running time cannot be weighed, so the album is split down the "
+                     "middle by count and the window says so. Check that against the tape before you "
+                     "start."},
+            {"h2": "The ten seconds of silence"},
+            {"p": "Every side of a cassette begins with leader tape - a few inches of plain plastic "
+                  "spliced on to take the wear of being wound around the hub. It is not magnetic, so "
+                  "nothing recorded onto it survives. xD-Tools therefore records **ten seconds of "
+                  "silence** at the start of each side before the music begins, and those ten seconds "
+                  "come out of what that side holds."},
+            {"h2": "Step by step, per side"},
+            {"ol": [
+                "Check the album, the artist, the year and the cover - they are what the labels will "
+                "be printed from, and they freeze the moment recording starts.",
+                "Put the cassette in, wound to the start of the side, and put the deck into record. "
+                "Set its input to whatever foobar2000 is feeding it, and set its level.",
+                "Press the button. That click is the only confirmation there is that the deck is "
+                "really rolling - nothing here can see it.",
+                "Ten seconds of silence run down while the leader passes.",
+                "The side plays. foobar2000 is told to stop when the side's last track ends, rather "
+                "than being caught afterwards - which is what keeps the first second of the next "
+                "track off the end of the side.",
+                "Stop the deck, take the cassette out and turn it over, put it back into record, and "
+                "press the button again for side B.",
+            ]},
+            {"tip": "**Stop** stops foobar2000 and says so - it cannot stop the deck, which will "
+                    "happily go on recording silence. That is the one thing only you can do."},
+            {"h2": "The audio path"},
+            {"p": "Out of the computer and into the deck's line inputs, as an ordinary analogue "
+                  "recording. Nothing in this window depends on how it gets there: the deck's input "
+                  "selector, its recording level and its noise reduction are all yours to set, and "
+                  "xD-Tools neither knows nor asks about any of them."},
+            {"p": "Set the level with the loudest passage of the album, not the first ten seconds of "
+                  "it. Tape distorts gradually rather than abruptly, so a little too hot is a warmer "
+                  "recording and a lot too hot is a muddy one."},
+            {"h2": "Afterwards"},
+            {"p": "When both sides are done the album is adopted by the open project and its three "
+                  "pages are laid out - the inlay card and a label for each side, split exactly where "
+                  "the recording was. The tape you chose is saved with the project, so the labels and "
+                  "the recording can never disagree about where side B starts."},
+            {"fig": ("tape-jcard", "The inlay card: cover, spine, and the track list on the tuck-in "
+                                   "flap under a heading per side.")},
+            {"p": "The **shell labels** are the other two pages, and they are cut with a round hole "
+                  "for each reel hub - the deck's spindles come up through them, so a label without "
+                  "them would be stuck over the drive. The sleeve goes across the whole sticker, "
+                  "washed out so the text over it stays readable, and the holes are punched through "
+                  "it. The side letter sits between them; that side's tracks run along the bottom, "
+                  "numbered from one so they agree with the deck's own counter."},
+            {"fig": ("tape-label", "A shell label: the sleeve, the holes the reels turn in, and this "
+                                   "side's tracks.")},
+            {"p": "In **File > Print...** the two shell labels share one sheet - they are the same "
+                  "sticker printed twice, cut at the same time and stuck on opposite faces of one "
+                  "tape - and the inlay card, four times the size, takes the next sheet."},
+            {"fig": ("tape-print", "Both stickers on one sheet, with the inlay on the sheet after it.")},
         ],
     },
     # ------------------------------------------------------------------

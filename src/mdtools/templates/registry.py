@@ -35,10 +35,19 @@ def _ensure_user_file() -> Path:
     return path
 
 
+# The template families, and what each one is built from. "label" arrived
+# with the cassette: a shell sticker is the same rectangle a cover is, so
+# it shares CoverTemplate -- but it is not interchangeable with one, and
+# keeping them one family let File > New offer a J-card for a page that
+# wants a sticker.
+KINDS = ("disc", "cover", "label")
+_MODELS = {"disc": DiscTemplate, "cover": CoverTemplate, "label": CoverTemplate}
+
+
 def _parse(data: dict) -> dict[str, list]:
-    discs = [DiscTemplate(**{k: v for k, v in item.items()}) for item in data.get("disc", [])]
-    covers = [CoverTemplate(**{k: v for k, v in item.items()}) for item in data.get("cover", [])]
-    return {"disc": discs, "cover": covers}
+    return {
+        kind: [_MODELS[kind](**dict(item)) for item in data.get(kind, [])] for kind in KINDS
+    }
 
 
 def load_templates() -> dict[str, list]:
@@ -52,10 +61,7 @@ def save_templates(templates: dict[str, list]) -> None:
         d = dict(t.__dict__)
         return d
 
-    data = {
-        "disc": [to_dict(t) for t in templates.get("disc", [])],
-        "cover": [to_dict(t) for t in templates.get("cover", [])],
-    }
+    data = {kind: [to_dict(t) for t in templates.get(kind, [])] for kind in KINDS}
     user_templates_path().write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
@@ -77,8 +83,8 @@ def sync_builtin_templates() -> bool:
     current = load_templates()
     bundled = _parse(json.loads(_bundled_defaults_text()))
 
-    changed = False
-    for kind in ("disc", "cover"):
+    changed = _rehome_moved_builtins(current, bundled)
+    for kind in KINDS:
         existing_builtin_names = {t.name for t in current[kind] if t.builtin}
         for template in bundled[kind]:
             if template.builtin and template.name not in existing_builtin_names:
@@ -87,4 +93,35 @@ def sync_builtin_templates() -> bool:
 
     if changed:
         save_templates(current)
+    return changed
+
+
+def _rehome_moved_builtins(current: dict[str, list], bundled: dict[str, list]) -> bool:
+    """Moves a built-in that has since changed family, keeping the user's
+    own edits to it.
+
+    Only ever needed when a template family is split, which happened once:
+    the cassette shell label started life as a "cover" and became a
+    "label", and a copy left behind in the old family is exactly the bug
+    that split fixes -- it would go on being offered where a J-card
+    belongs.
+
+    The bundled version replaces the old entry rather than the old entry
+    being carried across, and that is deliberate: a built-in that has
+    changed family has changed *shape* -- this one grew the two holes a
+    cassette's reel hubs come up through -- so its old dimensions no
+    longer describe anything. This is the one case where sync overwrites
+    instead of appending, and it is why it is kept to built-ins whose
+    family actually moved.
+    """
+    home = {t.name: (kind, t) for kind in KINDS for t in bundled[kind] if t.builtin}
+    changed = False
+    for kind in KINDS:
+        for template in list(current[kind]):
+            wanted = home.get(template.name)
+            if not template.builtin or wanted is None or wanted[0] == kind:
+                continue
+            current[kind].remove(template)
+            current[wanted[0]].append(wanted[1])
+            changed = True
     return changed

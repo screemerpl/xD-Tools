@@ -44,7 +44,7 @@ from mdtools.auto_layout import place_cover_on_label
 from mdtools.canvas.items import set_item_scale
 from mdtools.canvas.scene import DesignScene
 from mdtools.constants import mm_to_px
-from mdtools.jcard_layout import _text, place_back, place_spine
+from mdtools.jcard_layout import JCARD_BACK_HEIGHT_MM, _text, place_back, place_spine
 from mdtools.palette import accent_colour, dominant_colour, readable_text_colour
 from mdtools.project import ProjectMetadata
 
@@ -70,12 +70,6 @@ DISC_SUBTITLE_MM = 7.0
 DISC_FOOTER_MM = 5.0
 DISC_LOGO_HEIGHT_MM = 8.0
 DISC_GAP_MM = 1.5
-
-# The height of a J-card's own back panel, which is what jcard_layout's
-# heading constants were chosen against. Everything here is measured
-# against it rather than given a second set of numbers to drift from.
-JCARD_BACK_HEIGHT_MM = 58.85
-
 
 class CdLayoutError(Exception):
     """The page could not be laid out -- a wrong template, or no artwork."""

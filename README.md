@@ -1,12 +1,13 @@
 # xD-Tools
 
-A desktop workbench for MiniDisc and CD-R. (The x stands in for M or C --
-which started as a joke and then turned out to be the description.)
+A desktop workbench for retro music media: MiniDisc, CD-R and compact
+cassette. (The x stands in for M or C -- which started as a joke and then
+turned out to be the description.)
 
-**Design** disc labels and cover inserts for either medium -- a MiniDisc's
-sticker and J-card, or a CD's ring label and slim-case insert -- exporting
-standards-compliant SVG (cut lines) and PNG (print artwork) for use with
-Cricut Design Space and a regular printer.
+**Design** labels and inserts for any of them -- a MiniDisc's sticker and
+J-card, a CD's ring label and case inserts, or a cassette's inlay card and a
+sticker for each side -- exporting standards-compliant SVG (cut lines) and
+PNG (print artwork) for use with Cricut Design Space and a regular printer.
 
 **Record and title** -- with an MDRem infrared adapter, record an album
 straight from foobar2000 with a track mark at every song, write the disc and
@@ -28,6 +29,14 @@ CD-Text titles. Anything that is not already 44.1 kHz / 16-bit stereo (a
 hi-res download, say) is resampled by the bundled SoX on the way, and the
 plan says so per track before the disc is committed -- a CD-R cannot be
 edited afterwards.
+
+**Record a cassette** -- pick the tape you have (C46 to C100) and xD-Tools
+works out where the album is turned over, balancing the two sides rather
+than filling the first. It records ten seconds of silence past the leader,
+plays exactly that side's tracks -- telling foobar2000 to stop at the break
+rather than catching it afterwards -- and then says, in as many words, to
+stop the deck and turn the cassette over. The deck itself stays yours to
+operate: xD-Tools presses nothing.
 
 **Mixtapes too** -- a disc or playlist whose tracks are by different artists
 is recognised as a compilation, credited to Various Artists rather than to

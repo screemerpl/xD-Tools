@@ -12,7 +12,7 @@ import pytest
 from mdtools.app_window import MainWindow
 from mdtools.io.project_io import load_project, project_to_dict, save_project
 from mdtools.panels.new_design_dialog import NewDesignDialog
-from mdtools.project import MEDIUM_CD, MEDIUM_MD, PAGE_COVER, PAGE_DISC
+from mdtools.project import MEDIUM_CD, MEDIUM_MD, MEDIUM_PAGES, PAGE_COVER, PAGE_DISC
 from mdtools.templates import registry
 
 
@@ -63,7 +63,7 @@ def test_builtin_defaults_include_both_slim_case_inserts():
 def test_every_builtin_template_declares_a_medium():
     templates = registry.load_templates()
     for template in templates["disc"] + templates["cover"]:
-        assert template.medium in (MEDIUM_MD, MEDIUM_CD), template.name
+        assert template.medium in MEDIUM_PAGES, template.name
 
 
 # -- the medium on the project itself -----------------------------------
@@ -120,15 +120,14 @@ def test_accepting_reports_the_chosen_medium(qt_app):
     dialog._on_accept()
 
     assert dialog.selected_medium == MEDIUM_CD
-    assert dialog.selected_disc_template.shape == "cd_label"
+    assert dialog.selected_templates[PAGE_DISC].shape == "cd_label"
 
 
 def test_creating_a_cd_project_records_its_medium_and_pages(qt_app, monkeypatch):
     disc, cover = _cd_templates()
 
     def fake_exec(self):
-        self.selected_disc_template = disc
-        self.selected_cover_template = cover
+        self.selected_templates = {PAGE_DISC: disc, PAGE_COVER: cover}
         self.selected_medium = MEDIUM_CD
         return NewDesignDialog.DialogCode.Accepted
 

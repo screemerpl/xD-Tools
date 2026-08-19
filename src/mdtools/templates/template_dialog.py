@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mdtools.project import MEDIUM_CD, MEDIUM_MD
+from mdtools.project import MEDIUM_CD, MEDIUM_MD, MEDIUM_TAPE
 from mdtools.templates import registry
 from mdtools.templates.models import CoverTemplate, DiscTemplate
 
@@ -53,6 +53,7 @@ class TemplateManagerDialog(QDialog):
         self.medium_filter.addItem(self.tr("All"), None)
         self.medium_filter.addItem(self.tr("MiniDisc"), MEDIUM_MD)
         self.medium_filter.addItem(self.tr("CD-R"), MEDIUM_CD)
+        self.medium_filter.addItem(self.tr("Compact Cassette"), MEDIUM_TAPE)
         self.medium_filter.currentIndexChanged.connect(lambda _index: self._refresh_list())
         filter_row.addWidget(self.medium_filter, 1)
         left.addLayout(filter_row)
@@ -68,7 +69,11 @@ class TemplateManagerDialog(QDialog):
         # refactor set out to remove.
         self.add_btn = QPushButton(self.tr("Add..."))
         add_menu = QMenu(self.add_btn)
-        for kind, label in (("disc", self.tr("Disc label")), ("cover", self.tr("Cover or insert"))):
+        for kind, label in (
+            ("disc", self.tr("Disc label")),
+            ("cover", self.tr("Cover or insert")),
+            ("label", self.tr("Shell label")),
+        ):
             add_menu.addAction(label, lambda checked=False, k=kind: self._add_template(k))
         self.add_btn.setMenu(add_menu)
         btn_row.addWidget(self.add_btn)
@@ -116,7 +121,11 @@ class TemplateManagerDialog(QDialog):
         wanted = self.medium_filter.currentData()
         self.list_widget.blockSignals(True)
         self.list_widget.clear()
-        for kind, label in (("disc", self.tr("Disc: {name}")), ("cover", self.tr("Cover: {name}"))):
+        for kind, label in (
+            ("disc", self.tr("Disc: {name}")),
+            ("cover", self.tr("Cover: {name}")),
+            ("label", self.tr("Label: {name}")),
+        ):
             for template in self.templates[kind]:
                 if wanted is not None and getattr(template, "medium", MEDIUM_MD) != wanted:
                     continue
@@ -142,6 +151,12 @@ class TemplateManagerDialog(QDialog):
         medium = self.medium_filter.currentData() or MEDIUM_MD
         if kind == "disc":
             template = DiscTemplate(name=self.tr("New Disc"), width_mm=37.0, height_mm=52.0, medium=medium)
+        elif kind == "label":
+            # Same dataclass as a cover, a different family -- see
+            # registry.KINDS for why that distinction is worth having.
+            template = CoverTemplate(
+                name=self.tr("New Label"), width_mm=90.0, height_mm=46.0, medium=medium, kind="label"
+            )
         else:
             template = CoverTemplate(name=self.tr("New Cover"), width_mm=100.0, height_mm=60.0, medium=medium)
         self.templates[kind].append(template)
@@ -185,6 +200,7 @@ class TemplateManagerDialog(QDialog):
         medium_combo = QComboBox()
         medium_combo.addItem(self.tr("MiniDisc"), MEDIUM_MD)
         medium_combo.addItem(self.tr("CD-R"), MEDIUM_CD)
+        medium_combo.addItem(self.tr("Compact Cassette"), MEDIUM_TAPE)
         medium_index = medium_combo.findData(template.medium)
         medium_combo.setCurrentIndex(medium_index if medium_index >= 0 else 0)
         medium_combo.currentIndexChanged.connect(
@@ -368,6 +384,23 @@ class TemplateManagerDialog(QDialog):
             cutout_from_bottom.valueChanged.connect(lambda v: setattr(template, "cutout_from_bottom_mm", v))
             form.addRow(self.tr("Cutout distance from bottom"), cutout_from_bottom)
 
+            hub_d = spin(template.hub_diameter_mm, maximum=100.0)
+            hub_d.valueChanged.connect(lambda v: setattr(template, "hub_diameter_mm", v))
+            form.addRow(self.tr("Hub hole diameter (0 = none)"), hub_d)
+
+            hub_gap = spin(template.hub_spacing_mm, maximum=200.0)
+            hub_gap.valueChanged.connect(lambda v: setattr(template, "hub_spacing_mm", v))
+            form.addRow(self.tr("Hub hole spacing (centres)"), hub_gap)
+
+            hub_top = spin(template.hub_centre_from_top_mm, maximum=200.0)
+            hub_top.valueChanged.connect(lambda v: setattr(template, "hub_centre_from_top_mm", v))
+            form.addRow(self.tr("Hub centres from top (0 = middle)"), hub_top)
+
+            # A cover or insert is a solid sheet; only a sticker that goes
+            # onto a cassette has to be cut around the reels.
+            for row_widget in (hub_d, hub_gap, hub_top):
+                form.setRowVisible(row_widget, kind == "label")
+
         verified = QCheckBox(self.tr("Verified against real media/case"))
         verified.setChecked(template.verified)
         verified.toggled.connect(lambda v: setattr(template, "verified", v))
@@ -378,7 +411,10 @@ class TemplateManagerDialog(QDialog):
     def _relabel(self, row: int, kind: str, name: str) -> None:
         _, template = self.list_widget.item(row).data(1)
         suffix = self._builtin_suffix(template.builtin)
-        label = self.tr("Disc: {name}") if kind == "disc" else self.tr("Cover: {name}")
+        label = {
+            "disc": self.tr("Disc: {name}"),
+            "label": self.tr("Label: {name}"),
+        }.get(kind, self.tr("Cover: {name}"))
         self.list_widget.item(row).setText(label.format(name=name) + suffix)
 
     def _on_accept(self) -> None:
