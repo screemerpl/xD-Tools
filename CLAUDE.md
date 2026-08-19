@@ -620,6 +620,36 @@ small fixed margin around the actual cut shape (see `_build_disc_outline`/
 -- so this is exactly the same physical footprint Export Print PNG's own
 output image already has, not a bug introduced by printing.
 
+**Landscape, and a sheet per label -- both forced by a CD project.**
+Printing was portrait-only, on the stated reasoning that both MiniDisc
+designs fit a portrait sheet comfortably. A CD project breaks that twice
+over: its folded slim-case insert is 242mm wide, which no portrait sheet
+takes upright (it fits only turned a quarter turn), and the disc label plus
+that insert exceed A4's 287mm printable length side by side, so **they
+cannot share one sheet in either orientation** -- 242 + 3 + 118 = 363.
+`oriented_page_size()` is the one place the paper is turned, so the preview,
+`_new_printer()`'s `setPageOrientation()` and a PNG export can never disagree
+about which way round it is.
+
+`build_sheet_layout()` packs one label type alone on a page -- the plain-grid
+half of `build_copies_layout()` without the two-label arrangement search,
+keeping the same "rotation is a fallback, never a default" rule -- and
+raises `PrintLayoutError` when not even one copy fits, which is a real
+answer rather than a failure to try. `print_sheets()` then prints several
+pages in **one** job with `newPage()` between them: a QPainter can only be
+opened on a QPrinter once, and starting a second job would ask the printer
+dialog again or overwrite the PDF just written. Empty sheets are skipped
+rather than emitted blank.
+
+**The preview shows one sheet at a time** (`PrintDialog.sheets()` /
+`_show_current_sheet()`), because what is on screen has to be a page that
+will actually come out, not a composite of two that will not. Items on the
+other sheet are *hidden*, never removed, so flipping back and forth keeps
+their positions, rotations and images. Export PNG writes one file per sheet
+(`name-1.png`, `name-2.png`) since a PNG holds one page and exporting only
+the first would silently lose half a project; a single sheet still writes
+exactly the filename that was asked for.
+
 **The actual print -- `printing.print_placements()` -- must run with
 `printer.setFullPage(True)` already set by the caller**, so the printer's
 own `(0, 0)` is the physical page's top-left corner, matching the
