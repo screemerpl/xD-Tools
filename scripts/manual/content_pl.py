@@ -10,10 +10,10 @@ razu. Źródłem prawdy jest src/mdtools/i18n/mdtools_pl.ts.
 """
 
 TITLE = "xD-Tools"
-SUBTITLE = "Studio MiniDisc i CD — instrukcja obsługi"
-TITLE_NOTE = "Projektowanie etykiet, nagrywanie MiniDisców, wypalanie CD-R i nadawanie tytułów"
+SUBTITLE = "Studio Retro Nośników — instrukcja obsługi"
+TITLE_NOTE = "Projektowanie etykiet, nagrywanie MiniDisców i kaset, wypalanie CD-R i nadawanie tytułów"
 COVER_CAPTION = "Co z czym rozmawia: komendy przez USB, klawisze przez podczerwień, dźwięk przez S/PDIF."
-VERSION_LINE = "Wersja 0.2.0"
+VERSION_LINE = "Wersja 0.3.0"
 AUTHOR_LINE = 'Artur "Screemer" Jakubowicz'
 DATE_LINE = "Sierpień 2026"
 TOC_TITLE = "Spis treści"
@@ -790,6 +790,90 @@ BOOK = [
             {"warn": "Wczytanie folderu **czyści bieżącą playlistę foobar2000**, dokładnie tak samo "
                      "jak nagrywanie z CD. Jeśli miałeś tam coś przygotowane, przenieś to wcześniej "
                      "gdzie indziej."},
+        ],
+    },
+    # ------------------------------------------------------------------
+    {
+        "title": "Nagrywanie kasety",
+        "blocks": [
+            {"p": "**Nagrywanie > Nagraj na kasetę z foobara2000...** nagrywa album na kasetę "
+                  "magnetofonową, strona po stronie. To wyjątek wśród sposobów nagrywania — i wyjątek, "
+                  "który przesądza o wszystkim: **magnetofon obsługujesz ty**. Do magnetofonu nie ma "
+                  "adaptera ani kabla, który wciskałby klawisze, więc xD-Tools odtwarza właściwe utwory "
+                  "we właściwym momencie i mówi wprost, co i kiedy nacisnąć."},
+            {"note": "Do tego **nie jest potrzebny adapter MDRem** — wystarczy foobar2000. Pozycja jest "
+                     "widoczna zawsze, gdy otwarty projekt jest kasetowy, niezależnie od tego, czy "
+                     "adapter jest włączony."},
+            {"fig": ("tape-record", "Podział, kaseta, pod którą go policzono, i czekająca instrukcja.")},
+            {"h2": "Wybór kasety"},
+            {"p": "Podana długość dotyczy obu stron razem: C60 to trzydzieści minut na stronę, nie "
+                  "sześćdziesiąt. Wybierz w polu **Kaseta** tę, którą naprawdę masz — album dzieli się "
+                  "od razu: kolumna Strona na liście utworów i podsumowanie pod nią zmieniają się "
+                  "natychmiast."},
+            {"p": "Po otwarciu okna zaznaczona jest najkrótsza kaseta, na której album się mieści. To "
+                  "podpowiedź o albumie, a nie o twojej półce: zmień ją na to, co masz w pudełku."},
+            {"h2": "Gdzie przewracasz taśmę"},
+            {"p": "xD-Tools nigdy nie zmienia kolejności utworów. Do wyboru jest tylko to, po którym "
+                  "utworze wypada przerwa, i sprawdzane są wszystkie możliwości: wygrywa ta, po której "
+                  "obie strony wychodzą najbardziej równe — spośród tych, które się mieszczą. "
+                  "Wypełnienie strony A po brzegi i zostawienie połowy strony B niczego nie oszczędza — "
+                  "taśma jest tak samo długa w obu przypadkach."},
+            {"p": "Jeśli nie mieści się nic, i tak brany jest podział z najmniejszym przekroczeniem, a "
+                  "okno mówi o ile. To, czy ostatni utwór wejdzie w wybieg taśmy, jest twoją decyzją — "
+                  "dokładnie tak jak przy albumie dłuższym niż osiemdziesiąt minut MiniDisca."},
+            {"warn": "Utworów bez czasu trwania nie da się zważyć, więc album dzielony jest po połowie "
+                     "według liczby utworów, o czym okno informuje. Sprawdź to względem taśmy, zanim "
+                     "zaczniesz."},
+            {"h2": "Dziesięć sekund ciszy"},
+            {"p": "Każda strona kasety zaczyna się rozbiegówką — kilkoma centymetrami zwykłego "
+                  "tworzywa, doklejonego po to, by to ono znosiło nawijanie na szpulę. Nie jest "
+                  "magnetyczna, więc nic, co się na nią nagra, nie przetrwa. Dlatego xD-Tools nagrywa "
+                  "na początku każdej strony **dziesięć sekund ciszy**, zanim ruszy muzyka — i te "
+                  "dziesięć sekund odlicza od tego, co strona mieści."},
+            {"h2": "Krok po kroku, dla każdej strony"},
+            {"ol": [
+                "Sprawdź album, wykonawcę, rok i okładkę — to z nich zostaną wydrukowane etykiety, i "
+                "zostają zamrożone z chwilą rozpoczęcia nagrywania.",
+                "Włóż kasetę przewiniętą na początek strony i włącz w magnetofonie nagrywanie. Ustaw "
+                "jego wejście na to, z którego idzie sygnał, i ustaw poziom.",
+                "Naciśnij przycisk. To kliknięcie jest jedynym potwierdzeniem, że magnetofon naprawdę "
+                "nagrywa — nic tutaj tego nie widzi.",
+                "Odlicza dziesięć sekund ciszy, w czasie których przechodzi rozbiegówka.",
+                "Strona się odtwarza. foobar2000 dostaje polecenie zatrzymania się po ostatnim utworze "
+                "tej strony, zamiast być zatrzymywanym po fakcie — dzięki temu pierwsza sekunda "
+                "następnego utworu nie trafia na koniec strony.",
+                "Zatrzymaj magnetofon, wyjmij kasetę i odwróć ją, włącz nagrywanie ponownie i naciśnij "
+                "przycisk dla strony B.",
+            ]},
+            {"tip": "**Zatrzymaj** zatrzymuje foobara2000 i mówi o tym — magnetofonu zatrzymać nie "
+                    "może, a ten spokojnie nagrywałby dalej ciszę. To jedyna rzecz, którą możesz "
+                    "zrobić tylko ty."},
+            {"h2": "Droga dźwięku"},
+            {"p": "Z komputera na wejścia liniowe magnetofonu, zwyczajnie analogowo. Nic w tym oknie "
+                  "nie zależy od tego, jak dźwięk tam dociera: przełącznik wejść, poziom nagrywania i "
+                  "redukcja szumów są twoje do ustawienia, a xD-Tools o żadnym z nich nie wie i nie "
+                  "pyta."},
+            {"p": "Poziom ustaw na najgłośniejszym fragmencie albumu, a nie na pierwszych dziesięciu "
+                  "sekundach. Taśma zniekształca stopniowo, a nie nagle, więc odrobinę za gorąco to "
+                  "cieplejsze nagranie, a mocno za gorąco to zamulone."},
+            {"h2": "Potem"},
+            {"p": "Gdy obie strony są nagrane, album przechodzi do otwartego projektu i rozmieszczane "
+                  "są jego trzy strony — wkładka i etykieta na każdą stronę kasety, podzielone dokładnie "
+                  "tam, gdzie podzieliło się nagranie. Wybrana kaseta zapisuje się w projekcie, więc "
+                  "etykiety i nagranie nie mogą się różnić co do tego, gdzie zaczyna się strona B."},
+            {"fig": ("tape-jcard", "Wkładka: okładka, grzbiet i spis utworów na zakładce, pod "
+                                   "nagłówkiem każdej strony.")},
+            {"p": "Pozostałe dwie strony to **etykiety na kasetę**, wycinane z okrągłym otworem na "
+                  "każdą szpulę — wchodzą w nie trzpienie magnetofonu, więc etykieta bez nich zakleiłaby "
+                  "napęd. Okładka idzie na całą naklejkę, rozjaśniona tak, by tekst na niej pozostał "
+                  "czytelny, a otwory są przez nią wybite. Litera strony stoi między nimi, a utwory tej "
+                  "strony biegną wzdłuż dołu, numerowane od jedynki — tak jak liczy je magnetofon."},
+            {"fig": ("tape-label", "Etykieta kasety: okładka, otwory, w których obracają się szpule, "
+                                   "i utwory tej strony.")},
+            {"p": "W **Plik > Drukuj...** obie etykiety idą na jedną kartkę — to ta sama naklejka "
+                  "wydrukowana dwa razy, wycinana za jednym razem i naklejana na dwie strony tej samej "
+                  "kasety — a wkładka, cztery razy większa, na następną."},
+            {"fig": ("tape-print", "Obie naklejki na jednej kartce, wkładka na kolejnej.")},
         ],
     },
     # ------------------------------------------------------------------
