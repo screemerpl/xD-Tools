@@ -1032,57 +1032,57 @@ Musi być uruchomiony i mieć włączony komponent Beefweb Remote Control (foo_b
 <context>
     <name>MDRemUploadDialog</name>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="110"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="130"/>
         <source>Upload Tracklist</source>
         <translation>Wyślij listę utworów</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="133"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="158"/>
         <source>What</source>
         <translation>Co</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="133"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="158"/>
         <source>Will be written</source>
         <translation>Zostanie zapisane</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="140"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="165"/>
         <source>Erase existing titles first</source>
         <translation>Najpierw skasuj istniejące tytuły</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="144"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="169"/>
         <source>Clearing is the slowest part of writing a title and roughly doubles the total time. Turn it off on a freshly recorded disc whose titles are still empty -- but leave it on when replacing existing ones, or the old text will be left behind.</source>
         <translation>Kasowanie to najwolniejszy etap zapisu tytułu i mniej więcej podwaja łączny czas. Wyłącz je przy świeżo nagranej płycie, na której nazwy są jeszcze puste — ale zostaw włączone przy podmianie istniejących, inaczej stary tekst zostanie na miejscu.</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="170"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="195"/>
         <source>Start Upload</source>
         <translation>Rozpocznij wysyłkę</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="174"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="199"/>
         <source>Cancel</source>
         <translation>Anuluj</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="190"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="222"/>
         <source>There is nothing to upload -- fill in the album, artist or track list first.</source>
         <translation>Nie ma czego wysłać — uzupełnij najpierw album, wykonawcę albo listę utworów.</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="199"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="231"/>
         <source>{count} titles will be written to the disc over infrared, taking roughly {time}. Aim the adapter at the deck and leave it undisturbed until it finishes.</source>
         <translation>Tytuły do zapisania: {count}. Zapis przez podczerwień potrwa około {time}. Wyceluj przystawkę w magnetofon i nie ruszaj jej do końca.</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="266"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="298"/>
         <source>Writing {index} of {total}: {what} -- about {remaining} left</source>
         <translation>Zapisywanie {index} z {total}: {what} — pozostało około {remaining}</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="283"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="316"/>
         <source>Everything was sent in {elapsed}. The deck cannot report back, so check the titles on it yourself.</source>
         <translation>Wszystko zostało wysłane w {elapsed}. Magnetofon nie potrafi niczego odesłać, więc sprawdź tytuły na nim samodzielnie.</translation>
     </message>
@@ -1091,17 +1091,17 @@ Musi być uruchomiony i mieć włączony komponent Beefweb Remote Control (foo_b
         <translation type="vanished">Tytuły do zapisania: {count}. Zapis przez podczerwień potrwa około {minutes} min. Wyceluj przystawkę w magnetofon i nie ruszaj jej do końca.</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="208"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="240"/>
         <source>These characters cannot be shown by the deck and were removed: {chars}</source>
         <translation>Tych znaków magnetofon nie potrafi wyświetlić i zostały usunięte: {chars}</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="214"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="246"/>
         <source>The deck can only be told to select tracks 1-{max}, so these were skipped: {titles}</source>
         <translation>Magnetofonowi można wskazać tylko utwory 1-{max}, więc te zostały pominięte: {titles}</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="231"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="263"/>
         <source>Stop</source>
         <translation>Zatrzymaj</translation>
     </message>
@@ -1110,7 +1110,7 @@ Musi być uruchomiony i mieć włączony komponent Beefweb Remote Control (foo_b
         <translation type="vanished">Zapisywanie: {what}</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="277"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="309"/>
         <source>Upload failed: {error}</source>
         <translation>Wysyłka nie powiodła się: {error}</translation>
     </message>
@@ -1119,18 +1119,18 @@ Musi być uruchomiony i mieć włączony komponent Beefweb Remote Control (foo_b
         <translation type="vanished">Wszystko zostało wysłane. Magnetofon nie potrafi niczego odesłać, więc sprawdź tytuły na nim samodzielnie.</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="297"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="330"/>
         <source>Close</source>
         <translation>Zamknij</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="309"/>
-        <location filename="../panels/mdrem_upload_dialog.py" line="322"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="351"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="364"/>
         <source>Save to Disc</source>
         <translation>Zapisz na płycie</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="311"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="353"/>
         <source>Titles are only held in the deck&apos;s memory until the disc is ejected -- they are lost if it powers off first.
 
 Eject now to write them permanently?</source>
@@ -1139,12 +1139,12 @@ Eject now to write them permanently?</source>
 Wysunąć teraz, żeby zapisać je trwale?</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="322"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="364"/>
         <source>Could not eject: {error}</source>
         <translation>Nie udało się wysunąć: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="338"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="380"/>
         <source>Stopping after the current title...</source>
         <translation>Zatrzymam po bieżącym tytule...</translation>
     </message>
@@ -2567,68 +2567,134 @@ choose one)</source>
 <context>
     <name>RecordDialog</name>
     <message>
-        <location filename="../panels/record_dialog.py" line="108"/>
+        <location filename="../panels/record_dialog.py" line="139"/>
         <source>Record to MiniDisc from foobar2000</source>
         <translation>Nagrywanie na MiniDisc z foobar2000</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="144"/>
-        <location filename="../panels/record_dialog.py" line="156"/>
+        <location filename="../panels/record_dialog.py" line="186"/>
+        <location filename="../panels/record_dialog.py" line="199"/>
         <source>Artist</source>
         <translation>Wykonawca</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="145"/>
+        <location filename="../panels/record_dialog.py" line="187"/>
         <source>Album</source>
         <translation>Album</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="146"/>
+        <location filename="../panels/record_dialog.py" line="188"/>
         <source>Year</source>
         <translation>Rok</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="156"/>
+        <location filename="../panels/record_dialog.py" line="199"/>
         <source>#</source>
         <translation>#</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="156"/>
+        <location filename="../panels/record_dialog.py" line="199"/>
         <source>Title</source>
         <translation>Tytuł</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="156"/>
+        <location filename="../panels/record_dialog.py" line="199"/>
         <source>Length</source>
         <translation>Czas</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="162"/>
+        <location filename="../panels/record_dialog.py" line="199"/>
+        <source>Disc</source>
+        <translation>Płyta</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="205"/>
+        <source>Move Up</source>
+        <translation>Przesuń w górę</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="207"/>
+        <source>Move Down</source>
+        <translation>Przesuń w dół</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="212"/>
+        <source>Changes the order the album is recorded in. foobar2000&apos;s playlist is rebuilt to match when recording starts, so this needs the tracks to be files on disk.</source>
+        <translation>Zmienia kolejność, w jakiej album zostanie nagrany. Przy starcie nagrywania playlista foobara2000 jest przebudowywana pod tę kolejność, więc ścieżki muszą być plikami na dysku.</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="216"/>
+        <location filename="../panels/record_dialog.py" line="581"/>
+        <source>Start Disc Here</source>
+        <translation>Zacznij tu nową płytę</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="219"/>
+        <source>Makes the selected track the first one on a new disc, instead of wherever the split was worked out to go.</source>
+        <translation>Zaznaczona ścieżka staje się pierwszą na nowej płycie, zamiast podziału wyliczonego automatycznie.</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="221"/>
+        <source>Split Automatically</source>
+        <translation>Podziel automatycznie</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="224"/>
+        <source>Throws away the splits placed by hand and works them out again from the running times.</source>
+        <translation>Odrzuca podziały ustawione ręcznie i wylicza je od nowa z czasów trwania.</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="242"/>
         <source>Everything above and in the Title column can be edited, and is what gets written onto the disc. Fill the Artist column in only on a compilation, where each track has its own.</source>
         <translation>Wszystko powyżej oraz kolumnę Tytuł można edytować — to właśnie trafia na płytę. Kolumnę Wykonawca wypełnij tylko przy składance, gdzie każdy utwór ma swojego.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="169"/>
+        <location filename="../panels/record_dialog.py" line="249"/>
         <source>Mark tracks through the adapter</source>
         <translation>Znaczniki ścieżek przez przystawkę</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="173"/>
+        <location filename="../panels/record_dialog.py" line="253"/>
         <source>Sends a track mark at each track change instead of relying on the deck hearing a gap. This is the only thing that splits a gapless album correctly -- but turn LEVEL-SYNC off on the deck when using it, or both will mark the same boundary and leave a stray sliver of a track between them.</source>
         <translation>Wysyła znacznik ścieżki przy każdej zmianie utworu, zamiast polegać na tym, że magnetofon usłyszy przerwę. Tylko to poprawnie dzieli album grany bezprzerwowo — ale wyłącz wtedy LEVEL-SYNC w magnetofonie, inaczej oba oznaczą tę samą granicę i zostanie między nimi szczątkowa ścieżka.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="198"/>
+        <location filename="../panels/record_dialog.py" line="261"/>
+        <source>Record across several discs</source>
+        <translation>Nagraj na kilka płyt</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="264"/>
+        <source>For an album longer than one disc. Each disc is recorded, titled and ejected on its own, and you are asked to load the next one -- so nothing waits for you between the last track and the titles being written.</source>
+        <translation>Dla albumu dłuższego niż jedna płyta. Każda płyta jest osobno nagrywana, tytułowana i wysuwana, a program prosi o kolejną — między ostatnim utworem a zapisem tytułów nic nie czeka na Ciebie.</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="273"/>
+        <source> min</source>
+        <translation> min</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="276"/>
+        <source>How long one disc holds: 80 in SP, 160 in LP2, 320 in LP4. Which mode the deck is in can neither be read nor set from here, so this is a number you tell it, not one it finds out.</source>
+        <translation>Ile mieści jedna płyta: 80 w SP, 160 w LP2, 320 w LP4. Trybu magnetofonu nie da się stąd ani odczytać, ani ustawić, więc tę liczbę podajesz Ty, a nie program.</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="281"/>
+        <source>One disc holds</source>
+        <translation>Jedna płyta mieści</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="312"/>
         <source>Start Recording</source>
         <translation>Rozpocznij nagrywanie</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="201"/>
+        <location filename="../panels/record_dialog.py" line="315"/>
         <source>Cancel</source>
         <translation>Anuluj</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="222"/>
+        <location filename="../panels/record_dialog.py" line="337"/>
         <source>Could not reach foobar2000: {error}
 
 It must be running with the Beefweb Remote Control component (foo_beefweb) enabled.</source>
@@ -2637,47 +2703,94 @@ It must be running with the Beefweb Remote Control component (foo_beefweb) enabl
 Musi być uruchomiony i mieć włączony komponent Beefweb Remote Control (foo_beefweb).</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="230"/>
+        <location filename="../panels/record_dialog.py" line="345"/>
         <source>foobar2000&apos;s current playlist is empty -- load the album first.</source>
         <translation>Bieżąca playlista w foobar2000 jest pusta — wczytaj najpierw album.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="243"/>
+        <location filename="../panels/record_dialog.py" line="377"/>
         <source>Playlist &quot;{playlist}&quot; -- {count} tracks, {total} total.
 It will be recorded to the disc in this order, then titled from these names.</source>
         <translation>Playlista „{playlist}&quot; — utworów: {count}, łącznie {total}.
 Zostaną nagrane na płytę w tej kolejności, a potem nazwane według tych tytułów.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="310"/>
-        <source>This is longer than the {limit} an MD holds in SP mode. Set the deck to LP2 first, or the recording will be cut short.</source>
-        <translation>To więcej niż {limit}, które mieści płyta w trybie SP. Ustaw magnetofon na LP2, inaczej nagranie zostanie urwane.</translation>
+        <location filename="../panels/record_dialog.py" line="388"/>
+        <source>The files say this is a {count}-disc album, so the disc splits below are already placed where they say.</source>
+        <translation>Pliki mówią, że to album na {count} płyt, więc podziały poniżej są już ustawione tam, gdzie one wskazują.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="326"/>
-        <location filename="../panels/record_dialog.py" line="398"/>
+        <location filename="../panels/record_dialog.py" line="729"/>
+        <source>foobar2000&apos;s playlist is now in this order -- the album&apos;s own, from the files.</source>
+        <translation>Playlista w foobarze2000 jest teraz w tej kolejności — własnej kolejności albumu, wziętej z plików.</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="1005"/>
+        <source>Disc {number} recorded. Writing its titles now -- leave the adapter pointing at the deck.</source>
+        <translation>Płyta {number} nagrana. Trwa zapis jej tytułów — zostaw przystawkę wycelowaną w magnetofon.</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="1020"/>
+        <source>Recording finished.</source>
+        <translation>Nagrywanie zakończone.</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="1030"/>
+        <source>Disc {number} was recorded, but its titles could not be written, so the run stopped there. The disc itself is fine -- the titles can be written again from Tools &gt; Metadata...</source>
+        <translation>Płyta {number} została nagrana, ale nie udało się zapisać jej tytułów, więc na tym stanęło. Sama płyta jest w porządku — tytuły można zapisać ponownie z Narzędzia &gt; Metadane...</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="1039"/>
+        <source>All {count} discs are recorded, titled and ejected.</source>
+        <translation>Wszystkie płyty ({count}) są nagrane, otytułowane i wysunięte.</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="1045"/>
+        <source>Stopped after disc {number}. The discs already recorded are finished and titled.</source>
+        <translation>Zatrzymano po płycie {number}. Płyty już nagrane są gotowe i otytułowane.</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="1059"/>
+        <source>Disc {done} of {count} is written, titled and ejected.
+
+Put a blank disc in the deck and close the tray, then continue to record disc {next}.</source>
+        <translation>Płyta {done} z {count} jest nagrana, otytułowana i wysunięta.
+
+Włóż czystą płytę do magnetofonu, zamknij kieszeń i przejdź do nagrywania płyty {next}.</translation>
+    </message>
+    <message>
+        <source>This is longer than the {limit} an MD holds in SP mode. Set the deck to LP2 first, or the recording will be cut short.</source>
+        <translation type="vanished">To więcej niż {limit}, które mieści płyta w trybie SP. Ustaw magnetofon na LP2, inaczej nagranie zostanie urwane.</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="660"/>
+        <location filename="../panels/record_dialog.py" line="858"/>
         <source>foobar2000: {error}</source>
         <translation>foobar2000: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="339"/>
+        <location filename="../panels/record_dialog.py" line="667"/>
         <source>Stop</source>
         <translation>Zatrzymaj</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="342"/>
+        <location filename="../panels/record_dialog.py" line="689"/>
         <source>Recording started -- waiting for the first track...</source>
         <translation>Nagrywanie rozpoczęte — czekam na pierwszy utwór...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="350"/>
-        <location filename="../panels/record_dialog.py" line="377"/>
-        <location filename="../panels/record_dialog.py" line="525"/>
+        <location filename="../panels/record_dialog.py" line="710"/>
+        <location filename="../panels/record_dialog.py" line="756"/>
+        <location filename="../panels/record_dialog.py" line="778"/>
+        <location filename="../panels/record_dialog.py" line="800"/>
+        <location filename="../panels/record_dialog.py" line="825"/>
+        <location filename="../panels/record_dialog.py" line="1057"/>
+        <location filename="../panels/record_dialog.py" line="1154"/>
         <source>Record to MiniDisc</source>
         <translation>Nagrywanie na MiniDisc</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="352"/>
+        <location filename="../panels/record_dialog.py" line="705"/>
         <source>Recording replaces whatever is on the disc, and nothing about it can be undone.
 
 Make sure the right disc is loaded and its write-protect tab is open, then continue.</source>
@@ -2686,13 +2799,76 @@ Make sure the right disc is loaded and its write-protect tab is open, then conti
 Upewnij się, że włożona jest właściwa płyta, a blokada zapisu jest otwarta, i kontynuuj.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="370"/>
+        <location filename="../panels/record_dialog.py" line="533"/>
+        <source>Disc {number}: tracks {first}-{last}, {time}</source>
+        <translation>Płyta {number}: ścieżki {first}-{last}, {time}</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="544"/>
+        <source>These tracks carry no running times, so nothing here knows how full a disc is -- place the splits yourself.</source>
+        <translation>Te ścieżki nie mają czasów trwania, więc nie wiadomo, jak pełna jest płyta — ustaw podziały samodzielnie.</translation>
+    </message>
+    <message>
         <location filename="../panels/record_dialog.py" line="549"/>
+        <source>That is {over} more than one disc holds. Split it again, or set the deck to a longer mode and say so above.</source>
+        <translation>To o {over} więcej, niż mieści jedna płyta. Podziel inaczej albo ustaw magnetofon na dłuższy tryb i podaj go powyżej.</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="563"/>
+        <source>This is longer than the {limit} an MD holds in SP mode. Set the deck to LP2 first, turn on &quot;Record across several discs&quot; below, or the recording will be cut short.</source>
+        <translation>To więcej niż {limit}, które mieści płyta MD w trybie SP. Ustaw magnetofon na LP2, włącz poniżej „Nagraj na kilka płyt” albo nagranie zostanie urwane.</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="581"/>
+        <source>Do Not Start Disc Here</source>
+        <translation>Nie zaczynaj tu płyty</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="687"/>
+        <source>Recording disc {number} -- waiting for the first track...</source>
+        <translation>Nagrywanie płyty {number} — czekam na pierwszą ścieżkę...</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="698"/>
+        <source>This album takes {count} discs. Each one is recorded, titled and ejected on its own, and you will be asked to load the next.
+
+Recording replaces whatever is on a disc, and nothing about it can be undone. Make sure the first disc is loaded and its write-protect tab is open, then continue.</source>
+        <translation>Ten album zajmie {count} płyt. Każda jest osobno nagrywana, tytułowana i wysuwana, a program poprosi o kolejną.
+
+Nagrywanie zastępuje to, co jest na płycie, i nie da się tego cofnąć. Upewnij się, że pierwsza płyta jest w magnetofonie, a jej zabezpieczenie przed zapisem jest otwarte, i kontynuuj.</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="758"/>
+        <source>Some of these entries are not files on disk, so the new order cannot be given to foobar2000. Put the playlist in the order you want there instead.</source>
+        <translation>Część pozycji nie jest plikami na dysku, więc nowej kolejności nie da się przekazać foobarowi2000. Ustaw playlistę w żądanej kolejności bezpośrednio tam.</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="768"/>
+        <source>Putting foobar2000&apos;s playlist into this order...</source>
+        <translation>Ustawiam playlistę foobara2000 w tej kolejności...</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="779"/>
+        <source>foobar2000 could not be given the new order: {error}</source>
+        <translation>Nie udało się przekazać nowej kolejności do foobara2000: {error}</translation>
+    </message>
+    <message>
+        <source>foobar2000 ended up with {landed} of the {expected} tracks, so what would be recorded is no longer what this list says. Nothing was recorded.</source>
+        <translation type="vanished">W foobarze2000 znalazło się {landed} z {expected} ścieżek, więc to, co zostałoby nagrane, nie zgadza się już z tą listą. Nic nie zostało nagrane.</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="802"/>
+        <source>foobar2000 could not be found, so its playlist cannot be reordered. Set its location in Window &gt; Settings..., or put the playlist in the order you want in foobar2000 itself.</source>
+        <translation>Nie znaleziono foobara2000, więc nie da się zmienić kolejności jego playlisty. Podaj jego lokalizację w Okno &gt; Ustawienia... albo ustaw kolejność bezpośrednio w foobarze2000.</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="818"/>
+        <location filename="../panels/record_dialog.py" line="1178"/>
         <source>MDRem: {error}</source>
         <translation>MDRem: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="379"/>
+        <location filename="../panels/record_dialog.py" line="827"/>
         <source>The deck was told to start recording.
 
 Is it now showing record-pause (REC lit, paused)?</source>
@@ -2701,33 +2877,39 @@ Is it now showing record-pause (REC lit, paused)?</source>
 Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="387"/>
+        <location filename="../panels/record_dialog.py" line="837"/>
         <source>Cancelled -- the deck was not recording.</source>
         <translation>Anulowano — magnetofon nie nagrywał.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="406"/>
+        <location filename="../panels/record_dialog.py" line="879"/>
         <source>Lost contact with foobar2000: {error}</source>
         <translation>Utracono łączność z foobar2000: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="446"/>
+        <location filename="../panels/record_dialog.py" line="954"/>
+        <source>Disc {disc} of {discs}, track {index} of {count}: {title} -- {elapsed} of {total}</source>
+        <translation>Płyta {disc} z {discs}, ścieżka {index} z {count}: {title} — {elapsed} z {total}</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="966"/>
         <source>Recording {index} of {count}: {title} -- {elapsed} of {total}</source>
         <translation>Nagrywanie {index} z {count}: {title} — {elapsed} z {total}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="461"/>
-        <location filename="../panels/record_dialog.py" line="564"/>
+        <location filename="../panels/record_dialog.py" line="998"/>
+        <location filename="../panels/record_dialog.py" line="1072"/>
+        <location filename="../panels/record_dialog.py" line="1193"/>
         <source>Close</source>
         <translation>Zamknij</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="468"/>
+        <location filename="../panels/record_dialog.py" line="990"/>
         <source>Playback stopped at track {reached} of {count}, so the disc is incomplete. Titling it now would name tracks that were never recorded.</source>
         <translation>Odtwarzanie zatrzymało się na utworze {reached} z {count}, więc płyta jest niekompletna. Nazwanie jej teraz oznaczałoby tytuły dla utworów, które nie zostały nagrane.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="475"/>
+        <location filename="../panels/record_dialog.py" line="1000"/>
         <source>Recording finished. The titles can be written now.</source>
         <translation>Nagrywanie zakończone. Można teraz zapisać tytuły.</translation>
     </message>
@@ -2736,12 +2918,12 @@ Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
         <translation type="vanished">Szukam okładki...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="526"/>
+        <location filename="../panels/record_dialog.py" line="1155"/>
         <source>Write the album and track titles onto the disc now?</source>
         <translation>Zapisać teraz tytuł albumu i nazwy utworów na płycie?</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="543"/>
+        <location filename="../panels/record_dialog.py" line="1172"/>
         <source>MDRem: not connected</source>
         <translation>MDRem: brak połączenia</translation>
     </message>

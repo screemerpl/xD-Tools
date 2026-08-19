@@ -276,12 +276,29 @@ def test_waiting_gives_up_at_the_deadline_rather_than_looping_forever():
     assert settled == 1
 
 
+def _reordering_client(landings: list[list[str]], recorder: list | None = None) -> foobar.FoobarClient:
+    """A client whose playlist reports a different order each time it is
+    read -- one entry of `landings` per read, which is how foobar2000
+    re-sorting an incoming batch is modelled here."""
+    client = _client({"/api/playlists": PLAYLISTS}, recorder)
+    reads = iter(landings)
+
+    def playlist_items(playlist_id, limit=500):
+        return [
+            foobar.PlaylistItem.from_columns(["", path, "", "", "", "0", "", path])
+            for path in next(reads)
+        ]
+
+    client.playlist_items = playlist_items
+    return client
+
+
 def test_replacing_the_current_playlist_clears_it_then_adds(monkeypatch):
     """Deliberately the *current* playlist rather than a new one: the record
     flow reads whatever is current, so this keeps one meaning of "what is
     about to be recorded"."""
     sent: list = []
-    client = _client({"/api/playlists": PLAYLISTS}, sent)
+    client = _reordering_client([["01.flac", "02.flac"]], sent)
     added: list = []
     monkeypatch.setattr(foobar, "add_files_via_cli", lambda exe, paths, **kw: added.append((exe, list(paths))))
 
@@ -289,7 +306,179 @@ def test_replacing_the_current_playlist_clears_it_then_adds(monkeypatch):
 
     assert playlist.id == "p1"
     assert ("/api/playlists/p1/clear", {}) in sent
-    assert added == [("fb2k.exe", ["01.flac", "02.flac"])]
+    assert added == [("fb2k.exe", ["01.flac", "02.flac"])], "one call while the order holds"
+
+
+def test_a_batch_foobar_re_sorts_is_added_one_file_at_a_time(monkeypatch):
+    """Verified against the live foobar2000: handed 11, 01, 02 in one /add
+    call it appends them sorted by filename -- 01, 02, 11 -- and the caller
+    that trusted the order recorded the wrong track onto a MiniDisc. Adding
+    them one at a time keeps the order, because a batch of one has nothing
+    to sort against."""
+    wanted = ["11.flac", "01.flac", "02.flac"]
+    client = _reordering_client([sorted(wanted), wanted])
+    added: list = []
+    monkeypatch.setattr(foobar, "add_files_via_cli", lambda exe, paths, **kw: added.append(list(paths)))
+
+    foobar.replace_current_playlist(client, "fb2k.exe", wanted, wait=lambda c, p, expected: expected)
+
+    assert added == [wanted, ["11.flac"], ["01.flac"], ["02.flac"]]
+
+
+def test_an_order_foobar_will_not_keep_raises_rather_than_being_recorded(monkeypatch):
+    """A wrong order found afterwards is a disc that cannot be un-recorded,
+    so this is one of the few places that would rather fail than proceed."""
+    wanted = ["11.flac", "01.flac"]
+    client = _reordering_client([sorted(wanted), sorted(wanted)])
+    monkeypatch.setattr(foobar, "add_files_via_cli", lambda exe, paths, **kw: None)
+
+    with pytest.raises(foobar.FoobarError):
+        foobar.replace_current_playlist(client, "fb2k.exe", wanted, wait=lambda c, p, expected: expected)
+
+
+def test_a_file_that_never_lands_is_named_rather_than_waited_on_forever(monkeypatch):
+    """One file per call means one wait per call, and a file foobar quietly
+    refuses would otherwise cost that wait once per remaining track."""
+    wanted = ["11.flac", "01.flac", "02.flac"]
+    client = _reordering_client([sorted(wanted)])
+    monkeypatch.setattr(foobar, "add_files_via_cli", lambda exe, paths, **kw: None)
+
+    with pytest.raises(foobar.FoobarError, match="01.flac"):
+        foobar.replace_current_playlist(client, "fb2k.exe", wanted, wait=lambda c, p, expected: 1)
+
+
+def test_the_order_check_ignores_how_a_path_is_spelled(monkeypatch):
+    """The path we ask with and the path %path% reports come from different
+    sides of the same filesystem."""
+    client = _reordering_client([[r"C:\Music\01.flac", r"C:\Music\02.flac"]])
+    monkeypatch.setattr(foobar, "add_files_via_cli", lambda exe, paths, **kw: None)
+
+    foobar.replace_current_playlist(
+        client, "fb2k.exe", ["c:/music/01.flac", "c:/music/02.flac"], wait=lambda *a, **k: 2
+    )
+
+
+# --- reordering a playlist in place ----------------------------------------
+
+
+class _MovablePlaylist:
+    """A client whose playlist can actually be moved about, so the moves
+    themselves are what the test checks rather than the calls."""
+
+    def __init__(self, paths: list[str]):
+        self.paths = list(paths)
+        self.moves: list[tuple[list[int], int]] = []
+
+    def playlist_items(self, playlist_id, limit=500):
+        return [
+            foobar.PlaylistItem.from_columns(["", path, "", "", "", "0", "", path, ""])
+            for path in self.paths
+        ]
+
+    def move_playlist_items(self, playlist_id, indexes, target):
+        self.moves.append((list(indexes), target))
+        for offset, index in enumerate(sorted(indexes)):
+            self.paths.insert(target + offset, self.paths.pop(index))
+
+
+def test_a_playlist_is_reordered_by_moving_its_items():
+    """Verified against the live Beefweb: items/move inserts before
+    targetIndex and leaves everything else in its relative order."""
+    client = _MovablePlaylist(["b.flac", "c.flac", "a.flac"])
+
+    assert foobar.reorder_playlist(client, "p1", ["a.flac", "b.flac", "c.flac"])
+    assert client.paths == ["a.flac", "b.flac", "c.flac"]
+    assert client.moves == [([2], 0)], "one move, not a rebuild"
+
+
+def test_a_playlist_already_in_order_is_not_touched_at_all():
+    client = _MovablePlaylist(["a.flac", "b.flac"])
+    assert foobar.reorder_playlist(client, "p1", ["a.flac", "b.flac"])
+    assert client.moves == []
+
+
+def test_reordering_declines_a_playlist_holding_different_tracks():
+    """Not something moving items can fix, and the caller has another way
+    to deal with it -- so this says no rather than raising."""
+    client = _MovablePlaylist(["a.flac", "b.flac"])
+    assert not foobar.reorder_playlist(client, "p1", ["a.flac", "z.flac"])
+    assert client.moves == []
+
+
+def test_reordering_declines_entries_that_are_not_files():
+    """Every empty path normalises to the same string, so the check at the
+    end would report success having moved nothing at all."""
+    client = _MovablePlaylist(["", ""])
+    assert not foobar.reorder_playlist(client, "p1", ["", ""])
+    assert client.moves == []
+
+
+def test_reordering_does_not_care_how_a_path_is_spelled():
+    client = _MovablePlaylist([r"C:\Music\b.flac", r"C:\Music\a.flac"])
+    assert foobar.reorder_playlist(client, "p1", ["c:/music/a.flac", "c:/music/b.flac"])
+
+
+# --- the album's own order -------------------------------------------------
+
+
+def _tagged(disc: str, track: str, name: str = "") -> foobar.PlaylistItem:
+    return foobar.PlaylistItem.from_columns(
+        [track, name or f"{disc}-{track}", "", "", "", "0", "", f"{name or disc + track}.flac", disc]
+    )
+
+
+def test_a_double_album_is_put_back_into_disc_then_track_order():
+    """Observed live: a two-disc album dropped into foobar2000 as one folder
+    arrives interleaved -- 2, 1, 2, 1 -- because foobar sorts by filename
+    and both discs number their tracks from one."""
+    interleaved = [_tagged("2", "01"), _tagged("1", "01"), _tagged("2", "02"), _tagged("1", "02")]
+
+    ordered = foobar.sort_by_disc_and_track(interleaved)
+
+    assert [(i.disc_number, i.track_number) for i in ordered] == [
+        ("1", "01"), ("1", "02"), ("2", "01"), ("2", "02"),
+    ]
+
+
+def test_tags_written_as_one_of_two_sort_the_same_as_a_bare_number():
+    ordered = foobar.sort_by_disc_and_track([_tagged("2/2", "1/12"), _tagged("1/2", "3/12")])
+    assert [i.disc_number for i in ordered] == ["1/2", "2/2"]
+
+
+def test_a_playlist_with_no_numbers_at_all_is_left_exactly_as_it_is():
+    """No tags means no opinion -- and the order somebody assembled by hand
+    beats one invented here."""
+    untagged = [
+        foobar.PlaylistItem.from_columns(["", "b", "", "", "", "0", "", "b.flac", ""]),
+        foobar.PlaylistItem.from_columns(["", "a", "", "", "", "0", "", "a.flac", ""]),
+    ]
+
+    assert [i.title for i in foobar.sort_by_disc_and_track(untagged)] == ["b", "a"]
+
+
+def test_a_file_missing_its_track_number_sinks_rather_than_displacing_the_album():
+    stray = foobar.PlaylistItem.from_columns(["", "stray", "", "", "", "0", "", "stray.flac", "1"])
+    ordered = foobar.sort_by_disc_and_track([stray, _tagged("1", "01"), _tagged("1", "02")])
+
+    assert [i.title for i in ordered] == ["1-01", "1-02", "stray"]
+
+
+def test_a_missing_disc_number_counts_as_disc_one():
+    """Which is what every single-disc album's files look like."""
+    plain = foobar.PlaylistItem.from_columns(["02", "second", "", "", "", "0", "", "2.flac", ""])
+    first = foobar.PlaylistItem.from_columns(["01", "first", "", "", "", "0", "", "1.flac", ""])
+
+    assert [i.title for i in foobar.sort_by_disc_and_track([plain, first])] == ["first", "second"]
+
+
+def test_where_the_files_say_one_disc_ends():
+    items = [_tagged("1", "01"), _tagged("1", "02"), _tagged("2", "01")]
+    assert foobar.disc_breaks(items) == [2]
+
+
+def test_a_single_disc_album_declares_no_breaks():
+    assert foobar.disc_breaks([_tagged("1", "01"), _tagged("1", "02")]) == []
+    assert foobar.disc_breaks([]) == []
 
 
 def test_replacing_a_playlist_when_foobar_has_none_open_is_an_error():

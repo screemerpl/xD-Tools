@@ -250,7 +250,7 @@ class EraseDiscDialog(QDialog):
     def _offer_eject(self) -> None:
         """An erased TOC lives in the deck's memory until the disc is
         ejected, exactly as a written one does -- see
-        MDRemUploadDialog._offer_eject. Asked rather than done silently,
+        MDRemUploadDialog._eject. Asked rather than done silently,
         since it physically opens the tray."""
         answer = QMessageBox.question(
             self,

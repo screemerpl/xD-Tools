@@ -75,6 +75,7 @@ src/mdtools/
   audio_folder.py           which files in a folder are the album, and in what order (no Qt)
   album_sort.py             one folder of downloads split into one folder per album (no Qt)
   tape.py                   where a cassette is turned over: sides, leader tape, lengths (no Qt)
+  multidisc.py              where an album too long for one disc is cut into several (no Qt)
   telegram_bot.py           Telethon behind one class: sign-in, chat, downloads (experimental)
   translate.py              MyMemory, for showing a bot's message in the user's language
   auto_layout.py            places cover art on a disc label and the logo on its slider (no Qt UI beyond items)
@@ -131,7 +132,7 @@ assets/
   icons/                    the Twemoji button icons -- see panels/icons.py and ATTRIBUTION.md
 bin/
   win64/                    bundled cd-paranoia + flac + cdrecord + sox, with their DLLs -- see ATTRIBUTION.md
-tests/          1360+ tests, all offscreen via QT_QPA_PLATFORM=offscreen
+tests/          1400+ tests, all offscreen via QT_QPA_PLATFORM=offscreen
 doc/            the built user manual (PDF x3) + doc/img, its generated screenshots -- see doc/README.md
 scripts/
   build_windows.ps1 / build_linux.sh   PyInstaller onedir build
@@ -2304,6 +2305,194 @@ recording got cut off at minute 80" into a warning beforehand. It only ever
 warns -- which recording mode the deck is in (SP/LP2/LP4) can neither be
 read nor set through the key table, so it is not MDTools' decision to make.
 
+**A double album: "Record across several discs" (`multidisc.py` + the
+option on `RecordDialog`).** 150 minutes is two MiniDiscs, and a MiniDisc
+cannot be turned over the way a cassette can -- so the whole sequence above
+runs once per disc: record, wait two seconds, write that disc's titles
+*without asking*, eject, ask for a blank one, repeat. Only MiniDisc and, if
+it is ever wanted, CD; a cassette already has `tape.py`'s two sides and was
+explicitly excluded.
+
+**The asking is what is deliberately removed, and it is the whole point of
+the feature.** An album is forty minutes of real time and nobody sits
+through it, so a confirmation between the last note and the titles going
+out would leave the deck holding an untitled disc until somebody came back
+-- which on a MiniDisc is worse than it sounds, since an edited TOC lives
+in volatile memory until the disc is ejected. `MDRemUploadDialog` therefore
+grew `unattended=True`: it starts on a zero-delay `QTimer.singleShot`
+rather than on its Start button, ejects without asking (`_eject(ask=...)`,
+which is what `_offer_eject` became), and calls `accept()` on itself from
+`_on_worker_finished` so the flow behind it can carry on. What that gives
+up is the preview that dialog exists for, so it is paid for beforehand:
+every title, and every character the deck cannot show, is on
+`RecordDialog`'s own table before the first note plays. A *failed* upload
+deliberately does not close and does not advance -- `succeeded` is read
+back after `exec()`, and the run stops there rather than ejecting an
+untitled disc and asking for the next as though nothing had happened.
+
+**`multidisc.split_discs()` is the same "plan it, let the caller execute
+it" split as `mdrem.build_upload_plan()`/`tape.split_sides()`, and follows
+tape's two rules**: the running order is never changed (a disc break is a
+cut, not a repacking), and the split is balanced rather than the first disc
+filled to the brim -- disc two is a whole disc either way, so cramming
+disc one only costs the listener a lopsided record. It takes the *fewest*
+discs that fit and then minimises the longest one (binary search for the
+smallest limit `n` parts can respect, then fill greedily up to it), rather
+than scoring every possible cut the way `tape._best_break()` can afford to
+with exactly one break to place.
+
+**The capacity is stated, never guessed.** `disc_minutes_spin` defaults to
+80 (SP) and the tooltip says LP2 is 160 -- because which mode the deck is
+in can neither be read nor set through the MDRem key table, which is the
+same reason `DISC_SP_SECONDS` only ever warns. For the same reason the
+option is **not** ticked automatically for an album over 80 minutes,
+tempting as that is: on a deck set to LP2 that album fits on one disc, and
+turning a one-disc recording into a two-disc one on an assumption is
+deciding something the warning only points at. The warning does now name
+the option, and hides itself while it is on.
+
+**`RecordDialog._multi()` means "the option is on *and* the plan really has
+more than one disc"**, so an album that fits keeps the plain single-disc
+path (one question about titling, no disc column, no `[1/2]`) whatever the
+checkbox says -- nothing downstream has to ask twice.
+
+Details that are load-bearing:
+- **The first track of every disc is never marked.** `_begin_disc()` sets
+  `_marked_index = first`, for exactly the reason the first track of a
+  single-disc recording is never marked: the deck opens a track of its own
+  when recording starts, and marking again immediately leaves a
+  fraction-of-a-second track at the front.
+- **A disc ends by `set_stop_after_current_track`, armed on the transition
+  *into* its last track** -- the cassette's own side-break mechanism, for
+  the same reason (the flag applies to whatever is playing when it is
+  read, so arming it at the start would end the disc after track one).
+  `_poll()` also stops the moment it sees an index past the disc's last:
+  if the flag did not take, ending here costs a fraction of the next track,
+  where letting it run would put the whole of the next disc onto this one.
+- **The disc title carries `[n/total]`** (`_disc_metadata`, appended to the
+  album name). Two discs of the same album titled identically are
+  indistinguishable on a shelf, and the disc title is the only text a
+  MiniDisc carries about itself. The tracks are *sliced out of the captured
+  whole*, not taken from the plan, so a title corrected in the table is the
+  one that reaches the deck -- and slicing is also what renumbers them:
+  track 16 of the album is track 1 of disc two, which is how the deck
+  numbers it. (It also keeps most discs under `mdrem.MAX_TRACK`, though
+  that is a side effect and not the fix for it.)
+- **`result_metadata` stays the whole album**, every disc of it: the label
+  describes the record, not one of its discs.
+
+**Breaks placed by hand, and moving tracks -- both from the same request.**
+"Start Disc Here" makes the selected track the first of a new disc and
+"Split Automatically" hands the split back to the arithmetic. Placing one
+by hand **starts from the breaks already on screen** rather than from none:
+a three-disc album has two boundaries, and moving one must not throw the
+other away and leave the user to place them all again -- so moving a
+boundary is placing the new one and removing the old, which is what the
+button's own text spells out for whichever row is selected. Once placed,
+they are sticky (`_manual_breaks`), because the arithmetic would otherwise
+put its own break back the moment the capacity changed.
+
+**The album's own order comes from the files, before anybody touches
+anything -- `foobar.sort_by_disc_and_track()` / `disc_breaks()`, applied in
+`RecordDialog._load_playlist()`.** A double album dropped into foobar2000
+as one folder does not arrive in album order: both discs number their
+tracks from one, so foobar's own sort interleaves them. Measured against a
+real 34-track two-disc album in the live install, the playlist came back
+sorted *alphabetically by title*; sorted by `%discnumber%` then
+`%tracknumber%` it comes out as disc 1's seventeen tracks followed by disc
+2's, with the break at index 17. `%discnumber%` is **appended** to
+`_COLUMNS`, like every column added before it, so no positional index
+shifts.
+
+Three rules keep it from doing harm:
+- **A list where nothing carries either number is returned untouched.** No
+  tags means no opinion, and a playlist somebody assembled by hand beats
+  an order invented here. (This is also the whole of the answer to "only
+  when the input is FLAC files": the numbers come from foobar's own
+  columns, so any format it can read is covered, and anything untagged
+  simply leaves the order alone.)
+- **A file missing a track number sinks to the end of its disc**, never to
+  the front, and ties keep the order they arrived in -- an odd untagged
+  file cannot displace the album.
+- **A missing disc number counts as disc 1**, which is exactly what a
+  single-disc album's files look like.
+
+**A track list handed in by the caller is parallel to the *old* order and
+has to be permuted with it.** `RecordDialog` receives `metadata` from
+Record Folder and the Telegram hand-off, built from the files as they sat
+on disk; sorting `self._items` without permuting `metadata.tracks` the same
+way put one track's title against another track's file -- reported as "the
+tracks are in the wrong order, and so is the split", which is what it looks
+like from the table. The permutation is taken from the sort itself
+(`id()`-keyed positions of the items before it) rather than recomputed, and
+applied to `self._given_metadata` before `self._seed` is built from it.
+
+**Sorting the table is only half of it: foobar has to be put into that
+order too, and it is, as the dialog opens** (`_push_order_now`, deferred by
+a zero-delay `QTimer.singleShot` so the window is up and the status line
+readable while the rebuild blocks). Leaving it until Start would work --
+`_apply_order_to_foobar()` runs there anyway -- but it would leave the
+playlist on screen in foobar2000 disagreeing with the table in MDTools
+until a button was pressed, which is the exact confusion that produced the
+wrong-track recording in the first place. It runs only when sorting
+actually moved something, so an album already in order costs nothing.
+
+**The disc numbers seed the split *and* tick the box.** `_manual_breaks`
+starts as `disc_breaks()`, so a two-CD album is offered *the album's own*
+split rather than one worked out from running times, and "Record across
+several discs" is ticked for it. Leaving that to the user was the first
+version and was reported as broken on sight: with the box clear the Disc
+column stays hidden, so the table read `01..17, 01..17` with nothing on
+screen explaining the repeat. **This is not the same case as an album that
+merely overruns 80 minutes, which is still left unticked** -- that one is
+an assumption about the deck's recording mode, which cannot be read from
+here, whereas a disc number is the album stating what it is. Unticking
+puts the whole thing on one disc (which is what LP2 is for), and "Split
+Automatically" hands the division back to the arithmetic. The summary line
+says where the split came from.
+
+**Up/Down reorder the recording, which means reordering foobar2000's
+playlist** -- the recording *is* foobar playing its own playlist, so a
+table reordered only here would title the disc in one order and record it
+in another, the exact failure the "the playlist is what will be recorded"
+rule exists to avoid. `_apply_order_to_foobar()` does it in two ways, in
+this order:
+
+1. **`foobar.reorder_playlist()` -- moving the items where they already
+   are.** Beefweb's `POST /api/playlists/{id}/items/move` was found by
+   probing the live install (204 for `move`/`sort`/`copy`, 405 for a made-up
+   route, so these are real endpoints) and its semantics measured there
+   too: `targetIndex` inserts the moved items *before* that position and
+   leaves everything else in its relative order, so pulling each track
+   forward in turn arrives at exactly the order asked for. This touches no
+   files, clears nothing and needs neither foobar's executable nor the
+   tracks still being where they were -- a failure costs nothing. Each move
+   is simulated locally as it goes, because a playlist's indices shift
+   under every one of them.
+2. **`foobar.replace_current_playlist()` -- the rebuild**, only when
+   moving cannot be done at all. It empties the playlist before it can
+   refill it, which is why it is no longer the first move. It goes through
+   the command line (Beefweb's own add endpoint refuses any file outside
+   foobar's configured music folders, which on a normal install is every
+   file there is) and **verifies the order that actually landed rather than
+   trusting it** -- see the note below on why that is not paranoia.
+
+`reorder_playlist()` declines outright when any entry has no path: they all
+normalise to the same string, so the check at the end would report success
+having moved nothing -- which is exactly the shape of failure this whole
+area keeps producing. Beyond that: it only ever runs when a row was
+actually moved, and an order that neither route can reach stops the
+recording rather than letting it proceed against a playlist foobar does not
+have. `_move_selected()` moves the
+seed's own track list alongside `_items`, since everything downstream pairs
+the two by index.
+
+**The track table grew a `Disc` column at index 0**, hidden unless there is
+more than one disc -- the same shape as the cassette dialog's `Side`
+column. Every read of a row is therefore one index further along than it
+was; `COL_DISC`/`COL_NUMBER`/`COL_TITLE`/`COL_ARTIST`/`COL_LENGTH` exist so
+that shift is stated once rather than counted at each call site.
+
 **Every recording backs foobar2000's own output volume off to
 `RECORDING_VOLUME_DB` (-5.0dB) first, via a new `FoobarClient.set_volume()`
 -- explicit user request, headroom against clipping on the digital
@@ -2463,6 +2652,33 @@ overridable in Window > Settings.
 finished.** The command line is answered as soon as foobar *accepts* the
 files; reading and tagging them happens after, so asking for the playlist
 immediately reports a count still climbing.
+
+**foobar2000 does not keep the order it is handed on the command line, and
+believing it did put the wrong track on a MiniDisc.** Reported live,
+mid-recording: an album whose tracks had been reordered in the record
+dialog was recorded from foobar's own order instead. `add_files_via_cli()`'s
+docstring used to state the opposite as fact ("foobar adds a batch in the
+order it receives it"); measured against the live install on 2026-08-19,
+handing it `11, 01, 02...` in one `/add` call appends them **sorted by
+filename**, so the reordered track went straight back where it started
+while MDTools went on playing by its own indices. Nothing in the API turns
+that off. Two things follow, and both are in `replace_current_playlist()`:
+- **The order is read back and compared, by path** (`_same_order()`,
+  normalised for case and separators, since the path we ask with and the
+  path `%path%` reports come from opposite sides of the same filesystem).
+  Comparing titles would not do -- two tracks can share one.
+- **One file per `/add` call is the fallback that works**, measured the
+  same way in the same session: a batch of one has nothing to sort against
+  and each lands after the last, so the order survives exactly. It costs a
+  process per track, which is why the single batch is still tried first and
+  kept whenever it happens to come out right (a CD rip's zero-padded names,
+  or any album already in filename order, never reach the fallback).
+If even that does not produce the order asked for, it **raises rather than
+returning**: every caller is about to record or burn what is in that
+playlist, and a wrong order found afterwards is a disc that cannot be
+un-recorded. Note this also quietly fixed a latent bug in the folder and
+Telegram flows, which sort their files with `natural_key` (so `9` before
+`10`) and then handed them to foobar, whose own sort is lexicographic.
 
 **Tags are written at encode time, and that is what makes the titles
 correct downstream.** `flac --tag=...` gets TITLE/ARTIST/ALBUMARTIST/
