@@ -1,5 +1,5 @@
 {
-  "_readme": "All dimensions were provided directly by the user (measured from real media/cases) and are trusted as-is, except slider_gap_mm on the disc-with-slider template (canvas layout spacing between the two independent cut shapes, not a measured part dimension), and on the two Full disc label templates: width_mm/height_mm (69.4x66.4) is the MD's own 71x68mm size inset by a 0.8mm margin on all sides, and slider_notch_top_mm (25.2) is the user's '26mm from the MD's top edge' adjusted for that same 0.8mm label margin -- both are derived, not independently measured, numbers. On the (with Slider) variant, slider_width_mm/slider_height_mm/slider_corner_radius_mm intentionally match slider_notch_width_mm/slider_notch_height_mm/slider_notch_corner_radius_mm exactly, so the printable sticker shape nests inside the notch it's meant to sit on.",
+  "_readme": "All dimensions were provided directly by the user (measured from real media/cases) and are trusted as-is, except slider_gap_mm on the disc-with-slider template (canvas layout spacing between the two independent cut shapes, not a measured part dimension), and on the two Full disc label templates: width_mm/height_mm (69.4x66.4) is the MD's own 71x68mm size inset by a 0.8mm margin on all sides, and slider_notch_top_mm (24.3) places the cut's own top edge 23.5mm below the label's top, which is where the user measured the shutter opening after cutting one -- the first reading, 26mm from the MD's own top edge, put it 1mm too low. slider_travel_mm (19.4) then ends the channel 62mm below the label's top, measured the same way. On the (with Slider) variant, slider_width_mm/slider_height_mm/slider_corner_radius_mm intentionally match slider_notch_width_mm/slider_notch_height_mm/slider_notch_corner_radius_mm exactly, so the printable sticker shape nests inside the notch it's meant to sit on.",
   "disc": [
     {
       "name": "MiniDisc Disc Label",
@@ -39,9 +39,9 @@
       "slider_notch_width_mm": 27.5,
       "slider_notch_height_mm": 17.5,
       "slider_notch_corner_radius_mm": 2.5,
-      "slider_notch_top_mm": 25.2,
+      "slider_notch_top_mm": 24.3,
       "slider_notch_buffer_mm": 0.8,
-      "slider_travel_mm": 18.0,
+      "slider_travel_mm": 19.4,
       "verified": true,
       "builtin": true,
       "medium": "md"
@@ -56,9 +56,9 @@
       "slider_notch_width_mm": 27.5,
       "slider_notch_height_mm": 17.5,
       "slider_notch_corner_radius_mm": 2.5,
-      "slider_notch_top_mm": 25.2,
+      "slider_notch_top_mm": 24.3,
       "slider_notch_buffer_mm": 0.8,
-      "slider_travel_mm": 18.0,
+      "slider_travel_mm": 19.4,
       "slider_width_mm": 27.5,
       "slider_height_mm": 17.5,
       "slider_corner_radius_mm": 2.5,

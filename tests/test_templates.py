@@ -32,9 +32,18 @@ def test_builtin_defaults_include_a_full_disc_label_variant(tmp_path, monkeypatc
     assert full_label.slider_notch_width_mm == 27.5
     assert full_label.slider_notch_height_mm == 17.5
     assert full_label.slider_notch_corner_radius_mm == 2.5
-    assert full_label.slider_notch_top_mm == 25.2
+    # The cut's own edges, which is what these two numbers exist to place:
+    # 23.5mm below the label's top for the notch, 62 for the end of the
+    # channel the shutter sweeps through -- both measured off a cut label.
+    assert full_label.slider_notch_top_mm - full_label.slider_notch_buffer_mm == 23.5
     assert full_label.slider_notch_buffer_mm == 0.8
-    assert full_label.slider_travel_mm == 18.0
+    channel_end = (
+        full_label.slider_notch_top_mm
+        + full_label.slider_notch_height_mm
+        + full_label.slider_notch_buffer_mm
+        + full_label.slider_travel_mm
+    )
+    assert round(channel_end, 6) == 62.0
     assert full_label.builtin is True
     assert full_label.verified is True
 

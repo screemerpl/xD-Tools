@@ -193,20 +193,27 @@ a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
   The notch is `slider_notch_width_mm`/`slider_notch_height_mm` (27.5mm x
   17.5mm, same footprint as the other slider label, left corners rounded
   `slider_notch_corner_radius_mm` = 2.5mm), flush against the label's right
-  edge, positioned `slider_notch_top_mm` (25.2mm) below the label's own top
-  edge — that's the user's measured "26mm from the MD's top edge",
-  adjusted for the label's own 0.8mm margin, since the notch position has
-  to be expressed in the label's local coordinates, not the MD's.
+  edge, positioned `slider_notch_top_mm` (24.3mm) below the label's own top
+  edge. **These two numbers are set by where the cut lands, not by what
+  they are called** — the buffer below moves the actual edge 0.8mm up from
+  whatever this says, so 24.3 puts the cut at **23.5mm** below the label's
+  top, which is what the user measured off a cut label. The first reading
+  (26mm from the MD's own top edge, converted to 25.2 in label
+  coordinates) put the top of the notch 1mm too low, and was reported
+  after cutting one. So: change either number and check the *edge*, which
+  is what `test_builtin_defaults_include_a_full_disc_label_variant` now
+  asserts rather than the raw fields.
   `slider_notch_buffer_mm` (0.8mm) then physically enlarges the notch by
   that amount on its top/bottom/left sides (its right side is already
   flush with the label edge, so there's no material there to clear) — a
   real clearance cut, not a print-only keep-out zone, confirmed explicitly
   by the user ("it needs to be cut as well") after an initial ambiguous
   reading of "not printable" as a print-exclusion concept. `slider_travel_mm`
-  (18mm) then extends that already-buffered notch further down by the same
+  (19.4mm) then extends that already-buffered notch further down by the same
   buffered width (confirmed: "it needs to include a buffer"), forming one
   continuous cutout (see `DesignScene._build_full_label_outline`) — the
-  channel the shutter sweeps through as the deck pushes it open.
+  channel the shutter sweeps through as the deck pushes it open. It ends
+  **62mm** below the label's top, measured the same way as the 23.5 above.
   Built via `QPainterPath.subtracted()` (one `LAYER_CUT` shape with a hole
   in it), unlike the additive slider variant, so `template_clip_path()`
   already excludes the notch correctly with no extra union logic needed.
