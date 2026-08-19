@@ -27,9 +27,9 @@ PAGE_COVER = "cover"
 # point of the object is which half is facing you.
 PAGE_SIDE_A = "side_a"
 PAGE_SIDE_B = "side_b"
-# Not built yet -- the planned CD back insert (a jewel case tray card).
-# Listed here so the shape of "a page kind" is visible, and so nothing
-# below has to change when it arrives.
+# The CD back insert -- a jewel case tray card, the optional third page of
+# a CD project. It was listed here before it was built, to show the shape
+# of "a page kind"; nothing below had to change when it arrived.
 PAGE_BACK = "back"
 
 
