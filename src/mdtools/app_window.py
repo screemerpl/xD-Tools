@@ -44,6 +44,9 @@ from mdtools.panels.experimental_settings_dialog import ExperimentalSettingsDial
 from mdtools import foobar
 from mdtools.audio_folder import album_from_folder
 from mdtools.cd_layout import CdLayoutError, build_case_back, build_disc_label, build_insert
+from mdtools import tape
+from mdtools.tape_layout import TapeLayoutError, build_side_label
+from mdtools.tape_layout import build_jcard as build_tape_jcard
 from mdtools.panels.burn_dialog import BurnDialog
 from mdtools.panels.folder_record_dialog import FolderRecordDialog
 from mdtools.panels import icons
@@ -53,6 +56,7 @@ from mdtools.mdrem import disc_title
 from mdtools.panels.mdrem_port import resolve_port
 from mdtools.panels.metadata_dialog import MetadataDialog
 from mdtools.panels.record_dialog import RecordDialog
+from mdtools.panels.tape_record_dialog import TapeRecordDialog
 from mdtools.panels.new_design_dialog import NewDesignDialog
 from mdtools.panels.print_dialog import PrintDialog
 from mdtools.panels.properties_panel import PropertiesPanel
@@ -64,10 +68,14 @@ from mdtools.panels.tool_panel import ToolPanel
 from mdtools.project import (
     MEDIUM_CD,
     MEDIUM_MD,
+    MEDIUM_TAPE,
     PAGE_BACK,
     PAGE_COVER,
     PAGE_DISC,
     PAGE_ORDER,
+    PAGE_SIDE_A,
+    PAGE_SIDE_B,
+    medium_pages,
     page_template_kind,
     page_title,
     GrayscaleAdjustment,
@@ -88,6 +96,15 @@ JCARD_TEMPLATE = "MiniDisc Cover (J-Card)"
 # it is the one with somewhere to put a track list.
 CD_LABEL_TEMPLATE = "CD Disc Label (Standard Hub)"
 CD_INSERT_TEMPLATE = "CD Slim Case Insert (Folded, 2 Panels)"
+# The cassette's: one inlay card and the same sticker twice, once per face.
+TAPE_JCARD_TEMPLATE = "Cassette J-Card"
+TAPE_LABEL_TEMPLATE = "Cassette Shell Label"
+
+
+# What a saved project's suggested filename ends with, so a shelf of them
+# says which machine each one is for at a glance. "MC" is what a cassette
+# release has been called on its own spine since the format was sold.
+MEDIUM_SUFFIXES = {MEDIUM_MD: "MD", MEDIUM_CD: "CD", MEDIUM_TAPE: "MC"}
 
 
 class MainWindow(QMainWindow):
@@ -99,7 +116,7 @@ class MainWindow(QMainWindow):
         # titling it over infrared, and standing in for the deck's remote.
         # "xD-Tools": the x stands in for M or C, which is the joke and
         # also, now, the truth -- it does MiniDisc and CD alike.
-        self.setWindowTitle(self.tr("xD-Tools - MiniDisc & CD Studio"))
+        self.setWindowTitle(self.tr("xD-Tools - Retro Media Studio"))
         # Set here too, not just on QApplication in main.py -- so the
         # window has the right icon (title bar/taskbar/alt-tab) even when
         # MainWindow is constructed directly (tests, or any future
@@ -343,6 +360,13 @@ class MainWindow(QMainWindow):
         )
         self.record_action = recording_menu.addAction(
             self.tr("Record to MiniDisc from foobar2000..."), self._record_from_foobar
+        )
+        recording_menu.addSeparator()
+        # A tape deck is driven by the person in front of it, so this one
+        # needs no adapter and is never hidden by _sync_mdrem_actions() on
+        # those grounds -- only by the medium, like the burning entries.
+        self.record_tape_action = recording_menu.addAction(
+            self.tr("Record to Cassette from foobar2000..."), self._record_to_tape
         )
         recording_menu.addSeparator()
         # Burning needs no infrared adapter -- it is the drive's own job --
@@ -707,11 +731,9 @@ class MainWindow(QMainWindow):
             dialog = NewDesignDialog(self)
             if dialog.exec() != NewDesignDialog.DialogCode.Accepted:
                 return False
-            disc_template = dialog.selected_disc_template
-            cover_template = dialog.selected_cover_template
-            back_template = dialog.selected_back_template
             medium = dialog.selected_medium
-            if disc_template is None or cover_template is None:
+            chosen = dict(dialog.selected_templates)
+            if not chosen:
                 return False
         else:
             from mdtools.templates import registry
@@ -719,29 +741,30 @@ class MainWindow(QMainWindow):
             templates = registry.load_templates()
             # The unprompted fallback (a cancelled startup screen, or a
             # first launch with nothing chosen) stays on MiniDisc: it is
-            # what this app defaulted to before CD-R support existed, and
-            # picking a medium for the user out of template file order
-            # would be arbitrary.
+            # what this app defaulted to before other media existed, and
+            # picking one for the user out of template file order would be
+            # arbitrary.
             medium = MEDIUM_MD
-            discs = [t for t in templates["disc"] if getattr(t, "medium", MEDIUM_MD) == medium]
-            covers = [t for t in templates["cover"] if getattr(t, "medium", MEDIUM_MD) == medium]
-            if not discs or not covers:
-                return False
-            disc_template = discs[0]
-            cover_template = covers[0]
-            back_template = None
+            chosen = {}
+            for entry in medium_pages(medium):
+                available = [
+                    t
+                    for t in templates[page_template_kind(entry.page)]
+                    if getattr(t, "medium", MEDIUM_MD) == medium
+                ]
+                if available:
+                    chosen[entry.page] = available[0]
+                elif not entry.optional:
+                    return False
 
         pages = {}
-        for page, template in (
-            (PAGE_DISC, disc_template),
-            (PAGE_COVER, cover_template),
-            (PAGE_BACK, back_template),
-        ):
+        for entry in medium_pages(medium):
+            template = chosen.get(entry.page)
             if template is None:
                 continue  # an optional page nobody asked for
             scene = DesignScene(template)
-            self._populate_new_scene(scene, template, page)
-            pages[page] = scene
+            self._populate_new_scene(scene, template, entry.page)
+            pages[entry.page] = scene
 
         self.current_project_path = None
         self.project = Project(metadata=ProjectMetadata(), pages=pages, medium=medium)
@@ -838,7 +861,8 @@ class MainWindow(QMainWindow):
         """
         if self.project is None:
             return
-        missing = [page for page in PAGE_ORDER if page not in self.project.pages]
+        allowed = {entry.page for entry in medium_pages(self.project.medium)}
+        missing = [page for page in PAGE_ORDER if page in allowed and page not in self.project.pages]
         if not missing:
             QMessageBox.information(
                 self,
@@ -895,11 +919,12 @@ class MainWindow(QMainWindow):
         if self.project is None:
             return
         page = self.current_page
-        if page in (PAGE_DISC, PAGE_COVER):
+        required = {entry.page for entry in medium_pages(self.project.medium) if not entry.optional}
+        if page in required:
             QMessageBox.information(
                 self,
                 self.tr("Remove Page"),
-                self.tr("The disc label and the cover are part of every project and cannot be removed."),
+                self.tr("That page is part of every project of this kind and cannot be removed."),
             )
             return
 
@@ -1358,7 +1383,7 @@ class MainWindow(QMainWindow):
         title = disc_title(self.project.metadata)
         if not title:
             return ""
-        return f"{title} -{'CD' if self.project.medium == MEDIUM_CD else 'MD'}"
+        return f"{title} -{MEDIUM_SUFFIXES.get(self.project.medium, 'MD')}"
 
     def _project_file_filter(self) -> str:
         # a module-level constant can't use self.tr(), so this is computed
@@ -1423,6 +1448,10 @@ class MainWindow(QMainWindow):
         # the medium alone, and stay put when MDRem is switched off.
         self.burn_folder_action.setVisible(for_cd)
         self.burn_foobar_action.setVisible(for_cd)
+        # Recording a cassette needs neither the adapter nor a drive: the
+        # deck is operated by hand, and all MDTools does is play the right
+        # tracks at the right moment.
+        self.record_tape_action.setVisible(medium in (None, MEDIUM_TAPE))
 
         # The Experimental menu's two hand-offs are the same pair of
         # operations reached from a different place, so they follow exactly
@@ -1726,6 +1755,28 @@ class MainWindow(QMainWindow):
             return
         self._run_record_dialog(port)
 
+    def _record_to_tape(self) -> None:
+        """Recording > Record to Cassette from foobar2000...
+
+        No port to resolve and no drive to find: the deck is the user's to
+        operate, so foobar2000 is the only thing that has to be there --
+        and TapeRecordDialog says so itself if it is not, rather than being
+        pre-checked here.
+        """
+        minutes = (
+            self.project.tape_total_minutes if self.project is not None else tape.DEFAULT_LENGTH.total_minutes
+        )
+        dialog = TapeRecordDialog(app_settings.foobar_url(), self, total_minutes=minutes)
+        dialog.exec()
+        if dialog.result_metadata is None or self.project is None:
+            return
+        self.project.metadata = dialog.result_metadata
+        # The tape that was actually used, so the shell labels split where
+        # the recording did rather than where a default would have.
+        self.project.tape_total_minutes = dialog.total_minutes
+        self._mark_dirty()
+        self._auto_layout_project(dialog.result_metadata)
+
     def _record_cd(self) -> None:
         """Recording > Record CD to MiniDisc... -- rips the disc into
         foobar2000's playlist, then records that playlist exactly as the
@@ -1999,6 +2050,8 @@ class MainWindow(QMainWindow):
         The case back is included only when the project has one -- it is
         optional, and the layout leaves it alone otherwise.
         """
+        if self.project.medium == MEDIUM_TAPE:
+            return {PAGE_COVER, PAGE_SIDE_A, PAGE_SIDE_B}
         pages = {PAGE_DISC, PAGE_COVER}
         if self.project.medium == MEDIUM_CD and PAGE_BACK in self.project.pages:
             pages.add(PAGE_BACK)
@@ -2055,6 +2108,9 @@ class MainWindow(QMainWindow):
         panel button, which is a single click out of nowhere, does confirm.
         """
         if self.project is None or not metadata.cover_art:
+            return
+        if self.project.medium == MEDIUM_TAPE:
+            self._auto_layout_tape(metadata)
             return
         if self.project.medium == MEDIUM_CD:
             self._auto_layout_cd_insert(metadata)
@@ -2210,6 +2266,55 @@ class MainWindow(QMainWindow):
         for item in items:
             self.undo_stack.push(AddItemCommand(scene, item, self.tr("Case Insert")))
         self.undo_stack.endMacro()
+
+    def _auto_layout_tape(self, metadata: ProjectMetadata) -> None:
+        """The inlay card, and a shell label for each side of the tape.
+
+        Where the split falls is `tape.split_sides()`'s answer, not this
+        method's -- the same function the recording flow uses to decide when
+        to ask the user to turn the tape over. That is the point of sharing
+        it: a label that says side B starts at track seven, and a recording
+        that turns over after track six, would each be defensible alone and
+        wrong together.
+
+        Which tape it is for comes from the project (`tape_total_minutes`),
+        set by the recording flow and saved with the file -- so a label laid
+        out after recording splits exactly where the recording did, and one
+        laid out before it uses the same default the recording dialog will
+        open on.
+        """
+        plan = tape.split_sides(metadata.tracks, self.project.tape_total_minutes)
+
+        jcard = self._template_named("cover", TAPE_JCARD_TEMPLATE)
+        if jcard is not None:
+            self.apply_template(PAGE_COVER, jcard)
+            scene = self.project.pages[PAGE_COVER]
+            try:
+                items = build_tape_jcard(scene, metadata)
+            except TapeLayoutError:
+                items = []
+            if items:
+                self.undo_stack.beginMacro(self.tr("Lay Out J-Card"))
+                for item in items:
+                    self.undo_stack.push(AddItemCommand(scene, item, self.tr("J-Card")))
+                self.undo_stack.endMacro()
+
+        label = self._template_named("cover", TAPE_LABEL_TEMPLATE)
+        if label is None:
+            return
+        for page, side in ((PAGE_SIDE_A, plan.sides[0]), (PAGE_SIDE_B, plan.sides[1])):
+            if page not in self.project.pages:
+                continue
+            self.apply_template(page, copy.deepcopy(label))
+            scene = self.project.pages[page]
+            try:
+                items = build_side_label(scene, metadata, side)
+            except TapeLayoutError:
+                continue
+            self.undo_stack.beginMacro(self.tr("Lay Out Shell Label"))
+            for item in items:
+                self.undo_stack.push(AddItemCommand(scene, item, self.tr("Shell Label")))
+            self.undo_stack.endMacro()
 
     def _edit_metadata(self) -> None:
         if self.project is None:

@@ -90,7 +90,7 @@ def test_a_new_project_has_no_case_back_unless_one_is_chosen(qt_app):
 
     assert dialog.back_combo.currentData() is None, "the default must be no third page"
     dialog._on_accept()
-    assert dialog.selected_back_template is None
+    assert PAGE_BACK not in dialog.selected_templates
 
 
 def test_choosing_a_case_back_gives_the_project_three_pages(qt_app, monkeypatch):

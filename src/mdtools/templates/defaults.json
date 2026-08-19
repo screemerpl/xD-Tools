@@ -157,6 +157,33 @@
       "safe_margin_mm": 3.0,
       "verified": false,
       "builtin": true
+    },
+    {
+      "name": "Cassette J-Card",
+      "kind": "cover",
+      "medium": "tape",
+      "width_mm": 101.6,
+      "height_mm": 101.6,
+      "corner_radius_mm": 0.0,
+      "fold_offsets_mm": [
+        65.1,
+        77.8
+      ],
+      "safe_margin_mm": 2.0,
+      "verified": false,
+      "builtin": true
+    },
+    {
+      "name": "Cassette Shell Label",
+      "kind": "cover",
+      "medium": "tape",
+      "width_mm": 88.9,
+      "height_mm": 42.9,
+      "corner_radius_mm": 1.0,
+      "fold_offsets_mm": [],
+      "safe_margin_mm": 2.0,
+      "verified": false,
+      "builtin": true
     }
   ]
 }

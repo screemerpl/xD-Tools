@@ -18,9 +18,15 @@ from mdtools.canvas.scene import DesignScene
 # recording/burning flow applies to it.
 MEDIUM_MD = "md"
 MEDIUM_CD = "cd"
+MEDIUM_TAPE = "tape"
 
 PAGE_DISC = "disc"
 PAGE_COVER = "cover"
+# A cassette carries a label on each face, and they are different pages
+# rather than one page printed twice: side B is not side A, and the whole
+# point of the object is which half is facing you.
+PAGE_SIDE_A = "side_a"
+PAGE_SIDE_B = "side_b"
 # Not built yet -- the planned CD back insert (a jewel case tray card).
 # Listed here so the shape of "a page kind" is visible, and so nothing
 # below has to change when it arrives.
@@ -51,12 +57,42 @@ PAGE_KINDS: dict[str, PageKind] = {
     PAGE_DISC: PageKind(PAGE_DISC, "disc"),
     PAGE_COVER: PageKind(PAGE_COVER, "cover"),
     PAGE_BACK: PageKind(PAGE_BACK, "cover"),
+    # Plain rectangles, so they take cover-shaped templates: "cover" here
+    # is the template *family*, not a claim about what the page is for.
+    PAGE_SIDE_A: PageKind(PAGE_SIDE_A, "cover"),
+    PAGE_SIDE_B: PageKind(PAGE_SIDE_B, "cover"),
 }
 
 # The order pages are offered in, for any project that has them. A project
 # carries only the pages it actually uses; this decides how they are
 # listed.
-PAGE_ORDER = (PAGE_DISC, PAGE_COVER, PAGE_BACK)
+PAGE_ORDER = (PAGE_DISC, PAGE_COVER, PAGE_BACK, PAGE_SIDE_A, PAGE_SIDE_B)
+
+
+@dataclass(frozen=True)
+class MediumPage:
+    """One page a medium has, and whether a project must have it.
+
+    This is what stopped the app assuming a disc: a MiniDisc project has a
+    disc label and a J-card, a CD project may add a case back, and a
+    cassette has no disc at all -- a J-card and one label per side. Which
+    pages File > New offers, and which of them can be left out, is read
+    from here rather than written into the dialog.
+    """
+
+    page: str
+    optional: bool = False
+
+
+MEDIUM_PAGES: dict[str, tuple[MediumPage, ...]] = {
+    MEDIUM_MD: (MediumPage(PAGE_DISC), MediumPage(PAGE_COVER)),
+    MEDIUM_CD: (MediumPage(PAGE_DISC), MediumPage(PAGE_COVER), MediumPage(PAGE_BACK, optional=True)),
+    MEDIUM_TAPE: (MediumPage(PAGE_COVER), MediumPage(PAGE_SIDE_A), MediumPage(PAGE_SIDE_B)),
+}
+
+
+def medium_pages(medium: str) -> tuple[MediumPage, ...]:
+    return MEDIUM_PAGES.get(medium, MEDIUM_PAGES[MEDIUM_MD])
 
 
 def page_template_kind(page: str) -> str:
@@ -82,9 +118,15 @@ def page_title(page: str, medium: str = "md") -> str:
     if page == PAGE_COVER:
         if medium == MEDIUM_CD:
             return QCoreApplication.translate("Pages", "Case Insert")
+        if medium == MEDIUM_TAPE:
+            return QCoreApplication.translate("Pages", "J-Card")
         return QCoreApplication.translate("Pages", "Cover / J-Card")
     if page == PAGE_BACK:
         return QCoreApplication.translate("Pages", "Case Back")
+    if page == PAGE_SIDE_A:
+        return QCoreApplication.translate("Pages", "Side A label")
+    if page == PAGE_SIDE_B:
+        return QCoreApplication.translate("Pages", "Side B label")
     return page
 
 
@@ -206,6 +248,12 @@ class Project:
     # were MiniDisc projects, so loading them as such is not a default, it
     # is the truth about them.
     medium: str = MEDIUM_MD
+    # Which cassette this project is for, in minutes across both sides. It
+    # decides where the side break falls, so the shell labels and the
+    # recording have to agree about it -- which is why it lives on the
+    # project rather than being asked for twice. Meaningless for a disc,
+    # and simply ignored there.
+    tape_total_minutes: float = 90.0
 
     def ordered_pages(self) -> list[str]:
         """This project's pages, in the order they are shown.

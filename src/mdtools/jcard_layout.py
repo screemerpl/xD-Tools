@@ -58,6 +58,11 @@ MAX_POINT_SIZE = 20.0
 MIN_POINT_SIZE = 3.5
 POINT_STEP = 0.25
 
+# The height of a J-card's own back panel. Every other card's heading bands
+# are scaled against it (see place_back's heading_scale) rather than given a
+# second set of constants to drift from.
+JCARD_BACK_HEIGHT_MM = 58.85
+
 # Beyond this many tracks a single column gets too tall and thin to read, so
 # the list splits into the two side-by-side columns project.py already knows
 # how to build.

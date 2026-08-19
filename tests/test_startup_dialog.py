@@ -9,8 +9,7 @@ from mdtools.templates import registry
 
 def _fake_new_project_choice(disc, cover):
     def fake_exec(self):
-        self.selected_disc_template = disc
-        self.selected_cover_template = cover
+        self.selected_templates = {PAGE_DISC: disc, PAGE_COVER: cover}
         return NewDesignDialog.DialogCode.Accepted
 
     return fake_exec

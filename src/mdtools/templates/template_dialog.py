@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mdtools.project import MEDIUM_CD, MEDIUM_MD
+from mdtools.project import MEDIUM_CD, MEDIUM_MD, MEDIUM_TAPE
 from mdtools.templates import registry
 from mdtools.templates.models import CoverTemplate, DiscTemplate
 
@@ -53,6 +53,7 @@ class TemplateManagerDialog(QDialog):
         self.medium_filter.addItem(self.tr("All"), None)
         self.medium_filter.addItem(self.tr("MiniDisc"), MEDIUM_MD)
         self.medium_filter.addItem(self.tr("CD-R"), MEDIUM_CD)
+        self.medium_filter.addItem(self.tr("Compact Cassette"), MEDIUM_TAPE)
         self.medium_filter.currentIndexChanged.connect(lambda _index: self._refresh_list())
         filter_row.addWidget(self.medium_filter, 1)
         left.addLayout(filter_row)
@@ -185,6 +186,7 @@ class TemplateManagerDialog(QDialog):
         medium_combo = QComboBox()
         medium_combo.addItem(self.tr("MiniDisc"), MEDIUM_MD)
         medium_combo.addItem(self.tr("CD-R"), MEDIUM_CD)
+        medium_combo.addItem(self.tr("Compact Cassette"), MEDIUM_TAPE)
         medium_index = medium_combo.findData(template.medium)
         medium_combo.setCurrentIndex(medium_index if medium_index >= 0 else 0)
         medium_combo.currentIndexChanged.connect(

@@ -267,6 +267,7 @@ def project_to_dict(project: Project) -> dict:
         "default_text_style": _text_style_to_dict(project.default_text_style),
         "grayscale_adjustment": _grayscale_adjustment_to_dict(project.grayscale_adjustment),
         "medium": project.medium,
+        "tape_total_minutes": project.tape_total_minutes,
     }
 
 
@@ -294,4 +295,8 @@ def load_project(path: str | Path) -> Project:
         # A project file written before CD-R support existed has no medium
         # in it and is a MiniDisc project.
         medium=data.get("medium", MEDIUM_MD),
+        # A project saved before cassettes existed is not a cassette, so
+        # what this says about it does not matter -- the default keeps it
+        # a number rather than a None every reader has to guard against.
+        tape_total_minutes=float(data.get("tape_total_minutes", 90.0)),
     )

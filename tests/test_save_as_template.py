@@ -103,8 +103,7 @@ def test_new_project_from_a_template_with_items_recreates_them_instead_of_seedin
     cover_template = registry.load_templates()["cover"][0]
 
     def fake_exec(self):
-        self.selected_disc_template = saved_template
-        self.selected_cover_template = cover_template
+        self.selected_templates = {PAGE_DISC: saved_template, PAGE_COVER: cover_template}
         return NewDesignDialog.DialogCode.Accepted
 
     monkeypatch.setattr(NewDesignDialog, "exec", fake_exec)
@@ -124,8 +123,7 @@ def test_new_project_from_a_template_without_items_still_seeds_defaults(qt_app, 
     assert not disc_template.items  # sanity: the built-in has no pre-made layers
 
     def fake_exec(self):
-        self.selected_disc_template = disc_template
-        self.selected_cover_template = cover_template
+        self.selected_templates = {PAGE_DISC: disc_template, PAGE_COVER: cover_template}
         return NewDesignDialog.DialogCode.Accepted
 
     monkeypatch.setattr(NewDesignDialog, "exec", fake_exec)
