@@ -196,7 +196,9 @@ def test_turning_off_erasing_updates_the_quoted_time(qt_app):
 
 def test_the_erase_choice_actually_reaches_the_firmware(qt_app, monkeypatch):
     """The checkbox is worthless if it only changes the estimate -- what
-    matters is the TIMING COUNT the firmware is put into before writing."""
+    matters is which form of the command goes out. It is said per command
+    (TITLETRACKCLEAR / TITLETRACKNOCLEAR) rather than by first putting the
+    board into a TIMING COUNT, which it keeps in RAM until it is reset."""
     sent: list[str] = []
 
     class FakeClient:
@@ -218,12 +220,13 @@ def test_the_erase_choice_actually_reaches_the_firmware(qt_app, monkeypatch):
     # run() called directly rather than via start(): it is an ordinary
     # method, and this keeps the test free of thread timing.
     _UploadWorker("COM_TEST", plan.steps, clear_first=False).run()
-    assert sent[0] == "TIMING COUNT 0"
+    assert sent == [step.command(False) for step in plan.steps]
+    assert all("NOCLEAR" in line for line in sent)
 
     sent.clear()
     _UploadWorker("COM_TEST", plan.steps, clear_first=True).run()
-    assert sent[0] == f"TIMING COUNT {mdrem.DEFAULT_CLEAR_COUNT}"
-    assert sent[1:] == [step.command for step in plan.steps]
+    assert sent == [step.command(True) for step in plan.steps]
+    assert not any("TIMING" in line for line in sent), "the global is never touched"
 
 
 def test_progress_advances_between_steps_not_only_at_their_boundaries(qt_app):

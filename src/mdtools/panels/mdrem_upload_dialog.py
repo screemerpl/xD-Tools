@@ -82,16 +82,16 @@ class _UploadWorker(QThread):
     def run(self) -> None:
         try:
             with mdrem.MDRemClient(self._port) as client:
-                # Set explicitly every time rather than trusting whatever a
-                # previous upload left the firmware on -- it keeps this in
-                # RAM until the board is reset.
-                count = mdrem.DEFAULT_CLEAR_COUNT if self._clear_first else 0
-                client.command(f"TIMING COUNT {count}")
+                # Whether to erase first is said in each command's own name
+                # (see UploadStep.command), not by putting the board into a
+                # TIMING COUNT beforehand and trusting it to stay there.
                 for index, step in enumerate(self._steps):
                     if self._cancelled:
                         return
                     self.step_started.emit(index, step.label)
-                    client.command(step.command, timeout_ms=mdrem.TITLE_TIMEOUT_MS)
+                    client.command(
+                        step.command(self._clear_first), timeout_ms=mdrem.TITLE_TIMEOUT_MS
+                    )
         except mdrem.MDRemError as exc:
             self.failed.emit(str(exc))
             return
@@ -243,9 +243,10 @@ class MDRemUploadDialog(QDialog):
             )
         if self._plan.skipped_tracks:
             parts.append(
-                self.tr("The deck can only be told to select tracks 1-{max}, so these were skipped: {titles}").format(
-                    max=mdrem.MAX_TRACK, titles=", ".join(self._plan.skipped_tracks)
-                )
+                self.tr(
+                    "The deck's own track number field takes two digits, so tracks past "
+                    "{max} cannot be selected and were skipped: {titles}"
+                ).format(max=mdrem.MAX_TRACK, titles=", ".join(self._plan.skipped_tracks))
             )
         return "\n\n".join(parts)
 

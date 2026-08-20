@@ -1165,12 +1165,12 @@ Musi być uruchomiony i mieć włączony komponent Beefweb Remote Control (foo_b
 <context>
     <name>MDRem</name>
     <message>
-        <location filename="../mdrem.py" line="379"/>
+        <location filename="../mdrem.py" line="429"/>
         <source>Disc title</source>
         <translation>Tytuł płyty</translation>
     </message>
     <message>
-        <location filename="../mdrem.py" line="395"/>
+        <location filename="../mdrem.py" line="444"/>
         <source>Track {n}</source>
         <translation>Utwór {n}</translation>
     </message>
@@ -1233,12 +1233,17 @@ Musi być uruchomiony i mieć włączony komponent Beefweb Remote Control (foo_b
         <translation>Tytuły do zapisania: {count}. Zapis przez podczerwień potrwa około {time}. Wyceluj przystawkę w magnetofon i nie ruszaj jej do końca.</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="298"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="247"/>
+        <source>The deck&apos;s own track number field takes two digits, so tracks past {max} cannot be selected and were skipped: {titles}</source>
+        <translation>Pole numeru ścieżki w magnetofonie mieści dwie cyfry, więc ścieżek powyżej {max} nie da się wybrać i zostały pominięte: {titles}</translation>
+    </message>
+    <message>
+        <location filename="../panels/mdrem_upload_dialog.py" line="299"/>
         <source>Writing {index} of {total}: {what} -- about {remaining} left</source>
         <translation>Zapisywanie {index} z {total}: {what} — pozostało około {remaining}</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="316"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="317"/>
         <source>Everything was sent in {elapsed}. The deck cannot report back, so check the titles on it yourself.</source>
         <translation>Wszystko zostało wysłane w {elapsed}. Magnetofon nie potrafi niczego odesłać, więc sprawdź tytuły na nim samodzielnie.</translation>
     </message>
@@ -1252,12 +1257,11 @@ Musi być uruchomiony i mieć włączony komponent Beefweb Remote Control (foo_b
         <translation>Tych znaków magnetofon nie potrafi wyświetlić i zostały usunięte: {chars}</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="246"/>
         <source>The deck can only be told to select tracks 1-{max}, so these were skipped: {titles}</source>
-        <translation>Magnetofonowi można wskazać tylko utwory 1-{max}, więc te zostały pominięte: {titles}</translation>
+        <translation type="vanished">Magnetofonowi można wskazać tylko utwory 1-{max}, więc te zostały pominięte: {titles}</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="263"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="264"/>
         <source>Stop</source>
         <translation>Zatrzymaj</translation>
     </message>
@@ -1266,7 +1270,7 @@ Musi być uruchomiony i mieć włączony komponent Beefweb Remote Control (foo_b
         <translation type="vanished">Zapisywanie: {what}</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="309"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="310"/>
         <source>Upload failed: {error}</source>
         <translation>Wysyłka nie powiodła się: {error}</translation>
     </message>
@@ -1275,18 +1279,18 @@ Musi być uruchomiony i mieć włączony komponent Beefweb Remote Control (foo_b
         <translation type="vanished">Wszystko zostało wysłane. Magnetofon nie potrafi niczego odesłać, więc sprawdź tytuły na nim samodzielnie.</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="330"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="331"/>
         <source>Close</source>
         <translation>Zamknij</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="351"/>
-        <location filename="../panels/mdrem_upload_dialog.py" line="364"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="352"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="365"/>
         <source>Save to Disc</source>
         <translation>Zapisz na płycie</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="353"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="354"/>
         <source>Titles are only held in the deck&apos;s memory until the disc is ejected -- they are lost if it powers off first.
 
 Eject now to write them permanently?</source>
@@ -1295,12 +1299,12 @@ Eject now to write them permanently?</source>
 Wysunąć teraz, żeby zapisać je trwale?</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="364"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="365"/>
         <source>Could not eject: {error}</source>
         <translation>Nie udało się wysunąć: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="380"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="381"/>
         <source>Stopping after the current title...</source>
         <translation>Zatrzymam po bieżącym tytule...</translation>
     </message>
