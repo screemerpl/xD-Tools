@@ -94,192 +94,233 @@ Z przystawką MDRem na podczerwień steruje też samym magnetofonem: nagrywa alb
     <name>BurnDialog</name>
     <message>
         <location filename="../panels/burn_dialog.py" line="188"/>
-        <location filename="../panels/burn_dialog.py" line="612"/>
-        <location filename="../panels/burn_dialog.py" line="636"/>
-        <location filename="../panels/burn_dialog.py" line="662"/>
-        <location filename="../panels/burn_dialog.py" line="723"/>
-        <location filename="../panels/burn_dialog.py" line="739"/>
-        <location filename="../panels/burn_dialog.py" line="745"/>
-        <location filename="../panels/burn_dialog.py" line="751"/>
-        <location filename="../panels/burn_dialog.py" line="777"/>
-        <location filename="../panels/burn_dialog.py" line="802"/>
+        <location filename="../panels/burn_dialog.py" line="741"/>
+        <location filename="../panels/burn_dialog.py" line="765"/>
+        <location filename="../panels/burn_dialog.py" line="791"/>
+        <location filename="../panels/burn_dialog.py" line="858"/>
+        <location filename="../panels/burn_dialog.py" line="874"/>
+        <location filename="../panels/burn_dialog.py" line="880"/>
+        <location filename="../panels/burn_dialog.py" line="886"/>
+        <location filename="../panels/burn_dialog.py" line="912"/>
+        <location filename="../panels/burn_dialog.py" line="937"/>
         <source>Burn Audio CD</source>
         <translation>Wypal płytę audio CD</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="228"/>
+        <location filename="../panels/burn_dialog.py" line="240"/>
         <source>Burn</source>
         <translation>Wypal</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="232"/>
+        <location filename="../panels/burn_dialog.py" line="244"/>
         <source>Close</source>
         <translation>Zamknij</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="251"/>
-        <location filename="../panels/burn_dialog.py" line="268"/>
+        <location filename="../panels/burn_dialog.py" line="263"/>
+        <location filename="../panels/burn_dialog.py" line="280"/>
         <source>Artist</source>
         <translation>Wykonawca</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="253"/>
+        <location filename="../panels/burn_dialog.py" line="265"/>
         <source>Album</source>
         <translation>Album</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="255"/>
+        <location filename="../panels/burn_dialog.py" line="267"/>
         <source>Year</source>
         <translation>Rok</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="268"/>
+        <location filename="../panels/burn_dialog.py" line="280"/>
         <source>Title</source>
         <translation>Tytuł</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="268"/>
+        <location filename="../panels/burn_dialog.py" line="280"/>
         <source>Length</source>
         <translation>Czas</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="268"/>
+        <location filename="../panels/burn_dialog.py" line="280"/>
         <source>Status</source>
         <translation>Status</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="268"/>
-        <location filename="../panels/burn_dialog.py" line="287"/>
+        <location filename="../panels/burn_dialog.py" line="280"/>
+        <location filename="../panels/burn_dialog.py" line="413"/>
         <source>Disc</source>
         <translation>Płyta</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="295"/>
+        <location filename="../panels/burn_dialog.py" line="310"/>
+        <source>Move Up</source>
+        <translation>Przesuń w górę</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="312"/>
+        <source>Move Down</source>
+        <translation>Przesuń w dół</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="315"/>
+        <source>Changes the order the tracks are written to the disc in.</source>
+        <translation>Zmienia kolejność, w jakiej ścieżki zostaną zapisane na płycie.</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="316"/>
+        <location filename="../panels/burn_dialog.py" line="367"/>
+        <source>Start Disc Here</source>
+        <translation>Zacznij tu nową płytę</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="320"/>
+        <source>Makes the selected track the first one on a new disc, instead of wherever the split was worked out to go.</source>
+        <translation>Zaznaczona ścieżka staje się pierwszą na nowej płycie, zamiast podziału wyliczonego automatycznie.</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="324"/>
+        <source>Split Automatically</source>
+        <translation>Podziel automatycznie</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="327"/>
+        <source>Throws away the splits placed by hand and works them out again.</source>
+        <translation>Odrzuca podziały ustawione ręcznie i wylicza je od nowa.</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="367"/>
+        <source>Do Not Start Disc Here</source>
+        <translation>Nie zaczynaj tu płyty</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="421"/>
         <source>Refresh</source>
         <translation>Odśwież</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="298"/>
+        <location filename="../panels/burn_dialog.py" line="424"/>
         <source>Burner</source>
         <translation>Nagrywarka</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="303"/>
+        <location filename="../panels/burn_dialog.py" line="429"/>
         <source>Speed</source>
         <translation>Prędkość</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="305"/>
+        <location filename="../panels/burn_dialog.py" line="431"/>
         <source>Simulate only (test run, nothing is written)</source>
         <translation>Tylko symulacja (próba, nic nie zostanie zapisane)</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="308"/>
+        <location filename="../panels/burn_dialog.py" line="434"/>
         <source>Eject when finished</source>
         <translation>Wysuń po zakończeniu</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="312"/>
+        <location filename="../panels/burn_dialog.py" line="438"/>
         <source>Burn across several discs</source>
         <translation>Wypal na kilka płyt</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="315"/>
+        <location filename="../panels/burn_dialog.py" line="441"/>
         <source>For an album longer than one disc. Each disc is written and ejected on its own, and you are asked to put the next blank one in.</source>
         <translation>Dla albumu dłuższego niż jedna płyta. Każda płyta jest osobno nagrywana i wysuwana, a program prosi o kolejny czysty krążek.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="327"/>
+        <location filename="../panels/burn_dialog.py" line="453"/>
         <source> min</source>
         <translation> min</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="329"/>
+        <location filename="../panels/burn_dialog.py" line="455"/>
         <source>What one blank holds: 80 minutes on an ordinary CD-R, 74 on an older one.</source>
         <translation>Ile mieści czysty krążek: 80 minut na zwykłym CD-R, 74 na starszym.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="332"/>
+        <location filename="../panels/burn_dialog.py" line="458"/>
         <source>One disc holds</source>
         <translation>Jedna płyta mieści</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="376"/>
+        <location filename="../panels/burn_dialog.py" line="502"/>
         <source>(no burner found)</source>
         <translation>(nie znaleziono nagrywarki)</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="383"/>
+        <location filename="../panels/burn_dialog.py" line="509"/>
         <source>Missing tools: {tools}. Burning is unavailable until they are installed.</source>
         <translation>Brakuje narzędzi: {tools}. Wypalanie będzie niedostępne, dopóki ich nie zainstalujesz.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="507"/>
+        <location filename="../panels/burn_dialog.py" line="636"/>
         <source>Tracks: {count} -- {length} of an available {capacity}</source>
         <translation>Ścieżki: {count} — {length} z dostępnych {capacity}</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="513"/>
+        <location filename="../panels/burn_dialog.py" line="642"/>
         <source>Disc {number}: {summary}</source>
         <translation>Płyta {number}: {summary}</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="526"/>
+        <location filename="../panels/burn_dialog.py" line="655"/>
         <source>CD-Text cannot carry these characters and they will be left out: {characters}</source>
         <translation>CD-Text nie przeniesie tych znaków i zostaną pominięte: {characters}</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="538"/>
+        <location filename="../panels/burn_dialog.py" line="667"/>
         <source>OK</source>
         <translation>OK</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="547"/>
+        <location filename="../panels/burn_dialog.py" line="676"/>
         <source>{format} -- a CD needs 44100 Hz / 16-bit / stereo</source>
         <translation>{format} — płyta CD wymaga 44100 Hz / 16 bitów / stereo</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="549"/>
+        <location filename="../panels/burn_dialog.py" line="678"/>
         <source>{format} -- will be converted to 44100 Hz / 16-bit</source>
         <translation>{format} — zostanie przekonwertowane na 44100 Hz / 16 bitów</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="551"/>
+        <location filename="../panels/burn_dialog.py" line="680"/>
         <source>shorter than the 4 seconds a CD track must be ({length})</source>
         <translation>krótsza niż wymagane dla ścieżki CD 4 sekundy ({length})</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="555"/>
+        <location filename="../panels/burn_dialog.py" line="684"/>
         <source>could not be read</source>
         <translation>nie udało się odczytać</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="557"/>
+        <location filename="../panels/burn_dialog.py" line="686"/>
         <source>A CD holds at most 99 tracks, and this is {count}.</source>
         <translation>Płyta CD mieści najwyżej 99 ścieżek, a tych jest {count}.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="559"/>
+        <location filename="../panels/burn_dialog.py" line="688"/>
         <source>This is {over} longer than the disc holds.</source>
         <translation>To o {over} więcej, niż mieści płyta.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="561"/>
+        <location filename="../panels/burn_dialog.py" line="690"/>
         <source>There are no tracks to burn.</source>
         <translation>Nie ma czego wypalić.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="613"/>
+        <location filename="../panels/burn_dialog.py" line="742"/>
         <source>No burner was found. Check that the drive is connected and press Refresh.</source>
         <translation>Nie znaleziono nagrywarki. Sprawdź, czy napęd jest podłączony, i naciśnij Odśwież.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="620"/>
+        <location filename="../panels/burn_dialog.py" line="749"/>
         <source>Run through the whole burn with the laser off? Nothing will be written to the disc.</source>
         <translation>Przejść przez całe wypalanie z wyłączonym laserem? Na płycie nic nie zostanie zapisane.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="624"/>
+        <location filename="../panels/burn_dialog.py" line="753"/>
         <source>Write this album to {discs} discs, one after another?
 
 Each is written and ejected on its own and you will be asked for the next blank. A CD-R cannot be rewritten: once this starts, a disc is either finished or wasted.</source>
@@ -288,7 +329,7 @@ Each is written and ejected on its own and you will be asked for the next blank.
 Każda jest osobno nagrywana i wysuwana, a program poprosi o kolejny czysty krążek. CD-R-a nie da się nagrać ponownie: po starcie płyta jest albo gotowa, albo zmarnowana.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="630"/>
+        <location filename="../panels/burn_dialog.py" line="759"/>
         <source>Write {count} tracks to the disc in the drive?
 
 A CD-R cannot be rewritten: once this starts, the disc is either finished or wasted.</source>
@@ -297,47 +338,47 @@ A CD-R cannot be rewritten: once this starts, the disc is either finished or was
 Płyty CD-R nie da się nadpisać: gdy to ruszy, płyta będzie albo gotowa, albo zmarnowana.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="668"/>
+        <location filename="../panels/burn_dialog.py" line="797"/>
         <source>Disc {number} of {count}...</source>
         <translation>Płyta {number} z {count}...</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="716"/>
+        <location filename="../panels/burn_dialog.py" line="851"/>
         <source>Preparing audio...</source>
         <translation>Przygotowywanie dźwięku...</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="716"/>
+        <location filename="../panels/burn_dialog.py" line="851"/>
         <source>Writing the disc...</source>
         <translation>Zapisywanie płyty...</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="726"/>
+        <location filename="../panels/burn_dialog.py" line="861"/>
         <source>Stopped.</source>
         <translation>Zatrzymano.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="740"/>
+        <location filename="../panels/burn_dialog.py" line="875"/>
         <source>The test run finished without an error. Nothing was written to the disc.</source>
         <translation>Próba zakończyła się bez błędu. Na płycie nic nie zapisano.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="746"/>
+        <location filename="../panels/burn_dialog.py" line="881"/>
         <source>All {count} discs are written.</source>
         <translation>Wszystkie płyty ({count}) są nagrane.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="752"/>
+        <location filename="../panels/burn_dialog.py" line="887"/>
         <source>The disc is written.</source>
         <translation>Płyta zapisana.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="764"/>
+        <location filename="../panels/burn_dialog.py" line="899"/>
         <source>Stopped after disc {number}. The discs already written are finished.</source>
         <translation>Zatrzymano po płycie {number}. Płyty już nagrane są gotowe.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="779"/>
+        <location filename="../panels/burn_dialog.py" line="914"/>
         <source>Disc {done} of {count} is written and ejected.
 
 Put the next blank disc in the drive and close the tray, then continue with disc {next}.</source>
@@ -346,12 +387,12 @@ Put the next blank disc in the drive and close the tray, then continue with disc
 Włóż do napędu kolejny czysty krążek, zamknij kieszeń i przejdź do płyty {next}.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="804"/>
+        <location filename="../panels/burn_dialog.py" line="939"/>
         <source>Stop now? If the disc is already being written it will be left unfinished, and a CD-R cannot be reused.</source>
         <translation>Zatrzymać teraz? Jeśli płyta jest już zapisywana, zostanie niedokończona, a CD-R nie nadaje się do ponownego użycia.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="813"/>
+        <location filename="../panels/burn_dialog.py" line="948"/>
         <source>Stopping...</source>
         <translation>Zatrzymywanie...</translation>
     </message>

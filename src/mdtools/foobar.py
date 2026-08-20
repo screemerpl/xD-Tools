@@ -40,7 +40,7 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
-from mdtools.multidisc import breaks_from_disc_numbers, leading_number
+from mdtools.multidisc import breaks_from_disc_numbers, leading_number, order_by_disc_and_track
 from mdtools.project import ProjectMetadata, Track, apply_compilation_naming
 
 DEFAULT_BASE_URL = "http://localhost:8880"
@@ -550,23 +550,10 @@ def sort_by_disc_and_track(items: list[PlaylistItem]) -> list[PlaylistItem]:
 
     A missing disc number counts as disc 1, which is what a single-disc
     album's files look like."""
-    if all(
-        leading_number(item.disc_number) is None and leading_number(item.track_number) is None
-        for item in items
-    ):
-        return list(items)
-
-    def key(pair: tuple[int, PlaylistItem]) -> tuple[int, int, int]:
-        index, item = pair
-        disc = leading_number(item.disc_number)
-        track = leading_number(item.track_number)
-        return (
-            disc if disc is not None else 1,
-            track if track is not None else sys.maxsize,
-            index,
-        )
-
-    return [item for _index, item in sorted(enumerate(items), key=key)]
+    numbers = [
+        (leading_number(item.disc_number), leading_number(item.track_number)) for item in items
+    ]
+    return [items[index] for index in order_by_disc_and_track(numbers)]
 
 
 def disc_breaks(items: list[PlaylistItem]) -> list[int]:

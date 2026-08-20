@@ -2890,6 +2890,36 @@ cosmetic problem; one that stops because the output read differently would
 be a wasted disc. `build_windows.ps1` needed no change for the new binaries
 -- it already `--add-data`s the whole `bin/win64` folder.
 
+**Disc breaks are only meaningful once the tracks are in disc order, and
+forgetting that offered a 34-track album as 26 discs.** Reported on sight
+from the burn dialog. `breaks_from_disc_numbers()` says "a break is where
+the number changes", which is right for an album in its own order and
+catastrophic for one in filename order: both discs of a set number their
+tracks from one, so a folder holding both arrives as `2, 1, 2, 1, ...` and
+a break falls at almost every track. The recording dialog never showed it
+because it sorts its playlist first. So:
+- **`multidisc.order_by_disc_and_track()` is the single rule**, taking
+  (disc, track) pairs and returning the order, used by
+  `foobar.sort_by_disc_and_track()` for a playlist and by
+  `audio_folder.disc_and_track_order()` for files on disk. Two answers to
+  "what order is this album in" is exactly the disagreement that produced
+  the bug.
+- **`BurnDialog` sorts its sources in `__init__`**, before anything is
+  measured or split.
+- `audio_folder.disc_breaks()` now says in its own docstring that it
+  assumes disc order, since it cannot tell.
+
+**The burn dialog carries the recording dialog's table controls, because
+they are the same job.** Reported directly -- the burn window had a Disc
+column and a checkbox but no way to move a track or place a break, while
+the recording window had all of it. Move Up/Move Down, "Start Disc
+Here"/"Do Not Start Disc Here" and "Split Automatically" are now in both,
+with the same behaviour: hand-placed breaks are sticky and start from the
+ones already on screen, and "Split Automatically" hands the division back.
+The one difference is what a move costs: the recording flow has to push a
+reordered playlist into foobar2000, while a burn hands the files to
+cdrecord itself, so here the table simply *is* the disc's running order.
+
 **A set of discs, on both sides of the CD flow.** The same `multidisc.py`
 split now drives three media, and the two CD halves each got the half of it
 they needed:

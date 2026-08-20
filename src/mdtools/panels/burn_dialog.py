@@ -188,7 +188,16 @@ class BurnDialog(QDialog):
         self.setWindowTitle(self.tr("Burn Audio CD"))
         self.resize(760, 640)
 
-        self._sources = [(Path(path), title, track_artist) for path, title, track_artist in sources]
+        # The album's own order, taken from the files rather than from
+        # however they were handed over. A two-disc set downloaded into one
+        # folder arrives interleaved -- both discs number their tracks from
+        # one -- and a disc break worked out from *that* falls on nearly
+        # every track: a 34-track album was offered as 26 discs before this
+        # was here. The recording dialog sorts its playlist for the same
+        # reason and by the same rule.
+        given = [(Path(path), title, track_artist) for path, title, track_artist in sources]
+        order = audio_folder.disc_and_track_order([path for path, _t, _a in given])
+        self._sources = [given[index] for index in order]
         self._worker: _BurnWorker | None = None
         self._burning = False
         # One plan per disc, and which of them is on the drive now. A list
@@ -197,11 +206,14 @@ class BurnDialog(QDialog):
         self._plans: list[cdburn.BurnPlan] = []
         self._disc = 0
         self._advance_when_finished = False
+        # None means "wherever the files or the arithmetic put them"; a list
+        # means the user has placed the breaks by hand.
+        self._manual_breaks: list[int] | None = None
         self.result_metadata: ProjectMetadata | None = None
 
         layout = QVBoxLayout(self)
         layout.addWidget(self._build_album_row(album, artist, year, cover_art))
-        layout.addWidget(self._build_tracks_table())
+        layout.addWidget(self._build_table_row())
         layout.addWidget(self._build_disc_box())
 
         # Two labels, not one: a missing cdrecord must not hide what the plan
@@ -282,6 +294,120 @@ class BurnDialog(QDialog):
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.table.setItem(row, column, item)
         return self.table
+
+    def _build_table_row(self) -> QWidget:
+        """The table, plus the same four buttons the recording dialog has.
+
+        Reordering and placing the disc breaks by hand are the same job
+        whichever machine the album ends up on, so they are the same
+        controls in the same place -- reported directly, as the burn dialog
+        having none of them."""
+        row = QWidget()
+        row_layout = QHBoxLayout(row)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.addWidget(self._build_tracks_table(), 1)
+
+        self.up_button = QPushButton(self.tr("Move Up"))
+        self.up_button.clicked.connect(lambda: self._move_selected(-1))
+        self.down_button = QPushButton(self.tr("Move Down"))
+        self.down_button.clicked.connect(lambda: self._move_selected(1))
+        for button in (self.up_button, self.down_button):
+            button.setToolTip(self.tr("Changes the order the tracks are written to the disc in."))
+        self.split_button = QPushButton(self.tr("Start Disc Here"))
+        self.split_button.clicked.connect(self._toggle_split)
+        self.split_button.setToolTip(
+            self.tr(
+                "Makes the selected track the first one on a new disc, instead of wherever the split was "
+                "worked out to go."
+            )
+        )
+        self.auto_split_button = QPushButton(self.tr("Split Automatically"))
+        self.auto_split_button.clicked.connect(self._auto_split)
+        self.auto_split_button.setToolTip(
+            self.tr("Throws away the splits placed by hand and works them out again.")
+        )
+
+        side = QVBoxLayout()
+        side.addWidget(self.up_button)
+        side.addWidget(self.down_button)
+        side.addSpacing(12)
+        side.addWidget(self.split_button)
+        side.addWidget(self.auto_split_button)
+        side.addStretch(1)
+        row_layout.addLayout(side)
+
+        self.table.currentCellChanged.connect(lambda *_: self._refresh_split_button())
+        return row
+
+    # -- the order, and where the discs end --------------------------------
+
+    def _selected_row(self) -> int:
+        return self.table.currentRow()
+
+    def _current_breaks(self) -> list[int]:
+        if self._manual_breaks is not None:
+            return list(self._manual_breaks)
+        starts = []
+        index = 0
+        for plan in self._plans[1:]:
+            index += len(self._plans[self._plans.index(plan) - 1].tracks)
+            starts.append(index)
+        return starts
+
+    def _refresh_split_button(self) -> None:
+        row = self._selected_row()
+        breaks = set(self._current_breaks())
+        self.split_button.setEnabled(
+            self.multi_check.isChecked() and row > 0 and not self._burning
+        )
+        self.auto_split_button.setEnabled(
+            self.multi_check.isChecked() and self._manual_breaks is not None and not self._burning
+        )
+        self.split_button.setText(
+            self.tr("Do Not Start Disc Here") if row in breaks else self.tr("Start Disc Here")
+        )
+
+    def _toggle_split(self) -> None:
+        """Adds a disc break at the selected track, or takes one away.
+
+        Starts from the breaks already on screen rather than from none, so
+        moving a boundary on a three-disc album does not throw the other one
+        away -- the same rule, and the same button text, as the recording
+        dialog."""
+        row = self._selected_row()
+        if row <= 0:
+            return
+        breaks = set(self._current_breaks())
+        breaks.discard(row) if row in breaks else breaks.add(row)
+        self._manual_breaks = sorted(breaks)
+        self._rebuild_plan()
+
+    def _auto_split(self) -> None:
+        self._manual_breaks = None
+        self._rebuild_plan()
+
+    def _move_selected(self, delta: int) -> None:
+        """Moves the selected track one place up or down.
+
+        Unlike the recording dialog, nothing outside this window has to be
+        told: a burn hands the files to cdrecord itself, so the order in
+        this table *is* the order on the disc."""
+        row = self._selected_row()
+        target = row + delta
+        if row < 0 or not 0 <= target < len(self._sources):
+            return
+        self._sources[row], self._sources[target] = self._sources[target], self._sources[row]
+        for column in (COL_TITLE, COL_ARTIST):
+            here = self.table.item(row, column)
+            there = self.table.item(target, column)
+            here_text = here.text() if here else ""
+            there_text = there.text() if there else ""
+            if here:
+                here.setText(there_text)
+            if there:
+                there.setText(here_text)
+        self.table.setCurrentCell(target, COL_TITLE)
+        self._rebuild_plan()
 
     def _build_disc_box(self) -> QWidget:
         box = QGroupBox(self.tr("Disc"))
@@ -455,7 +581,9 @@ class BurnDialog(QDialog):
             Track(title=track.title, time_seconds=track.seconds, artist=track.artist)
             for track in whole.tracks
         ]
-        declared = audio_folder.disc_breaks([path for path, _title, _artist in sources])
+        declared = self._manual_breaks
+        if declared is None:
+            declared = audio_folder.disc_breaks([path for path, _title, _artist in sources])
         # The lead-in is part of what a disc holds, so the music has that
         # much less room -- the same arithmetic BurnPlan.total_sectors does.
         usable = (capacity - cdburn.LEAD_IN_SECTORS) / cdburn.SECTORS_PER_SECOND
@@ -484,6 +612,7 @@ class BurnDialog(QDialog):
         # and for an ordinary album nothing about this has changed.
         self.plan = self._plans[0]
         self._show_plans(self._plans)
+        self._refresh_split_button()
 
     def _show_plans(self, plans: list[cdburn.BurnPlan]) -> None:
         several = len(plans) > 1
@@ -707,9 +836,15 @@ class BurnDialog(QDialog):
             self.eject_check,
             self.multi_check,
             self.disc_minutes_spin,
+            self.up_button,
+            self.down_button,
+            self.split_button,
+            self.auto_split_button,
             self.burn_button,
         ):
             widget.setEnabled(not running)
+        if not running:
+            self._refresh_split_button()
 
     def _on_stage(self, stage: str) -> None:
         self.stage_label.setText(

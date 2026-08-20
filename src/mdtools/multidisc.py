@@ -29,6 +29,7 @@ given.
 
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass, field
 from math import ceil
 
@@ -55,6 +56,39 @@ def leading_number(value) -> int | None:
             break
         digits += char
     return int(digits) if digits else None
+
+
+def order_by_disc_and_track(numbers: list[tuple[int | None, int | None]]) -> list[int]:
+    """The album's own order, as indices into what was handed in.
+
+    `numbers` is one (disc, track) pair per track, either of which may be
+    None. The rule lives here because the same question is asked of a
+    foobar2000 playlist and of files on disk, and the two must not answer it
+    differently -- a burn split where the recording flow would not split is
+    exactly the kind of disagreement this project keeps paying for.
+
+    Three things it will not do:
+    - **Nothing carries either number: the order is returned untouched.** No
+      tags means no opinion, and whatever order somebody assembled beats one
+      invented here.
+    - **A track with no number sinks to the end of its disc**, never to the
+      front, and ties keep the order they arrived in -- one untagged odd
+      file out cannot displace the album.
+    - **A missing disc number counts as disc 1**, which is what every
+      single-disc album's files look like.
+    """
+    if all(disc is None and track is None for disc, track in numbers):
+        return list(range(len(numbers)))
+
+    def key(pair: tuple[int, tuple[int | None, int | None]]) -> tuple[int, int, int]:
+        index, (disc, track) = pair
+        return (
+            disc if disc is not None else 1,
+            track if track is not None else sys.maxsize,
+            index,
+        )
+
+    return [index for index, _numbers in sorted(enumerate(numbers), key=key)]
 
 
 def breaks_from_disc_numbers(numbers: list[int | None]) -> list[int]:
@@ -248,6 +282,7 @@ def _parts_needed(durations: list[int], limit: int) -> int:
 
 __all__ = [
     "DEFAULT_DISC_MINUTES",
+    "order_by_disc_and_track",
     "MAX_DISC_MINUTES",
     "MIN_DISC_MINUTES",
     "DiscPlan",

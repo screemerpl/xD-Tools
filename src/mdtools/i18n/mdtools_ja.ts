@@ -94,192 +94,233 @@ MDRem赤外線アダプターがあれば、デッキ自体も操作します: f
     <name>BurnDialog</name>
     <message>
         <location filename="../panels/burn_dialog.py" line="188"/>
-        <location filename="../panels/burn_dialog.py" line="612"/>
-        <location filename="../panels/burn_dialog.py" line="636"/>
-        <location filename="../panels/burn_dialog.py" line="662"/>
-        <location filename="../panels/burn_dialog.py" line="723"/>
-        <location filename="../panels/burn_dialog.py" line="739"/>
-        <location filename="../panels/burn_dialog.py" line="745"/>
-        <location filename="../panels/burn_dialog.py" line="751"/>
-        <location filename="../panels/burn_dialog.py" line="777"/>
-        <location filename="../panels/burn_dialog.py" line="802"/>
+        <location filename="../panels/burn_dialog.py" line="741"/>
+        <location filename="../panels/burn_dialog.py" line="765"/>
+        <location filename="../panels/burn_dialog.py" line="791"/>
+        <location filename="../panels/burn_dialog.py" line="858"/>
+        <location filename="../panels/burn_dialog.py" line="874"/>
+        <location filename="../panels/burn_dialog.py" line="880"/>
+        <location filename="../panels/burn_dialog.py" line="886"/>
+        <location filename="../panels/burn_dialog.py" line="912"/>
+        <location filename="../panels/burn_dialog.py" line="937"/>
         <source>Burn Audio CD</source>
         <translation>オーディオCDを書き込む</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="228"/>
+        <location filename="../panels/burn_dialog.py" line="240"/>
         <source>Burn</source>
         <translation>書き込む</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="232"/>
+        <location filename="../panels/burn_dialog.py" line="244"/>
         <source>Close</source>
         <translation>閉じる</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="251"/>
-        <location filename="../panels/burn_dialog.py" line="268"/>
+        <location filename="../panels/burn_dialog.py" line="263"/>
+        <location filename="../panels/burn_dialog.py" line="280"/>
         <source>Artist</source>
         <translation>アーティスト</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="253"/>
+        <location filename="../panels/burn_dialog.py" line="265"/>
         <source>Album</source>
         <translation>アルバム</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="255"/>
+        <location filename="../panels/burn_dialog.py" line="267"/>
         <source>Year</source>
         <translation>年</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="268"/>
+        <location filename="../panels/burn_dialog.py" line="280"/>
         <source>Title</source>
         <translation>タイトル</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="268"/>
+        <location filename="../panels/burn_dialog.py" line="280"/>
         <source>Length</source>
         <translation>長さ</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="268"/>
+        <location filename="../panels/burn_dialog.py" line="280"/>
         <source>Status</source>
         <translation>ステータス</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="268"/>
-        <location filename="../panels/burn_dialog.py" line="287"/>
+        <location filename="../panels/burn_dialog.py" line="280"/>
+        <location filename="../panels/burn_dialog.py" line="413"/>
         <source>Disc</source>
         <translation>ディスク</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="295"/>
+        <location filename="../panels/burn_dialog.py" line="310"/>
+        <source>Move Up</source>
+        <translation>上へ移動</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="312"/>
+        <source>Move Down</source>
+        <translation>下へ移動</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="315"/>
+        <source>Changes the order the tracks are written to the disc in.</source>
+        <translation>ディスクに書き込むトラックの順番を変えます。</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="316"/>
+        <location filename="../panels/burn_dialog.py" line="367"/>
+        <source>Start Disc Here</source>
+        <translation>ここから新しいディスク</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="320"/>
+        <source>Makes the selected track the first one on a new disc, instead of wherever the split was worked out to go.</source>
+        <translation>自動で決まった区切りではなく、選択したトラックを新しいディスクの1曲目にします。</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="324"/>
+        <source>Split Automatically</source>
+        <translation>自動で分割</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="327"/>
+        <source>Throws away the splits placed by hand and works them out again.</source>
+        <translation>手で置いた区切りを捨てて、計算し直します。</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="367"/>
+        <source>Do Not Start Disc Here</source>
+        <translation>ここでは区切らない</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="421"/>
         <source>Refresh</source>
         <translation>更新</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="298"/>
+        <location filename="../panels/burn_dialog.py" line="424"/>
         <source>Burner</source>
         <translation>書き込みドライブ</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="303"/>
+        <location filename="../panels/burn_dialog.py" line="429"/>
         <source>Speed</source>
         <translation>速度</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="305"/>
+        <location filename="../panels/burn_dialog.py" line="431"/>
         <source>Simulate only (test run, nothing is written)</source>
         <translation>シミュレーションのみ（テスト実行、書き込みなし）</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="308"/>
+        <location filename="../panels/burn_dialog.py" line="434"/>
         <source>Eject when finished</source>
         <translation>終了後に取り出す</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="312"/>
+        <location filename="../panels/burn_dialog.py" line="438"/>
         <source>Burn across several discs</source>
         <translation>複数のディスクに分けて書き込む</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="315"/>
+        <location filename="../panels/burn_dialog.py" line="441"/>
         <source>For an album longer than one disc. Each disc is written and ejected on its own, and you are asked to put the next blank one in.</source>
         <translation>1枚に収まらないアルバム用です。各ディスクはそれぞれ書き込みとイジェクトまで行われ、次の空のディスクを入れるよう促されます。</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="327"/>
+        <location filename="../panels/burn_dialog.py" line="453"/>
         <source> min</source>
         <translation> 分</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="329"/>
+        <location filename="../panels/burn_dialog.py" line="455"/>
         <source>What one blank holds: 80 minutes on an ordinary CD-R, 74 on an older one.</source>
         <translation>空のディスクに収まる長さです: 一般的な CD-R で80分、古いものでは74分。</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="332"/>
+        <location filename="../panels/burn_dialog.py" line="458"/>
         <source>One disc holds</source>
         <translation>1枚に収まる長さ</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="376"/>
+        <location filename="../panels/burn_dialog.py" line="502"/>
         <source>(no burner found)</source>
         <translation>（書き込みドライブが見つかりません）</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="383"/>
+        <location filename="../panels/burn_dialog.py" line="509"/>
         <source>Missing tools: {tools}. Burning is unavailable until they are installed.</source>
         <translation>不足しているツール: {tools}。インストールするまで書き込みはできません。</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="507"/>
+        <location filename="../panels/burn_dialog.py" line="636"/>
         <source>Tracks: {count} -- {length} of an available {capacity}</source>
         <translation>トラック: {count} — 使用可能な {capacity} のうち {length}</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="513"/>
+        <location filename="../panels/burn_dialog.py" line="642"/>
         <source>Disc {number}: {summary}</source>
         <translation>ディスク {number}: {summary}</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="526"/>
+        <location filename="../panels/burn_dialog.py" line="655"/>
         <source>CD-Text cannot carry these characters and they will be left out: {characters}</source>
         <translation>CD-Text は次の文字を扱えないため省かれます: {characters}</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="538"/>
+        <location filename="../panels/burn_dialog.py" line="667"/>
         <source>OK</source>
         <translation>OK</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="547"/>
+        <location filename="../panels/burn_dialog.py" line="676"/>
         <source>{format} -- a CD needs 44100 Hz / 16-bit / stereo</source>
         <translation>{format} — CD には 44100 Hz / 16ビット / ステレオ が必要です</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="549"/>
+        <location filename="../panels/burn_dialog.py" line="678"/>
         <source>{format} -- will be converted to 44100 Hz / 16-bit</source>
         <translation>{format} — 44100 Hz / 16ビット に変換されます</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="551"/>
+        <location filename="../panels/burn_dialog.py" line="680"/>
         <source>shorter than the 4 seconds a CD track must be ({length})</source>
         <translation>CDのトラックに必要な4秒より短いです（{length}）</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="555"/>
+        <location filename="../panels/burn_dialog.py" line="684"/>
         <source>could not be read</source>
         <translation>読み取れませんでした</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="557"/>
+        <location filename="../panels/burn_dialog.py" line="686"/>
         <source>A CD holds at most 99 tracks, and this is {count}.</source>
         <translation>CD は最大99トラックですが、これは {count} トラックです。</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="559"/>
+        <location filename="../panels/burn_dialog.py" line="688"/>
         <source>This is {over} longer than the disc holds.</source>
         <translation>ディスクの容量を {over} 超えています。</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="561"/>
+        <location filename="../panels/burn_dialog.py" line="690"/>
         <source>There are no tracks to burn.</source>
         <translation>書き込むトラックがありません。</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="613"/>
+        <location filename="../panels/burn_dialog.py" line="742"/>
         <source>No burner was found. Check that the drive is connected and press Refresh.</source>
         <translation>書き込みドライブが見つかりません。ドライブの接続を確認して「更新」を押してください。</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="620"/>
+        <location filename="../panels/burn_dialog.py" line="749"/>
         <source>Run through the whole burn with the laser off? Nothing will be written to the disc.</source>
         <translation>レーザーを切ったまま書き込みの手順を通しますか？ディスクには何も書き込まれません。</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="624"/>
+        <location filename="../panels/burn_dialog.py" line="753"/>
         <source>Write this album to {discs} discs, one after another?
 
 Each is written and ejected on its own and you will be asked for the next blank. A CD-R cannot be rewritten: once this starts, a disc is either finished or wasted.</source>
@@ -288,7 +329,7 @@ Each is written and ejected on its own and you will be asked for the next blank.
 各ディスクはそれぞれ書き込みとイジェクトまで行われ、次の空のディスクを求められます。CD-R は書き直せません。始めたら、そのディスクは完成するか無駄になるかのどちらかです。</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="630"/>
+        <location filename="../panels/burn_dialog.py" line="759"/>
         <source>Write {count} tracks to the disc in the drive?
 
 A CD-R cannot be rewritten: once this starts, the disc is either finished or wasted.</source>
@@ -297,47 +338,47 @@ A CD-R cannot be rewritten: once this starts, the disc is either finished or was
 CD-R は書き直せません。始めたら、ディスクは完成するか無駄になるかのどちらかです。</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="668"/>
+        <location filename="../panels/burn_dialog.py" line="797"/>
         <source>Disc {number} of {count}...</source>
         <translation>{count} 枚中 {number} 枚目...</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="716"/>
+        <location filename="../panels/burn_dialog.py" line="851"/>
         <source>Preparing audio...</source>
         <translation>音声を準備しています...</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="716"/>
+        <location filename="../panels/burn_dialog.py" line="851"/>
         <source>Writing the disc...</source>
         <translation>ディスクに書き込んでいます...</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="726"/>
+        <location filename="../panels/burn_dialog.py" line="861"/>
         <source>Stopped.</source>
         <translation>停止しました。</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="740"/>
+        <location filename="../panels/burn_dialog.py" line="875"/>
         <source>The test run finished without an error. Nothing was written to the disc.</source>
         <translation>テスト実行はエラーなく終わりました。ディスクには何も書き込まれていません。</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="746"/>
+        <location filename="../panels/burn_dialog.py" line="881"/>
         <source>All {count} discs are written.</source>
         <translation>{count} 枚すべて書き込みました。</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="752"/>
+        <location filename="../panels/burn_dialog.py" line="887"/>
         <source>The disc is written.</source>
         <translation>ディスクを書き込みました。</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="764"/>
+        <location filename="../panels/burn_dialog.py" line="899"/>
         <source>Stopped after disc {number}. The discs already written are finished.</source>
         <translation>ディスク {number} の後で停止しました。すでに書き込んだディスクは完成しています。</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="779"/>
+        <location filename="../panels/burn_dialog.py" line="914"/>
         <source>Disc {done} of {count} is written and ejected.
 
 Put the next blank disc in the drive and close the tray, then continue with disc {next}.</source>
@@ -346,12 +387,12 @@ Put the next blank disc in the drive and close the tray, then continue with disc
 次の空のディスクをドライブに入れてトレイを閉じ、{next} 枚目に進んでください。</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="804"/>
+        <location filename="../panels/burn_dialog.py" line="939"/>
         <source>Stop now? If the disc is already being written it will be left unfinished, and a CD-R cannot be reused.</source>
         <translation>今すぐ停止しますか？すでに書き込み中の場合、ディスクは未完成のまま残り、CD-R は再利用できません。</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="813"/>
+        <location filename="../panels/burn_dialog.py" line="948"/>
         <source>Stopping...</source>
         <translation>停止しています...</translation>
     </message>

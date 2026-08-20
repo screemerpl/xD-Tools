@@ -44,7 +44,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from mdtools.embedded_cover import flac_tags
-from mdtools.multidisc import breaks_from_disc_numbers, leading_number
+from mdtools.multidisc import (
+    breaks_from_disc_numbers,
+    leading_number,
+    order_by_disc_and_track,
+)
 
 # What foobar2000 plays out of the box, plus the common lossless oddities.
 # A generous list rather than a strict one: a file it turns out not to
@@ -250,11 +254,41 @@ def disc_numbers(paths: list[Path | str]) -> list[int | None]:
     return numbers
 
 
+def disc_and_track_order(paths: list[Path | str]) -> list[int]:
+    """The album's own order for these files, as indices into `paths`.
+
+    The same rule the playlist side follows (multidisc.order_by_disc_and_track)
+    over the same two tags, read straight out of the files. It matters most
+    where a two-disc set was downloaded into one folder: both discs number
+    their tracks from one, so by filename they arrive interleaved -- and a
+    disc break worked out from *that* order falls on nearly every track,
+    which is exactly what a 34-track album offered as 26 discs turned out to
+    be.
+    """
+    numbers = disc_numbers(paths)
+    tracks = _track_numbers(paths)
+    return order_by_disc_and_track(list(zip(numbers, tracks)))
+
+
+def _track_numbers(paths: list[Path | str]) -> list[int | None]:
+    result: list[int | None] = []
+    for path in paths:
+        path = Path(path)
+        tags = flac_tags(path) if path.suffix.lower() == ".flac" else {}
+        result.append(leading_number(tags.get("TRACKNUMBER", "")))
+    return result
+
+
 def disc_breaks(paths: list[Path | str]) -> list[int]:
     """Where these files say one disc ends and the next begins.
 
     Empty for a single-disc album and for anything untagged, so a caller
-    can use it without asking whether it applies."""
+    can use it without asking whether it applies.
+
+    **Assumes the files are already in disc order** -- see
+    disc_and_track_order(), which is what puts them there. A break is simply
+    where the number changes, so an interleaved folder produces one at
+    almost every track."""
     return breaks_from_disc_numbers(disc_numbers(paths))
 
 

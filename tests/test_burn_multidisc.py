@@ -207,6 +207,61 @@ def test_the_capacity_is_what_the_user_says_it_is(qt_app, tmp_path, burnable):
     assert dialog._plans[0].capacity_sectors == 74 * 60 * cdburn.SECTORS_PER_SECOND
 
 
+def test_a_set_downloaded_into_one_folder_is_put_back_in_order(
+    qt_app, tmp_path, burnable, monkeypatch
+):
+    """Both discs of a set number their tracks from one, so by filename
+    they arrive interleaved -- 2, 1, 2, 1. A break worked out from *that*
+    order falls on nearly every track: a real 34-track album was offered as
+    26 discs before the sources were sorted first."""
+    interleaved = _sources(tmp_path, 6)
+    numbers = {path: disc for path, disc in zip([s[0] for s in interleaved], [2, 1, 2, 1, 2, 1])}
+    monkeypatch.setattr(
+        burn_module.audio_folder,
+        "disc_and_track_order",
+        lambda paths: sorted(range(len(paths)), key=lambda i: (numbers[paths[i]], i)),
+    )
+    monkeypatch.setattr(
+        burn_module.audio_folder,
+        "disc_breaks",
+        lambda paths: [3],  # once sorted, the change of disc is in the middle
+    )
+
+    dialog = BurnDialog(interleaved, album="Album", artist="Artist")
+    dialog.multi_check.setChecked(True)
+
+    assert [len(plan.tracks) for plan in dialog._plans] == [3, 3]
+
+
+def test_a_break_placed_by_hand_wins_over_the_files(qt_app, tmp_path, burnable, monkeypatch):
+    monkeypatch.setattr(burn_module.audio_folder, "disc_breaks", lambda paths: [4])
+    dialog = BurnDialog(_sources(tmp_path, 8), album="Album", artist="Artist")
+    _short_disc(dialog, minutes=60)
+    dialog.table.setCurrentCell(2, burn_module.COL_TITLE)
+
+    dialog._toggle_split()
+
+    assert [len(plan.tracks) for plan in dialog._plans] == [2, 2, 4]
+    dialog._auto_split()
+    assert [len(plan.tracks) for plan in dialog._plans] == [4, 4]
+
+
+def test_moving_a_track_changes_the_order_it_is_written_in(qt_app, tmp_path, burnable):
+    """A burn hands the files to cdrecord itself, so this table *is* the
+    disc's running order -- nothing outside the window has to be told."""
+    dialog = BurnDialog(_sources(tmp_path, 3), album="Album", artist="Artist")
+    dialog.table.setCurrentCell(0, burn_module.COL_TITLE)
+
+    dialog._move_selected(1)
+
+    assert [title for _path, title, _artist in dialog.track_sources()] == [
+        "Track 2",
+        "Track 1",
+        "Track 3",
+    ]
+    assert [track.title for track in dialog._plans[0].tracks] == ["Track 2", "Track 1", "Track 3"]
+
+
 # -- one disc after another ----------------------------------------------
 
 
