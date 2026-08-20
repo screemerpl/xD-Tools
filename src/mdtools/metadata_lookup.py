@@ -25,7 +25,7 @@ from dataclasses import dataclass
 SEARCH_URL = "https://itunes.apple.com/search"
 LOOKUP_URL = "https://itunes.apple.com/lookup"
 REQUEST_TIMEOUT_SECONDS = 10
-USER_AGENT = "MDTools (https://github.com/) metadata lookup"
+USER_AGENT = "xD-Tools (https://github.com/) metadata lookup"
 
 
 class MetadataLookupError(Exception):

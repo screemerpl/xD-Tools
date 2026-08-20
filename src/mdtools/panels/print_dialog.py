@@ -882,7 +882,7 @@ class MultiprintDialog(_PrintDialogBase):
 
     def _on_add(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, self.tr("Add Project"), user_paths.project_start_path(None), self.tr("MDTools Project (*.mdproj)")
+            self, self.tr("Add Project"), user_paths.project_start_path(None), self.tr("xD-Tools Project (*.mdproj)")
         )
         if not path:
             return

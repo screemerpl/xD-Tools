@@ -1,4 +1,4 @@
-"""Experimental Settings' "Sign in to Telegram..." button -- logs MDTools
+"""Experimental Settings' "Sign in to Telegram..." button -- logs xD-Tools
 in as the user's own Telegram account, which is what lets it later talk to
 a bot the user runs themselves (see mdtools.telegram_bot's module docstring
 for why a real user login is needed at all, not a bot token).
@@ -170,7 +170,7 @@ class TelegramLoginDialog(QDialog):
 
         intro = QLabel(
             self.tr(
-                "MDTools needs to sign in as your own Telegram account to talk to your bot -- "
+                "xD-Tools needs to sign in as your own Telegram account to talk to your bot -- "
                 "Telegram does not let one bot message another directly."
             )
         )

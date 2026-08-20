@@ -2,7 +2,7 @@
 component (foo_beefweb), which exposes a small REST API on localhost.
 
 Used by "Record to MiniDisc from foobar2000...": foobar plays the album
-into the deck over S/PDIF while MDTools watches which track is playing and,
+into the deck over S/PDIF while xD-Tools watches which track is playing and,
 when the playlist ends, titles the disc through MDRem.
 
 Plain stdlib urllib rather than QtNetwork or a client library, for the same
@@ -499,7 +499,7 @@ def replace_current_playlist(
 
     **The order is verified rather than assumed, and that is the whole
     point of this function.** Reported live, mid-recording: an album whose
-    tracks had been reordered in MDTools was recorded from foobar's own
+    tracks had been reordered in xD-Tools was recorded from foobar's own
     order, so the disc got the wrong track -- foobar2000 sorts an incoming
     batch by filename before appending it, which silently undoes the very
     thing the caller asked for. Adding the files one at a time is what

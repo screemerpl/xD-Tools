@@ -245,7 +245,7 @@ class CdRipDialog(QDialog):
             self.tr(
                 "Titles and artists can be edited here -- they are written into the ripped files, and are "
                 "what ends up on the {medium}. Fill the artist column in when the disc is a compilation: "
-                "MDTools then names it accordingly and draws it a cover of its own."
+                "xD-Tools then names it accordingly and draws it a cover of its own."
             ).format(medium=self._target)
         )
         hint.setWordWrap(True)
@@ -333,7 +333,7 @@ class CdRipDialog(QDialog):
         self.read_btn.setEnabled(False)
         self.status_label.setText(
             self.tr(
-                "These bundled tools are missing, so a CD cannot be read: {tools}. Reinstall MDTools, or put "
+                "These bundled tools are missing, so a CD cannot be read: {tools}. Reinstall xD-Tools, or put "
                 "them on your PATH."
             ).format(tools=", ".join(missing))
         )

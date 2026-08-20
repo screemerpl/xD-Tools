@@ -1,6 +1,6 @@
 """Machine translation of a Telegram bot's messages into whatever language
-MDTools' own UI is currently set to (mdtools.i18n.current_language()) --
-so running MDTools in Polish or Japanese doesn't mean reading an
+xD-Tools' own UI is currently set to (mdtools.i18n.current_language()) --
+so running xD-Tools in Polish or Japanese doesn't mean reading an
 English-speaking bot's replies by hand. Used by
 panels/telegram_chat_dialog.py only.
 
@@ -33,7 +33,7 @@ import urllib.request
 
 _ENDPOINT = "https://api.mymemory.translated.net/get"
 _TIMEOUT_S = 10
-_USER_AGENT = "MDTools (https://github.com/) -- Telegram bot chat translation"
+_USER_AGENT = "xD-Tools (https://github.com/) -- Telegram bot chat translation"
 
 
 class TranslationError(Exception):

@@ -3,7 +3,7 @@
 Rendering is Qt's own: the content is described as blocks (see
 content_*.py), turned into the rich-text subset QTextDocument understands,
 and painted onto a QPdfWriter. That keeps the manual buildable with
-nothing installed beyond what MDTools already needs -- no LaTeX, no
+nothing installed beyond what xD-Tools already needs -- no LaTeX, no
 wkhtmltopdf, no reportlab.
 
 Pagination is done by hand rather than through QTextDocument.print_(),
@@ -332,7 +332,7 @@ def paint(doc: QTextDocument, path: Path, content, body_size: QSizeF, footer_hei
     writer.setPageMargins(QMarginsF(*PAGE_MARGINS_MM), QPageLayout.Unit.Millimeter)
     writer.setResolution(RESOLUTION)
     writer.setTitle(f"{content.TITLE} - {content.SUBTITLE}")
-    writer.setCreator("MDTools")
+    writer.setCreator("xD-Tools")
 
     painter = QPainter(writer)
     body_height = body_size.height()

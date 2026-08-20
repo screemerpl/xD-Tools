@@ -610,6 +610,45 @@ BOOK = [
             {"p": "An MD holds 80 minutes in SP. xD-Tools warns when the playlist is longer than that, but "
                   "it can only warn - LP2 and LP4 have to be set on the deck itself, and there is no way "
                   "to read back which mode it is in."},
+            {"h2": "An album that takes more than one disc"},
+            {"p": "A double album does not fit on a MiniDisc, and a MiniDisc cannot be turned over the "
+                  "way a cassette can. **Record across several discs** records it a disc at a time "
+                  "instead: one disc, its titles, eject, the next blank, and so on."},
+            {"p": "Tick it and the track list gains a **Disc** column showing where the album is cut, "
+                  "with a line underneath saying how full each disc ends up. **One disc holds** is the "
+                  "number that decides it - 80 minutes in SP, 160 in LP2. xD-Tools cannot read which "
+                  "mode the deck is in, so that number is yours to state."},
+            {"ol": [
+                "Each disc is recorded exactly as a single one is: armed, confirmed, played, marked.",
+                "**Two seconds after the last track of that disc, the titles go out by themselves** - "
+                "no question, no button. Nobody sits through forty minutes of album, and a MiniDisc "
+                "keeps an edited title list in memory only until the disc is ejected.",
+                "The disc is ejected, and xD-Tools asks you to put the next blank one in.",
+                "The last disc finishes the same way and the run ends.",
+            ]},
+            {"note": "Each disc is titled with the album's name and **[1/2]**, **[2/2]** after it. Two "
+                     "discs of one album titled identically are two discs nobody can tell apart on a "
+                     "shelf. The tracks on each are numbered from one, which is how the deck numbers "
+                     "them anyway."},
+            {"warn": "The preview that Upload Tracklist normally shows is given up here - there is "
+                     "nobody at the machine to read it. That is why every title, and every character "
+                     "the deck cannot show, is on screen in this window **before** the first note "
+                     "plays."},
+            {"h2": "Where the album is cut, and in what order"},
+            {"p": "xD-Tools puts the playlist into the album's own order as the window opens: by disc "
+                  "number first, then by track number, both read from the files themselves. A "
+                  "two-disc set dropped into foobar2000 as one folder arrives interleaved, because both "
+                  "discs number their tracks from one - this is what puts it right, and foobar2000's own "
+                  "playlist is reordered to match, since that is what actually gets played."},
+            {"p": "If the files say how many discs there are, the splits are placed where they say and "
+                  "the option is ticked for you. Otherwise the album is divided as evenly as its running "
+                  "order allows, into the fewest discs that fit."},
+            {"ul": [
+                "**Move Up** / **Move Down** change the order the album is recorded in.",
+                "**Start Disc Here** makes the selected track the first of a new disc; pressed again on "
+                "the same track, it takes that split away.",
+                "**Split Automatically** throws away the splits you placed and works them out again.",
+            ]},
         ],
     },
     # ------------------------------------------------------------------
@@ -683,6 +722,24 @@ BOOK = [
             {"warn": "Loading the copied tracks into foobar2000 **empties its current playlist**. "
                      "Anything you had queued up there is gone, so move it elsewhere first if you want "
                      "to keep it."},
+            {"h2": "A set of several CDs"},
+            {"p": "**Rip several discs as one album** copies a boxed set as one album rather than as "
+                  "two unrelated ones. Each disc is read, identified and ripped on its own, and xD-Tools "
+                  "then asks for the next."},
+            {"ul": [
+                "They all land in **one folder**, the one the first disc made. A later disc is often "
+                "identified under a title of its own - \"... [Disc 2]\" - and a folder per disc would "
+                "be two albums.",
+                "The album, artist and year stay the ones from the first disc. The **titles** are each "
+                "disc's own, which is what the lookup is for.",
+                "Every file is tagged with the disc it came from, and carries that number in its name. "
+                "That is what lets everything afterwards - the playlist, a recording, a burn - put the "
+                "set back in its own order.",
+                "When you stop adding discs, foobar2000's playlist holds the whole set, and the "
+                "recording that follows records all of it.",
+            ]},
+            {"note": "You can stop after any disc: the question offers to carry on or to record what has "
+                     "been ripped so far."},
         ],
     },
     {
@@ -741,6 +798,26 @@ BOOK = [
                 "A blank CD-R. A disc that already holds something cannot take a fresh burn.",
                 "Nothing else: cdrecord and SoX are bundled on Windows.",
             ]},
+            {"h2": "An album that takes more than one disc"},
+            {"p": "**Burn across several discs** writes a long album onto as many CD-Rs as it needs. "
+                  "**One disc holds** is what that depends on: 80 minutes on an ordinary blank, 74 on an "
+                  "older one."},
+            {"p": "The track list gains a **Disc** column showing where the album is cut, and the "
+                  "summary gives each disc's own length. Every disc is measured against the disc it goes "
+                  "on - the album overrunning is the point - so the Burn button stays off until each of "
+                  "them fits."},
+            {"ol": [
+                "Each disc is written and then ejected, whatever **Eject when finished** says: the tray "
+                "has to open for the next blank to go in.",
+                "xD-Tools asks you to put that blank in, and writes the next disc.",
+                "You can stop at any of those questions; the discs already written are finished.",
+            ]},
+            {"note": "Each disc's CD-Text carries the album's name with **[1/2]**, **[2/2]** after it, "
+                     "for the same reason MiniDisc titles do."},
+            {"p": "Where the cut falls comes from the files when they say - a ripped boxed set carries "
+                  "its disc numbers, and those are honoured rather than balanced over. The same four "
+                  "buttons as the recording window are here too: **Move Up**, **Move Down**, **Start "
+                  "Disc Here** and **Split Automatically**."},
         ],
     },
     # ------------------------------------------------------------------

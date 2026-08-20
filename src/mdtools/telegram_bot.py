@@ -4,7 +4,7 @@ MiniDisc -- see panels/folder_record_dialog.py, which this eventually feeds
 exactly the way a folder of files already does.
 
 **Why a real user login, not a bot token.** Telegram's Bot API forbids one
-bot from messaging another bot outright -- MDTools can't send `/search
+bot from messaging another bot outright -- xD-Tools can't send `/search
 Nevermind` to the user's bot as a bot itself and get a reply. To talk to a
 bot the way a person would in the Telegram app, this has to act as an
 actual Telegram *user account* (phone number + code, optionally a 2FA
@@ -12,7 +12,7 @@ password) over the MTProto client protocol, which is what Telethon
 (https://docs.telethon.dev) speaks. That needs its own API ID/API Hash pair
 from https://my.telegram.org -- a credential for *this application acting
 as a client*, completely unrelated to whatever bot token the user's own bot
-uses internally. MDTools never needs the bot's token at all; it just
+uses internally. xD-Tools never needs the bot's token at all; it just
 messages the bot like any other contact would.
 
 No Qt in here, matching mdrem.py/foobar.py/cdrip.py -- the panel imports

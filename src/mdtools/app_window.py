@@ -519,7 +519,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:
         """Closing the window means "done with this project", not "done with
-        MDTools" -- it goes back to the startup screen.
+        xD-Tools" -- it goes back to the startup screen.
 
         Quitting outright had one route to it and no way back: shut the
         window to open a different project and the whole app went with it.
@@ -1382,7 +1382,7 @@ class MainWindow(QMainWindow):
     def _project_file_filter(self) -> str:
         # a module-level constant can't use self.tr(), so this is computed
         # per-call instead (cheap, and picks up the active language)
-        return self.tr("MDTools Project (*.mdproj)")
+        return self.tr("xD-Tools Project (*.mdproj)")
 
     def _manage_templates(self) -> None:
         dialog = TemplateManagerDialog(self)
@@ -1722,7 +1722,7 @@ class MainWindow(QMainWindow):
         box = QMessageBox(
             QMessageBox.Icon.Information,
             self.tr("Language Changed"),
-            self.tr("Restart MDTools for the new language to take full effect."),
+            self.tr("Restart xD-Tools for the new language to take full effect."),
             parent=self,
         )
         restart_btn = box.addButton(self.tr("Restart Now"), QMessageBox.ButtonRole.AcceptRole)
@@ -1733,7 +1733,7 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def _restart_app() -> None:
-        """Relaunches MDTools as a brand-new process, then quits this one.
+        """Relaunches xD-Tools as a brand-new process, then quits this one.
         There's no live-retranslation machinery in this codebase (every
         widget sets its text once, from self.tr(...), at construction
         time only -- see i18n/__init__.py's own "restart required" note),
@@ -1761,7 +1761,7 @@ class MainWindow(QMainWindow):
     def _recording_needs_an_adapter(self) -> bool:
         """Whether this project's recording goes through the MDRem adapter.
 
-        A cassette's does not: MDTools presses nothing, it plays the tracks
+        A cassette's does not: xD-Tools presses nothing, it plays the tracks
         and says what to do. So every source below resolves a port only
         when there is a MiniDisc at the end of it."""
         return self.project is None or self.project.medium != MEDIUM_TAPE

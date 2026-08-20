@@ -34,7 +34,7 @@ TIMEOUT_S = 20.0
 
 # MusicBrainz blocks requests that do not identify themselves. Their policy
 # asks for an application name, a version, and a way to make contact.
-_USER_AGENT = "MDTools/1.0 ( https://github.com/screemerpl/MDTools )"
+_USER_AGENT = "xD-Tools/1.0 ( https://github.com/screemerpl/MDTools )"
 
 _INCLUDES = "artist-credits+recordings"
 

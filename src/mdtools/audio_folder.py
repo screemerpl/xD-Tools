@@ -64,7 +64,7 @@ AUDIO_EXTENSIONS = frozenset(
 
 _DIGITS = re.compile(r"(\d+)")
 
-# "Artist - Album", the shape MDTools itself proposes when saving a project
+# "Artist - Album", the shape xD-Tools itself proposes when saving a project
 # (see user_paths.project_start_path), and the shape essentially every
 # download and ripper uses for a folder name.
 _SEPARATOR = re.compile(r"\s+-\s+|\s+–\s+|\s+—\s+")
@@ -133,7 +133,7 @@ def guess_from_folder_name(name: str) -> tuple[str, str, int | None]:
     folder produces a disc with twelve titles and no name at all, since
     there is nothing else on the machine that knows what the album is.
 
-    Note this is the inverse of the filename MDTools proposes for a project
+    Note this is the inverse of the filename xD-Tools proposes for a project
     (user_paths.project_start_path, via mdrem.disc_title) -- the same
     convention read in the other direction."""
     text = name.strip()

@@ -448,9 +448,8 @@ Włóż do napędu kolejny czysty krążek, zamknij kieszeń i przejdź do płyt
         <translation type="vanished">Tytuły i wykonawców można tu edytować — trafiają do zgranych plików i to one zostaną zapisane na MiniDisc. Wypełnij kolumnę wykonawcy, gdy płyta jest składanką: MDTools nazwie ją wtedy odpowiednio i sam zaprojektuje jej okładkę.</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="246"/>
         <source>Titles and artists can be edited here -- they are written into the ripped files, and are what ends up on the {medium}. Fill the artist column in when the disc is a compilation: MDTools then names it accordingly and draws it a cover of its own.</source>
-        <translation>Tytuły i wykonawców można tu edytować — są zapisywane do zgranych plików i to one trafią na {medium}. Kolumnę wykonawcy wypełnij, gdy płyta jest składanką: MDTools odpowiednio ją wtedy nazwie i narysuje jej własną okładkę.</translation>
+        <translation type="vanished">Tytuły i wykonawców można tu edytować — są zapisywane do zgranych plików i to one trafią na {medium}. Kolumnę wykonawcy wypełnij, gdy płyta jest składanką: MDTools odpowiednio ją wtedy nazwie i narysuje jej własną okładkę.</translation>
     </message>
     <message>
         <location filename="../panels/cd_rip_dialog.py" line="254"/>
@@ -499,9 +498,18 @@ Włóż do napędu kolejny czysty krążek, zamknij kieszeń i przejdź do płyt
         <translation>Włóż płytę audio CD i naciśnij Odczytaj płytę.</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="336"/>
         <source>These bundled tools are missing, so a CD cannot be read: {tools}. Reinstall MDTools, or put them on your PATH.</source>
-        <translation>Brakuje dołączonych narzędzi, więc nie można odczytać płyty: {tools}. Zainstaluj MDTools ponownie albo umieść je w ścieżce PATH.</translation>
+        <translation type="vanished">Brakuje dołączonych narzędzi, więc nie można odczytać płyty: {tools}. Zainstaluj MDTools ponownie albo umieść je w ścieżce PATH.</translation>
+    </message>
+    <message>
+        <location filename="../panels/cd_rip_dialog.py" line="246"/>
+        <source>Titles and artists can be edited here -- they are written into the ripped files, and are what ends up on the {medium}. Fill the artist column in when the disc is a compilation: xD-Tools then names it accordingly and draws it a cover of its own.</source>
+        <translation>Tytuły i wykonawców można tu edytować — są zapisywane do zgranych plików i to one trafią na {medium}. Kolumnę wykonawcy wypełnij, gdy płyta jest składanką: xD-Tools odpowiednio ją wtedy nazwie i narysuje jej własną okładkę.</translation>
+    </message>
+    <message>
+        <location filename="../panels/cd_rip_dialog.py" line="336"/>
+        <source>These bundled tools are missing, so a CD cannot be read: {tools}. Reinstall xD-Tools, or put them on your PATH.</source>
+        <translation>Brakuje dołączonych narzędzi, więc nie można odczytać płyty: {tools}. Zainstaluj xD-Tools ponownie albo umieść je w ścieżce PATH.</translation>
     </message>
     <message>
         <location filename="../panels/cd_rip_dialog.py" line="351"/>
@@ -738,18 +746,30 @@ choose one)</source>
         <translation>Skasuj MiniDisc</translation>
     </message>
     <message>
-        <location filename="../panels/erase_dialog.py" line="150"/>
         <source>This asks the deck to erase everything on the disc. It cannot be undone, and MDTools cannot see the result -- the deck has no way to report back.
 
 Make sure the right disc is loaded and its write-protect tab is closed.</source>
-        <translation>To polecenie każe magnetofonowi skasować całą zawartość płyty. Operacji nie da się cofnąć, a MDTools nie zobaczy jej wyniku — magnetofon nie ma jak odpowiedzieć.
+        <translation type="vanished">To polecenie każe magnetofonowi skasować całą zawartość płyty. Operacji nie da się cofnąć, a MDTools nie zobaczy jej wyniku — magnetofon nie ma jak odpowiedzieć.
+
+Upewnij się, że w środku jest właściwa płyta i że jej suwak zabezpieczający jest zamknięty.</translation>
+    </message>
+    <message>
+        <source>Note: which editing menu your deck opens in response is not something MDTools can know, so it will ask you what the display shows before confirming anything.</source>
+        <translation type="vanished">Uwaga: MDTools nie jest w stanie wiedzieć, jakie menu edycji otworzy Twój magnetofon, więc przed potwierdzeniem czegokolwiek zapyta Cię, co pokazuje wyświetlacz.</translation>
+    </message>
+    <message>
+        <location filename="../panels/erase_dialog.py" line="150"/>
+        <source>This asks the deck to erase everything on the disc. It cannot be undone, and xD-Tools cannot see the result -- the deck has no way to report back.
+
+Make sure the right disc is loaded and its write-protect tab is closed.</source>
+        <translation>To polecenie każe magnetofonowi skasować całą zawartość płyty. Operacji nie da się cofnąć, a xD-Tools nie zobaczy jej wyniku — magnetofon nie ma jak odpowiedzieć.
 
 Upewnij się, że w środku jest właściwa płyta i że jej suwak zabezpieczający jest zamknięty.</translation>
     </message>
     <message>
         <location filename="../panels/erase_dialog.py" line="160"/>
-        <source>Note: which editing menu your deck opens in response is not something MDTools can know, so it will ask you what the display shows before confirming anything.</source>
-        <translation>Uwaga: MDTools nie jest w stanie wiedzieć, jakie menu edycji otworzy Twój magnetofon, więc przed potwierdzeniem czegokolwiek zapyta Cię, co pokazuje wyświetlacz.</translation>
+        <source>Note: which editing menu your deck opens in response is not something xD-Tools can know, so it will ask you what the display shows before confirming anything.</source>
+        <translation>Uwaga: xD-Tools nie jest w stanie wiedzieć, jakie menu edycji otworzy Twój magnetofon, więc przed potwierdzeniem czegokolwiek zapyta Cię, co pokazuje wyświetlacz.</translation>
     </message>
     <message>
         <location filename="../panels/erase_dialog.py" line="175"/>
@@ -1540,6 +1560,16 @@ Wysunąć teraz, żeby zapisać je trwale?</translation>
         <translation>Usuń stronę</translation>
     </message>
     <message>
+        <location filename="../app_window.py" line="1385"/>
+        <source>xD-Tools Project (*.mdproj)</source>
+        <translation>Projekt xD-Tools (*.mdproj)</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1725"/>
+        <source>Restart xD-Tools for the new language to take full effect.</source>
+        <translation>Uruchom ponownie xD-Tools, aby nowy język w pełni obowiązywał.</translation>
+    </message>
+    <message>
         <location filename="../app_window.py" line="2362"/>
         <source>Lay Out Shell Label</source>
         <translation>Rozmieść etykietę kasety</translation>
@@ -2076,9 +2106,8 @@ Strona okładki i metadane projektu pozostaną nietknięte.</translation>
         <translation>Wyeksportowano grafikę do druku do {path}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1385"/>
         <source>MDTools Project (*.mdproj)</source>
-        <translation>Projekt MDTools (*.mdproj)</translation>
+        <translation type="vanished">Projekt MDTools (*.mdproj)</translation>
     </message>
     <message>
         <location filename="../app_window.py" line="1556"/>
@@ -2126,9 +2155,8 @@ Strona okładki i metadane projektu pozostaną nietknięte.</translation>
         <translation>Zmieniono język</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1725"/>
         <source>Restart MDTools for the new language to take full effect.</source>
-        <translation>Uruchom ponownie MDTools, aby nowy język w pełni obowiązywał.</translation>
+        <translation type="vanished">Uruchom ponownie MDTools, aby nowy język w pełni obowiązywał.</translation>
     </message>
 </context>
 <context>
@@ -2372,8 +2400,12 @@ choose one)</source>
     </message>
     <message>
         <location filename="../panels/print_dialog.py" line="885"/>
+        <source>xD-Tools Project (*.mdproj)</source>
+        <translation>Projekt xD-Tools (*.mdproj)</translation>
+    </message>
+    <message>
         <source>MDTools Project (*.mdproj)</source>
-        <translation>Projekt MDTools (*.mdproj)</translation>
+        <translation type="vanished">Projekt MDTools (*.mdproj)</translation>
     </message>
     <message>
         <location filename="../panels/print_dialog.py" line="892"/>
@@ -3300,9 +3332,13 @@ Ustawienie i tak zostało zapisane, ale dopóki folder nie istnieje, nie da się
 <context>
     <name>StartupDialog</name>
     <message>
-        <location filename="../panels/startup_dialog.py" line="42"/>
         <source>Welcome to MDTools</source>
-        <translation>Witamy w MDTools</translation>
+        <translation type="vanished">Witamy w MDTools</translation>
+    </message>
+    <message>
+        <location filename="../panels/startup_dialog.py" line="42"/>
+        <source>Welcome to xD-Tools</source>
+        <translation>Witamy w xD-Tools</translation>
     </message>
     <message>
         <location filename="../panels/startup_dialog.py" line="47"/>
@@ -3346,8 +3382,12 @@ Ustawienie i tak zostało zapisane, ale dopóki folder nie istnieje, nie da się
     </message>
     <message>
         <location filename="../panels/startup_dialog.py" line="105"/>
+        <source>xD-Tools Project (*.mdproj)</source>
+        <translation>Projekt xD-Tools (*.mdproj)</translation>
+    </message>
+    <message>
         <source>MDTools Project (*.mdproj)</source>
-        <translation>Projekt MDTools (*.mdproj)</translation>
+        <translation type="vanished">Projekt MDTools (*.mdproj)</translation>
     </message>
 </context>
 <context>
@@ -3726,9 +3766,13 @@ Upewnij się, że w magnetofonie jest właściwa kaseta, przewinięta na począt
         <translation>Zaloguj się do Telegrama</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_login_dialog.py" line="173"/>
         <source>MDTools needs to sign in as your own Telegram account to talk to your bot -- Telegram does not let one bot message another directly.</source>
-        <translation>MDTools musi zalogować się na Twoje własne konto Telegram, aby porozmawiać z Twoim botem -- Telegram nie pozwala, by jeden bot wysyłał wiadomości bezpośrednio do innego bota.</translation>
+        <translation type="vanished">MDTools musi zalogować się na Twoje własne konto Telegram, aby porozmawiać z Twoim botem -- Telegram nie pozwala, by jeden bot wysyłał wiadomości bezpośrednio do innego bota.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="173"/>
+        <source>xD-Tools needs to sign in as your own Telegram account to talk to your bot -- Telegram does not let one bot message another directly.</source>
+        <translation>xD-Tools musi zalogować się na Twoje własne konto Telegram, aby porozmawiać z Twoim botem -- Telegram nie pozwala, by jeden bot wysyłał wiadomości bezpośrednio do innego bota.</translation>
     </message>
     <message>
         <location filename="../panels/telegram_login_dialog.py" line="183"/>

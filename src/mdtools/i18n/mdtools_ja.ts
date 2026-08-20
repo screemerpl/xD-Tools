@@ -448,9 +448,8 @@ Put the next blank disc in the drive and close the tray, then continue with disc
         <translation type="vanished">ここでタイトルとアーティストを編集できます。編集した内容は取り込んだファイルに書き込まれ、そのままMiniDiscのタイトルになります。ディスクがコンピレーションの場合はアーティスト欄を入力してください。MDToolsがそれに応じた名前を付け、独自のカバーを作成します。</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="246"/>
         <source>Titles and artists can be edited here -- they are written into the ripped files, and are what ends up on the {medium}. Fill the artist column in when the disc is a compilation: MDTools then names it accordingly and draws it a cover of its own.</source>
-        <translation>タイトルとアーティストはここで編集できます。リッピングしたファイルに書き込まれ、そのまま{medium}に載ります。ディスクがコンピレーションのときだけアーティスト列を埋めてください。MDToolsがそれに応じた名前を付け、専用のカバーを描きます。</translation>
+        <translation type="vanished">タイトルとアーティストはここで編集できます。リッピングしたファイルに書き込まれ、そのまま{medium}に載ります。ディスクがコンピレーションのときだけアーティスト列を埋めてください。MDToolsがそれに応じた名前を付け、専用のカバーを描きます。</translation>
     </message>
     <message>
         <location filename="../panels/cd_rip_dialog.py" line="254"/>
@@ -499,9 +498,18 @@ Put the next blank disc in the drive and close the tray, then continue with disc
         <translation>オーディオCDを入れて、ディスクを読み取るを押してください。</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="336"/>
         <source>These bundled tools are missing, so a CD cannot be read: {tools}. Reinstall MDTools, or put them on your PATH.</source>
-        <translation>同梱ツールが見つからないため、CDを読み取れません: {tools}。MDToolsを再インストールするか、PATHに配置してください。</translation>
+        <translation type="vanished">同梱ツールが見つからないため、CDを読み取れません: {tools}。MDToolsを再インストールするか、PATHに配置してください。</translation>
+    </message>
+    <message>
+        <location filename="../panels/cd_rip_dialog.py" line="246"/>
+        <source>Titles and artists can be edited here -- they are written into the ripped files, and are what ends up on the {medium}. Fill the artist column in when the disc is a compilation: xD-Tools then names it accordingly and draws it a cover of its own.</source>
+        <translation>タイトルとアーティストはここで編集できます。リッピングしたファイルに書き込まれ、そのまま{medium}に載ります。ディスクがコンピレーションのときだけアーティスト列を埋めてください。xD-Toolsがそれに応じた名前を付け、専用のカバーを描きます。</translation>
+    </message>
+    <message>
+        <location filename="../panels/cd_rip_dialog.py" line="336"/>
+        <source>These bundled tools are missing, so a CD cannot be read: {tools}. Reinstall xD-Tools, or put them on your PATH.</source>
+        <translation>同梱ツールが見つからないため、CDを読み取れません: {tools}。xD-Toolsを再インストールするか、PATHに配置してください。</translation>
     </message>
     <message>
         <location filename="../panels/cd_rip_dialog.py" line="351"/>
@@ -738,18 +746,30 @@ choose one)</source>
         <translation>MiniDiscを消去</translation>
     </message>
     <message>
-        <location filename="../panels/erase_dialog.py" line="150"/>
         <source>This asks the deck to erase everything on the disc. It cannot be undone, and MDTools cannot see the result -- the deck has no way to report back.
 
 Make sure the right disc is loaded and its write-protect tab is closed.</source>
-        <translation>ディスクの内容をすべて消去するようデッキに指示します。取り消すことはできず、MDToolsは結果を確認できません。デッキには返答する手段がないためです。
+        <translation type="vanished">ディスクの内容をすべて消去するようデッキに指示します。取り消すことはできず、MDToolsは結果を確認できません。デッキには返答する手段がないためです。
+
+正しいディスクが入っていること、誤消去防止タブが閉じていることを確認してください。</translation>
+    </message>
+    <message>
+        <source>Note: which editing menu your deck opens in response is not something MDTools can know, so it will ask you what the display shows before confirming anything.</source>
+        <translation type="vanished">注意: お使いのデッキがどの編集メニューを開くかはMDToolsには分かりません。そのため、何かを確定する前に表示内容をお尋ねします。</translation>
+    </message>
+    <message>
+        <location filename="../panels/erase_dialog.py" line="150"/>
+        <source>This asks the deck to erase everything on the disc. It cannot be undone, and xD-Tools cannot see the result -- the deck has no way to report back.
+
+Make sure the right disc is loaded and its write-protect tab is closed.</source>
+        <translation>ディスクの内容をすべて消去するようデッキに指示します。取り消すことはできず、xD-Toolsは結果を確認できません。デッキには返答する手段がないためです。
 
 正しいディスクが入っていること、誤消去防止タブが閉じていることを確認してください。</translation>
     </message>
     <message>
         <location filename="../panels/erase_dialog.py" line="160"/>
-        <source>Note: which editing menu your deck opens in response is not something MDTools can know, so it will ask you what the display shows before confirming anything.</source>
-        <translation>注意: お使いのデッキがどの編集メニューを開くかはMDToolsには分かりません。そのため、何かを確定する前に表示内容をお尋ねします。</translation>
+        <source>Note: which editing menu your deck opens in response is not something xD-Tools can know, so it will ask you what the display shows before confirming anything.</source>
+        <translation>注意: お使いのデッキがどの編集メニューを開くかはxD-Toolsには分かりません。そのため、何かを確定する前に表示内容をお尋ねします。</translation>
     </message>
     <message>
         <location filename="../panels/erase_dialog.py" line="175"/>
@@ -1540,6 +1560,16 @@ Eject now to write them permanently?</source>
         <translation>ページを削除</translation>
     </message>
     <message>
+        <location filename="../app_window.py" line="1385"/>
+        <source>xD-Tools Project (*.mdproj)</source>
+        <translation>xD-Toolsプロジェクト (*.mdproj)</translation>
+    </message>
+    <message>
+        <location filename="../app_window.py" line="1725"/>
+        <source>Restart xD-Tools for the new language to take full effect.</source>
+        <translation>新しい言語を完全に反映するには、xD-Toolsを再起動してください。</translation>
+    </message>
+    <message>
         <location filename="../app_window.py" line="2362"/>
         <source>Lay Out Shell Label</source>
         <translation>カセットラベルを配置</translation>
@@ -2076,9 +2106,8 @@ The cover page and the project&apos;s metadata are left alone.</source>
         <translation>印刷用アートワークを {path} に書き出しました</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1385"/>
         <source>MDTools Project (*.mdproj)</source>
-        <translation>MDToolsプロジェクト (*.mdproj)</translation>
+        <translation type="vanished">MDToolsプロジェクト (*.mdproj)</translation>
     </message>
     <message>
         <location filename="../app_window.py" line="1556"/>
@@ -2126,9 +2155,8 @@ The cover page and the project&apos;s metadata are left alone.</source>
         <translation>言語を変更しました</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1725"/>
         <source>Restart MDTools for the new language to take full effect.</source>
-        <translation>新しい言語を完全に反映するには、MDToolsを再起動してください。</translation>
+        <translation type="vanished">新しい言語を完全に反映するには、MDToolsを再起動してください。</translation>
     </message>
 </context>
 <context>
@@ -2372,8 +2400,12 @@ choose one)</source>
     </message>
     <message>
         <location filename="../panels/print_dialog.py" line="885"/>
+        <source>xD-Tools Project (*.mdproj)</source>
+        <translation>xD-Toolsプロジェクト (*.mdproj)</translation>
+    </message>
+    <message>
         <source>MDTools Project (*.mdproj)</source>
-        <translation>MDToolsプロジェクト (*.mdproj)</translation>
+        <translation type="vanished">MDToolsプロジェクト (*.mdproj)</translation>
     </message>
     <message>
         <location filename="../panels/print_dialog.py" line="892"/>
@@ -3300,9 +3332,13 @@ The setting has been saved anyway, but a CD cannot be ripped there until it exis
 <context>
     <name>StartupDialog</name>
     <message>
-        <location filename="../panels/startup_dialog.py" line="42"/>
         <source>Welcome to MDTools</source>
-        <translation>MDToolsへようこそ</translation>
+        <translation type="vanished">MDToolsへようこそ</translation>
+    </message>
+    <message>
+        <location filename="../panels/startup_dialog.py" line="42"/>
+        <source>Welcome to xD-Tools</source>
+        <translation>xD-Toolsへようこそ</translation>
     </message>
     <message>
         <location filename="../panels/startup_dialog.py" line="47"/>
@@ -3346,8 +3382,12 @@ The setting has been saved anyway, but a CD cannot be ripped there until it exis
     </message>
     <message>
         <location filename="../panels/startup_dialog.py" line="105"/>
+        <source>xD-Tools Project (*.mdproj)</source>
+        <translation>xD-Toolsプロジェクト (*.mdproj)</translation>
+    </message>
+    <message>
         <source>MDTools Project (*.mdproj)</source>
-        <translation>MDToolsプロジェクト (*.mdproj)</translation>
+        <translation type="vanished">MDToolsプロジェクト (*.mdproj)</translation>
     </message>
 </context>
 <context>
@@ -3726,9 +3766,13 @@ Make sure the right cassette is in the deck, wound to the start of side A, and t
         <translation>Telegram にサインイン</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_login_dialog.py" line="173"/>
         <source>MDTools needs to sign in as your own Telegram account to talk to your bot -- Telegram does not let one bot message another directly.</source>
-        <translation>MDTools がボットと通信するには、あなた自身の Telegram アカウントでサインインする必要があります -- Telegram はボット同士が直接メッセージをやり取りすることを許可していません。</translation>
+        <translation type="vanished">MDTools がボットと通信するには、あなた自身の Telegram アカウントでサインインする必要があります -- Telegram はボット同士が直接メッセージをやり取りすることを許可していません。</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_login_dialog.py" line="173"/>
+        <source>xD-Tools needs to sign in as your own Telegram account to talk to your bot -- Telegram does not let one bot message another directly.</source>
+        <translation>xD-Tools がボットと通信するには、あなた自身の Telegram アカウントでサインインする必要があります -- Telegram はボット同士が直接メッセージをやり取りすることを許可していません。</translation>
     </message>
     <message>
         <location filename="../panels/telegram_login_dialog.py" line="183"/>

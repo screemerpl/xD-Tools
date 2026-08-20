@@ -1,7 +1,7 @@
 """Recording > "Erase MiniDisc..." -- clears a disc through the MDRem
 adapter.
 
-This is the most destructive thing MDTools can ask a deck to do, and it is
+This is the most destructive thing xD-Tools can ask a deck to do, and it is
 the operation we know least about, so it is built differently from the rest:
 it does not claim to know what will happen, it asks.
 
@@ -147,7 +147,7 @@ class EraseDiscDialog(QDialog):
 
         intro = QLabel(
             self.tr(
-                "This asks the deck to erase everything on the disc. It cannot be undone, and MDTools cannot "
+                "This asks the deck to erase everything on the disc. It cannot be undone, and xD-Tools cannot "
                 "see the result -- the deck has no way to report back.\n\n"
                 "Make sure the right disc is loaded and its write-protect tab is closed."
             )
@@ -157,7 +157,7 @@ class EraseDiscDialog(QDialog):
 
         caution = QLabel(
             self.tr(
-                "Note: which editing menu your deck opens in response is not something MDTools can know, so "
+                "Note: which editing menu your deck opens in response is not something xD-Tools can know, so "
                 "it will ask you what the display shows before confirming anything."
             )
         )

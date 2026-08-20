@@ -19,6 +19,31 @@ Media Studio"**, with the x standing in for M or C.
 - records a cassette side by side, splitting the album where the tape runs
   out -- a deck nothing here can drive, so it tells the user what to press.
 
+**The app is called xD-Tools everywhere a person reads it, and MDTools in
+three places where a name is an address.** The visible half was swept in
+one go (every `tr()` string, the startup window's title, the file-dialog
+filter, the three User-Agents, the comment cdrecord's `.inf` files carry,
+and the built program itself -- `xD-Tools.exe`, matching the installer,
+which already called itself that). What is deliberately left alone, and
+must stay left alone:
+- **`app.setApplicationName("MDTools")`** in `main.py`.
+  `QStandardPaths.AppConfigLocation` is built from it, so renaming it moves
+  `%LOCALAPPDATA%/MDTools` and takes `templates.json`, `settings.ini` and
+  the Telegram session with it -- every customised template silently gone.
+  The same trap `setOrganizationName` already carries a warning about.
+- **The `"MDTools CD Rip"` and `"MDTools Telegram Downloads"` folder
+  names** (`app_settings.py`). They exist on people's disks with their
+  files in them; a rename would not move anything, it would just start
+  looking somewhere else and report the downloads missing.
+- **The package, the repository and its URL** (`mdtools`,
+  `github.com/screemerpl/MDTools`), which are what they are.
+
+A rename of a translated string makes lupdate see a new string and mark
+the old one `vanished` (not `obsolete` -- both forms exist and only the
+first was being looked for at one point). The ten translations were
+carried across by matching the retired source modulo the rename rather
+than by translating ten sentences again.
+
 Keep the window title, Help > About, the README, `pyproject.toml`'s
 `description` and the user manual in step when that scope shifts again --
 every one of them described a "label designer" long after it stopped being

@@ -33,7 +33,7 @@ _active_translator: QTranslator | None = None
 
 # Separate from _active_translator above -- this one carries Qt's OWN
 # built-in strings ("Close", "Cancel", "OK", ... used by e.g.
-# QDialogButtonBox.StandardButton), not any of MDTools' own self.tr(...)
+# QDialogButtonBox.StandardButton), not any of xD-Tools' own self.tr(...)
 # text. mdtools_<code>.qm never contains these -- they live in Qt's own
 # qtbase_<code>.qm, shipped inside the PySide6 wheel itself (found via
 # QLibraryInfo, not this package's own directory) -- installing only
@@ -70,13 +70,13 @@ def install_translator(app: QApplication, code: str) -> None:
     were installed before. Existing widgets do not retranslate live --
     callers should prompt for a restart after switching languages.
 
-    Two independent QTranslators are installed: MDTools' own
+    Two independent QTranslators are installed: xD-Tools' own
     mdtools_<code>.qm (this package's own self.tr(...) strings) and Qt's
     own qtbase_<code>.qm (standard strings Qt itself owns, e.g. "Close"/
     "Cancel"/"OK" on a QDialogButtonBox.StandardButton) -- installing only
     the former leaves every Qt standard-button label in English regardless
     of the selected language, since mdtools_<code>.qm was never asked to
-    translate text MDTools' own code never passes through self.tr()."""
+    translate text xD-Tools' own code never passes through self.tr()."""
     global _active_translator, _active_qt_translator
     if _active_translator is not None:
         app.removeTranslator(_active_translator)

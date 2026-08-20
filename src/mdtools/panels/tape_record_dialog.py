@@ -5,7 +5,7 @@ Everything else this app records to is driven: a MiniDisc deck takes its
 keys over infrared, a CD-R burner takes a command line. **A tape deck here
 is driven by the user**, and that is the whole shape of this dialog. There
 is no adapter, no key table and no way to know what the machine is doing --
-so MDTools does the one half it can (play the right tracks, in the right
+so xD-Tools does the one half it can (play the right tracks, in the right
 order, at the right moment) and *says* the other half out loud, one
 instruction at a time, waiting for the user to say it is done.
 
@@ -26,7 +26,7 @@ and a recording that turns over after track six would each be defensible
 alone and wrong together.
 
 The audio path is the deck's analogue inputs, and nothing here depends on
-that: MDTools presses no buttons and watches foobar2000, so how the sound
+that: xD-Tools presses no buttons and watches foobar2000, so how the sound
 gets from the sound card to the tape is entirely outside this loop. The
 deck's own input selector and recording level are the user's to set, which
 the manual says and this does not try to enforce.
