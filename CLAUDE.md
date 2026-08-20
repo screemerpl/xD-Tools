@@ -2331,6 +2331,23 @@ recording got cut off at minute 80" into a warning beforehand. It only ever
 warns -- which recording mode the deck is in (SP/LP2/LP4) can neither be
 read nor set through the key table, so it is not MDTools' decision to make.
 
+**Verified on the deck on 2026-08-20: the multi-disc MiniDisc recording
+was run end to end with a real two-disc album (Bajm, *Best Of 1978-2018*,
+17 + 17 tracks) and behaved as intended.** That covers the part with the
+most moving pieces -- the split, a disc recorded and titled without being
+asked, the eject, the prompt, the second disc -- and it is the reason the
+sorting and the playlist reordering underneath it were measured against
+the live foobar2000 first (see the notes below on both).
+
+**Still not through real hardware: the two CD flows.** Burning an album
+across several CD-Rs and ripping a set as one album have only ever been
+exercised against stand-ins. cdrecord's own `-dummy` ("Simulate only" in
+the dialog) runs the whole sequence with the laser off, prompts between
+discs included, and is the cheap way to try the first of them.
+
+**This work is 0.3.1, not 0.4.0** -- the user's own call, and not to be
+released yet. 0.4.0 is game-media covers, which is a different subject.
+
 **A double album: "Record across several discs" (`multidisc.py` + the
 option on `RecordDialog`).** 150 minutes is two MiniDiscs, and a MiniDisc
 cannot be turned over the way a cassette can -- so the whole sequence above
