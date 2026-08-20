@@ -94,11 +94,12 @@ src/mdtools/
   grayscale.py              the desaturation + brightness/contrast maths, shared by preview and export
   printing.py               sheet layout: pack copies, search arrangements, paint placements (no Qt UI)
   gallery.py                bundled asset gallery (assets/img) + per-user downloaded-covers cache, merged
-  metadata_lookup.py         iTunes Search API: track list + release year + cover art, given Album + Artist
+  metadata_lookup.py         iTunes Search API: track list + release year + cover art; Deezer for an artist photo
   musicbrainz.py            identifying a CD from its TOC alone -- a CD carries no text (no Qt UI)
   embedded_cover.py         the cover art and tags inside a FLAC file, as a last resort (no Qt)
   mixtape_cover.py          draws a cover for a compilation, which by definition has none
   palette.py                background/accent/text colours pulled out of a cover image (Pillow, no Qt)
+  cover_filters.py          six background treatments (brighten/blur/posterize/halftone/pixelate/none), pure Pillow
   mdrem.py                  MDRem IR adapter: serial protocol, transliteration, upload plan (no Qt UI)
   foobar.py                 foobar2000 via its Beefweb REST API *and* its command line (no Qt UI)
   cdrip.py                  audio CD: drives, TOC, disc ids, rip plan, cdparanoia/flac (no Qt UI)
@@ -123,7 +124,7 @@ src/mdtools/
   canvas/
     scene.py                 DesignScene: template outline + design items
     view.py                  zoomable/pannable view + mouse scale/rotate handles + undo hookup
-    items.py                 "cut" vs "print" layer tagging, non-uniform scale helpers
+    items.py                 "cut" vs "print" layer tagging, non-uniform scale helpers, text shadow/glow
     geometry.py               chamfered/filleted rectangle path builder
   templates/
     models.py                 DiscTemplate / CoverTemplate dataclasses
@@ -141,6 +142,8 @@ src/mdtools/
     experimental_settings_dialog.py   whatever an experimental feature needs, kept out of the stable one
     metadata_dialog.py          album/artist/year/track-list editor + "Lookup Track List..." + "Upload Tracklist"
     cover_preview.py            the cover thumbnail that is also the button for replacing it, plus its lookup
+    cover_filter_dialog.py      pick a background treatment for a disc/shell label, from a live preview per option
+    regenerate_font_dialog.py   Regenerate with Font...: pick a face (QFontDialog), Preview, then commit
     asset_gallery_dialog.py     Insert Asset: pick one of the bundled gallery images
     grayscale_export_dialog.py  brightness/contrast, previewed against the real scene, before the save path
     print_dialog.py             PrintDialog and MultiprintDialog over one shared base: sheets, PDF, PNG
@@ -396,6 +399,112 @@ a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
   halves of each target templates *by name*, so the branch is not cosmetic --
   running the MiniDisc layout on a CD project would replace its pages with
   MiniDisc shapes rather than laying them out.
+- **The jewel case tray card and the slim-case front insert were both
+  filed under the same `kind == "cover"` family, and that let either be
+  picked in place of the other.** Same `CoverTemplate` dataclass (a plain
+  folded rectangle either way), but the Template Manager, the New Project
+  dialog and Templates > Add Page... all read `registry.load_templates()
+  [page_template_kind(page)]` with no page-name special-casing, so a
+  CD-Slim-Case-Insert could be selected as a Rear Case template and vice
+  versa -- reported directly, found in the Template Manager. Fixed the same
+  way the cassette shell label's own "cover" -> "label" split was:
+  `registry.KINDS` grew a fourth family, `"case_back"`
+  (`project.PAGE_KINDS[PAGE_BACK]` points at it instead of `"cover"` now),
+  and the tray card's entry in `defaults.json` moved out of the top-level
+  `"cover"` array into a new `"case_back"` one -- the per-entry `"kind"`
+  field alone does not decide which registry list an entry lives in, the
+  JSON's own top-level array key does, so both had to change together, not
+  just the field. `registry._rehome_moved_builtins()` -- the same migration
+  that carried the shell label across its own split -- moves an existing
+  user's `templates.json` entry the same way. No code in `NewDesignDialog`,
+  `app_window._add_page()` or `_change_page_template()` needed to change at
+  all; every one of them already reads the page/kind mapping generically.
+- **The CD disc label's own accent/ink used to be scored against a flat
+  white, which is why they could never actually match the case insert's --
+  `accent_colour()`'s result depends on what it is scored *against*.**
+  The disc label computed `accent_colour(cover, against="#ffffff")`
+  (reasoning: white is what the *lightened* background actually looks
+  like), while the case insert's back panel
+  (`jcard_layout.place_back`, via `build_insert()`/`build_case_back()`)
+  computed `accent_colour(cover, against=dominant_colour(cover))` -- two
+  different inputs, so two different colours for the same album. Reported
+  directly, from a real cover (Taylor Swift: `#7e5730` on the disc label,
+  `#2f4228` on the case back). `build_disc_label()` now computes the
+  *exact same* `background`/`accent`/`ink` triple the insert/case back
+  already do -- not a similarly-scored approximation of it -- and the risk
+  that motivated scoring against white in the first place (a pale accent
+  disappearing into the lightened background) is now covered by the shadow
+  effect every auto-generated text layer gets by default regardless of
+  which colour was chosen (see the shadow/glow section below). Artist takes
+  the accent (bold); album and year both take the ink -- settled after two
+  earlier live corrections ("year same as artist", then "always white"),
+  landing on "one of the case back's own two colours", the same
+  `readable_text_colour()` value already guaranteed to contrast with the
+  real background.
+  `test_the_labels_palette_is_computed_identically_to_the_case_inserts`
+  (`tests/test_cd_layout.py`) builds both pages from one metadata and
+  compares the artist colour end to end, not just the palette functions in
+  isolation. The cassette shell label had the identical bug
+  (`tape_layout.build_side_label()`, scored against white the same way)
+  and got the identical fix once the disc label's own version was found.
+- **The Digital Audio mark moved from the bottom band to the disc's right
+  side; the year took over the whole bottom band on its own.** Explicit
+  request. `_right_band_rect()` mirrors `_chord_rect()` for a *horizontal*
+  strip: since the hub and the disc share one centre, a band at the disc's
+  own vertical centre clears the hub by definition, needing none of the
+  fractional-height reasoning the top/bottom text bands do -- it is simply
+  the space between the hub's right edge (read off the template's own
+  `hole_diameter_mm`) and the outer edge, at the widest point on that side.
+  `_right_align_vcentre_on()` places the mark flush against that band's
+  right edge, centred on the *disc*, mirroring `_centre_in()`'s "centred on
+  one axis, aligned to an edge on the other". The mark and the year used
+  to share the bottom band, the year positioned just above whichever logo
+  happened to be there; now they occupy genuinely different parts of the
+  label and the year sits at the very bottom, centred, with nothing left
+  to dodge.
+- **A CD insert's left panel changes when the project also has a case
+  back, for entirely physical reasons.** A full jewel case's tray card
+  already carries the track list (`build_case_back`'s own middle panel); a
+  *slim* case has no tray at all, so its folded insert's reverse side is
+  the only place a track list can go, which is why `build_insert()`'s left
+  panel was always the list. Printing the list a second time on a full
+  case's insert, just because the same function builds both, would be the
+  same list twice. `build_insert(..., has_case_back=..., artist_photo=...)`
+  branches on whether `project.PAGE_BACK` exists in the project -- **not**
+  on whether a photo was actually found; those are independent, and the
+  rule holds even with no photo. With a case back,
+  `place_artist_panel()` replaces the track list with the artist's name,
+  the year, and -- network and a good-enough name match permitting -- a
+  photo of the artist, keeping the same accent/ink roles `place_back()`'s
+  own heading already uses. The photo is fitted (`_place_contained()`,
+  scaled by the *smaller* ratio, same technique `place_disc_logo()` uses),
+  not stretched the way `place_insert_cover()` stretches an album cover --
+  explicit request, and a face is a much more noticeable thing to distort
+  a couple of percent than a nearly-square sleeve is.
+  `app_window._auto_layout_cd_insert()` decides `has_case_back` and, only
+  then, calls `metadata_lookup.find_artist_photo()` (behind the same
+  wait-cursor courtesy the album cover lookup already gets) -- the layout
+  function itself has no network access, the same "plan it, the caller
+  fetches for it" split used throughout this app.
+- **`metadata_lookup.find_artist_photo()` reaches Deezer's public
+  `/search/artist` endpoint, not iTunes** -- iTunes' own Search API (every
+  other lookup in this module) has no artist-photo field at all, and
+  Deezer's is keyless and needs no signup, the same reasoning that picked
+  iTunes over anything requiring registration in the first place. Verified
+  live (2026-08-21): a plain `picture_xl` URL from a real search result
+  downloads as an ordinary 1000x1000 JPEG with no auth headers.
+  **Ranked by name similarity first and *popularity* (`nb_fan`) second, not
+  track count** -- Deezer's artist search has no such number, and more to
+  the point, verified live that two entirely different acts both called
+  "Taylor Swift" score an identical 1.0 name match, so name similarity
+  alone cannot tell them apart; `nb_fan` (12.6M vs 11, in that live search)
+  is what actually distinguishes "who somebody means" from "who happens to
+  share a name". `MIN_ARTIST_PHOTO_SIMILARITY` (0.75) is stricter than the
+  album-search equivalent (0.40): a photo is of one specific person, and
+  there is no equivalent of "close enough, the cover still tells you which
+  release it is". Silent on every kind of failure -- no match, no picture,
+  a network error at either step -- the same "bonus, not the point of the
+  call" contract `find_cover()` already follows for album art.
 - Built-in templates can be edited but not deleted.
 - **New built-in templates reach existing installs via
   `registry.sync_builtin_templates()`, called once from `main()` on every
@@ -1414,6 +1523,144 @@ or the next style attribute added to `QFontDialog` will quietly break the
 same way. No migration for old `.mdproj` files using the old
 `font_family`/`font_size` keys — no released user base yet (same reasoning
 as the z-order caveat below).
+
+**A text layer can carry a shadow and/or a glow, both plain per-item bool
+flags (`get_text_shadow()`/`set_text_shadow()`, `get_text_glow()`/
+`set_text_glow()` in `canvas/items.py`) painted by `DesignTextItem.paint()`
+itself, underneath the real text -- not baked into the document or a
+pixmap, so toggling either is a flag flip plus a repaint with the item's
+actual text/font/colour untouched.**
+- **Both effects run in the item's own local, unrotated coordinate space**
+  -- Qt applies `rotation()` as an outer transform before `paint()` is ever
+  called, so the shadow's "down and to the right" offset, a plain local-
+  space translate, rotates along with the text for free: a caption turned
+  90 degrees to run down a spine gets a shadow that still falls toward the
+  *text's* own lower-right, not the label's. Confirmed explicitly with the
+  user mid-implementation ("kierunek cienia jest w stosunku do tego jak
+  tekst jest obrocony a nie do naklejki/etykiety") -- nothing had to change
+  to satisfy that; it was already true by construction, just worth stating
+  as a real constraint rather than an accident.
+- **The effect colour is auto-picked from the text's own colour**
+  (`_effect_colour()`): much lighter when the text is dark, much darker
+  when it's light, reusing `palette.readable_text_colour()`'s own
+  black-or-white contrast pick with the text colour itself passed as the
+  "background" it must contrast against.
+- **Both are rendered as cached, blurred bitmaps
+  (`_build_effect_pixmap()`), not live vector drawing** -- draw the text as
+  a solid opaque mask, blur its alpha channel with Pillow, recolour and
+  fade it. The shadow and the glow differ only in three numbers passed to
+  that one function: a small blur and full alpha for the shadow (a soft
+  *edge*, not a soft shadow -- explicit request, "very little" blur, just
+  enough to take the hard vector edge off the offset copy) versus a larger
+  blur and partial alpha for the glow (an actual halo). Each is cached on
+  the item (`SHADOW_CACHE_ROLE`/`GLOW_CACHE_ROLE`, keyed by
+  `(text, font_spec, colour, text_width)`) since rebuilding a Gaussian blur
+  on every repaint while the item is being dragged would be far too slow.
+  The shadow was plain live `QTextDocument.drawContents()` (resolution-
+  independent, crisp at any zoom/export DPI) until blur was requested --
+  there is no way to blur a single `drawContents()` call directly, so it
+  took on the glow's own bitmap-cache architecture and, with it, the
+  glow's pre-existing tradeoff of being built at screen-DPI scene-unit
+  resolution rather than export DPI. Not fixed here (deliberately out of
+  scope, and would apply to both effects together, not one).
+- **The glow was reported "almost invisible," and it was: alpha 130/255
+  with a blur radius at 0.10x the font's own line height meant the halo's
+  peak was already well past half-faded by the time it cleared the glyph's
+  own antialiased edge.** Raised to alpha 210 and a 0.16x blur radius
+  (padding scaled to 0.5x, roughly 3x the blur radius, so the Gaussian has
+  room to fully run out before the mask canvas edge clips it). Verified
+  numerically, not just by eye: rendered before/after onto a mid-grey
+  background and counted non-background pixels -- the glow's own added
+  coverage grew from ~7000 to ~10100 px for the same sample string, and
+  `test_glow_is_substantially_stronger_than_a_bare_hint`
+  (`tests/test_text_shadow_glow.py`) pins the *relationship* down (glow's
+  added coverage must clear more than double the shadow's own, built from
+  the same machinery with deliberately smaller numbers) rather than an
+  exact pixel count that would be fragile across environments/font
+  rasterizers.
+- **Every auto-generated cover/label turns shadow on by default**
+  (`jcard_layout._text()`, the single function the J-card, the CD ring
+  label, the CD insert and the cassette shell label/J-card all create
+  their text through, plus `DesignScene.seed_disc_defaults()`'s own
+  insertion-mark triangle/label) -- manually added text (Tools panel "Add
+  Text", "Insert from Metadata") stays plain, so the user can still opt in
+  or out per layer via the Properties panel's Shadow/Glow checkboxes.
+
+**Toolbar > "Regenerate with Font..." and the cover-filter picker it
+shares machinery with, both added the same session as the shadow/glow
+effects above and leaning on them.**
+- **`cover_filters.py` holds six pure-Pillow background treatments** (no
+  filter, brighten -- the existing `cd_layout.lighten()` maths, exposed
+  here as one option among several rather than always applied -- Gaussian
+  blur, posterize, halftone, pixelate) behind one dispatcher,
+  `apply_cover_filter(image_data, filter_id)`.
+  `panels/cover_filter_dialog.py`'s `CoverFilterDialog` shows all six as
+  live preview tiles (built from that exact function, so the preview can never
+  show one thing and the real layout print another) in a 3x2 grid; clicking
+  a tile both chooses it and closes the dialog, matching the eyedropper's
+  own single-click-to-commit interaction elsewhere in this app.
+  `MainWindow._choose_cover_background()` is the one place that shows it,
+  called from exactly the three auto-layout call sites that print a cover
+  full-bleed as a *background* behind text (the MD disc label, the CD ring
+  label, the cassette shell labels -- asked once for both sides, since they
+  share one photo) and nowhere a cover is the point of the page (a J-card
+  front, a CD insert's front panel). `self._last_cover_filter_id` remembers
+  the choice for the session (not persisted to the `.mdproj` -- the filter
+  is already baked into whatever image ended up on the page; this is only
+  ever needed again if something asks to *rebuild* that page) so a full
+  re-layout or "Regenerate with Font..." doesn't re-ask a question already
+  answered (`MainWindow._reused_cover_filter()`, a context manager
+  `_choose_cover_background()` checks first).
+- **`canvas/scene.font_family_override(family)` is a module-level context
+  manager, not a parameter threaded through every auto-layout function
+  signature.** `DesignScene.add_text()` is the one method every piece of
+  auto-generated text ultimately goes through (`jcard_layout._text()` and
+  `seed_disc_defaults()`'s own triangle/label alike), so hooking the
+  override in there once is what lets one `with` block substitute the font
+  for an entire page rebuild -- including the MD insertion mark -- with no
+  change needed to `place_spine()`/`place_back()`/`build_jcard()`/
+  `build_disc_label()`/`build_side_label()`'s own signatures. A plain
+  mutable module global guarded by the context manager, restored on exit
+  (even nested) -- unusual for this codebase's otherwise function-purity-
+  leaning style, but threading a new parameter through ten-plus functions
+  across three modules for one narrow, short-lived operation was judged the
+  worse tradeoff.
+- **The toolbar button sits beside the page dropdown** ("Editing:" ->
+  `page_combo` -> "Regenerate with Font..."), and **only ever touches the
+  page currently on screen** -- narrowed from an earlier plan to regenerate
+  every page at once, per explicit correction ("regeneration should be
+  only for currently visible element"). `RegenerateFontDialog` picks a face
+  through Qt's own `QFontDialog.getFont()` (only `.family()` is ever read;
+  size/style are discarded -- "only font face is relevant", and
+  auto-generated text already carries its own size/weight from its own
+  layout logic) rather than a typed `QFontComboBox`, and remembers the
+  last family chosen across sessions
+  (`app_settings.last_regenerate_font_family()`, saved the moment a font is
+  *picked*, not only once the dialog is accepted -- "remember the last
+  *selected* font", so a cancelled regenerate doesn't lose the choice
+  either). Its own "Preview" button reruns the real per-page auto-layout
+  call (`MainWindow._auto_layout_method_for_page()` maps the current page
+  to whichever `_auto_layout_*` method builds it) inside
+  `font_family_override()` -- there is no separate, fake preview renderer.
+  A second Preview click restores the *original* page first (via a
+  snapshot, see below), not the previous preview, so two previews in a row
+  (font A, then font B) never compound. Accepting shows a warning ("Are you
+  sure? This regenerates this label...") and, only on confirmation, rebuilds
+  the current page fresh the same way -- cheap and exactly idempotent with
+  what Preview already did, so there's no special-cased "just keep the
+  preview" path even when OK is pressed with no Preview click first.
+- **Cancelling (the dialog outright, or the final confirmation) restores
+  the page via a snapshot, not `QUndoStack.undo()`.** Every auto-layout
+  call goes through `apply_template()`, which resets the undo stack
+  entirely (its commands reference items on a scene about to be discarded)
+  -- so by the time Preview has run once, there is no undo entry left to
+  undo back to. `MainWindow._snapshot_page()`/`_restore_page()` round-trip
+  a page through `io.project_io.scene_to_dict()`/`scene_from_dict()`
+  (renamed from `_scene_to_dict`/`_scene_from_dict`, now public, since this
+  is a second real caller beyond save/load) -- the same technique a
+  project's own save/load already relies on, rather than re-applying the
+  template (which would reseed the MD insertion mark a second time, on top
+  of the snapshot's own copy of it).
 
 **A rectangle/ellipse's frame always matches its own fill color -- there
 is no separate frame-color control.** `scene.add_rectangle()`'s initial

@@ -2640,100 +2640,120 @@ choose one)</source>
 <context>
     <name>PropertiesPanel</name>
     <message>
-        <location filename="../panels/properties_panel.py" line="149"/>
+        <location filename="../panels/properties_panel.py" line="157"/>
         <source>X</source>
         <translation>X</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="155"/>
+        <location filename="../panels/properties_panel.py" line="163"/>
         <source>Y</source>
         <translation>Y</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="161"/>
+        <location filename="../panels/properties_panel.py" line="169"/>
         <source>Rotation</source>
         <translation>Obrót</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="166"/>
+        <location filename="../panels/properties_panel.py" line="174"/>
         <source>Text</source>
         <translation>Tekst</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="172"/>
+        <location filename="../panels/properties_panel.py" line="180"/>
         <source>Font size</source>
         <translation>Rozmiar czcionki</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="174"/>
+        <location filename="../panels/properties_panel.py" line="182"/>
         <source>Font...</source>
         <translation>Czcionka...</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="176"/>
+        <location filename="../panels/properties_panel.py" line="184"/>
         <source>Font</source>
         <translation>Czcionka</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="178"/>
+        <location filename="../panels/properties_panel.py" line="186"/>
         <source>Color...</source>
         <translation>Kolor...</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="180"/>
+        <location filename="../panels/properties_panel.py" line="188"/>
         <source>Probe...</source>
         <translation>Pobierz kolor...</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="181"/>
+        <location filename="../panels/properties_panel.py" line="189"/>
         <source>Click, then pick any color straight off the canvas</source>
         <translation>Kliknij, a następnie wybierz dowolny kolor prosto z widoku projektu</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="188"/>
+        <location filename="../panels/properties_panel.py" line="196"/>
         <source>Color</source>
         <translation>Kolor</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="190"/>
-        <location filename="../panels/properties_panel.py" line="366"/>
+        <location filename="../panels/properties_panel.py" line="200"/>
+        <source>Shadow</source>
+        <translation>Cień</translation>
+    </message>
+    <message>
+        <location filename="../panels/properties_panel.py" line="204"/>
+        <source>Glow</source>
+        <translation>Poświata</translation>
+    </message>
+    <message>
+        <location filename="../panels/properties_panel.py" line="206"/>
+        <location filename="../panels/properties_panel.py" line="402"/>
         <source>Reset to Default</source>
         <translation>Przywróć domyślne</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="244"/>
+        <location filename="../panels/properties_panel.py" line="264"/>
         <source>Move</source>
         <translation>Przesunięcie</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="252"/>
+        <location filename="../panels/properties_panel.py" line="272"/>
         <source>Rotate</source>
         <translation>Obrót</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="261"/>
+        <location filename="../panels/properties_panel.py" line="281"/>
         <source>Edit Text</source>
         <translation>Edycja tekstu</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="270"/>
+        <location filename="../panels/properties_panel.py" line="290"/>
         <source>Change Font Size</source>
         <translation>Zmiana rozmiaru czcionki</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="284"/>
+        <location filename="../panels/properties_panel.py" line="304"/>
         <source>Change Font</source>
         <translation>Zmiana czcionki</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="319"/>
+        <location filename="../panels/properties_panel.py" line="339"/>
         <source>Change Text Color</source>
         <translation>Zmiana koloru tekstu</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="325"/>
+        <location filename="../panels/properties_panel.py" line="345"/>
         <source>Change Fill Color</source>
         <translation>Zmiana koloru wypełnienia</translation>
+    </message>
+    <message>
+        <location filename="../panels/properties_panel.py" line="353"/>
+        <source>Toggle Shadow</source>
+        <translation>Przełącz cień</translation>
+    </message>
+    <message>
+        <location filename="../panels/properties_panel.py" line="361"/>
+        <source>Toggle Glow</source>
+        <translation>Przełącz poświatę</translation>
     </message>
 </context>
 <context>
@@ -3103,154 +3123,154 @@ Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
 <context>
     <name>RemoteDialog</name>
     <message>
-        <location filename="../panels/remote_dialog.py" line="216"/>
+        <location filename="../panels/remote_dialog.py" line="217"/>
         <source>Remote</source>
         <translation>Pilot</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="225"/>
+        <location filename="../panels/remote_dialog.py" line="237"/>
         <source>Extended mode -- every key the adapter knows</source>
         <translation>Tryb rozszerzony — wszystkie klawisze, jakie zna przystawka</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="228"/>
+        <location filename="../panels/remote_dialog.py" line="240"/>
         <source>Standard mode is the physical remote, key for key. Extended mode adds what has no key on it: tracks 11 to 25, the deck&apos;s own character entry, the rest of the recording group, the two keys that edit the disc, and typing.</source>
         <translation>Tryb standardowy to fizyczny pilot, klawisz w klawisz. Tryb rozszerzony dokłada to, czego on nie ma: ścieżki od 11 do 25, własną metodę wpisywania znaków magnetofonu, resztę grupy zapisu, dwa klawisze edytujące płytę oraz pisanie z klawiatury.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="242"/>
+        <location filename="../panels/remote_dialog.py" line="254"/>
         <source>Transport</source>
         <translation>Transport</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="244"/>
+        <location filename="../panels/remote_dialog.py" line="256"/>
         <source>Play Mode</source>
         <translation>Tryb odtwarzania</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="245"/>
+        <location filename="../panels/remote_dialog.py" line="257"/>
         <source>Display</source>
         <translation>Wyświetlacz</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="246"/>
+        <location filename="../panels/remote_dialog.py" line="260"/>
         <source>Titling</source>
         <translation>Nazywanie</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="249"/>
+        <location filename="../panels/remote_dialog.py" line="263"/>
         <source>Recording</source>
         <translation>Nagrywanie</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="251"/>
+        <location filename="../panels/remote_dialog.py" line="265"/>
         <source>These start or arm recording on the deck. A write-protected disc ignores them.</source>
         <translation>Te klawisze uruchamiają lub uzbrajają nagrywanie w magnetofonie. Płyta z blokadą zapisu je ignoruje.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="255"/>
+        <location filename="../panels/remote_dialog.py" line="269"/>
         <source>Disc Editing</source>
         <translation>Edycja płyty</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="258"/>
+        <location filename="../panels/remote_dialog.py" line="272"/>
         <source>These change what is on the disc. The deck asks on its own display before doing anything and waits for Enter -- read what it is asking before pressing it.</source>
         <translation>Te klawisze zmieniają zawartość płyty. Magnetofon najpierw pyta na własnym wyświetlaczu i czeka na Enter — przeczytaj pytanie, zanim go naciśniesz.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="265"/>
+        <location filename="../panels/remote_dialog.py" line="284"/>
         <source>Connecting...</source>
         <translation>Łączenie...</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="293"/>
+        <location filename="../panels/remote_dialog.py" line="312"/>
         <source>Tracks</source>
         <translation>Utwory</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="310"/>
+        <location filename="../panels/remote_dialog.py" line="329"/>
         <source>Typing</source>
         <translation>Pisanie</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="314"/>
+        <location filename="../panels/remote_dialog.py" line="333"/>
         <source>Type on your own keyboard and every letter, digit and symbol goes straight to the deck, which has to be in name-edit mode first -- press Name, or select a track and then Name. Backspace deletes, Enter commits the title, and the arrow keys move the cursor. Accented letters lose their marks; anything the deck cannot show at all is refused rather than sent as something else.</source>
         <translation>Pisz na własnej klawiaturze — każda litera, cyfra i znak idzie prosto do magnetofonu, który musi być najpierw w trybie edycji nazwy: naciśnij Name albo wybierz ścieżkę i dopiero potem Name. Backspace kasuje, Enter zatwierdza tytuł, a strzałki przesuwają kursor. Litery z ogonkami tracą znaki diakrytyczne; to, czego magnetofon nie umie pokazać w ogóle, jest odrzucane, a nie podmieniane na coś innego.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="410"/>
+        <location filename="../panels/remote_dialog.py" line="429"/>
         <source>The deck cannot show {chars} -- nothing was sent.</source>
         <translation>Magnetofon nie umie pokazać {chars} — nic nie zostało wysłane.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="417"/>
+        <location filename="../panels/remote_dialog.py" line="436"/>
         <source>Typed: {text}</source>
         <translation>Wpisano: {text}</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="450"/>
+        <location filename="../panels/remote_dialog.py" line="469"/>
         <source>Not connected: {error}</source>
         <translation>Brak połączenia: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="452"/>
+        <location filename="../panels/remote_dialog.py" line="471"/>
         <source>Connected on {port}.</source>
         <translation>Połączono na {port}.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="429"/>
-        <location filename="../panels/remote_dialog.py" line="456"/>
+        <location filename="../panels/remote_dialog.py" line="448"/>
+        <location filename="../panels/remote_dialog.py" line="475"/>
         <source>Not connected -- nothing was sent.</source>
         <translation>Brak połączenia — nic nie wysłano.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="161"/>
+        <location filename="../panels/remote_dialog.py" line="162"/>
         <source>While the deck is in name-edit mode this scrolls the character under the cursor instead of changing track, so it will quietly corrupt a title.</source>
         <translation>W trybie edycji nazwy przewija to znak pod kursorem, zamiast zmieniać ścieżkę — po cichu psuje tytuł.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="167"/>
+        <location filename="../panels/remote_dialog.py" line="168"/>
         <source>Opens a track number field on the deck&apos;s display, which closes itself as soon as two digits have been typed -- no Enter needed, and no room for a third digit.</source>
         <translation>Otwiera na wyświetlaczu pole numeru ścieżki, które domyka się samo po drugiej cyfrze — Enter jest zbędny, a na trzecią cyfrę nie ma już miejsca.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="173"/>
+        <location filename="../panels/remote_dialog.py" line="174"/>
         <source>Pressed while the deck is already recording, this puts a track mark in -- which is how this app splits an album that plays without gaps.</source>
         <translation>Naciśnięty w trakcie nagrywania stawia znacznik ścieżki — tak właśnie program dzieli album grany bez przerw.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="179"/>
+        <location filename="../panels/remote_dialog.py" line="180"/>
         <source>Switches the deck&apos;s own character set, part of the entry method this app bypasses by sending character codes directly. Known to work, and of no use here.</source>
         <translation>Przełącza zestaw znaków magnetofonu, czyli element jego własnej metody wpisywania, którą program omija, wysyłając kody znaków wprost. Działa, ale tutaj na nic się nie przydaje.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="185"/>
+        <location filename="../panels/remote_dialog.py" line="186"/>
         <source>One of three keys the deck&apos;s code table calls Clear. Tried in name-edit mode with the cursor at the start, in the middle, and held down: it does nothing there. It most likely clears a play program.</source>
         <translation>Jeden z trzech klawiszy, które tabela kodów magnetofonu nazywa Clear. Sprawdzony w edycji nazwy z kursorem na początku, w środku i przytrzymany: nie robi tam nic. Najpewniej kasuje program odtwarzania.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="192"/>
+        <location filename="../panels/remote_dialog.py" line="193"/>
         <source>Recognised by the deck as a recording command, but which of that group does what was never told apart -- they have only been tried on a write-protected disc, where every one of them answers the same way.</source>
         <translation>Magnetofon rozpoznaje go jako polecenie zapisu, ale nigdy nie udało się rozróżnić, który klawisz z tej grupy co robi — próbowano ich wyłącznie na płycie zabezpieczonej przed zapisem, gdzie każdy odpowiada tak samo.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="199"/>
+        <location filename="../panels/remote_dialog.py" line="200"/>
         <source>Erases the track the deck is sitting on. Tried on a real disc: it asks on the display first and does nothing until Enter, so Cancel backs out of it.</source>
         <translation>Kasuje ścieżkę, na której stoi magnetofon. Sprawdzone na prawdziwej płycie: najpierw pyta na wyświetlaczu i nie robi nic do czasu Entera, więc Cancel się z tego wycofuje.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="205"/>
+        <location filename="../panels/remote_dialog.py" line="206"/>
         <source>Splits the current track in two. Never tried on an unprotected disc -- Erase, the one key of this group that has been, asked before acting.</source>
         <translation>Dzieli bieżącą ścieżkę na dwie. Nigdy nie sprawdzone na niezabezpieczonej płycie — Erase, jedyny klawisz z tej grupy, który był, najpierw pytał.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="437"/>
-        <location filename="../panels/remote_dialog.py" line="461"/>
+        <location filename="../panels/remote_dialog.py" line="456"/>
+        <location filename="../panels/remote_dialog.py" line="480"/>
         <source>{key} failed: {error}</source>
         <translation>{key} nie powiodło się: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="465"/>
+        <location filename="../panels/remote_dialog.py" line="484"/>
         <source>Sent: {key}</source>
         <translation>Wysłano: {key}</translation>
     </message>

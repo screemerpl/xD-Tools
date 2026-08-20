@@ -30,7 +30,7 @@ def _isolated_templates(tmp_path, monkeypatch):
 
 
 def _tray_template():
-    return next(t for t in registry.load_templates()["cover"] if t.name == TRAY_CARD)
+    return next(t for t in registry.load_templates()["case_back"] if t.name == TRAY_CARD)
 
 
 def _metadata() -> ProjectMetadata:
@@ -204,6 +204,81 @@ def test_the_automatic_layout_leaves_the_case_backs_own_template_alone(qt_app, m
     window._auto_layout_project(_metadata())
 
     assert window.project.pages[PAGE_BACK].template.name == TRAY_CARD
+
+
+# -- the insert's left panel changes when a case back exists ----------------
+
+
+def test_the_insert_gets_no_track_list_when_a_case_back_exists(qt_app, monkeypatch):
+    """The tray card the case back builds already carries the list -- see
+    cd_layout.build_insert()'s own docstring."""
+    from PySide6.QtWidgets import QGraphicsTextItem
+
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a, **k: None))
+    window = _cd_window(with_back=True)
+    metadata = _metadata()
+
+    window._auto_layout_project(metadata)
+
+    texts = [i.toPlainText() for i in window.project.pages[PAGE_COVER].print_items() if isinstance(i, QGraphicsTextItem)]
+    assert not any("Zombified" in t or "Ronald" in t for t in texts)
+    assert metadata.artist in texts
+    assert str(metadata.year) in texts
+
+
+def test_the_insert_keeps_its_track_list_without_a_case_back(qt_app, monkeypatch):
+    from PySide6.QtWidgets import QGraphicsTextItem
+
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a, **k: None))
+    window = _cd_window(with_back=False)
+    metadata = _metadata()
+
+    window._auto_layout_project(metadata)
+
+    texts = [i.toPlainText() for i in window.project.pages[PAGE_COVER].print_items() if isinstance(i, QGraphicsTextItem)]
+    assert any("Zombified" in t for t in texts)
+
+
+def test_the_insert_looks_up_an_artist_photo_only_when_a_case_back_exists(qt_app, monkeypatch):
+    import mdtools.app_window as app_module
+
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a, **k: None))
+    seen = []
+    monkeypatch.setattr(app_module, "find_artist_photo", lambda artist: (seen.append(artist), None)[1])
+
+    without_back = _cd_window(with_back=False)
+    without_back._auto_layout_project(_metadata())
+    assert seen == []
+
+    with_back = _cd_window(with_back=True)
+    metadata = _metadata()
+    with_back._auto_layout_project(metadata)
+    assert seen == [metadata.artist]
+
+
+def test_a_found_artist_photo_actually_lands_on_the_insert(qt_app, monkeypatch):
+    import io
+
+    from PIL import Image
+    from PySide6.QtWidgets import QGraphicsPixmapItem
+
+    import mdtools.app_window as app_module
+
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a, **k: None))
+
+    def _fake_photo(artist):
+        out = io.BytesIO()
+        Image.new("RGB", (300, 400), (10, 200, 10)).save(out, format="PNG")
+        return out.getvalue()
+
+    monkeypatch.setattr(app_module, "find_artist_photo", _fake_photo)
+    window = _cd_window(with_back=True)
+
+    window._auto_layout_project(_metadata())
+
+    pixmaps = [i for i in window.project.pages[PAGE_COVER].print_items() if isinstance(i, QGraphicsPixmapItem)]
+    # front cover + artist photo
+    assert len(pixmaps) == 2
 
 
 def test_a_project_without_a_case_back_lays_out_the_other_two_quietly(qt_app, monkeypatch):

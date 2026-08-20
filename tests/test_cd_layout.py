@@ -147,6 +147,99 @@ def test_the_label_carries_the_cover_the_album_and_the_mark(qt_app):
     assert sum(1 for item in items if isinstance(item, QGraphicsPixmapItem)) == 2
 
 
+def test_the_labels_palette_is_computed_identically_to_the_case_inserts(qt_app):
+    """Not just "the same rule" -- the exact same background/accent/ink
+    values build_insert() computes for the case insert's back panel
+    (jcard_layout.place_back). Scoring the disc label's own accent against
+    a flat white instead used to give the two pages of one CD project
+    visibly different accent colours for the same album -- reported
+    directly, from a real cover."""
+    from mdtools.palette import accent_colour, dominant_colour, readable_text_colour
+
+    metadata = _metadata()
+    scene = _label_scene()
+
+    items = cd_layout.build_disc_label(scene, metadata, None)
+
+    by_text = {item.toPlainText(): item for item in items if hasattr(item, "toPlainText")}
+    expected_background = dominant_colour(metadata.cover_art)
+    expected_accent = accent_colour(metadata.cover_art, against=expected_background)
+    expected_ink = readable_text_colour(expected_background)
+
+    assert by_text["Falling In Reverse"].defaultTextColor().name() == expected_accent
+    assert by_text["Popular Monster"].defaultTextColor().name() == expected_ink
+    assert by_text["2024"].defaultTextColor().name() == expected_ink
+
+
+def test_the_disc_label_and_the_case_back_agree_on_the_artist_colour_for_one_album(qt_app):
+    """The actual reported bug, reproduced end to end: build both pages
+    for the same album and compare what actually landed on screen, not
+    just the palette functions in isolation."""
+    metadata = _metadata()
+
+    disc_scene = _label_scene()
+    disc_items = cd_layout.build_disc_label(disc_scene, metadata, None)
+    disc_artist = next(
+        item for item in disc_items if hasattr(item, "toPlainText") and item.toPlainText() == metadata.artist
+    )
+
+    back_scene = DesignScene(
+        CoverTemplate(name="Tray Card", width_mm=151.0, height_mm=117.5, fold_offsets_mm=[6.5, 144.5])
+    )
+    back_items = cd_layout.build_case_back(back_scene, metadata, None)
+    back_artist = next(
+        item for item in back_items if hasattr(item, "toPlainText") and item.toPlainText() == metadata.artist
+    )
+
+    assert disc_artist.defaultTextColor().name() == back_artist.defaultTextColor().name()
+
+
+def test_artist_stands_out_from_album_and_year(qt_app):
+    """Artist (bold, the accent) is the one field visually distinct from
+    the other two -- album and year deliberately share the plain ink."""
+    scene = _label_scene()
+
+    items = cd_layout.build_disc_label(scene, _metadata(), None)
+
+    by_text = {item.toPlainText(): item for item in items if hasattr(item, "toPlainText")}
+    artist_colour = by_text["Falling In Reverse"].defaultTextColor().name()
+    album_colour = by_text["Popular Monster"].defaultTextColor().name()
+    year_colour = by_text["2024"].defaultTextColor().name()
+
+    assert album_colour == year_colour
+    assert artist_colour != album_colour
+
+
+def test_the_year_sits_at_the_very_bottom_of_the_label(qt_app):
+    scene = _label_scene()
+    disc = scene.cut_shape_rects()[0]
+
+    items = cd_layout.build_disc_label(scene, _metadata(), None)
+
+    year = next(item for item in items if hasattr(item, "toPlainText") and item.toPlainText() == "2024")
+    footprint = _footprint(year)
+    # Centred horizontally...
+    assert abs(footprint.center().x() - disc.center().x()) < mm_to_px(1.0)
+    # ...and in the bottom band, not merely somewhere below centre.
+    bottom_band = cd_layout._chord_rect(disc, *cd_layout.BOTTOM_BAND, cd_layout.EDGE_MARGIN_MM)
+    assert footprint.bottom() <= bottom_band.bottom() + 1
+    assert footprint.bottom() > bottom_band.top()
+
+
+def test_the_mark_and_the_year_no_longer_share_a_band(qt_app):
+    """The whole point of moving the mark -- previously they shared the
+    bottom band and the year had to dodge whichever logo happened to be
+    there; now they occupy genuinely different parts of the label."""
+    scene = _label_scene()
+    logo = str(gallery.gallery_dir() / "cd_digital_audio.png")
+
+    items = cd_layout.build_disc_label(scene, _metadata(), logo)
+
+    mark = [item for item in items if isinstance(item, QGraphicsPixmapItem)][-1]
+    year = next(item for item in items if hasattr(item, "toPlainText") and item.toPlainText() == "2024")
+    assert not _footprint(mark).intersects(_footprint(year))
+
+
 def test_everything_on_the_label_lands_inside_the_disc(qt_app):
     """The regression that mattered: the mark was placed half off the edge,
     where Clip Layers removed it outright rather than clipping it -- so it
@@ -163,14 +256,16 @@ def test_everything_on_the_label_lands_inside_the_disc(qt_app):
         assert disc.contains(_footprint(item)), f"{item} is not fully on the disc"
 
 
-def test_the_mark_sits_at_the_foot_of_the_label(qt_app):
+def test_the_mark_sits_to_the_right_of_the_label(qt_app):
     scene = _label_scene()
     disc = scene.cut_shape_rects()[0]
 
     items = cd_layout.build_disc_label(scene, _metadata(), str(gallery.gallery_dir() / "cd_digital_audio.png"))
     mark = [item for item in items if isinstance(item, QGraphicsPixmapItem)][-1]
 
-    assert _footprint(mark).center().y() > disc.center().y()
+    centre = _footprint(mark).center()
+    assert centre.x() > disc.center().x()
+    assert abs(centre.y() - disc.center().y()) < mm_to_px(2.0)
 
 
 def test_the_label_is_built_without_a_mark_when_there_is_no_logo_file(qt_app):
@@ -221,6 +316,114 @@ def test_the_track_list_goes_on_the_left_hand_panel(qt_app):
     ]
     assert listed, "the track list is missing"
     assert left.contains(_footprint(listed[0]).center())
+
+
+def test_a_case_back_project_gets_no_track_list_on_the_insert(qt_app):
+    """The track list already lives on the tray card -- printing it again
+    on the insert's own left panel would be the same list twice."""
+    scene = _insert_scene()
+
+    cd_layout.build_insert(scene, _metadata(), has_case_back=True)
+
+    listed = [
+        item
+        for item in scene.print_items()
+        if hasattr(item, "toPlainText") and "Zombified" in item.toPlainText()
+    ]
+    assert not listed
+
+
+def test_a_case_back_project_shows_artist_and_year_instead(qt_app):
+    scene = _insert_scene()
+    metadata = _metadata()
+    left, _right = scene.fold_panel_rects()
+
+    cd_layout.build_insert(scene, metadata, has_case_back=True)
+
+    by_text = {
+        item.toPlainText(): item
+        for item in scene.print_items()
+        if hasattr(item, "toPlainText")
+    }
+    assert metadata.artist in by_text
+    assert str(metadata.year) in by_text
+    assert left.contains(_footprint(by_text[metadata.artist]).center())
+    assert left.contains(_footprint(by_text[str(metadata.year)]).center())
+
+
+def test_the_artist_takes_the_accent_and_the_year_takes_the_ink(qt_app):
+    from mdtools.palette import accent_colour, dominant_colour, readable_text_colour
+
+    scene = _insert_scene()
+    metadata = _metadata()
+
+    cd_layout.build_insert(scene, metadata, has_case_back=True)
+
+    background = dominant_colour(metadata.cover_art)
+    by_text = {
+        item.toPlainText(): item
+        for item in scene.print_items()
+        if hasattr(item, "toPlainText")
+    }
+    assert by_text[metadata.artist].defaultTextColor().name() == accent_colour(
+        metadata.cover_art, against=background
+    )
+    assert by_text[str(metadata.year)].defaultTextColor().name() == readable_text_colour(background)
+
+
+def test_an_artist_photo_is_placed_when_one_is_given(qt_app):
+    scene = _insert_scene()
+    left, _right = scene.fold_panel_rects()
+    photo_bytes = _cover(colour=(200, 100, 50), size=(300, 400))
+
+    cd_layout.build_insert(scene, _metadata(), has_case_back=True, artist_photo=photo_bytes)
+
+    # cover (right panel) + photo (left panel) == two pixmap items
+    pixmaps = [item for item in scene.print_items() if isinstance(item, QGraphicsPixmapItem)]
+    assert len(pixmaps) == 2
+    photo = min(pixmaps, key=lambda item: _footprint(item).left())
+    assert left.contains(_footprint(photo).center())
+
+
+def test_the_artist_photos_aspect_ratio_is_preserved_not_stretched(qt_app):
+    """Explicit request: place_insert_cover()'s own non-uniform stretch is
+    fine for a nearly-square album cover but would visibly distort a
+    person's face, so the photo is fitted (scaled by the smaller ratio)
+    rather than stretched to exactly fill its panel."""
+    scene = _insert_scene()
+    photo_bytes = _cover(colour=(200, 100, 50), size=(300, 400))  # 3:4 portrait
+
+    cd_layout.build_insert(scene, _metadata(), has_case_back=True, artist_photo=photo_bytes)
+
+    pixmaps = [item for item in scene.print_items() if isinstance(item, QGraphicsPixmapItem)]
+    photo = min(pixmaps, key=lambda item: _footprint(item).left())
+    footprint = _footprint(photo)
+    assert footprint.width() / footprint.height() == pytest.approx(300 / 400, rel=0.01)
+
+
+def test_no_photo_is_placed_when_none_was_found(qt_app):
+    scene = _insert_scene()
+
+    cd_layout.build_insert(scene, _metadata(), has_case_back=True, artist_photo=None)
+
+    # just the front cover -- no photo to place, and no fallback track list
+    pixmaps = [item for item in scene.print_items() if isinstance(item, QGraphicsPixmapItem)]
+    assert len(pixmaps) == 1
+
+
+def test_without_a_case_back_the_insert_is_unchanged_from_before(qt_app):
+    """has_case_back defaults to False -- every existing caller (and every
+    project without one) keeps the plain track-list panel."""
+    scene = _insert_scene()
+
+    cd_layout.build_insert(scene, _metadata())
+
+    listed = [
+        item
+        for item in scene.print_items()
+        if hasattr(item, "toPlainText") and "Zombified" in item.toPlainText()
+    ]
+    assert listed
 
 
 def test_the_insert_is_not_turned_the_way_a_jcard_is(qt_app):

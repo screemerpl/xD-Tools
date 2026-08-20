@@ -176,9 +176,17 @@ def build_side_label(
     scene: DesignScene,
     metadata: ProjectMetadata,
     side: SidePlan,
+    *,
+    background_art: bytes | None = None,
 ) -> list[QGraphicsItem]:
     """One face of the cassette: the sleeve, the side letter, and that
     side's tracks.
+
+    `background_art`, given, is used as-is for the sleeve instead of
+    lighten()ing `metadata.cover_art` here -- see cd_layout.build_disc_label's
+    own docstring for why: it's what lets a caller offer the
+    CoverFilterDialog picker and have this place exactly what was chosen.
+    Omitted, this keeps lightening by default, unchanged from before.
 
     Laid out around the opening, not over it. A shell label is cut with one
     hole through its middle -- the two reel hubs and, between them, the
@@ -209,16 +217,23 @@ def build_side_label(
         raise TapeLayoutError("there is no cover art to build the label from")
 
     panel = _page_rect(scene)
+    # The exact background/accent/ink triple cd_layout.build_disc_label()
+    # now uses (which itself matches the case insert's own back panel) --
+    # not a separately-scored approximation of it. Scoring against a flat
+    # white was tried first here too, on the reasoning that white is what
+    # the text is actually read against once the artwork underneath is
+    # washed out -- but that made accent_colour()'s result depend on what
+    # it was scored against, so this label's colours could never actually
+    # agree with the J-card's for the same album. See cd_layout.
+    # build_disc_label's own note on this for the full story (found there
+    # first, from a real cover).
     background = dominant_colour(metadata.cover_art)
-    # Scored against white rather than against the sleeve's own dominant
-    # colour, because white is what it will be read on once the artwork
-    # underneath has been washed out -- the same correction cd_layout's own
-    # disc label needed.
-    accent = accent_colour(metadata.cover_art, against="#ffffff")
-    ink = readable_text_colour("#ffffff")
+    accent = accent_colour(metadata.cover_art, against=background)
+    ink = readable_text_colour(background)
 
     added: list[QGraphicsItem] = []
-    cover = place_cover_on_label(scene, lighten(metadata.cover_art, LABEL_LIGHTEN))
+    art = background_art if background_art is not None else lighten(metadata.cover_art, LABEL_LIGHTEN)
+    cover = place_cover_on_label(scene, art)
     if cover is not None:
         added.append(cover)
 

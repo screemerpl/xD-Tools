@@ -27,7 +27,7 @@ from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QBrush, QColor, QPen
 from PySide6.QtWidgets import QGraphicsItem
 
-from mdtools.canvas.items import SCALE_ROLE, set_item_scale
+from mdtools.canvas.items import SCALE_ROLE, set_item_scale, set_text_shadow
 from mdtools.canvas.scene import DesignScene
 from mdtools.constants import mm_to_px
 from mdtools.palette import accent_colour, dominant_colour, readable_text_colour
@@ -190,6 +190,12 @@ def _text(
         return None
     item = scene.add_text(text)
     item.setDefaultTextColor(QColor(colour))
+    # Every auto-generated cover/label runs its text through here, and it
+    # sits directly on top of a photograph -- a plain flat colour, however
+    # well contrasted, can still get lost in a busy patch of the cover.
+    # The shadow is a small, automatic extra margin of legibility; it
+    # remains an ordinary per-layer toggle a user can turn back off.
+    set_text_shadow(item, True)
     if bold:
         font = item.font()
         font.setBold(True)

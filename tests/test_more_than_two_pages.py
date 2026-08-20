@@ -15,13 +15,25 @@ from mdtools.canvas.scene import DesignScene
 from mdtools.io.project_io import load_project, save_project
 from mdtools.panels.print_dialog import PrintDialog
 from mdtools.project import (
+    MEDIUM_CD,
     PAGE_BACK,
     PAGE_COVER,
     PAGE_DISC,
     page_template_kind,
     page_title,
 )
+from mdtools.templates import registry
 from mdtools.templates.models import CoverTemplate
+
+
+@pytest.fixture(autouse=True)
+def _isolated_templates(tmp_path, monkeypatch):
+    """Only test_changing_the_third_pages_template_offers_case_back_templates
+    actually reads the template registry (via _change_page_template()), but
+    every other file that does keeps this isolated -- without it, that one
+    test's result depends on whatever templates.json happens to already
+    exist on the machine running it, real per-user file included."""
+    monkeypatch.setattr(registry, "user_templates_path", lambda: tmp_path / "templates.json")
 
 
 def _back_page() -> DesignScene:
@@ -57,7 +69,7 @@ def test_pages_are_listed_in_a_known_order_and_unknown_ones_still_appear(qt_app)
 def test_a_page_knows_which_template_family_it_takes():
     assert page_template_kind(PAGE_DISC) == "disc"
     assert page_template_kind(PAGE_COVER) == "cover"
-    assert page_template_kind(PAGE_BACK) == "cover"
+    assert page_template_kind(PAGE_BACK) == "case_back"
     # anything unrecognised is treated as a cover rather than crashing
     assert page_template_kind("something-later") == "cover"
 
@@ -89,11 +101,13 @@ def test_switching_to_the_third_page_shows_its_scene(qt_app):
     assert window.view.scene() is window.project.pages[PAGE_BACK]
 
 
-def test_changing_the_third_pages_template_offers_cover_templates(qt_app, monkeypatch):
-    """It takes the same family as any other cover-shaped page, which is
-    what page_template_kind() is for -- the old code asked "is this the
-    disc page?" and called everything else a cover by luck."""
+def test_changing_the_third_pages_template_offers_case_back_templates(qt_app, monkeypatch):
+    """It takes its own family (page_template_kind(PAGE_BACK) == "case_back"),
+    not disc templates and not the front-cover/insert family either -- the
+    two used to be conflated under "cover", which is exactly what let a
+    slim-case insert be offered (and picked) as a case back."""
     window = _three_page_window(qt_app)
+    window.project.medium = MEDIUM_CD  # case_back templates only exist for CD
     window.page_combo.setCurrentIndex(window.page_combo.findData(PAGE_BACK))
 
     offered: list[list[str]] = []
@@ -103,6 +117,10 @@ def test_changing_the_third_pages_template_offers_cover_templates(qt_app, monkey
     window._change_page_template()
 
     assert offered and all("Disc Label" not in name for name in offered[0])
+    # The actual bug this split fixes: a slim-case insert must never be
+    # offered as a case back (or vice versa), even though both are plain
+    # CoverTemplate rectangles.
+    assert all("Slim Case Insert" not in name for name in offered[0])
 
 
 # -- saving --------------------------------------------------------------

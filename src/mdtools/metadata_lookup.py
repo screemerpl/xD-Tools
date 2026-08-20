@@ -27,6 +27,13 @@ LOOKUP_URL = "https://itunes.apple.com/lookup"
 REQUEST_TIMEOUT_SECONDS = 10
 USER_AGENT = "xD-Tools (https://github.com/) metadata lookup"
 
+# Deezer's public search API -- like iTunes, no key/signup, and unlike
+# iTunes it actually carries artist photos (iTunes' own API has no artist
+# image field at all). Used only for a picture of the *artist*, never for
+# album/track data -- that stays iTunes, which is what everything else here
+# is built around.
+ARTIST_SEARCH_URL = "https://api.deezer.com/search/artist"
+
 
 class MetadataLookupError(Exception):
     """No matching album could be found, or the request itself failed."""
@@ -57,6 +64,14 @@ class LookupTrack:
 class LookupResult:
     year: int | None
     tracks: list[LookupTrack]
+
+
+@dataclass
+class ArtistCandidate:
+    id: int
+    name: str
+    nb_fan: int
+    picture_url: str | None
 
 
 def search_albums(artist: str, album: str) -> list[AlbumCandidate]:
@@ -141,13 +156,77 @@ def find_cover(artist: str, album: str, track_count: int | None = None) -> tuple
 def fetch_artwork(url: str) -> bytes:
     """Raises MetadataLookupError on failure -- callers that treat cover
     art as an optional bonus (rather than the point of the call, unlike
-    search_albums/fetch_tracks) should catch and ignore it themselves."""
+    search_albums/fetch_tracks) should catch and ignore it themselves.
+
+    Named for cover art, but there is nothing album-specific about it --
+    it is a plain "download this URL or raise" helper, which is exactly
+    what find_artist_photo() below reuses it for."""
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
         with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
             return response.read()
     except (urllib.error.URLError, TimeoutError) as exc:
         raise MetadataLookupError(f"Could not download the cover art: {exc}") from exc
+
+
+def search_artists(artist: str) -> list[ArtistCandidate]:
+    """Candidates for `artist`'s own name, from Deezer's public artist
+    search -- ranked by name similarity first, and *popularity* (nb_fan)
+    second, not track count (Deezer's artist search has no such thing).
+
+    The popularity tiebreaker matters more here than the equivalent one
+    does for an album: verified live against "Taylor Swift" -- the real
+    one and a same-named unrelated act both score a perfect 1.0 name
+    match, so name similarity alone cannot tell them apart at all, and
+    nb_fan (12.6M vs 11, in that live search) is what actually
+    distinguishes "who somebody means" from "who happens to share a name".
+    """
+    query = urllib.parse.urlencode({"q": artist})
+    data = _get_json(f"{ARTIST_SEARCH_URL}?{query}")
+    candidates = [
+        ArtistCandidate(
+            id=entry["id"],
+            name=entry.get("name", ""),
+            nb_fan=entry.get("nb_fan") or 0,
+            picture_url=entry.get("picture_xl") or entry.get("picture_big") or None,
+        )
+        for entry in data.get("data", [])
+        if entry.get("id") is not None
+    ]
+    candidates.sort(key=lambda c: (_similarity(artist, c.name), c.nb_fan), reverse=True)
+    return candidates
+
+
+# A photo is of one specific person, not an edition of a release -- there
+# is no equivalent of "close enough, the user can still tell it's the right
+# album from the cover". Stricter than MIN_ARTIST_SIMILARITY (0.40) above,
+# which only ever has to rule out an unrelated act attached to someone
+# else's album.
+MIN_ARTIST_PHOTO_SIMILARITY = 0.75
+
+
+def find_artist_photo(artist: str) -> bytes | None:
+    """A photo of `artist`, or None if nothing good enough was found.
+
+    Silent on every kind of failure -- no match, no picture on the best
+    match, a network error either during search or download -- the same
+    "bonus, not the point of the call" contract find_cover() already
+    follows for album art: a missing photo means an empty spot on the
+    page, not a warning dialog interrupting whatever the caller was doing.
+    """
+    if not artist.strip():
+        return None
+    try:
+        candidates = search_artists(artist)
+    except MetadataLookupError:
+        return None
+    matching = [c for c in candidates if _similarity(artist, c.name) >= MIN_ARTIST_PHOTO_SIMILARITY]
+    if not matching or not matching[0].picture_url:
+        return None
+    try:
+        return fetch_artwork(matching[0].picture_url)
+    except MetadataLookupError:
+        return None
 
 
 # Words iTunes routinely appends to a release title that say nothing about

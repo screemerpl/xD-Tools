@@ -2640,100 +2640,120 @@ choose one)</source>
 <context>
     <name>PropertiesPanel</name>
     <message>
-        <location filename="../panels/properties_panel.py" line="149"/>
+        <location filename="../panels/properties_panel.py" line="157"/>
         <source>X</source>
         <translation>X</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="155"/>
+        <location filename="../panels/properties_panel.py" line="163"/>
         <source>Y</source>
         <translation>Y</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="161"/>
+        <location filename="../panels/properties_panel.py" line="169"/>
         <source>Rotation</source>
         <translation>回転</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="166"/>
+        <location filename="../panels/properties_panel.py" line="174"/>
         <source>Text</source>
         <translation>テキスト</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="172"/>
+        <location filename="../panels/properties_panel.py" line="180"/>
         <source>Font size</source>
         <translation>フォントサイズ</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="174"/>
+        <location filename="../panels/properties_panel.py" line="182"/>
         <source>Font...</source>
         <translation>フォント...</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="176"/>
+        <location filename="../panels/properties_panel.py" line="184"/>
         <source>Font</source>
         <translation>フォント</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="178"/>
+        <location filename="../panels/properties_panel.py" line="186"/>
         <source>Color...</source>
         <translation>色...</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="180"/>
+        <location filename="../panels/properties_panel.py" line="188"/>
         <source>Probe...</source>
         <translation>色を採取...</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="181"/>
+        <location filename="../panels/properties_panel.py" line="189"/>
         <source>Click, then pick any color straight off the canvas</source>
         <translation>クリックしてから、キャンバス上の任意の色を選んでください</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="188"/>
+        <location filename="../panels/properties_panel.py" line="196"/>
         <source>Color</source>
         <translation>色</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="190"/>
-        <location filename="../panels/properties_panel.py" line="366"/>
+        <location filename="../panels/properties_panel.py" line="200"/>
+        <source>Shadow</source>
+        <translation>シャドウ</translation>
+    </message>
+    <message>
+        <location filename="../panels/properties_panel.py" line="204"/>
+        <source>Glow</source>
+        <translation>グロー</translation>
+    </message>
+    <message>
+        <location filename="../panels/properties_panel.py" line="206"/>
+        <location filename="../panels/properties_panel.py" line="402"/>
         <source>Reset to Default</source>
         <translation>既定値に戻す</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="244"/>
+        <location filename="../panels/properties_panel.py" line="264"/>
         <source>Move</source>
         <translation>移動</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="252"/>
+        <location filename="../panels/properties_panel.py" line="272"/>
         <source>Rotate</source>
         <translation>回転</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="261"/>
+        <location filename="../panels/properties_panel.py" line="281"/>
         <source>Edit Text</source>
         <translation>テキストを編集</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="270"/>
+        <location filename="../panels/properties_panel.py" line="290"/>
         <source>Change Font Size</source>
         <translation>フォントサイズを変更</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="284"/>
+        <location filename="../panels/properties_panel.py" line="304"/>
         <source>Change Font</source>
         <translation>フォントを変更</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="319"/>
+        <location filename="../panels/properties_panel.py" line="339"/>
         <source>Change Text Color</source>
         <translation>文字色を変更</translation>
     </message>
     <message>
-        <location filename="../panels/properties_panel.py" line="325"/>
+        <location filename="../panels/properties_panel.py" line="345"/>
         <source>Change Fill Color</source>
         <translation>塗りの色を変更</translation>
+    </message>
+    <message>
+        <location filename="../panels/properties_panel.py" line="353"/>
+        <source>Toggle Shadow</source>
+        <translation>シャドウを切り替え</translation>
+    </message>
+    <message>
+        <location filename="../panels/properties_panel.py" line="361"/>
+        <source>Toggle Glow</source>
+        <translation>グローを切り替え</translation>
     </message>
 </context>
 <context>
@@ -3103,154 +3123,154 @@ Is it now showing record-pause (REC lit, paused)?</source>
 <context>
     <name>RemoteDialog</name>
     <message>
-        <location filename="../panels/remote_dialog.py" line="216"/>
+        <location filename="../panels/remote_dialog.py" line="217"/>
         <source>Remote</source>
         <translation>リモコン</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="225"/>
+        <location filename="../panels/remote_dialog.py" line="237"/>
         <source>Extended mode -- every key the adapter knows</source>
         <translation>拡張モード — アダプターが知っているすべてのキー</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="228"/>
+        <location filename="../panels/remote_dialog.py" line="240"/>
         <source>Standard mode is the physical remote, key for key. Extended mode adds what has no key on it: tracks 11 to 25, the deck&apos;s own character entry, the rest of the recording group, the two keys that edit the disc, and typing.</source>
         <translation>標準モードは実物のリモコンそのもので、キーの構成も同じです。拡張モードはそこに載っていないものを加えます。トラック11〜25、デッキ自身の文字入力、録音グループの残り、ディスクを編集する2つのキー、そしてキーボード入力です。</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="242"/>
+        <location filename="../panels/remote_dialog.py" line="254"/>
         <source>Transport</source>
         <translation>操作</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="244"/>
+        <location filename="../panels/remote_dialog.py" line="256"/>
         <source>Play Mode</source>
         <translation>再生モード</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="245"/>
+        <location filename="../panels/remote_dialog.py" line="257"/>
         <source>Display</source>
         <translation>表示</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="246"/>
+        <location filename="../panels/remote_dialog.py" line="260"/>
         <source>Titling</source>
         <translation>タイトル入力</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="249"/>
+        <location filename="../panels/remote_dialog.py" line="263"/>
         <source>Recording</source>
         <translation>録音</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="251"/>
+        <location filename="../panels/remote_dialog.py" line="265"/>
         <source>These start or arm recording on the deck. A write-protected disc ignores them.</source>
         <translation>これらはデッキの録音を開始または待機させます。書き込み禁止のディスクでは無視されます。</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="255"/>
+        <location filename="../panels/remote_dialog.py" line="269"/>
         <source>Disc Editing</source>
         <translation>ディスクの編集</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="258"/>
+        <location filename="../panels/remote_dialog.py" line="272"/>
         <source>These change what is on the disc. The deck asks on its own display before doing anything and waits for Enter -- read what it is asking before pressing it.</source>
         <translation>これらはディスクの中身を変更します。デッキは実行前に自身の表示で確認を求め、Enterを待ちます。押す前に何を聞かれているか読んでください。</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="265"/>
+        <location filename="../panels/remote_dialog.py" line="284"/>
         <source>Connecting...</source>
         <translation>接続中...</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="293"/>
+        <location filename="../panels/remote_dialog.py" line="312"/>
         <source>Tracks</source>
         <translation>トラック</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="310"/>
+        <location filename="../panels/remote_dialog.py" line="329"/>
         <source>Typing</source>
         <translation>文字入力</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="314"/>
+        <location filename="../panels/remote_dialog.py" line="333"/>
         <source>Type on your own keyboard and every letter, digit and symbol goes straight to the deck, which has to be in name-edit mode first -- press Name, or select a track and then Name. Backspace deletes, Enter commits the title, and the arrow keys move the cursor. Accented letters lose their marks; anything the deck cannot show at all is refused rather than sent as something else.</source>
         <translation>お使いのキーボードで入力すると、文字・数字・記号がそのままデッキへ送られます。デッキは先に名前編集モードにしておく必要があります（Nameを押すか、トラックを選んでからName）。Backspaceで削除、Enterでタイトル確定、矢印キーでカーソル移動です。アクセント付きの文字は記号が落ちます。デッキがまったく表示できないものは、別の文字に置き換えず送信を断ります。</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="410"/>
+        <location filename="../panels/remote_dialog.py" line="429"/>
         <source>The deck cannot show {chars} -- nothing was sent.</source>
         <translation>デッキは {chars} を表示できません。何も送信していません。</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="417"/>
+        <location filename="../panels/remote_dialog.py" line="436"/>
         <source>Typed: {text}</source>
         <translation>入力: {text}</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="450"/>
+        <location filename="../panels/remote_dialog.py" line="469"/>
         <source>Not connected: {error}</source>
         <translation>未接続: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="452"/>
+        <location filename="../panels/remote_dialog.py" line="471"/>
         <source>Connected on {port}.</source>
         <translation>{port} に接続しました。</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="429"/>
-        <location filename="../panels/remote_dialog.py" line="456"/>
+        <location filename="../panels/remote_dialog.py" line="448"/>
+        <location filename="../panels/remote_dialog.py" line="475"/>
         <source>Not connected -- nothing was sent.</source>
         <translation>未接続のため、何も送信されませんでした。</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="161"/>
+        <location filename="../panels/remote_dialog.py" line="162"/>
         <source>While the deck is in name-edit mode this scrolls the character under the cursor instead of changing track, so it will quietly corrupt a title.</source>
         <translation>デッキが名前編集モードのときは、トラックを変えるのではなくカーソル位置の文字を送るため、タイトルを黙って壊します。</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="167"/>
+        <location filename="../panels/remote_dialog.py" line="168"/>
         <source>Opens a track number field on the deck&apos;s display, which closes itself as soon as two digits have been typed -- no Enter needed, and no room for a third digit.</source>
         <translation>デッキの表示にトラック番号の入力欄を開きます。2桁目を入力した時点で自動的に確定するので、Enterは不要で、3桁目の余地もありません。</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="173"/>
+        <location filename="../panels/remote_dialog.py" line="174"/>
         <source>Pressed while the deck is already recording, this puts a track mark in -- which is how this app splits an album that plays without gaps.</source>
         <translation>録音中に押すとトラックマークが入ります。切れ目なく続くアルバムをこのアプリが分割しているのは、この方法です。</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="179"/>
+        <location filename="../panels/remote_dialog.py" line="180"/>
         <source>Switches the deck&apos;s own character set, part of the entry method this app bypasses by sending character codes directly. Known to work, and of no use here.</source>
         <translation>デッキ自身の文字セットを切り替えます。このアプリは文字コードを直接送ることでその入力方法を迂回しています。動作は確認済みですが、ここでは使い道がありません。</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="185"/>
+        <location filename="../panels/remote_dialog.py" line="186"/>
         <source>One of three keys the deck&apos;s code table calls Clear. Tried in name-edit mode with the cursor at the start, in the middle, and held down: it does nothing there. It most likely clears a play program.</source>
         <translation>デッキのコード表がClearと呼ぶ3つのキーのひとつです。名前編集モードで、カーソルを先頭に置いた場合・途中に置いた場合・押しっぱなしにした場合を試しましたが、そこでは何も起きません。おそらく再生プログラムを消すキーです。</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="192"/>
+        <location filename="../panels/remote_dialog.py" line="193"/>
         <source>Recognised by the deck as a recording command, but which of that group does what was never told apart -- they have only been tried on a write-protected disc, where every one of them answers the same way.</source>
         <translation>デッキは録音系のコマンドとして認識しますが、このグループのどれが何をするのかは区別できていません。書き込み禁止のディスクでしか試しておらず、そこではどれも同じ反応を返すためです。</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="199"/>
+        <location filename="../panels/remote_dialog.py" line="200"/>
         <source>Erases the track the deck is sitting on. Tried on a real disc: it asks on the display first and does nothing until Enter, so Cancel backs out of it.</source>
         <translation>デッキが止まっているトラックを消去します。実際のディスクで確認済みで、まず表示で確認を求め、Enterを押すまで何もしません。Cancelで取り消せます。</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="205"/>
+        <location filename="../panels/remote_dialog.py" line="206"/>
         <source>Splits the current track in two. Never tried on an unprotected disc -- Erase, the one key of this group that has been, asked before acting.</source>
         <translation>現在のトラックを2つに分割します。書き込み可能なディスクでは未検証です。このグループで唯一試されたEraseは、実行前に確認を求めました。</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="437"/>
-        <location filename="../panels/remote_dialog.py" line="461"/>
+        <location filename="../panels/remote_dialog.py" line="456"/>
+        <location filename="../panels/remote_dialog.py" line="480"/>
         <source>{key} failed: {error}</source>
         <translation>{key} に失敗しました: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="465"/>
+        <location filename="../panels/remote_dialog.py" line="484"/>
         <source>Sent: {key}</source>
         <translation>送信: {key}</translation>
     </message>

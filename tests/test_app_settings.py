@@ -141,6 +141,15 @@ def test_the_download_folder_setting_round_trips(tmp_path):
     assert app_settings.telegram_download_folder() == folder
 
 
+def test_last_regenerate_font_family_is_none_before_anything_is_chosen():
+    assert app_settings.last_regenerate_font_family() is None
+
+
+def test_last_regenerate_font_family_round_trips():
+    app_settings.set_last_regenerate_font_family("Courier New")
+    assert app_settings.last_regenerate_font_family() == "Courier New"
+
+
 def test_the_session_path_is_derived_not_stored_and_lives_beside_settings_ini():
     path = app_settings.telegram_session_path()
     assert path.name == "telegram.session"

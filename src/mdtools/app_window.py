@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import copy
 import sys
 from pathlib import Path
@@ -17,28 +18,30 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMainWindow,
     QMessageBox,
+    QPushButton,
     QSlider,
     QToolBar,
 )
 
-from mdtools import album_sort, app_settings, gallery, i18n, mixtape_cover, recent_projects, user_paths
+from mdtools import album_sort, app_settings, cover_filters, gallery, i18n, mixtape_cover, recent_projects, user_paths
 from mdtools.auto_layout import place_cover_on_label, place_logo_on_slider, recolour_insertion_mark
 from mdtools.gallery import save_downloaded_cover
 from mdtools.jcard_layout import build_jcard
-from mdtools.metadata_lookup import MetadataLookupError, find_cover
+from mdtools.metadata_lookup import MetadataLookupError, find_artist_photo, find_cover
 from mdtools.canvas.items import get_item_name, set_item_name
-from mdtools.canvas.scene import DesignScene
+from mdtools.canvas.scene import DesignScene, font_family_override
 from mdtools.canvas.view import DesignView
 from mdtools.clipboard import Clipboard
 from mdtools.commands import AddItemCommand, DeleteItemsCommand, PropertyEditCommand, SetPixmapCommand, SwapZCommand
 from mdtools.constants import mm_to_px
 from mdtools.grayscale import BRIGHTNESS_RANGE, CONTRAST_RANGE
 from mdtools.io.png_export import export_png, render_scene_to_image
-from mdtools.io.project_io import item_from_dict, item_to_dict, load_project, save_project
+from mdtools.io.project_io import item_from_dict, item_to_dict, load_project, save_project, scene_from_dict, scene_to_dict
 from mdtools.io.svg_export import export_svg
 from mdtools.panels.about_dialog import AboutDialog
 from mdtools.panels.asset_gallery_dialog import AssetGalleryDialog
 from mdtools.panels.cd_rip_dialog import CdRipDialog
+from mdtools.panels.cover_filter_dialog import CoverFilterDialog
 from mdtools.panels.erase_dialog import EraseDiscDialog
 from mdtools.panels.experimental_settings_dialog import ExperimentalSettingsDialog
 from mdtools import foobar
@@ -56,6 +59,7 @@ from mdtools.mdrem import disc_title
 from mdtools.panels.mdrem_port import resolve_port
 from mdtools.panels.metadata_dialog import MetadataDialog
 from mdtools.panels.record_dialog import RecordDialog
+from mdtools.panels.regenerate_font_dialog import RegenerateFontDialog
 from mdtools.panels.tape_record_dialog import TapeRecordDialog
 from mdtools.panels.new_design_dialog import NewDesignDialog
 from mdtools.panels.print_dialog import PrintDialog
@@ -143,6 +147,15 @@ class MainWindow(QMainWindow):
         self.startup_cancelled = False
         self._connected_scenes: set = set()
         self.clipboard = Clipboard()
+        # Which CoverFilterDialog choice a disc/shell label was last built
+        # with, this session -- _reused_cover_filter() reads it so
+        # "Regenerate with Font..." and a full re-layout don't re-ask a
+        # question that's already been answered for this project. Session-
+        # only, deliberately not saved into the .mdproj: the filter itself
+        # is already baked into whatever image is on the page, this is only
+        # ever needed again if something asks to *rebuild* that page.
+        self._last_cover_filter_id: str | None = None
+        self._reusing_cover_filter = False
         # One QUndoStack per project (undo history for a discarded project's
         # items isn't meaningful); QUndoGroup gives the Edit menu's
         # Undo/Redo actions a stable identity that survives swapping the
@@ -185,6 +198,9 @@ class MainWindow(QMainWindow):
         # had nowhere to appear.
         self.page_combo.currentIndexChanged.connect(self._on_page_combo_changed)
         toolbar.addWidget(self.page_combo)
+        self.regenerate_font_btn = QPushButton(self.tr("Regenerate with Font..."))
+        self.regenerate_font_btn.clicked.connect(self._open_regenerate_font_dialog)
+        toolbar.addWidget(self.regenerate_font_btn)
         self.addToolBar(toolbar)
 
         zoom_toolbar = QToolBar(self.tr("Zoom"), self)
@@ -2146,11 +2162,18 @@ class MainWindow(QMainWindow):
         disc label and the J-card, or a CD's ring label, case insert and --
         if there is one -- its case back.
 
-        After a recording this runs without asking. That is deliberate: the
-        recording flow has already asked for confirmation several times
-        over, and an extra prompt at the very end -- after the user has
-        watched an album go down in real time -- would be noise. The Tools
-        panel button, which is a single click out of nowhere, does confirm.
+        After a recording this runs without confirming first. That is
+        deliberate: the recording flow has already asked for confirmation
+        several times over, and an extra "are you sure" at the very end --
+        after the user has watched an album go down in real time -- would
+        be noise. The Tools panel button, which is a single click out of
+        nowhere, does confirm.
+
+        One thing it *does* still ask either way: any disc/shell label this
+        touches prompts for a background treatment via
+        _choose_cover_background() before it is built -- that is a real
+        creative choice with six visibly different outcomes, not a "did you
+        mean to do this" the user has already answered by getting this far.
         """
         if self.project is None or not metadata.cover_art:
             return
@@ -2169,11 +2192,56 @@ class MainWindow(QMainWindow):
         self._auto_layout_cover(metadata)
         self._auto_layout_disc_label(metadata)
 
+    def _choose_cover_background(self, cover_art: bytes, title: str) -> bytes | None:
+        """Shows CoverFilterDialog for `cover_art` and returns the filtered
+        PNG bytes the user picked, or None if they closed/cancelled it --
+        callers treat None as "skip building this label" rather than
+        silently falling back to some default treatment.
+
+        Every disc-shaped or shell-shaped label prints the cover full-bleed
+        behind text (unlike a J-card or CD insert's front panel, where the
+        cover *is* the point) -- this is the one thing all three of them
+        share, so the dialog is offered from exactly the three call sites
+        that place a cover this way, not from the cover/J-card/insert
+        layouts.
+
+        While `_reused_cover_filter()` is active, this skips the dialog
+        entirely and reuses whichever filter was last chosen this session
+        (see "Regenerate with Font..." -- rebuilding every page with a new
+        font must not re-ask a question about background treatment that has
+        already been answered)."""
+        if self._reusing_cover_filter:
+            filter_id = self._last_cover_filter_id or cover_filters.FILTER_NONE
+            return cover_filters.apply_cover_filter(cover_art, filter_id)
+        dialog = CoverFilterDialog(cover_art, title, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted or dialog.result_filter_id is None:
+            return None
+        self._last_cover_filter_id = dialog.result_filter_id
+        return cover_filters.apply_cover_filter(cover_art, dialog.result_filter_id)
+
+    @contextlib.contextmanager
+    def _reused_cover_filter(self):
+        """See _choose_cover_background()'s docstring -- scopes "don't ask,
+        reuse the last answer" to exactly the call this wraps."""
+        previous = self._reusing_cover_filter
+        self._reusing_cover_filter = True
+        try:
+            yield
+        finally:
+            self._reusing_cover_filter = previous
+
     def _auto_layout_disc_label(self, metadata: ProjectMetadata) -> None:
         """The full-face template, the cover across it cropped to the cut
         outline, and the MiniDisc logo on the slider sticker."""
         template = self._template_named("disc", FULL_LABEL_TEMPLATE)
         if template is None:
+            return
+
+        # Asked before anything on the page changes, so cancelling leaves
+        # it completely untouched rather than mid-way through a template
+        # swap with no cover to show for it.
+        background = self._choose_cover_background(metadata.cover_art, self.tr("Disc Label Background"))
+        if background is None:
             return
 
         # Clip Layers works on the *current* page, so the disc page has to be
@@ -2186,10 +2254,14 @@ class MainWindow(QMainWindow):
         # insertion mark the template change just seeded. Not an undo command:
         # those items were not added by one either (apply_template resets the
         # stack and seeds them directly), so there is nothing to undo back to.
-        recolour_insertion_mark(scene, metadata.cover_art)
+        # Sampled from the *filtered* artwork, not the raw cover -- that is
+        # what actually ends up behind this text, and a filter that changes
+        # how bright the top of the cover reads (or replaces it outright,
+        # e.g. halftone) has to be what this decision is based on.
+        recolour_insertion_mark(scene, background)
 
         self.undo_stack.beginMacro(self.tr("Lay Out Disc Label"))
-        cover = place_cover_on_label(scene, metadata.cover_art)
+        cover = place_cover_on_label(scene, background)
         if cover is not None:
             # Behind whatever the template change seeded (the insertion-mark
             # triangle and its label), not on top: a full-bleed cover would
@@ -2245,6 +2317,10 @@ class MainWindow(QMainWindow):
         if template is None:
             return
 
+        background = self._choose_cover_background(metadata.cover_art, self.tr("Disc Label Background"))
+        if background is None:
+            return
+
         # Clip Layers works on the *current* page.
         self.page_combo.setCurrentIndex(self.page_combo.findData(PAGE_DISC))
         self.apply_template(PAGE_DISC, template)
@@ -2252,7 +2328,12 @@ class MainWindow(QMainWindow):
 
         logo_path = gallery.gallery_dir() / "cd_digital_audio.png"
         try:
-            items = build_disc_label(scene, metadata, str(logo_path) if logo_path.exists() else None)
+            items = build_disc_label(
+                scene,
+                metadata,
+                str(logo_path) if logo_path.exists() else None,
+                background_art=background,
+            )
         except CdLayoutError:
             return
 
@@ -2288,8 +2369,11 @@ class MainWindow(QMainWindow):
         self.undo_stack.endMacro()
 
     def _auto_layout_cd_insert(self, metadata: ProjectMetadata) -> None:
-        """The folded slim-case insert: cover on the right panel, track list
-        on the left.
+        """The folded slim-case insert: cover on the right panel always;
+        the left panel is the track list, or -- if this project also has a
+        case back -- the artist's name, year and photo instead, since the
+        track list already lives on the tray card and repeating it here
+        would just be the same list twice (see cd_layout.build_insert).
 
         Not run through Clip Layers, for the same reason the J-card is not:
         nothing overhangs, and clipping would rasterise a track list that is
@@ -2299,11 +2383,25 @@ class MainWindow(QMainWindow):
         if template is None:
             return
 
+        has_case_back = PAGE_BACK in self.project.pages
+        artist_photo = None
+        if has_case_back:
+            # A network lookup, so the same wait-cursor courtesy
+            # _fetch_cover_into_metadata already extends to the album cover
+            # lookup -- this one is silent on failure by design (see
+            # metadata_lookup.find_artist_photo), so there is nothing to
+            # report either way, just a cursor while it runs.
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            try:
+                artist_photo = find_artist_photo(metadata.artist)
+            finally:
+                QApplication.restoreOverrideCursor()
+
         self.apply_template(PAGE_COVER, template)
         scene = self.project.pages[PAGE_COVER]
 
         try:
-            items = build_insert(scene, metadata)
+            items = build_insert(scene, metadata, has_case_back=has_case_back, artist_photo=artist_photo)
         except CdLayoutError:
             return
 
@@ -2312,11 +2410,9 @@ class MainWindow(QMainWindow):
             self.undo_stack.push(AddItemCommand(scene, item, self.tr("Case Insert")))
         self.undo_stack.endMacro()
 
-    def _auto_layout_tape(self, metadata: ProjectMetadata) -> None:
-        """The inlay card, and a shell label for each side of the tape.
-
-        Where the split falls is `tape.split_sides()`'s answer, not this
-        method's -- the same function the recording flow uses to decide when
+    def _tape_plan(self, metadata: ProjectMetadata) -> tape.TapePlan:
+        """Where the split falls is `tape.split_sides()`'s answer, not this
+        window's -- the same function the recording flow uses to decide when
         to ask the user to turn the tape over. That is the point of sharing
         it: a label that says side B starts at track seven, and a recording
         that turns over after track six, would each be defensible alone and
@@ -2326,37 +2422,63 @@ class MainWindow(QMainWindow):
         set by the recording flow and saved with the file -- so a label laid
         out after recording splits exactly where the recording did, and one
         laid out before it uses the same default the recording dialog will
-        open on.
-        """
-        plan = tape.split_sides(metadata.tracks, self.project.tape_total_minutes)
+        open on."""
+        return tape.split_sides(metadata.tracks, self.project.tape_total_minutes)
 
+    def _auto_layout_tape(self, metadata: ProjectMetadata) -> None:
+        """The inlay card, and a shell label for each side of the tape."""
+        plan = self._tape_plan(metadata)
+        self._auto_layout_tape_jcard(metadata, plan)
+        self._auto_layout_tape_sides(metadata, plan)
+
+    def _auto_layout_tape_jcard(self, metadata: ProjectMetadata, plan: tape.TapePlan) -> None:
         jcard = self._template_named("cover", TAPE_JCARD_TEMPLATE)
-        if jcard is not None:
-            self.apply_template(PAGE_COVER, jcard)
-            scene = self.project.pages[PAGE_COVER]
-            try:
-                items = build_tape_jcard(scene, metadata, plan=plan)
-            except TapeLayoutError:
-                items = []
-            if items:
-                self.undo_stack.beginMacro(self.tr("Lay Out J-Card"))
-                for item in items:
-                    self.undo_stack.push(AddItemCommand(scene, item, self.tr("J-Card")))
-                self.undo_stack.endMacro()
+        if jcard is None:
+            return
+        self.apply_template(PAGE_COVER, jcard)
+        scene = self.project.pages[PAGE_COVER]
+        try:
+            items = build_tape_jcard(scene, metadata, plan=plan)
+        except TapeLayoutError:
+            items = []
+        if items:
+            self.undo_stack.beginMacro(self.tr("Lay Out J-Card"))
+            for item in items:
+                self.undo_stack.push(AddItemCommand(scene, item, self.tr("J-Card")))
+            self.undo_stack.endMacro()
 
+    def _auto_layout_tape_sides(
+        self, metadata: ProjectMetadata, plan: tape.TapePlan, pages: tuple[str, ...] = (PAGE_SIDE_A, PAGE_SIDE_B)
+    ) -> None:
+        """A shell label for each side named in `pages` -- both by default,
+        or just one (see "Regenerate with Font..."'s preview, which only
+        ever wants to touch the single page currently on screen).
+
+        Asked once regardless of how many sides that ends up being, not
+        once per side -- both shell labels carry the same photo, just
+        cropped by a different hole/band arrangement, so asking twice would
+        be the same question asked twice in a row. Cancelling skips the
+        shell label(s); anything else this call doesn't touch (the J-card)
+        is left alone.
+        """
         label = self._template_named("label", TAPE_LABEL_TEMPLATE)
         if label is None:
             return
-        for page, side in ((PAGE_SIDE_A, plan.sides[0]), (PAGE_SIDE_B, plan.sides[1])):
+        background = self._choose_cover_background(metadata.cover_art, self.tr("Shell Label Background"))
+        if background is None:
+            return
+        sides = {PAGE_SIDE_A: plan.sides[0], PAGE_SIDE_B: plan.sides[1]}
+        for page in pages:
             if page not in self.project.pages:
                 continue
+            side = sides[page]
             # Clip Layers works on the *current* page, so the label has to
             # be the one on screen before any of this runs.
             self.page_combo.setCurrentIndex(self.page_combo.findData(page))
             self.apply_template(page, copy.deepcopy(label))
             scene = self.project.pages[page]
             try:
-                items = build_side_label(scene, metadata, side)
+                items = build_side_label(scene, metadata, side, background_art=background)
             except TapeLayoutError:
                 continue
             self.undo_stack.beginMacro(self.tr("Lay Out Shell Label"))
@@ -2368,6 +2490,150 @@ class MainWindow(QMainWindow):
             # trims the overhang *and* punches those holes through the
             # artwork, so the sticker does not cover the drive.
             self._clip_layers()
+
+    # -- Regenerate with Font... ---------------------------------------------
+
+    def _auto_layout_method_for_page(self, page: str):
+        """Which single-page auto-layout call rebuilds `page`, for whichever
+        medium the project currently is -- the mapping "Regenerate with
+        Font..."'s preview uses to redo only the page on screen, without
+        touching any other page. None means this page has no automatic
+        layout of its own (should not happen for a page a real project
+        actually has, but a template gone missing already makes every one
+        of these a silent no-op, and this is no different)."""
+        metadata = self.project.metadata
+        if self.project.medium == MEDIUM_TAPE:
+            plan = self._tape_plan(metadata)
+            return {
+                PAGE_COVER: lambda m: self._auto_layout_tape_jcard(m, plan),
+                PAGE_SIDE_A: lambda m: self._auto_layout_tape_sides(m, plan, pages=(PAGE_SIDE_A,)),
+                PAGE_SIDE_B: lambda m: self._auto_layout_tape_sides(m, plan, pages=(PAGE_SIDE_B,)),
+            }.get(page)
+        if self.project.medium == MEDIUM_CD:
+            return {
+                PAGE_DISC: self._auto_layout_cd_disc_label,
+                PAGE_COVER: self._auto_layout_cd_insert,
+                PAGE_BACK: self._auto_layout_cd_case_back,
+            }.get(page)
+        return {
+            PAGE_DISC: self._auto_layout_disc_label,
+            PAGE_COVER: self._auto_layout_cover,
+        }.get(page)
+
+    def _snapshot_page(self, page: str) -> dict:
+        return scene_to_dict(self.project.pages[page])
+
+    def _restore_page(self, page: str, snapshot: dict) -> None:
+        """Rebuilds `page` from a snapshot taken by _snapshot_page() --
+        the undo path for "Regenerate with Font..."'s preview. The real
+        regenerate always goes through apply_template(), which resets the
+        undo stack entirely (its commands would reference items on a scene
+        that's about to be discarded), so there is no QUndoStack entry to
+        undo() back to; rebuilding straight from a saved snapshot is the
+        same technique a project's own save/load already relies on."""
+        old_scene = self.project.pages.get(page)
+        if old_scene is not None:
+            self._connected_scenes.discard(id(old_scene))
+        self.project.pages[page] = scene_from_dict(snapshot)
+        self._reset_undo_stack()
+        self._mark_dirty()
+        if page == self.current_page:
+            self._show_page(page)
+
+    def _open_regenerate_font_dialog(self) -> None:
+        """Toolbar > "Regenerate with Font...": preview a different font on
+        the current page, then, only if accepted and confirmed, rebuild
+        that one page -- and only that page -- with it.
+
+        Preview and the final regenerate are the *same* auto-layout call
+        (whichever one _auto_layout_method_for_page() maps the current page
+        to) every other automatic layout in this app already goes through
+        (font_family_override() substitutes the font those calls' own text
+        creation uses; _reused_cover_filter() stops them from re-asking a
+        background-treatment question this project has already answered),
+        so nothing here can show one thing in the preview and build another
+        for real.
+        """
+        if self.project is None:
+            return
+        scene = self._current_scene()
+        if scene is None:
+            return
+        page = self.current_page
+        metadata = self.project.metadata
+
+        if not metadata.album and not metadata.artist:
+            QMessageBox.information(
+                self,
+                self.tr("Regenerate with Font"),
+                self.tr("Fill in the album and artist in the Tools panel's Metadata... first."),
+            )
+            return
+        if not metadata.cover_art:
+            self._fetch_cover_into_metadata(metadata)
+        if not metadata.cover_art:
+            QMessageBox.warning(
+                self,
+                self.tr("Regenerate with Font"),
+                self.tr(
+                    "No cover art could be found for this album, and the layout is built around it. Add "
+                    "an image yourself, or fetch one with the Metadata dialog's lookup."
+                ),
+            )
+            return
+
+        dialog = RegenerateFontDialog(self)
+        preview_snapshot: dict | None = None
+
+        def _run_preview(family: str) -> None:
+            nonlocal preview_snapshot
+            method = self._auto_layout_method_for_page(page)
+            if method is None:
+                return
+            if preview_snapshot is None:
+                preview_snapshot = self._snapshot_page(page)
+            else:
+                # Restore the true original first, not the previous
+                # preview -- two Previews in a row (font A, then font B)
+                # must not compound onto each other.
+                self._restore_page(page, preview_snapshot)
+            with font_family_override(family), self._reused_cover_filter():
+                method(metadata)
+            self._refresh_layers()
+
+        dialog.preview_requested.connect(_run_preview)
+        accepted = dialog.exec() == QDialog.DialogCode.Accepted
+        chosen_family = dialog.selected_family
+
+        if accepted:
+            answer = QMessageBox.warning(
+                self,
+                self.tr("Regenerate with Font"),
+                self.tr(
+                    'Are you sure? This regenerates this label using "{family}", and resets the undo '
+                    "history."
+                ).format(family=chosen_family),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if answer == QMessageBox.StandardButton.Yes:
+                # Rebuilt fresh rather than just "keeping" whatever Preview
+                # left on screen -- Preview may never have run at all (OK
+                # pressed with no Preview click first), and rebuilding is
+                # cheap and exactly idempotent with what Preview itself
+                # already does, so there is no reason to special-case it.
+                method = self._auto_layout_method_for_page(page)
+                if method is not None:
+                    with font_family_override(chosen_family), self._reused_cover_filter():
+                        method(metadata)
+                    self._refresh_layers()
+                return
+
+        # Cancelled outright, or backed out of the confirmation -- put the
+        # page back exactly how it looked before Preview was ever clicked.
+        if preview_snapshot is not None:
+            self._restore_page(page, preview_snapshot)
+            self._refresh_layers()
 
     def _edit_metadata(self) -> None:
         if self.project is None:

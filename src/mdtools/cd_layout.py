@@ -21,11 +21,12 @@ physical:
   a quarter turn round. That is the only reason `place_back()` grew a
   `turned` flag rather than this module getting its own copy of it.
 
-The right-hand panel is the front cover and the left-hand one the track
-list, because of how the sheet folds: crease at the middle, left half
-folded behind the right, so the right half faces out at the front and the
-left half faces out through the clear back of the tray. Both stay upright
--- folding about a vertical crease and then reading the other side flips
+The right-hand panel is the front cover; the left-hand one, because of how
+the sheet folds (crease at the middle, left half folded behind the right,
+so the right half faces out at the front and the left half faces out
+through the clear back of the tray), is whichever of two things build_insert()
+decides it should be -- see that function. Both panels stay upright --
+folding about a vertical crease and then reading the other side flips
 left-right twice, which cancels.
 
 No Qt UI here beyond the scene items it adds, matching jcard_layout.py.
@@ -44,7 +45,18 @@ from mdtools.auto_layout import place_cover_on_label
 from mdtools.canvas.items import set_item_scale
 from mdtools.canvas.scene import DesignScene
 from mdtools.constants import mm_to_px
-from mdtools.jcard_layout import JCARD_BACK_HEIGHT_MM, _text, place_back, place_spine
+from mdtools.jcard_layout import (
+    BACK_FOOTER_MM,
+    BACK_GAP_MM,
+    BACK_PADDING_MM,
+    BACK_TITLE_MM,
+    JCARD_BACK_HEIGHT_MM,
+    _filled_rect,
+    _move_top_left_to,
+    _text,
+    place_back,
+    place_spine,
+)
 from mdtools.palette import accent_colour, dominant_colour, readable_text_colour
 from mdtools.project import ProjectMetadata
 
@@ -145,8 +157,43 @@ def _centre_in(item: QGraphicsItem, area: QRectF, top: float) -> None:
     )
 
 
+def _right_band_rect(scene: DesignScene, disc: QRectF, margin_mm: float) -> QRectF:
+    """The horizontal strip to the right of the hub, at the disc's own
+    vertical centre -- the widest point on that side of the ring, so
+    placing something there needs no fractional y-band the way the
+    artist/album/year text bands do; the centreline already clears the hub
+    by definition (both are centred on the same point) and has the most
+    room of any height to spare.
+    """
+    hole_diameter_mm = getattr(scene.template, "hole_diameter_mm", 0.0)
+    hub_radius = mm_to_px(hole_diameter_mm) / 2
+    margin = mm_to_px(margin_mm)
+    left = disc.center().x() + hub_radius + margin
+    right = disc.right() - margin
+    width = max(0.0, right - left)
+    # Half the disc's own diameter as a generous height cap -- comfortably
+    # more than a small logo needs, and this close to the vertical centre
+    # (the circle's widest point) there is no risk of it pushing outside
+    # the ring at that height.
+    height = disc.height() * 0.5
+    return QRectF(left, disc.center().y() - height / 2, width, height)
+
+
+def _right_align_vcentre_on(item: QGraphicsItem, area: QRectF, disc: QRectF) -> None:
+    """Moves `item` so its right edge sits at `area`'s right edge, centred
+    vertically on `disc` -- the mirror of _centre_in's "centred
+    horizontally, aligned to one edge", for a mark placed beside the ring
+    rather than above or below it."""
+    footprint = _footprint(item)
+    item.setPos(
+        item.pos()
+        + QPointF(area.right() - footprint.right(), disc.center().y() - footprint.center().y())
+    )
+
+
 def place_disc_logo(scene: DesignScene, disc: QRectF, logo_path: str) -> QGraphicsItem | None:
-    """The Digital Audio mark, at the foot of the label.
+    """The Digital Audio mark, on the right side of the label, level with
+    the hub.
 
     Scaled by the *smaller* ratio, so it stays whole inside the band -- the
     opposite of the cover, which is deliberately overshot and then clipped.
@@ -159,20 +206,35 @@ def place_disc_logo(scene: DesignScene, disc: QRectF, logo_path: str) -> QGraphi
     if natural.width() <= 0 or natural.height() <= 0:
         return item
 
-    band = _chord_rect(disc, BOTTOM_BAND[0], BOTTOM_BAND[1], EDGE_MARGIN_MM)
+    band = _right_band_rect(scene, disc, EDGE_MARGIN_MM)
     height = mm_to_px(DISC_LOGO_HEIGHT_MM)
     scale = min(band.width() / natural.width(), height / natural.height())
     set_item_scale(item, scale, scale)
-    _centre_in(item, band, band.bottom() - _footprint(item).height())
+    _right_align_vcentre_on(item, band, disc)
     return item
 
 
-def build_disc_label(scene: DesignScene, metadata: ProjectMetadata, logo_path: str | None = None) -> list:
+def build_disc_label(
+    scene: DesignScene,
+    metadata: ProjectMetadata,
+    logo_path: str | None = None,
+    *,
+    background_art: bytes | None = None,
+) -> list:
     """The label: the cover lightened across the whole face, the album's
-    details above the hub, the year and the Digital Audio mark below it.
+    details above the hub, the Digital Audio mark beside it, and the year
+    at the very bottom.
 
     The cover deliberately overshoots the disc -- Tools > Clip Layers is
     what trims it back to the ring, exactly as on a MiniDisc label.
+
+    `background_art`, if given, is used **as-is** for that background
+    instead of lighten()ing `metadata.cover_art` here -- this is what lets
+    a caller offer the CoverFilterDialog picker (brighten is one of six
+    choices there, not the only one) and have this function place exactly
+    what was chosen, rather than always lightening regardless. Omitting it
+    keeps every existing caller's behaviour (this module's own default of
+    "lighten it") unchanged.
     """
     rects = scene.cut_shape_rects()
     if not rects:
@@ -183,18 +245,28 @@ def build_disc_label(scene: DesignScene, metadata: ProjectMetadata, logo_path: s
     disc = rects[0]
     added: list = []
 
-    cover = place_cover_on_label(scene, lighten(metadata.cover_art))
+    cover = place_cover_on_label(scene, background_art if background_art is not None else lighten(metadata.cover_art))
     if cover is not None:
         added.append(cover)
 
-    # Swatches from the *original* cover -- the lightened one has been
-    # washed towards white and every colour in it would agree on a pale
-    # nothing -- but scored against **white**, because white is what they
-    # will be read on once the artwork underneath has been lightened.
-    # Scoring against the sleeve's own dominant colour instead picked a pale
-    # yellow: right against dark navy, invisible on the label.
-    accent = accent_colour(metadata.cover_art, against="#ffffff")
-    ink = readable_text_colour("#ffffff")
+    # The *exact same* background/accent/ink triple build_insert() computes
+    # for the case insert's back panel (jcard_layout.place_back) -- not a
+    # separately-scored approximation of it. An earlier version scored
+    # these against a flat "#ffffff" instead, reasoning that white is what
+    # they would be read against once the artwork underneath is lightened
+    # -- which kept a pale accent legible on a pale background, but also
+    # meant the disc label's own artist/album colours could never actually
+    # match the insert's, since accent_colour()'s result depends on what it
+    # was scored against. Reported directly, from a real cover, with the
+    # two pages showing visibly different accent colours for the same
+    # album. Using the identical inputs is what actually delivers "the same
+    # palette as the case insert" -- and the risk that motivated scoring
+    # against white (a pale accent disappearing into the lightened
+    # background) is what every auto-generated text layer's shadow now
+    # exists to cover for regardless of which colour was chosen.
+    background = dominant_colour(metadata.cover_art)
+    accent = accent_colour(metadata.cover_art, against=background)
+    ink = readable_text_colour(background)
 
     top_band = _chord_rect(disc, TOP_BAND[0], TOP_BAND[1], EDGE_MARGIN_MM)
     cursor = top_band.top()
@@ -203,7 +275,7 @@ def build_disc_label(scene: DesignScene, metadata: ProjectMetadata, logo_path: s
         scene,
         metadata.artist.strip(),
         QRectF(0, 0, top_band.width(), mm_to_px(DISC_TITLE_MM)),
-        ink,
+        accent,
         wrap=False,
         bold=True,
     )
@@ -216,33 +288,37 @@ def build_disc_label(scene: DesignScene, metadata: ProjectMetadata, logo_path: s
         scene,
         metadata.album.strip(),
         QRectF(0, 0, top_band.width(), mm_to_px(DISC_SUBTITLE_MM)),
-        accent,
+        ink,
         wrap=False,
     )
     if album is not None:
         _centre_in(album, top_band, cursor)
         added.append(album)
 
-    bottom_band = _chord_rect(disc, BOTTOM_BAND[0], BOTTOM_BAND[1], EDGE_MARGIN_MM)
     logo = place_disc_logo(scene, disc, logo_path) if logo_path else None
     if logo is not None:
         added.append(logo)
 
     if metadata.year:
+        # The logo no longer shares this band -- it sits beside the ring
+        # now, not below it -- so the year is free to sit at the very
+        # bottom of the label, centred, with nothing else to make room for.
+        bottom_band = _chord_rect(disc, BOTTOM_BAND[0], BOTTOM_BAND[1], EDGE_MARGIN_MM)
         year = _text(
             scene,
             str(metadata.year),
             QRectF(0, 0, bottom_band.width(), mm_to_px(DISC_FOOTER_MM)),
+            # Same ink the album line uses, not a hardcoded white -- still
+            # one of the case insert's own two colours (the other being
+            # accent, already spoken for by the artist), and readable_text_
+            # colour() already picked it specifically to contrast with the
+            # actual dominant cover colour, which a fixed white is not
+            # guaranteed to do.
             ink,
             wrap=False,
         )
         if year is not None:
-            # Directly above the mark rather than at the top of the band,
-            # where it landed on the seam between two parts of the artwork
-            # and read as a stray number.
-            top = bottom_band.bottom() - mm_to_px(DISC_FOOTER_MM + DISC_GAP_MM)
-            if logo is not None:
-                top = _footprint(logo).top() - mm_to_px(DISC_FOOTER_MM + DISC_GAP_MM)
+            top = bottom_band.bottom() - mm_to_px(DISC_FOOTER_MM)
             _centre_in(year, bottom_band, top)
             added.append(year)
     return added
@@ -271,6 +347,107 @@ def place_insert_cover(scene: DesignScene, panel: QRectF, cover_art: bytes) -> Q
     footprint = _footprint(item)
     item.setPos(item.pos() + (panel.topLeft() - footprint.topLeft()))
     return item
+
+
+def _place_contained(scene: DesignScene, image_bytes: bytes, rect: QRectF) -> QGraphicsItem | None:
+    """Fits an image inside `rect`, aspect ratio intact -- scaled by the
+    *smaller* ratio, the same technique place_disc_logo() already uses so
+    a mark is never cropped or stretched. Explicit choice for a person's
+    photo: place_insert_cover()'s own non-uniform stretch is fine for a
+    nearly-square album cover, but doing that to a face is a much more
+    noticeable distortion than a couple of percent off on a sleeve. Centred
+    in `rect`, so any leftover space (whichever axis the photo's own
+    proportions don't fill) is split evenly on both sides rather than
+    pinned to one corner."""
+    item = scene.add_image_from_data(image_bytes)
+    if item is None:
+        return None
+    natural = item.boundingRect()
+    if natural.width() <= 0 or natural.height() <= 0:
+        return item
+    scale = min(rect.width() / natural.width(), rect.height() / natural.height())
+    set_item_scale(item, scale, scale)
+    footprint = _footprint(item)
+    target = QPointF(rect.center().x() - footprint.width() / 2, rect.center().y() - footprint.height() / 2)
+    item.setPos(item.pos() + (target - footprint.topLeft()))
+    return item
+
+
+def place_artist_panel(
+    scene: DesignScene,
+    panel: QRectF,
+    metadata: ProjectMetadata,
+    background: str,
+    accent: str,
+    artist_photo: bytes | None,
+) -> list[QGraphicsItem]:
+    """The insert's left panel for a project that also has a case back of
+    its own.
+
+    A full jewel case's tray card already carries the track list
+    (build_case_back's own middle panel) -- repeating it here, which is
+    what a *slim* case's insert has no choice but to do (there is nowhere
+    else on that case for it to go), would just be the same list printed
+    twice. In its place: the artist's name, the year, and -- network and a
+    good enough match permitting, see metadata_lookup.find_artist_photo --
+    a photo of the artist. That is what the reverse of a front insert
+    traditionally carries in a full jewel case, since the tray card is
+    what actually holds the track list there.
+
+    Artist and year keep the exact padding/position/colour roles
+    place_back() already gives its own heading and footer -- accent for the
+    bold artist line, ink for the one below it -- so this still reads as
+    the same family of panel as every other back/insert page, just with a
+    photo where the track list would otherwise be. A missing photo (no
+    match found, or none fetched at all) simply leaves that space empty
+    rather than falling back to the track list -- the point of this panel
+    is that the list lives on the case back now, and that stays true
+    whether or not a photo could be found for it.
+    """
+    added: list[QGraphicsItem] = [_filled_rect(scene, panel, background)]
+    ink = readable_text_colour(background)
+    pad = mm_to_px(BACK_PADDING_MM)
+    content_width = panel.width() - 2 * pad
+    cursor = pad
+
+    artist = _text(
+        scene,
+        metadata.artist.strip(),
+        QRectF(0, 0, content_width, mm_to_px(BACK_TITLE_MM)),
+        accent,
+        wrap=False,
+        bold=True,
+    )
+    if artist is not None:
+        _move_top_left_to(artist, QPointF(panel.left() + pad, panel.top() + cursor))
+        added.append(artist)
+        cursor += mm_to_px(BACK_TITLE_MM + BACK_GAP_MM)
+
+    footer_height = mm_to_px(BACK_FOOTER_MM + BACK_GAP_MM) if metadata.year else 0.0
+    photo_top = panel.top() + cursor
+    photo_height = panel.height() - cursor - footer_height - pad
+
+    if artist_photo and photo_height > mm_to_px(15):
+        photo_rect = QRectF(panel.left() + pad, photo_top, content_width, photo_height)
+        photo = _place_contained(scene, artist_photo, photo_rect)
+        if photo is not None:
+            added.append(photo)
+
+    if metadata.year:
+        year = _text(
+            scene,
+            str(metadata.year),
+            QRectF(0, 0, content_width, mm_to_px(BACK_FOOTER_MM)),
+            ink,
+            wrap=False,
+        )
+        if year is not None:
+            _move_top_left_to(
+                year, QPointF(panel.left() + pad, panel.bottom() - pad - mm_to_px(BACK_FOOTER_MM))
+            )
+            added.append(year)
+
+    return added
 
 
 def build_case_back(scene: DesignScene, metadata: ProjectMetadata, logo_path: str | None = None) -> list:
@@ -357,13 +534,33 @@ def place_back_logo(scene: DesignScene, panel: QRectF, logo_path: str) -> QGraph
     return item
 
 
-def build_insert(scene: DesignScene, metadata: ProjectMetadata) -> list:
-    """The folded insert: track list on the left panel, cover on the right.
+def build_insert(
+    scene: DesignScene,
+    metadata: ProjectMetadata,
+    *,
+    has_case_back: bool = False,
+    artist_photo: bytes | None = None,
+) -> list:
+    """The folded insert: the cover on the right panel always; the left one
+    is either the track list or the artist panel, depending on
+    `has_case_back`.
 
     Which panel is which follows from the fold -- see this module's own
     header. Raises rather than returning quietly if the page is not a
     two-panel insert: laying a track list across an unfolded sheet would
     put half of it where the crease is not.
+
+    `has_case_back` -- whether this project *also* has a jewel case back
+    page (see project.PAGE_BACK) -- decides which left panel gets built:
+    the ordinary track list (place_back(), unchanged default) when there
+    isn't one, since a slim case's insert is the only place that list can
+    go; place_artist_panel() (artist, year, and a photo of the artist)
+    when there is, since the tray card already carries the list and
+    printing it twice would be redundant. `artist_photo`, if given, is
+    what that panel places -- the caller's job to find (see
+    metadata_lookup.find_artist_photo), since this module has no network
+    access of its own, matching the "plan it, the caller executes/fetches
+    for it" split used throughout this app.
     """
     panels = scene.fold_panel_rects()
     if len(panels) != 2:
@@ -375,19 +572,22 @@ def build_insert(scene: DesignScene, metadata: ProjectMetadata) -> list:
     background = dominant_colour(metadata.cover_art)
     accent = accent_colour(metadata.cover_art, against=background)
 
-    # The track list first, so the cover added afterwards can never end up
+    # The left panel first, so the cover added afterwards can never end up
     # painted over by the panel block behind it.
-    added = list(
-        place_back(
-            scene,
-            left,
-            metadata,
-            background,
-            accent,
-            turned=False,
-            heading_scale=left.height() / mm_to_px(JCARD_BACK_HEIGHT_MM),
+    if has_case_back:
+        added = list(place_artist_panel(scene, left, metadata, background, accent, artist_photo))
+    else:
+        added = list(
+            place_back(
+                scene,
+                left,
+                metadata,
+                background,
+                accent,
+                turned=False,
+                heading_scale=left.height() / mm_to_px(JCARD_BACK_HEIGHT_MM),
+            )
         )
-    )
     cover = place_insert_cover(scene, right, metadata.cover_art)
     if cover is not None:
         added.append(cover)
@@ -400,6 +600,7 @@ __all__ = [
     "build_disc_label",
     "build_insert",
     "lighten",
+    "place_artist_panel",
     "place_back_logo",
     "place_disc_logo",
     "place_insert_cover",

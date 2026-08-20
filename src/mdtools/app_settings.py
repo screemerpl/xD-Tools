@@ -47,6 +47,7 @@ _TELEGRAM_API_HASH_KEY = "telegram_api_hash"
 _TELEGRAM_BOT_USERNAME_KEY = "telegram_bot_username"
 _TELEGRAM_DOWNLOAD_FOLDER_KEY = "telegram_download_folder"
 _TELEGRAM_PHONE_KEY = "telegram_phone"
+_REGENERATE_FONT_FAMILY_KEY = "regenerate_font_family"
 
 # foo_beefweb's own default listening address.
 DEFAULT_FOOBAR_URL = "http://localhost:8880"
@@ -164,6 +165,19 @@ def mdrem_port() -> str:
 
 def set_mdrem_port(value: str) -> None:
     _settings().setValue(_MDREM_PORT_KEY, str(value))
+
+
+def last_regenerate_font_family() -> str | None:
+    """The font family last chosen in Toolbar > "Regenerate with
+    Font..."'s picker, or None if it has never been used -- the dialog
+    opens on this instead of the application's own default font, so a
+    user who settles on a face doesn't have to re-pick it every time."""
+    value = _settings().value(_REGENERATE_FONT_FAMILY_KEY, "")
+    return str(value) if value else None
+
+
+def set_last_regenerate_font_family(family: str) -> None:
+    _settings().setValue(_REGENERATE_FONT_FAMILY_KEY, str(family))
 
 
 def foobar_url() -> str:
