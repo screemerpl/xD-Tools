@@ -2198,6 +2198,80 @@ kept visually apart from the transport keys on purpose -- on a physical
 remote Record is a deliberate reach, and a mouse makes stray clicks much
 easier than a thumb does.
 
+**The remote has two modes, and the split is not "basic and advanced".**
+Asked for directly ("czemu na pilocie nie mamy wszystkich mozliwych
+klawiszy"). **Standard mode is the physical RM-D10P, key for key** --
+which is what the window always was, and why keys were missing: the plastic
+remote has no key for them either. Extended mode (`extended_check`, saved
+as `app_settings.mdrem_extended_remote()`) adds every remaining code the
+firmware's table resolves: tracks 11-25, `CHAR`/`NUM`, `CLEAR2`, `DPRE`,
+and a Disc Editing group holding `ERASE`/`DIVIDE`. Four things worth
+knowing:
+- **What each added key is worth knowing about is in its tooltip**, from
+  `_hint_for()` -- `CLEAR2` does nothing in name-edit mode wherever the
+  cursor is, `DPRE` is recognised as a recording command but was never
+  told apart from the rest of that group, `ERASE` asks on the deck's own
+  display and needs ENTER. Those are findings from the firmware's bench,
+  and a key labelled "Clear 2" with nothing else said is a trap.
+- **`_hint_for()` is a chain of `if`s returning literal
+  `QCoreApplication.translate(...)` calls, not a dict on `_Key`.** lupdate
+  scans statically: a string reaching `translate()` through a dataclass
+  field is invisible to it. Same rule as everywhere else here, in its less
+  obvious form.
+- **Tracks stop at 25 even though titling now goes to 99.** A track up to
+  25 is one code, which is what a button stands for; past that the number
+  is *typed* (`>25` and its digits), which is a sequence and belongs to
+  `TITLETRACK`.
+- **Two columns.** Stacked, extended mode came to 1032px tall -- taller
+  than a laptop screen, at which point Qt squeezes the groups rather than
+  the window and the track numbers stop being legible. Standard mode is
+  short either way, but it shares the layout: a remote whose keys move
+  when a checkbox is ticked would be worse than one slightly wider than it
+  needs to be.
+
+**Extended mode also types, from the PC's own keyboard -- there is no text
+box and no on-screen QWERTY, and both were tried and rejected in that
+order.** A text box plus a Type button was the first attempt and was
+turned down flat ("to nie maja byc przyciski na UI tylko obsluga samej
+klawiatury"); an on-screen keyboard grid was rejected long before, when
+this dialog was first built, and for the reason that still holds -- the
+RM-D10P has keys because a deck has none, and a computer running this
+already has better ones. So `keyPressEvent` sends each keystroke as it
+happens. Four details, each of which is a real failure avoided:
+- **A space cannot go through `SEND`.** The firmware splits that command's
+  arguments on whitespace, so the argument would simply be missing --
+  `TEXT` with a lone space fails the same way, since `handle_line` skips
+  every space after the command word. `mdrem.character_command()` sends
+  the character's own code instead (`RAW 61D20 20`), which is the one
+  place this repo restates the `0x61D00 | ascii` formula rather than
+  asking the firmware by name. A `SPACE` key name in the firmware would
+  retire it.
+- **The ASCII fast path in `_type()` exists for that same character.**
+  `transliterate()` ends by stripping, which is right for a title and
+  turns a pressed space bar into nothing at all, so anything the deck can
+  already show goes as it is and only the rest is transliterated.
+- **`MIN_CHARACTER_GAP_S` (0.15) paces the keystrokes**, matching the gap
+  the firmware leaves inside its own `TEXT`. The deck counts a press only
+  after three frames *and* a clear pause; two characters sent back to back
+  read as **one key held down**, which is the difference between wrong and
+  slow. Only the remainder is waited out, so ordinary typing never waits
+  -- fingers are slower than 150 ms. `event.isAutoRepeat()` is dropped for
+  the same reason.
+- **Nothing in the window may hold the keyboard focus.** Every button was
+  already `NoFocus`; the checkbox and the Close button were not, and a
+  focused checkbox eats the space bar to toggle itself while a focused
+  button eats space and Enter. Guarded by
+  `test_nothing_in_the_window_takes_the_keyboard_focus`.
+
+Backspace maps to `DELETE` (which takes the character *under* the cursor,
+not the one before it -- the deck has no backspace), Enter to `ENTER`, and
+Left/Right to `SCANREV`/`SCANFWD`, which move the cursor in name-edit mode
+rather than seeking. Escape is deliberately left alone and still closes
+the window. `_EDITING_KEYS` is keyed by plain `int` and looked up as one:
+a Qt enum member is not reliably equal to its own numeric value across
+PySide versions, and `Qt.Key(n)` raises outright for a key code the enum
+has no name for -- which real keyboards do produce.
+
 **Recording > "Remote Control..." reaches the exact same `RemoteDialog`
 from inside an already-open project, not just the startup screen --
 reported directly.** Before this, using the remote while a project was

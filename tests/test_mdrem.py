@@ -62,6 +62,28 @@ def test_disc_title_skips_whatever_is_missing():
     assert mdrem.disc_title(_album([], album="", artist="", year=None)) == ""
 
 
+# --- typing one character --------------------------------------------------
+
+
+def test_a_printable_character_is_sent_by_name():
+    """And case is kept: the deck has a different code for A and for a."""
+    assert mdrem.character_command("A") == "SEND A"
+    assert mdrem.character_command("a") == "SEND a"
+    assert mdrem.character_command("7") == "SEND 7"
+
+
+def test_a_space_cannot_go_through_send_so_it_goes_as_its_own_code():
+    """The firmware splits SEND's arguments on whitespace, so the argument
+    would simply be missing. RAW takes the character code instead."""
+    assert mdrem.character_command(" ") == f"RAW {mdrem.CHAR_CODE_BASE | 0x20:X} 20"
+
+
+def test_a_character_the_deck_cannot_show_has_no_command_at_all():
+    assert mdrem.character_command("日") is None
+    assert mdrem.character_command("ł") is None  # transliterate first
+    assert mdrem.character_command("ab") is None
+
+
 # --- upload plan -----------------------------------------------------------
 
 
@@ -174,6 +196,15 @@ def test_mdrem_enabled_survives_a_round_trip_through_the_ini_file():
     assert app_settings.mdrem_enabled() is True
     app_settings.set_mdrem_enabled(False)
     assert app_settings.mdrem_enabled() is False
+
+
+def test_the_extended_remote_choice_survives_the_same_round_trip():
+    """Same trap as above, and the same guard: it is remembered between
+    openings, so reading it naively would wedge it on."""
+    app_settings.set_mdrem_extended_remote(True)
+    assert app_settings.mdrem_extended_remote() is True
+    app_settings.set_mdrem_extended_remote(False)
+    assert app_settings.mdrem_extended_remote() is False
 
 
 def test_mdrem_is_off_and_portless_until_configured():

@@ -224,7 +224,11 @@ whether an adapter answers. Two things then appear:
   exactly what it will write first, then works through it with a progress
   bar.
 - **Remote...** on the startup screen opens a software remote -- transport,
-  track numbers, play modes, display and titling keys.
+  track numbers, play modes, display and titling keys. That is the physical
+  Sony remote, key for key; **Extended mode** adds everything else the
+  adapter can send -- tracks up to 25, the deck's own character entry, the
+  keys that erase or divide a track -- and turns your own keyboard into the
+  deck's, typing straight into a title as you press the keys.
 
 Worth knowing before you use it:
 

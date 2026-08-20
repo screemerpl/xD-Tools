@@ -684,7 +684,13 @@ def capture_language(app, code: str) -> None:
     _capture_cd(out, code, metadata)
 
     # -- everything MDRem, with the hardware and foobar2000 stood in for
+    # Both remote modes: extended is a mode nobody can see without ticking
+    # the box, which is exactly why the manual shows it.
+    app_settings.set_mdrem_extended_remote(False)
     save(RemoteDialog("COM7"), out / "remote.png")
+    app_settings.set_mdrem_extended_remote(True)
+    save(RemoteDialog("COM7"), out / "remote-extended.png")
+    app_settings.set_mdrem_extended_remote(False)
     save(MDRemUploadDialog(metadata, "COM7"), out / "upload.png", settle_ms=400)
     save(RecordDialog("COM7", "http://localhost:8880"), out / "record.png", settle_ms=400)
 
