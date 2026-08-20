@@ -3,7 +3,7 @@ layer without having to browse for a file. Two sources feed the same
 gallery:
 
 - `gallery_dir()` -- the bundled read-only folder (currently just the
-  MDTools logo), at `assets/img` alongside the source checkout --
+  xD-Tools logo), at `assets/img` alongside the source checkout --
   deliberately NOT embedded/encoded into Python source -- so adding a new
   bundled image later is just dropping a file in that folder. Locating it
   at runtime differs between dev mode (running from the source checkout)

@@ -1,5 +1,5 @@
 """Talking to MDRem -- an RP2040 board that emulates a Sony RM-D10P IR
-remote, letting MDTools write a project's metadata straight onto the
+remote, letting xD-Tools write a project's metadata straight onto the
 MiniDisc it describes instead of only printing a label for it.
 
 Deliberately a top-level module with no dependency on this app's widgets

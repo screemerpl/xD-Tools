@@ -39,7 +39,7 @@ class StartupDialog(QDialog):
 
     def __init__(self, recent_paths: list[str], parent=None):
         super().__init__(parent)
-        self.setWindowTitle(self.tr("Welcome to MDTools"))
+        self.setWindowTitle(self.tr("Welcome to xD-Tools"))
         self.resize(420, 320)
         self.result_path: str | None = None
 
@@ -102,7 +102,7 @@ class StartupDialog(QDialog):
             self,
             self.tr("Open Project"),
             user_paths.project_start_path(None),
-            self.tr("MDTools Project (*.mdproj)"),
+            self.tr("xD-Tools Project (*.mdproj)"),
         )
         if not path:
             return

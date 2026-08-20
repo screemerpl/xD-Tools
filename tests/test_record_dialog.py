@@ -21,6 +21,7 @@ class FakeClient:
         self.prepared = False
         self.played = None
         self.volume_set: float | None = None
+        self.stop_after_track: list[bool] = []
         self.state = foobar.PlayerState(foobar.STOPPED, "", -1, 0.0, 0.0)
 
     def current_playlist(self):
@@ -41,6 +42,9 @@ class FakeClient:
 
     def set_volume(self, db):
         self.volume_set = db
+
+    def set_stop_after_current_track(self, stop):
+        self.stop_after_track.append(bool(stop))
 
     def stop(self):
         self.stopped = True
@@ -457,7 +461,7 @@ def test_the_titles_written_onto_the_disc_are_the_ones_on_screen(qt_app, monkeyp
     dialog = _dialog(FakeClient(_items(3)), monkeypatch)
     dialog.album_edit.setText("Posluchaj")
     dialog.artist_edit.setText("Kult")
-    dialog.tree.topLevelItem(0).setText(1, "Arahja")
+    dialog.tree.topLevelItem(0).setText(record_module.COL_TITLE, "Arahja")
     dialog._recording = True
     dialog._started = True
     dialog._highest_index = len(dialog._items) - 1
@@ -477,7 +481,7 @@ def test_an_edited_track_artist_keeps_a_mixtape_a_mixtape(qt_app, monkeypatch, n
     dialog.artist_edit.clear()
     dialog.album_edit.clear()
     for index, performer in enumerate(("New Order", "The Cure", "Depeche Mode")):
-        dialog.tree.topLevelItem(index).setText(2, performer)
+        dialog.tree.topLevelItem(index).setText(record_module.COL_ARTIST, performer)
 
     _finish_recording(dialog, monkeypatch)
 

@@ -34,9 +34,9 @@ if (-not $SkipBuild) {
     if ($LASTEXITCODE -ne 0) { throw "the application build failed" }
 }
 
-$source = Join-Path (Get-Location) "dist\MDTools"
-if (-not (Test-Path (Join-Path $source "MDTools.exe"))) {
-    throw "dist\MDTools\MDTools.exe is missing -- run without -SkipBuild, or build first."
+$source = Join-Path (Get-Location) "dist\xD-Tools"
+if (-not (Test-Path (Join-Path $source "xD-Tools.exe"))) {
+    throw "dist\xD-Tools\xD-Tools.exe is missing -- run without -SkipBuild, or build first."
 }
 
 # Read the version out of the package rather than restating it here.

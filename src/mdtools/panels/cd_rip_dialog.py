@@ -39,6 +39,7 @@ from pathlib import Path
 from PySide6.QtCore import QThread, Qt, Signal
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -103,12 +104,24 @@ class _RipWorker(QThread):
     cancelled = Signal()
     succeeded = Signal()
 
-    def __init__(self, device: str, plan: cdrip.RipPlan, client: foobar.FoobarClient, exe: str, parent=None):
+    def __init__(
+        self,
+        device: str,
+        plan: cdrip.RipPlan,
+        client: foobar.FoobarClient,
+        exe: str,
+        parent=None,
+        playlist_paths=None,
+    ):
         super().__init__(parent)
         self._device = device
         self._plan = plan
         self._client = client
         self._exe = exe
+        # Normally this disc's own files. When several discs are being
+        # ripped as one album it is every disc's, so the playlist ends up
+        # holding the album rather than whichever disc finished last.
+        self._playlist_paths = list(playlist_paths) if playlist_paths is not None else list(plan.flac_paths)
         self._cancelled = False
         self._total_sectors = max(1, sum(task.sectors for task in plan.tasks))
         self._done_sectors = 0
@@ -141,7 +154,7 @@ class _RipWorker(QThread):
                 self.cancelled.emit()
                 return
             self.stage.emit("playlist")
-            foobar.replace_current_playlist(self._client, self._exe, self._plan.flac_paths)
+            foobar.replace_current_playlist(self._client, self._exe, self._playlist_paths)
         except cdrip.CdRipCancelled:
             self.cancelled.emit()
             return
@@ -178,6 +191,15 @@ class CdRipDialog(QDialog):
         self._releases: list[musicbrainz.DiscRelease] = []
         self._worker: _RipWorker | None = None
         self._closing = False
+        # Several discs ripped as one album: which one is in the drive, the
+        # folder they all share (fixed by the first, since a later disc may
+        # well be identified under a different name), and what the discs
+        # already done contributed.
+        self._disc = 1
+        self._album_folder: Path | None = None
+        self._done_tracks: list[Track] = []
+        self._done_paths: list[Path] = []
+        self._advance_when_finished = False
         # Read by MainWindow after exec(): where the tracks were written, so
         # a message can name it.
         self.result_folder: Path | None = None
@@ -223,11 +245,21 @@ class CdRipDialog(QDialog):
             self.tr(
                 "Titles and artists can be edited here -- they are written into the ripped files, and are "
                 "what ends up on the {medium}. Fill the artist column in when the disc is a compilation: "
-                "MDTools then names it accordingly and draws it a cover of its own."
+                "xD-Tools then names it accordingly and draws it a cover of its own."
             ).format(medium=self._target)
         )
         hint.setWordWrap(True)
         layout.addWidget(hint)
+
+        self.multi_check = QCheckBox(self.tr("Rip several discs as one album"))
+        self.multi_check.setToolTip(
+            self.tr(
+                "For a set that came as more than one CD. Each disc is read, identified and ripped on its "
+                "own, and you are asked for the next -- they end up in one folder, tagged with the disc "
+                "they came from, as a single album."
+            )
+        )
+        layout.addWidget(self.multi_check)
 
         self.warning_label = QLabel()
         self.warning_label.setWordWrap(True)
@@ -301,7 +333,7 @@ class CdRipDialog(QDialog):
         self.read_btn.setEnabled(False)
         self.status_label.setText(
             self.tr(
-                "These bundled tools are missing, so a CD cannot be read: {tools}. Reinstall MDTools, or put "
+                "These bundled tools are missing, so a CD cannot be read: {tools}. Reinstall xD-Tools, or put "
                 "them on your PATH."
             ).format(tools=", ".join(missing))
         )
@@ -448,7 +480,12 @@ class CdRipDialog(QDialog):
     def build_plan(self) -> cdrip.RipPlan:
         assert self._toc is not None
         root = Path(app_settings.cd_rip_folder())
-        folder = root / cdrip.rip_folder_name(self.artist_edit.text(), self.album_edit.text())
+        # Every disc of a set goes into the folder the first one made: a
+        # later disc is often identified under its own title ("... [Disc
+        # 2]"), and a folder per disc would be two albums rather than one.
+        folder = self._album_folder or root / cdrip.rip_folder_name(
+            self.artist_edit.text(), self.album_edit.text()
+        )
         year = self.year_spin.value() or None
         return cdrip.build_rip_plan(
             self._toc,
@@ -458,6 +495,7 @@ class CdRipDialog(QDialog):
             album=self.album_edit.text(),
             year=year,
             track_artists=self.track_artists(),
+            disc_number=self._disc if self.multi_check.isChecked() else None,
         )
 
     def build_metadata(self) -> ProjectMetadata:
@@ -468,7 +506,7 @@ class CdRipDialog(QDialog):
         tagged with, so it is not a second source of truth competing with
         the playlist -- it is the playlist's own contents plus a cover,
         which a tag cannot carry to foobar and back."""
-        tracks = []
+        tracks = list(self._done_tracks)
         for index, track in enumerate(self._toc.tracks if self._toc else []):
             row = self.tree.topLevelItem(index)
             tracks.append(
@@ -506,7 +544,11 @@ class CdRipDialog(QDialog):
         self.result_metadata = self.build_metadata()
         # Previous rips go now, not at the end of this one: the files stay
         # in foobar's playlist for as long as the user might replay them.
-        cdrip.clean_stale_rip_folders(plan.folder.parent, keep=plan.folder)
+        # Only ever before the *first* disc of a set, though -- the second
+        # disc's rip would otherwise be tidying away the first disc's files
+        # as it went, since they share a folder.
+        if self._disc == 1:
+            cdrip.clean_stale_rip_folders(plan.folder.parent, keep=plan.folder)
         try:
             cdrip.ensure_folder(plan.folder)
         except cdrip.CdRipError as exc:
@@ -520,6 +562,7 @@ class CdRipDialog(QDialog):
             )
             return
         self.result_folder = plan.folder
+        self._album_folder = plan.folder
 
         self._set_running(True)
         self._succeeded = False
@@ -528,7 +571,16 @@ class CdRipDialog(QDialog):
         self.progress.setVisible(True)
         self.status_label.setText(self.tr("Starting..."))
 
-        self._worker = _RipWorker(self.selected_device(), plan, self._client, exe, self)
+        self._worker = _RipWorker(
+            self.selected_device(),
+            plan,
+            self._client,
+            exe,
+            self,
+            # Everything ripped so far, so the playlist holds the whole
+            # album rather than only the disc that finished last.
+            playlist_paths=self._done_paths + list(plan.flac_paths),
+        )
         self._worker.track_started.connect(self._on_track_started)
         self._worker.progress.connect(self._on_progress)
         self._worker.stage.connect(self._on_stage)
@@ -583,6 +635,7 @@ class CdRipDialog(QDialog):
             self.album_edit,
             self.year_spin,
             self.release_combo,
+            self.multi_check,
         ):
             widget.setEnabled(not running)
         self.close_btn.setText(self.tr("Stop") if running else self.tr("Cancel"))
@@ -619,6 +672,15 @@ class CdRipDialog(QDialog):
 
     def _on_succeeded(self) -> None:
         self.progress.setValue(_PROGRESS_SCALE)
+        if self.multi_check.isChecked():
+            # Asked about from _on_worker_finished rather than here: this
+            # thread is still running, and starting the next disc now would
+            # have its worker cleared away the moment this one finishes.
+            self._advance_when_finished = True
+            self.status_label.setText(
+                self.tr("Disc {number} is ripped.").format(number=self._disc)
+            )
+            return
         self.status_label.setText(self.tr("The disc is ripped and loaded into foobar2000."))
         self._succeeded = True
 
@@ -628,12 +690,61 @@ class CdRipDialog(QDialog):
         immediately instead of blocking the GUI thread on wait()."""
         self._worker = None
         self._set_running(False)
+        if self._advance_when_finished:
+            self._advance_when_finished = False
+            self._keep_finished_disc()
+            if self._ask_for_next_disc():
+                self._read_next_disc()
+                return
+            self._succeeded = True
         if getattr(self, "_succeeded", False):
             # Accepting is the hand-off: MainWindow opens RecordDialog next.
             self.accept()
             return
         if self._closing:
             super().reject()
+
+    def _keep_finished_disc(self) -> None:
+        """Folds the disc just ripped into what the album is, so the next
+        one is added to it rather than replacing it."""
+        self._done_tracks = list(self.build_metadata().tracks)
+        self._done_paths += list(self._plan.flac_paths)
+
+    def _ask_for_next_disc(self) -> bool:
+        return (
+            QMessageBox.question(
+                self,
+                self._window_title(),
+                self.tr(
+                    "Disc {number} is ripped.\n\nPut the next disc of the set in the drive and close the "
+                    "tray, then continue -- or stop here and record what has been ripped so far."
+                ).format(number=self._disc),
+                QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Ok,
+            )
+            == QMessageBox.StandardButton.Ok
+        )
+
+    def _read_next_disc(self) -> None:
+        """Reads and identifies the next disc of the set.
+
+        The album, artist and year are put back afterwards: MusicBrainz
+        routinely names the second disc of a set as its own release, and
+        this is one album being ripped, not two. The *titles* are disc 2's
+        own -- those are the ones being asked for."""
+        self._disc += 1
+        album, artist, year = (
+            self.album_edit.text(),
+            self.artist_edit.text(),
+            self.year_spin.value(),
+        )
+        self._read_disc()
+        self.album_edit.setText(album)
+        self.artist_edit.setText(artist)
+        self.year_spin.setValue(year)
+        self.status_label.setText(
+            self.tr("Disc {number} of the set. Check its titles, then rip it.").format(number=self._disc)
+        )
 
     # --- shutdown ---------------------------------------------------------
 

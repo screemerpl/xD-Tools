@@ -2,7 +2,7 @@
 component (foo_beefweb), which exposes a small REST API on localhost.
 
 Used by "Record to MiniDisc from foobar2000...": foobar plays the album
-into the deck over S/PDIF while MDTools watches which track is playing and,
+into the deck over S/PDIF while xD-Tools watches which track is playing and,
 when the playlist ends, titles the disc through MDRem.
 
 Plain stdlib urllib rather than QtNetwork or a client library, for the same
@@ -40,6 +40,7 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
+from mdtools.multidisc import breaks_from_disc_numbers, leading_number, order_by_disc_and_track
 from mdtools.project import ProjectMetadata, Track, apply_compilation_naming
 
 DEFAULT_BASE_URL = "http://localhost:8880"
@@ -65,6 +66,11 @@ _COLUMNS = [
     "%length_seconds%",
     "%artist%",
     "%path%",
+    # Appended, like every column before it -- see the note on _COLUMNS'
+    # order in PlaylistItem.from_columns. A double album's files carry the
+    # disc they belong to, and a playlist assembled by dropping a folder in
+    # routinely arrives with the two interleaved.
+    "%discnumber%",
 ]
 _COLUMNS_PARAM = ",".join(_COLUMNS)
 
@@ -88,6 +94,7 @@ class PlaylistItem:
     length_seconds: int
     artist: str = ""
     path: str = ""
+    disc_number: str = ""
 
     @classmethod
     def from_columns(cls, columns: list[str]) -> PlaylistItem:
@@ -105,6 +112,7 @@ class PlaylistItem:
             length_seconds=length,
             artist=padded[6],
             path=padded[7],
+            disc_number=padded[8],
         )
 
     def display_title(self) -> str:
@@ -236,6 +244,18 @@ class FoobarClient:
     def clear_playlist(self, playlist_id: str) -> None:
         self._request(f"/api/playlists/{playlist_id}/clear", body={})
 
+    def move_playlist_items(self, playlist_id: str, indexes: list[int], target: int) -> None:
+        """Moves the items at these positions so they sit at `target`.
+
+        Beefweb's own endpoint, and the only way to reorder a playlist that
+        does not go anywhere near the files: nothing is cleared, nothing is
+        re-added, and a track whose file has since moved or been locked is
+        reordered just the same."""
+        self._request(
+            f"/api/playlists/{playlist_id}/items/move",
+            body={"items": list(indexes), "targetIndex": int(target)},
+        )
+
     def browser_roots(self) -> list[str]:
         """The directories Beefweb is allowed to serve files from.
 
@@ -337,11 +357,19 @@ def find_foobar_exe() -> str | None:
 
 
 def add_files_via_cli(exe: str, paths: list[Path | str], *, run=subprocess.run) -> None:
-    """Adds files to foobar2000's *current* playlist, in the order given.
+    """Adds files to foobar2000's *current* playlist.
 
-    One call with every file rather than one call per file: foobar adds a
-    batch in the order it receives it, and spawning a process per track
-    would multiply the wait for no gain."""
+    One call with every file rather than one call per file, because spawning
+    a process per track multiplies the wait.
+
+    **It does not follow that they land in the order they were given.** This
+    used to say they did, and a user recording an album whose tracks he had
+    reordered got the wrong track on the disc: foobar2000 sorts an incoming
+    batch by its own rule (by filename, normally), so a batch handed over in
+    one order can arrive in another. Nothing here can turn that off, so
+    order is something to *check* afterwards, never to assume -- see
+    replace_current_playlist(), which does the checking and knows what to do
+    when the answer is no."""
     if not paths:
         return
     command = [exe, "/add"] + [str(path) for path in paths]
@@ -390,6 +418,71 @@ def wait_for_item_count(
         sleep(0.25)
 
 
+def _same_order(client: FoobarClient, playlist_id: str, paths: list[Path | str]) -> bool:
+    """Whether the playlist really holds these files, in this order.
+
+    Compared by path rather than by title, because the title is whatever
+    foobar read out of the tags and two tracks can share one. Normalised
+    for case and separators, since the path we asked with and the path
+    %path% reports come from different sides of the same filesystem."""
+
+    try:
+        landed = client.playlist_items(playlist_id)
+    except FoobarError:
+        return False
+    return [_normalise_path(item.path) for item in landed] == [_normalise_path(p) for p in paths]
+
+
+def _normalise_path(value) -> str:
+    return os.path.normcase(os.path.normpath(str(value)))
+
+
+def reorder_playlist(client: FoobarClient, playlist_id: str, paths: list[Path | str]) -> bool:
+    """Puts a playlist into this order by *moving* its items.
+
+    The right way round, and the one to try first: it never clears the
+    playlist, never re-adds a file, and does not care whether the files are
+    still where they were -- so nothing is lost if it fails halfway, unlike
+    rebuilding through the command line (which additionally has to fight
+    foobar2000's own habit of sorting whatever it is handed).
+
+    Verified against the live Beefweb: `items/move` with `targetIndex`
+    inserts the moved items *before* that position and leaves everything
+    else in its relative order, so pulling each track forward in turn ends
+    with exactly the order asked for. Each step is simulated locally as
+    well, because a playlist's indices shift under every move.
+
+    Returns whether the playlist now holds that order; False (rather than
+    an exception) when it holds different tracks altogether, which is not
+    something reordering can fix and the caller has another way to handle.
+    """
+    items = client.playlist_items(playlist_id)
+    if not all(str(path).strip() for path in paths) or not all(item.path.strip() for item in items):
+        # Without a path there is nothing to tell one entry from another --
+        # every empty one normalises to the same string, so the comparison
+        # below would report success having moved nothing at all. A stream
+        # or anything else that is not a file is simply not reorderable
+        # this way, and saying so is what sends the caller to the fallback.
+        return False
+
+    wanted = [_normalise_path(path) for path in paths]
+    current = [_normalise_path(item.path) for item in items]
+    if current == wanted:
+        return True
+    if sorted(current) != sorted(wanted):
+        return False
+
+    for target, path in enumerate(wanted):
+        if current[target] == path:
+            continue
+        source = current.index(path, target)
+        client.move_playlist_items(playlist_id, [source], target)
+        current.insert(target, current.pop(source))
+
+    landed = [_normalise_path(item.path) for item in client.playlist_items(playlist_id)]
+    return landed == wanted
+
+
 def replace_current_playlist(
     client: FoobarClient,
     exe: str,
@@ -397,18 +490,80 @@ def replace_current_playlist(
     *,
     wait=wait_for_item_count,
 ) -> Playlist:
-    """Empties the playlist foobar is on and fills it with these files.
+    """Empties the playlist foobar is on and fills it with these files, in
+    this order -- and makes sure that is what actually happened.
 
     Deliberately the *current* playlist rather than a new one made for the
     occasion: the record flow reads whatever playlist is current, so this
-    keeps one meaning of "what is about to be recorded" instead of two."""
+    keeps one meaning of "what is about to be recorded" instead of two.
+
+    **The order is verified rather than assumed, and that is the whole
+    point of this function.** Reported live, mid-recording: an album whose
+    tracks had been reordered in xD-Tools was recorded from foobar's own
+    order, so the disc got the wrong track -- foobar2000 sorts an incoming
+    batch by filename before appending it, which silently undoes the very
+    thing the caller asked for. Adding the files one at a time is what
+    survives that (a batch of one has nothing to sort against, and each
+    lands after the last), at the cost of one process per track, so it is
+    the fallback and not the first move.
+
+    If even that does not produce the order asked for, this raises rather
+    than returning: every caller is about to record or burn what is in this
+    playlist, and a wrong order discovered afterwards is a wasted disc."""
     playlist = client.current_playlist()
     if playlist is None:
         raise FoobarError("foobar2000 has no playlist open")
+
     client.clear_playlist(playlist.id)
     add_files_via_cli(exe, paths)
     wait(client, playlist.id, len(paths))
-    return playlist
+    if _same_order(client, playlist.id, paths):
+        return playlist
+
+    client.clear_playlist(playlist.id)
+    for index, path in enumerate(paths, start=1):
+        add_files_via_cli(exe, [path])
+        if wait(client, playlist.id, index) < index:
+            raise FoobarError(f"foobar2000 did not take {path}")
+    if _same_order(client, playlist.id, paths):
+        return playlist
+
+    raise FoobarError("foobar2000 would not keep the tracks in the order they were given")
+
+
+def sort_by_disc_and_track(items: list[PlaylistItem]) -> list[PlaylistItem]:
+    """The album's own order: disc first, then track.
+
+    A playlist assembled by dropping a folder of a double album into
+    foobar2000 routinely arrives with the two discs interleaved -- observed
+    directly, `2, 1, 2, 1, 1...` -- because foobar sorts what it is given by
+    filename, and both discs number their tracks from one. The files
+    themselves know better, so this asks them.
+
+    Two rules keep it from doing harm where it has nothing to go on:
+    - **A list where nothing carries either number is returned untouched.**
+      No tags means no opinion, and the order somebody put the playlist in
+      by hand is a better answer than one invented here.
+    - **Anything missing a track number sinks to the end of its disc rather
+      than to the front**, and ties keep the order they arrived in (the sort
+      is stable), so an untagged odd file out never displaces the album.
+
+    A missing disc number counts as disc 1, which is what a single-disc
+    album's files look like."""
+    numbers = [
+        (leading_number(item.disc_number), leading_number(item.track_number)) for item in items
+    ]
+    return [items[index] for index in order_by_disc_and_track(numbers)]
+
+
+def disc_breaks(items: list[PlaylistItem]) -> list[int]:
+    """Where the files themselves say one disc ends and the next begins --
+    indices into `items`, in the form multidisc.plan_from_breaks() takes.
+
+    Assumes the list is already in disc order (see sort_by_disc_and_track);
+    the rule itself is multidisc's, since the same question is asked of
+    files on disk by the burning side."""
+    return breaks_from_disc_numbers([leading_number(item.disc_number) for item in items])
 
 
 def total_seconds(items: list[PlaylistItem]) -> int:

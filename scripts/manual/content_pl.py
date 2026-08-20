@@ -611,6 +611,44 @@ BOOK = [
             {"p": "MD mieści 80 minut w SP. xD-Tools ostrzega, gdy playlista jest dłuższa, ale może "
                   "wyłącznie ostrzec — LP2 i LP4 trzeba ustawić na samym magnetofonie i nie da się "
                   "odczytać, w którym trybie jest."},
+            {"h2": "Album, który nie mieści się na jednej płycie"},
+            {"p": "Podwójny album nie zmieści się na MiniDysku, a MiniDysku nie da się odwrócić tak jak "
+                  "kasety. **Nagraj na kilka płyt** nagrywa go płyta po płycie: jedna płyta, jej tytuły, "
+                  "wysunięcie, kolejny czysty krążek i tak dalej."},
+            {"p": "Po zaznaczeniu lista utworów dostaje kolumnę **Płyta** pokazującą, gdzie album jest "
+                  "cięty, a pod nią linijkę z zapełnieniem każdej płyty. Decyduje o tym pole **Jedna "
+                  "płyta mieści** - 80 minut w SP, 160 w LP2. xD-Tools nie potrafi odczytać trybu "
+                  "magnetofonu, więc tę liczbę podajesz Ty."},
+            {"ol": [
+                "Każda płyta jest nagrywana dokładnie tak jak pojedyncza: uzbrojenie, potwierdzenie, "
+                "odtwarzanie, znaczniki ścieżek.",
+                "**Dwie sekundy po ostatnim utworze tej płyty tytuły idą same** - bez pytania, bez "
+                "przycisku. Nikt nie siedzi przy komputerze przez czterdzieści minut albumu, a MiniDysk "
+                "trzyma zmienione tytuły w pamięci tylko do wysunięcia płyty.",
+                "Płyta jest wysuwana, a xD-Tools prosi o kolejny czysty krążek.",
+                "Ostatnia płyta kończy się tak samo i na tym przebieg się zamyka.",
+            ]},
+            {"note": "Każda płyta dostaje nazwę albumu z dopiskiem **[1/2]**, **[2/2]**. Dwie płyty tego "
+                     "samego albumu opisane identycznie to dwie płyty nie do odróżnienia na półce. "
+                     "Ścieżki na każdej numerowane są od jedynki - i tak numeruje je sam magnetofon."},
+            {"warn": "Podgląd, który normalnie pokazuje okno wysyłania tytułów, jest tu pominięty - nie "
+                     "ma go komu przeczytać. Dlatego każdy tytuł i każdy znak, którego magnetofon nie "
+                     "potrafi wyświetlić, widać w tym oknie **zanim** zabrzmi pierwsza nuta."},
+            {"h2": "Gdzie album jest cięty i w jakiej kolejności"},
+            {"p": "xD-Tools układa playlistę we własnej kolejności albumu już przy otwarciu okna: "
+                  "najpierw numer płyty, potem numer ścieżki, jedno i drugie prosto z plików. Komplet "
+                  "dwupłytowy wrzucony do foobara2000 jako jeden folder przychodzi przeplatany, bo obie "
+                  "płyty numerują ścieżki od jedynki - to właśnie prostuje, a playlista w foobarze jest "
+                  "przestawiana pod to, bo to ona jest odtwarzana."},
+            {"p": "Jeżeli pliki mówią, ile jest płyt, podziały stają tam, gdzie one wskazują, a opcja "
+                  "zaznacza się sama. W przeciwnym razie album dzieli się możliwie równo, na najmniejszą "
+                  "liczbę płyt, która wystarczy."},
+            {"ul": [
+                "**Przesuń w górę** / **Przesuń w dół** zmieniają kolejność nagrywania.",
+                "**Zacznij tu nową płytę** czyni z zaznaczonej ścieżki pierwszą na nowej płycie; "
+                "naciśnięty ponownie na tej samej ścieżce - zabiera ten podział.",
+                "**Podziel automatycznie** odrzuca ręcznie ustawione podziały i wylicza je od nowa.",
+            ]},
         ],
     },
     # ------------------------------------------------------------------
@@ -685,6 +723,24 @@ BOOK = [
             {"warn": "Załadowanie zgranych ścieżek do foobar2000 **czyści jego bieżącą playlistę**. To, "
                      "co miałeś tam przygotowane, przepadnie - przenieś to wcześniej gdzie indziej, "
                      "jeśli chcesz zachować."},
+            {"h2": "Wydanie na kilku płytach CD"},
+            {"p": "**Zgraj kilka płyt jako jeden album** przenosi komplet jako jeden album, a nie jako "
+                  "dwa niezwiązane. Każda płyta jest osobno odczytywana, identyfikowana i zgrywana, po "
+                  "czym xD-Tools prosi o następną."},
+            {"ul": [
+                "Wszystkie trafiają do **jednego folderu** - tego, który utworzyła pierwsza płyta. "
+                "Kolejna bywa identyfikowana pod własnym tytułem - \"... [Disc 2]\" - a folder na "
+                "płytę to byłyby dwa albumy.",
+                "Album, wykonawca i rok zostają te z pierwszej płyty. **Tytuły** są własne każdej płyty "
+                "i po to właśnie jest to sprawdzanie.",
+                "Każdy plik dostaje tag z numerem swojej płyty i numer ten w nazwie. To dzięki temu "
+                "wszystko dalej - playlista, nagrywanie, wypalanie - potrafi ułożyć komplet po jego "
+                "własnemu.",
+                "Kiedy przestaniesz dokładać płyty, playlista foobara2000 trzyma cały komplet, a "
+                "nagranie po niej obejmuje całość.",
+            ]},
+            {"note": "Możesz zakończyć po dowolnej płycie: pytanie proponuje kontynuować albo nagrać to, "
+                     "co zostało już zgrane."},
         ],
     },
     {
@@ -743,6 +799,26 @@ BOOK = [
                 "Czystej płyty CD-R. Płyta, na której już coś jest, nie przyjmie nowego zapisu.",
                 "Niczego więcej: cdrecord i SoX są dołączone w wersji na Windows.",
             ]},
+            {"h2": "Album, który nie mieści się na jednej płycie"},
+            {"p": "**Wypal na kilka płyt** zapisuje długi album na tylu krążkach CD-R, ilu potrzeba. "
+                  "Zależy to od pola **Jedna płyta mieści**: 80 minut na zwykłym krążku, 74 na "
+                  "starszym."},
+            {"p": "Lista utworów dostaje kolumnę **Płyta** pokazującą miejsce cięcia, a podsumowanie "
+                  "podaje długość każdej płyty osobno. Każda mierzona jest względem krążka, na który "
+                  "pójdzie - to, że album się nie mieści, jest przecież założeniem - więc przycisk Wypal "
+                  "pozostaje wyłączony, dopóki nie zmieszczą się wszystkie."},
+            {"ol": [
+                "Każda płyta jest nagrywana i wysuwana niezależnie od pola **Wysuń po zakończeniu**: "
+                "taca musi się otworzyć, żeby włożyć następny krążek.",
+                "xD-Tools prosi o ten krążek i wypala kolejną płytę.",
+                "Przy każdym z tych pytań można zakończyć; płyty już nagrane są gotowe.",
+            ]},
+            {"note": "CD-Text każdej płyty niesie nazwę albumu z dopiskiem **[1/2]**, **[2/2]** - z tego "
+                     "samego powodu co tytuły na MiniDysku."},
+            {"p": "Miejsce cięcia bierze się z plików, kiedy te je znają - zgrany komplet niesie numery "
+                  "swoich płyt i są one respektowane, a nie zastępowane wyrównywaniem po czasie. Są tu "
+                  "też te same cztery przyciski co w oknie nagrywania: **Przesuń w górę**, **Przesuń w "
+                  "dół**, **Zacznij tu nową płytę** i **Podziel automatycznie**."},
         ],
     },
     # ------------------------------------------------------------------

@@ -25,7 +25,7 @@ DEFAULT_SCREEN_DPI = 96.0
 DEFAULT_EXPORT_DPI = 300.0
 DEFAULT_BAKE_DPI = DEFAULT_EXPORT_DPI * 3
 
-# MDTools' own Telegram API credentials are **injected at build time, never
+# xD-Tools' own Telegram API credentials are **injected at build time, never
 # written in this file** -- see _bundled_telegram_credentials() below.
 _TELEGRAM_API_ID_ENV = "MDTOOLS_TELEGRAM_API_ID"
 _TELEGRAM_API_HASH_ENV = "MDTOOLS_TELEGRAM_API_HASH"
@@ -232,7 +232,7 @@ def set_music_folder(value: str) -> None:
 
 
 def _bundled_telegram_credentials() -> tuple[str, str]:
-    """MDTools' own registered API ID/Hash, or `("", "")` if this build was
+    """xD-Tools' own registered API ID/Hash, or `("", "")` if this build was
     made without them.
 
     **Injected at build time and deliberately absent from the source tree**,

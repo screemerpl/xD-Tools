@@ -14,7 +14,7 @@ fi
 # shift between versions/platforms.
 QT_TRANSLATIONS=$(.venv/bin/python -c "from PySide6.QtCore import QLibraryInfo; print(QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath))")
 
-# MDTools' own Telegram API ID/Hash are baked in here rather than committed
+# xD-Tools' own Telegram API ID/Hash are baked in here rather than committed
 # to the source tree -- this repo has a public remote, and a credential in
 # git history is effectively permanent. Set MDTOOLS_TELEGRAM_API_ID and
 # MDTOOLS_TELEGRAM_API_HASH to bake them into this build; leave them unset to
@@ -40,7 +40,7 @@ fi
 # No bin/ is bundled here, unlike the Windows build: cdparanoia and flac
 # are packaged by every distribution, so cdrip.find_tool() picks them up
 # from PATH instead of a bundled copy.
-.venv/bin/pyinstaller --noconfirm --windowed --name MDTools --paths src \
+.venv/bin/pyinstaller --noconfirm --windowed --name "xD-Tools" --paths src \
     --add-data "src/mdtools/templates/defaults.json:mdtools/templates" \
     --add-data "src/mdtools/i18n/mdtools_pl.qm:mdtools/i18n" \
     --add-data "src/mdtools/i18n/mdtools_ja.qm:mdtools/i18n" \
@@ -50,4 +50,4 @@ fi
     --add-data "assets/icons:assets/icons" \
     src/mdtools/main.py
 
-echo "Build output: dist/MDTools/MDTools"
+echo "Build output: dist/xD-Tools/xD-Tools"

@@ -36,7 +36,7 @@ Unicode true
 !endif
 
 !define APP_NAME "xD-Tools"
-!define APP_EXE "MDTools.exe"
+!define APP_EXE "xD-Tools.exe"
 !define PUBLISHER "Artur Jakubowicz"
 !define UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
 

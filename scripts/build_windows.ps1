@@ -13,7 +13,7 @@ if (-not (Test-Path ".venv")) {
 # shift between versions/platforms.
 $qtTranslations = & ".venv/Scripts/python.exe" -c "from PySide6.QtCore import QLibraryInfo; print(QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath))"
 
-# MDTools' own Telegram API ID/Hash are baked in here rather than committed
+# xD-Tools' own Telegram API ID/Hash are baked in here rather than committed
 # to the source tree -- this repo has a public remote, and a credential in
 # git history is effectively permanent. Set MDTOOLS_TELEGRAM_API_ID and
 # MDTOOLS_TELEGRAM_API_HASH to bake them into this build; leave them unset
@@ -37,7 +37,7 @@ if ($env:MDTOOLS_TELEGRAM_API_ID -and $env:MDTOOLS_TELEGRAM_API_HASH) {
     Write-Warning "No Telegram API credentials: set MDTOOLS_TELEGRAM_API_ID/_HASH to bake them in. The build works, but users must supply their own to sign in."
 }
 
-& ".venv/Scripts/pyinstaller.exe" --noconfirm --windowed --name MDTools --paths src `
+& ".venv/Scripts/pyinstaller.exe" --noconfirm --windowed --name "xD-Tools" --paths src `
     --icon "assets/img/xdtools.ico" `
     --add-data "src/mdtools/templates/defaults.json;mdtools/templates" `
     --add-data "src/mdtools/i18n/mdtools_pl.qm;mdtools/i18n" `
@@ -49,4 +49,4 @@ if ($env:MDTOOLS_TELEGRAM_API_ID -and $env:MDTOOLS_TELEGRAM_API_HASH) {
     --add-data "bin/win64;bin/win64" `
     src/mdtools/main.py
 
-Write-Host "Build output: dist/MDTools/MDTools.exe"
+Write-Host "Build output: dist/xD-Tools/xD-Tools.exe"
