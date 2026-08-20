@@ -93,160 +93,202 @@ Z przystawką MDRem na podczerwień steruje też samym magnetofonem: nagrywa alb
 <context>
     <name>BurnDialog</name>
     <message>
-        <location filename="../panels/burn_dialog.py" line="175"/>
-        <location filename="../panels/burn_dialog.py" line="478"/>
-        <location filename="../panels/burn_dialog.py" line="495"/>
-        <location filename="../panels/burn_dialog.py" line="508"/>
-        <location filename="../panels/burn_dialog.py" line="559"/>
-        <location filename="../panels/burn_dialog.py" line="569"/>
-        <location filename="../panels/burn_dialog.py" line="575"/>
-        <location filename="../panels/burn_dialog.py" line="598"/>
+        <location filename="../panels/burn_dialog.py" line="188"/>
+        <location filename="../panels/burn_dialog.py" line="612"/>
+        <location filename="../panels/burn_dialog.py" line="636"/>
+        <location filename="../panels/burn_dialog.py" line="662"/>
+        <location filename="../panels/burn_dialog.py" line="723"/>
+        <location filename="../panels/burn_dialog.py" line="739"/>
+        <location filename="../panels/burn_dialog.py" line="745"/>
+        <location filename="../panels/burn_dialog.py" line="751"/>
+        <location filename="../panels/burn_dialog.py" line="777"/>
+        <location filename="../panels/burn_dialog.py" line="802"/>
         <source>Burn Audio CD</source>
         <translation>Wypal płytę audio CD</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="209"/>
+        <location filename="../panels/burn_dialog.py" line="228"/>
         <source>Burn</source>
         <translation>Wypal</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="213"/>
+        <location filename="../panels/burn_dialog.py" line="232"/>
         <source>Close</source>
         <translation>Zamknij</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="232"/>
-        <location filename="../panels/burn_dialog.py" line="249"/>
+        <location filename="../panels/burn_dialog.py" line="251"/>
+        <location filename="../panels/burn_dialog.py" line="268"/>
         <source>Artist</source>
         <translation>Wykonawca</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="234"/>
+        <location filename="../panels/burn_dialog.py" line="253"/>
         <source>Album</source>
         <translation>Album</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="236"/>
+        <location filename="../panels/burn_dialog.py" line="255"/>
         <source>Year</source>
         <translation>Rok</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="249"/>
+        <location filename="../panels/burn_dialog.py" line="268"/>
         <source>Title</source>
         <translation>Tytuł</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="249"/>
+        <location filename="../panels/burn_dialog.py" line="268"/>
         <source>Length</source>
         <translation>Czas</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="249"/>
+        <location filename="../panels/burn_dialog.py" line="268"/>
         <source>Status</source>
         <translation>Status</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="265"/>
+        <location filename="../panels/burn_dialog.py" line="268"/>
+        <location filename="../panels/burn_dialog.py" line="287"/>
         <source>Disc</source>
         <translation>Płyta</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="273"/>
+        <location filename="../panels/burn_dialog.py" line="295"/>
         <source>Refresh</source>
         <translation>Odśwież</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="276"/>
+        <location filename="../panels/burn_dialog.py" line="298"/>
         <source>Burner</source>
         <translation>Nagrywarka</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="281"/>
+        <location filename="../panels/burn_dialog.py" line="303"/>
         <source>Speed</source>
         <translation>Prędkość</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="283"/>
+        <location filename="../panels/burn_dialog.py" line="305"/>
         <source>Simulate only (test run, nothing is written)</source>
         <translation>Tylko symulacja (próba, nic nie zostanie zapisane)</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="286"/>
+        <location filename="../panels/burn_dialog.py" line="308"/>
         <source>Eject when finished</source>
         <translation>Wysuń po zakończeniu</translation>
     </message>
     <message>
+        <location filename="../panels/burn_dialog.py" line="312"/>
+        <source>Burn across several discs</source>
+        <translation>Wypal na kilka płyt</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="315"/>
+        <source>For an album longer than one disc. Each disc is written and ejected on its own, and you are asked to put the next blank one in.</source>
+        <translation>Dla albumu dłuższego niż jedna płyta. Każda płyta jest osobno nagrywana i wysuwana, a program prosi o kolejny czysty krążek.</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="327"/>
+        <source> min</source>
+        <translation> min</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="329"/>
+        <source>What one blank holds: 80 minutes on an ordinary CD-R, 74 on an older one.</source>
+        <translation>Ile mieści czysty krążek: 80 minut na zwykłym CD-R, 74 na starszym.</translation>
+    </message>
+    <message>
         <location filename="../panels/burn_dialog.py" line="332"/>
+        <source>One disc holds</source>
+        <translation>Jedna płyta mieści</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="376"/>
         <source>(no burner found)</source>
         <translation>(nie znaleziono nagrywarki)</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="339"/>
+        <location filename="../panels/burn_dialog.py" line="383"/>
         <source>Missing tools: {tools}. Burning is unavailable until they are installed.</source>
         <translation>Brakuje narzędzi: {tools}. Wypalanie będzie niedostępne, dopóki ich nie zainstalujesz.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="385"/>
+        <location filename="../panels/burn_dialog.py" line="507"/>
         <source>Tracks: {count} -- {length} of an available {capacity}</source>
         <translation>Ścieżki: {count} — {length} z dostępnych {capacity}</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="397"/>
+        <location filename="../panels/burn_dialog.py" line="513"/>
+        <source>Disc {number}: {summary}</source>
+        <translation>Płyta {number}: {summary}</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="526"/>
         <source>CD-Text cannot carry these characters and they will be left out: {characters}</source>
         <translation>CD-Text nie przeniesie tych znaków i zostaną pominięte: {characters}</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="408"/>
+        <location filename="../panels/burn_dialog.py" line="538"/>
         <source>OK</source>
         <translation>OK</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="417"/>
+        <location filename="../panels/burn_dialog.py" line="547"/>
         <source>{format} -- a CD needs 44100 Hz / 16-bit / stereo</source>
         <translation>{format} — płyta CD wymaga 44100 Hz / 16 bitów / stereo</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="419"/>
+        <location filename="../panels/burn_dialog.py" line="549"/>
         <source>{format} -- will be converted to 44100 Hz / 16-bit</source>
         <translation>{format} — zostanie przekonwertowane na 44100 Hz / 16 bitów</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="421"/>
+        <location filename="../panels/burn_dialog.py" line="551"/>
         <source>shorter than the 4 seconds a CD track must be ({length})</source>
         <translation>krótsza niż wymagane dla ścieżki CD 4 sekundy ({length})</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="425"/>
+        <location filename="../panels/burn_dialog.py" line="555"/>
         <source>could not be read</source>
         <translation>nie udało się odczytać</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="427"/>
+        <location filename="../panels/burn_dialog.py" line="557"/>
         <source>A CD holds at most 99 tracks, and this is {count}.</source>
         <translation>Płyta CD mieści najwyżej 99 ścieżek, a tych jest {count}.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="429"/>
+        <location filename="../panels/burn_dialog.py" line="559"/>
         <source>This is {over} longer than the disc holds.</source>
         <translation>To o {over} więcej, niż mieści płyta.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="431"/>
+        <location filename="../panels/burn_dialog.py" line="561"/>
         <source>There are no tracks to burn.</source>
         <translation>Nie ma czego wypalić.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="479"/>
+        <location filename="../panels/burn_dialog.py" line="613"/>
         <source>No burner was found. Check that the drive is connected and press Refresh.</source>
         <translation>Nie znaleziono nagrywarki. Sprawdź, czy napęd jest podłączony, i naciśnij Odśwież.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="485"/>
+        <location filename="../panels/burn_dialog.py" line="620"/>
         <source>Run through the whole burn with the laser off? Nothing will be written to the disc.</source>
         <translation>Przejść przez całe wypalanie z wyłączonym laserem? Na płycie nic nie zostanie zapisane.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="488"/>
+        <location filename="../panels/burn_dialog.py" line="624"/>
+        <source>Write this album to {discs} discs, one after another?
+
+Each is written and ejected on its own and you will be asked for the next blank. A CD-R cannot be rewritten: once this starts, a disc is either finished or wasted.</source>
+        <translation>Wypalić ten album na {discs} płyt, jedna po drugiej?
+
+Każda jest osobno nagrywana i wysuwana, a program poprosi o kolejny czysty krążek. CD-R-a nie da się nagrać ponownie: po starcie płyta jest albo gotowa, albo zmarnowana.</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="630"/>
         <source>Write {count} tracks to the disc in the drive?
 
 A CD-R cannot be rewritten: once this starts, the disc is either finished or wasted.</source>
@@ -255,37 +297,61 @@ A CD-R cannot be rewritten: once this starts, the disc is either finished or was
 Płyty CD-R nie da się nadpisać: gdy to ruszy, płyta będzie albo gotowa, albo zmarnowana.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="552"/>
+        <location filename="../panels/burn_dialog.py" line="668"/>
+        <source>Disc {number} of {count}...</source>
+        <translation>Płyta {number} z {count}...</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="716"/>
         <source>Preparing audio...</source>
         <translation>Przygotowywanie dźwięku...</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="552"/>
+        <location filename="../panels/burn_dialog.py" line="716"/>
         <source>Writing the disc...</source>
         <translation>Zapisywanie płyty...</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="562"/>
+        <location filename="../panels/burn_dialog.py" line="726"/>
         <source>Stopped.</source>
         <translation>Zatrzymano.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="570"/>
+        <location filename="../panels/burn_dialog.py" line="740"/>
         <source>The test run finished without an error. Nothing was written to the disc.</source>
         <translation>Próba zakończyła się bez błędu. Na płycie nic nie zapisano.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="576"/>
+        <location filename="../panels/burn_dialog.py" line="746"/>
+        <source>All {count} discs are written.</source>
+        <translation>Wszystkie płyty ({count}) są nagrane.</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="752"/>
         <source>The disc is written.</source>
         <translation>Płyta zapisana.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="600"/>
+        <location filename="../panels/burn_dialog.py" line="764"/>
+        <source>Stopped after disc {number}. The discs already written are finished.</source>
+        <translation>Zatrzymano po płycie {number}. Płyty już nagrane są gotowe.</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="779"/>
+        <source>Disc {done} of {count} is written and ejected.
+
+Put the next blank disc in the drive and close the tray, then continue with disc {next}.</source>
+        <translation>Płyta {done} z {count} jest nagrana i wysunięta.
+
+Włóż do napędu kolejny czysty krążek, zamknij kieszeń i przejdź do płyty {next}.</translation>
+    </message>
+    <message>
+        <location filename="../panels/burn_dialog.py" line="804"/>
         <source>Stop now? If the disc is already being written it will be left unfinished, and a CD-R cannot be reused.</source>
         <translation>Zatrzymać teraz? Jeśli płyta jest już zapisywana, zostanie niedokończona, a CD-R nie nadaje się do ponownego użycia.</translation>
     </message>
     <message>
-        <location filename="../panels/burn_dialog.py" line="609"/>
+        <location filename="../panels/burn_dialog.py" line="813"/>
         <source>Stopping...</source>
         <translation>Zatrzymywanie...</translation>
     </message>
@@ -297,38 +363,38 @@ Płyty CD-R nie da się nadpisać: gdy to ruszy, płyta będzie albo gotowa, alb
         <translation type="vanished">Nagraj CD na MiniDisc</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="203"/>
-        <location filename="../panels/cd_rip_dialog.py" line="218"/>
+        <location filename="../panels/cd_rip_dialog.py" line="225"/>
+        <location filename="../panels/cd_rip_dialog.py" line="240"/>
         <source>Artist</source>
         <translation>Wykonawca</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="204"/>
+        <location filename="../panels/cd_rip_dialog.py" line="226"/>
         <source>Album</source>
         <translation>Album</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="205"/>
+        <location filename="../panels/cd_rip_dialog.py" line="227"/>
         <source>Year</source>
         <translation>Rok</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="206"/>
+        <location filename="../panels/cd_rip_dialog.py" line="228"/>
         <source>Release</source>
         <translation>Wydanie</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="218"/>
+        <location filename="../panels/cd_rip_dialog.py" line="240"/>
         <source>#</source>
         <translation>#</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="218"/>
+        <location filename="../panels/cd_rip_dialog.py" line="240"/>
         <source>Title</source>
         <translation>Tytuł</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="218"/>
+        <location filename="../panels/cd_rip_dialog.py" line="240"/>
         <source>Length</source>
         <translation>Czas</translation>
     </message>
@@ -341,98 +407,108 @@ Płyty CD-R nie da się nadpisać: gdy to ruszy, płyta będzie albo gotowa, alb
         <translation type="vanished">Tytuły i wykonawców można tu edytować — trafiają do zgranych plików i to one zostaną zapisane na MiniDisc. Wypełnij kolumnę wykonawcy, gdy płyta jest składanką: MDTools nazwie ją wtedy odpowiednio i sam zaprojektuje jej okładkę.</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="224"/>
+        <location filename="../panels/cd_rip_dialog.py" line="246"/>
         <source>Titles and artists can be edited here -- they are written into the ripped files, and are what ends up on the {medium}. Fill the artist column in when the disc is a compilation: MDTools then names it accordingly and draws it a cover of its own.</source>
         <translation>Tytuły i wykonawców można tu edytować — są zapisywane do zgranych plików i to one trafią na {medium}. Kolumnę wykonawcy wypełnij, gdy płyta jest składanką: MDTools odpowiednio ją wtedy nazwie i narysuje jej własną okładkę.</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="248"/>
+        <location filename="../panels/cd_rip_dialog.py" line="254"/>
+        <source>Rip several discs as one album</source>
+        <translation>Zgraj kilka płyt jako jeden album</translation>
+    </message>
+    <message>
+        <location filename="../panels/cd_rip_dialog.py" line="257"/>
+        <source>For a set that came as more than one CD. Each disc is read, identified and ripped on its own, and you are asked for the next -- they end up in one folder, tagged with the disc they came from, as a single album.</source>
+        <translation>Dla wydania, które przyszło na więcej niż jednej płycie CD. Każda jest osobno odczytywana, identyfikowana i zgrywana, a program prosi o kolejną — trafiają do jednego folderu, otagowane numerem swojej płyty, jako jeden album.</translation>
+    </message>
+    <message>
+        <location filename="../panels/cd_rip_dialog.py" line="280"/>
         <source>Rip and Record</source>
         <translation>Zgraj i nagraj</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="252"/>
-        <location filename="../panels/cd_rip_dialog.py" line="588"/>
+        <location filename="../panels/cd_rip_dialog.py" line="284"/>
+        <location filename="../panels/cd_rip_dialog.py" line="641"/>
         <source>Cancel</source>
         <translation>Anuluj</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="265"/>
+        <location filename="../panels/cd_rip_dialog.py" line="297"/>
         <source>Drive</source>
         <translation>Napęd</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="268"/>
+        <location filename="../panels/cd_rip_dialog.py" line="300"/>
         <source>Refresh</source>
         <translation>Odśwież</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="271"/>
+        <location filename="../panels/cd_rip_dialog.py" line="303"/>
         <source>Read Disc</source>
         <translation>Odczytaj płytę</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="285"/>
+        <location filename="../panels/cd_rip_dialog.py" line="317"/>
         <source>No CD drive was found. Connect one and press Refresh.</source>
         <translation>Nie znaleziono napędu CD. Podłącz napęd i naciśnij Odśwież.</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="292"/>
+        <location filename="../panels/cd_rip_dialog.py" line="324"/>
         <source>Insert an audio CD and press Read Disc.</source>
         <translation>Włóż płytę audio CD i naciśnij Odczytaj płytę.</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="304"/>
+        <location filename="../panels/cd_rip_dialog.py" line="336"/>
         <source>These bundled tools are missing, so a CD cannot be read: {tools}. Reinstall MDTools, or put them on your PATH.</source>
         <translation>Brakuje dołączonych narzędzi, więc nie można odczytać płyty: {tools}. Zainstaluj MDTools ponownie albo umieść je w ścieżce PATH.</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="319"/>
+        <location filename="../panels/cd_rip_dialog.py" line="351"/>
         <source>Reading the disc...</source>
         <translation>Odczytywanie płyty...</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="324"/>
+        <location filename="../panels/cd_rip_dialog.py" line="356"/>
         <source>Could not read the disc: {error}</source>
         <translation>Nie udało się odczytać płyty: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="345"/>
+        <location filename="../panels/cd_rip_dialog.py" line="377"/>
         <source>Track {number}</source>
         <translation>Ścieżka {number}</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="356"/>
+        <location filename="../panels/cd_rip_dialog.py" line="388"/>
         <source>Record CD to {medium}</source>
         <translation>Nagraj CD na {medium}</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="367"/>
+        <location filename="../panels/cd_rip_dialog.py" line="399"/>
         <source>This disc runs {total}, longer than the {limit} an MD holds in SP mode. Set the deck to LP2 first, or the recording will be cut short.</source>
         <translation>Ta płyta trwa {total}, czyli więcej niż {limit}, które mieści płyta MD w trybie SP. Ustaw magnetofon na LP2, inaczej nagranie zostanie urwane.</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="380"/>
+        <location filename="../panels/cd_rip_dialog.py" line="412"/>
         <source>Looking the disc up on MusicBrainz...</source>
         <translation>Wyszukiwanie płyty w MusicBrainz...</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="387"/>
+        <location filename="../panels/cd_rip_dialog.py" line="419"/>
         <source>The disc could not be looked up ({error}) -- type the titles in yourself.</source>
         <translation>Nie udało się wyszukać płyty ({error}) — wpisz tytuły samodzielnie.</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="395"/>
+        <location filename="../panels/cd_rip_dialog.py" line="427"/>
         <source>This disc is not in MusicBrainz -- type the album, artist and titles in yourself.</source>
         <translation>Tej płyty nie ma w MusicBrainz — wpisz album, wykonawcę i tytuły samodzielnie.</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="412"/>
+        <location filename="../panels/cd_rip_dialog.py" line="444"/>
         <source>Identified as {name}. Check the titles, then rip.</source>
         <translation>Rozpoznano jako {name}. Sprawdź tytuły i zgraj płytę.</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="517"/>
+        <location filename="../panels/cd_rip_dialog.py" line="559"/>
         <source>The rip folder could not be created: {error}
 
 Choose a different one in Window &gt; Settings...</source>
@@ -441,17 +517,17 @@ Choose a different one in Window &gt; Settings...</source>
 Wskaż inny w Okno &gt; Ustawienia...</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="529"/>
+        <location filename="../panels/cd_rip_dialog.py" line="572"/>
         <source>Starting...</source>
         <translation>Rozpoczynanie...</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="554"/>
+        <location filename="../panels/cd_rip_dialog.py" line="606"/>
         <source>foobar2000 could not be found. The ripped tracks are loaded into it through its own program file, so its location has to be set in Window &gt; Settings...</source>
         <translation>Nie znaleziono programu foobar2000. Zgrane ścieżki są do niego ładowane przez jego własny plik programu, więc jego lokalizację trzeba wskazać w Okno &gt; Ustawienia...</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="568"/>
+        <location filename="../panels/cd_rip_dialog.py" line="620"/>
         <source>Could not reach foobar2000: {error}
 
 It must be running with the Beefweb Remote Control component (foo_beefweb) enabled.</source>
@@ -460,42 +536,61 @@ It must be running with the Beefweb Remote Control component (foo_beefweb) enabl
 Musi być uruchomiony i mieć włączony komponent Beefweb Remote Control (foo_beefweb).</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="588"/>
+        <location filename="../panels/cd_rip_dialog.py" line="641"/>
         <source>Stop</source>
         <translation>Zatrzymaj</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="594"/>
+        <location filename="../panels/cd_rip_dialog.py" line="647"/>
         <source>Ripping {index} of {count}: {title}</source>
         <translation>Zgrywanie {index} z {count}: {title}</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="602"/>
+        <location filename="../panels/cd_rip_dialog.py" line="655"/>
         <source>Encoding {index} of {count}...</source>
         <translation>Kodowanie {index} z {count}...</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="607"/>
+        <location filename="../panels/cd_rip_dialog.py" line="660"/>
         <source>Loading the tracks into foobar2000...</source>
         <translation>Ładowanie ścieżek do foobar2000...</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="614"/>
+        <location filename="../panels/cd_rip_dialog.py" line="667"/>
         <source>Ripping failed: {error}</source>
         <translation>Zgrywanie nie powiodło się: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="618"/>
+        <location filename="../panels/cd_rip_dialog.py" line="671"/>
         <source>Stopped. Nothing was recorded.</source>
         <translation>Zatrzymano. Nic nie zostało nagrane.</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="622"/>
+        <location filename="../panels/cd_rip_dialog.py" line="681"/>
+        <source>Disc {number} is ripped.</source>
+        <translation>Płyta {number} jest zgrana.</translation>
+    </message>
+    <message>
+        <location filename="../panels/cd_rip_dialog.py" line="684"/>
         <source>The disc is ripped and loaded into foobar2000.</source>
         <translation>Płyta jest zgrana i załadowana do foobar2000.</translation>
     </message>
     <message>
-        <location filename="../panels/cd_rip_dialog.py" line="645"/>
+        <location filename="../panels/cd_rip_dialog.py" line="719"/>
+        <source>Disc {number} is ripped.
+
+Put the next disc of the set in the drive and close the tray, then continue -- or stop here and record what has been ripped so far.</source>
+        <translation>Płyta {number} jest zgrana.
+
+Włóż do napędu kolejną płytę z wydania, zamknij kieszeń i kontynuuj — albo zakończ tutaj i nagraj to, co zostało już zgrane.</translation>
+    </message>
+    <message>
+        <location filename="../panels/cd_rip_dialog.py" line="746"/>
+        <source>Disc {number} of the set. Check its titles, then rip it.</source>
+        <translation>Płyta {number} z wydania. Sprawdź jej tytuły i zgraj ją.</translation>
+    </message>
+    <message>
+        <location filename="../panels/cd_rip_dialog.py" line="756"/>
         <source>Stopping...</source>
         <translation>Zatrzymywanie...</translation>
     </message>
@@ -2624,7 +2719,7 @@ choose one)</source>
     </message>
     <message>
         <location filename="../panels/record_dialog.py" line="216"/>
-        <location filename="../panels/record_dialog.py" line="581"/>
+        <location filename="../panels/record_dialog.py" line="602"/>
         <source>Start Disc Here</source>
         <translation>Zacznij tu nową płytę</translation>
     </message>
@@ -2708,49 +2803,49 @@ Musi być uruchomiony i mieć włączony komponent Beefweb Remote Control (foo_b
         <translation>Bieżąca playlista w foobar2000 jest pusta — wczytaj najpierw album.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="377"/>
+        <location filename="../panels/record_dialog.py" line="390"/>
         <source>Playlist &quot;{playlist}&quot; -- {count} tracks, {total} total.
 It will be recorded to the disc in this order, then titled from these names.</source>
         <translation>Playlista „{playlist}&quot; — utworów: {count}, łącznie {total}.
 Zostaną nagrane na płytę w tej kolejności, a potem nazwane według tych tytułów.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="388"/>
+        <location filename="../panels/record_dialog.py" line="401"/>
         <source>The files say this is a {count}-disc album, so the disc splits below are already placed where they say.</source>
         <translation>Pliki mówią, że to album na {count} płyt, więc podziały poniżej są już ustawione tam, gdzie one wskazują.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="729"/>
+        <location filename="../panels/record_dialog.py" line="750"/>
         <source>foobar2000&apos;s playlist is now in this order -- the album&apos;s own, from the files.</source>
         <translation>Playlista w foobarze2000 jest teraz w tej kolejności — własnej kolejności albumu, wziętej z plików.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="1005"/>
+        <location filename="../panels/record_dialog.py" line="1040"/>
         <source>Disc {number} recorded. Writing its titles now -- leave the adapter pointing at the deck.</source>
         <translation>Płyta {number} nagrana. Trwa zapis jej tytułów — zostaw przystawkę wycelowaną w magnetofon.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="1020"/>
+        <location filename="../panels/record_dialog.py" line="1055"/>
         <source>Recording finished.</source>
         <translation>Nagrywanie zakończone.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="1030"/>
+        <location filename="../panels/record_dialog.py" line="1065"/>
         <source>Disc {number} was recorded, but its titles could not be written, so the run stopped there. The disc itself is fine -- the titles can be written again from Tools &gt; Metadata...</source>
         <translation>Płyta {number} została nagrana, ale nie udało się zapisać jej tytułów, więc na tym stanęło. Sama płyta jest w porządku — tytuły można zapisać ponownie z Narzędzia &gt; Metadane...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="1039"/>
+        <location filename="../panels/record_dialog.py" line="1074"/>
         <source>All {count} discs are recorded, titled and ejected.</source>
         <translation>Wszystkie płyty ({count}) są nagrane, otytułowane i wysunięte.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="1045"/>
+        <location filename="../panels/record_dialog.py" line="1080"/>
         <source>Stopped after disc {number}. The discs already recorded are finished and titled.</source>
         <translation>Zatrzymano po płycie {number}. Płyty już nagrane są gotowe i otytułowane.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="1059"/>
+        <location filename="../panels/record_dialog.py" line="1094"/>
         <source>Disc {done} of {count} is written, titled and ejected.
 
 Put a blank disc in the deck and close the tray, then continue to record disc {next}.</source>
@@ -2763,34 +2858,34 @@ Włóż czystą płytę do magnetofonu, zamknij kieszeń i przejdź do nagrywani
         <translation type="vanished">To więcej niż {limit}, które mieści płyta w trybie SP. Ustaw magnetofon na LP2, inaczej nagranie zostanie urwane.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="660"/>
-        <location filename="../panels/record_dialog.py" line="858"/>
+        <location filename="../panels/record_dialog.py" line="681"/>
+        <location filename="../panels/record_dialog.py" line="893"/>
         <source>foobar2000: {error}</source>
         <translation>foobar2000: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="667"/>
+        <location filename="../panels/record_dialog.py" line="688"/>
         <source>Stop</source>
         <translation>Zatrzymaj</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="689"/>
+        <location filename="../panels/record_dialog.py" line="710"/>
         <source>Recording started -- waiting for the first track...</source>
         <translation>Nagrywanie rozpoczęte — czekam na pierwszy utwór...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="710"/>
-        <location filename="../panels/record_dialog.py" line="756"/>
-        <location filename="../panels/record_dialog.py" line="778"/>
-        <location filename="../panels/record_dialog.py" line="800"/>
-        <location filename="../panels/record_dialog.py" line="825"/>
-        <location filename="../panels/record_dialog.py" line="1057"/>
-        <location filename="../panels/record_dialog.py" line="1154"/>
+        <location filename="../panels/record_dialog.py" line="731"/>
+        <location filename="../panels/record_dialog.py" line="791"/>
+        <location filename="../panels/record_dialog.py" line="813"/>
+        <location filename="../panels/record_dialog.py" line="835"/>
+        <location filename="../panels/record_dialog.py" line="860"/>
+        <location filename="../panels/record_dialog.py" line="1092"/>
+        <location filename="../panels/record_dialog.py" line="1189"/>
         <source>Record to MiniDisc</source>
         <translation>Nagrywanie na MiniDisc</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="705"/>
+        <location filename="../panels/record_dialog.py" line="726"/>
         <source>Recording replaces whatever is on the disc, and nothing about it can be undone.
 
 Make sure the right disc is loaded and its write-protect tab is open, then continue.</source>
@@ -2799,37 +2894,37 @@ Make sure the right disc is loaded and its write-protect tab is open, then conti
 Upewnij się, że włożona jest właściwa płyta, a blokada zapisu jest otwarta, i kontynuuj.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="533"/>
+        <location filename="../panels/record_dialog.py" line="554"/>
         <source>Disc {number}: tracks {first}-{last}, {time}</source>
         <translation>Płyta {number}: ścieżki {first}-{last}, {time}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="544"/>
+        <location filename="../panels/record_dialog.py" line="565"/>
         <source>These tracks carry no running times, so nothing here knows how full a disc is -- place the splits yourself.</source>
         <translation>Te ścieżki nie mają czasów trwania, więc nie wiadomo, jak pełna jest płyta — ustaw podziały samodzielnie.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="549"/>
+        <location filename="../panels/record_dialog.py" line="570"/>
         <source>That is {over} more than one disc holds. Split it again, or set the deck to a longer mode and say so above.</source>
         <translation>To o {over} więcej, niż mieści jedna płyta. Podziel inaczej albo ustaw magnetofon na dłuższy tryb i podaj go powyżej.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="563"/>
+        <location filename="../panels/record_dialog.py" line="584"/>
         <source>This is longer than the {limit} an MD holds in SP mode. Set the deck to LP2 first, turn on &quot;Record across several discs&quot; below, or the recording will be cut short.</source>
         <translation>To więcej niż {limit}, które mieści płyta MD w trybie SP. Ustaw magnetofon na LP2, włącz poniżej „Nagraj na kilka płyt” albo nagranie zostanie urwane.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="581"/>
+        <location filename="../panels/record_dialog.py" line="602"/>
         <source>Do Not Start Disc Here</source>
         <translation>Nie zaczynaj tu płyty</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="687"/>
+        <location filename="../panels/record_dialog.py" line="708"/>
         <source>Recording disc {number} -- waiting for the first track...</source>
         <translation>Nagrywanie płyty {number} — czekam na pierwszą ścieżkę...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="698"/>
+        <location filename="../panels/record_dialog.py" line="719"/>
         <source>This album takes {count} discs. Each one is recorded, titled and ejected on its own, and you will be asked to load the next.
 
 Recording replaces whatever is on a disc, and nothing about it can be undone. Make sure the first disc is loaded and its write-protect tab is open, then continue.</source>
@@ -2838,17 +2933,17 @@ Recording replaces whatever is on a disc, and nothing about it can be undone. Ma
 Nagrywanie zastępuje to, co jest na płycie, i nie da się tego cofnąć. Upewnij się, że pierwsza płyta jest w magnetofonie, a jej zabezpieczenie przed zapisem jest otwarte, i kontynuuj.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="758"/>
+        <location filename="../panels/record_dialog.py" line="793"/>
         <source>Some of these entries are not files on disk, so the new order cannot be given to foobar2000. Put the playlist in the order you want there instead.</source>
         <translation>Część pozycji nie jest plikami na dysku, więc nowej kolejności nie da się przekazać foobarowi2000. Ustaw playlistę w żądanej kolejności bezpośrednio tam.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="768"/>
+        <location filename="../panels/record_dialog.py" line="803"/>
         <source>Putting foobar2000&apos;s playlist into this order...</source>
         <translation>Ustawiam playlistę foobara2000 w tej kolejności...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="779"/>
+        <location filename="../panels/record_dialog.py" line="814"/>
         <source>foobar2000 could not be given the new order: {error}</source>
         <translation>Nie udało się przekazać nowej kolejności do foobara2000: {error}</translation>
     </message>
@@ -2857,18 +2952,18 @@ Nagrywanie zastępuje to, co jest na płycie, i nie da się tego cofnąć. Upewn
         <translation type="vanished">W foobarze2000 znalazło się {landed} z {expected} ścieżek, więc to, co zostałoby nagrane, nie zgadza się już z tą listą. Nic nie zostało nagrane.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="802"/>
+        <location filename="../panels/record_dialog.py" line="837"/>
         <source>foobar2000 could not be found, so its playlist cannot be reordered. Set its location in Window &gt; Settings..., or put the playlist in the order you want in foobar2000 itself.</source>
         <translation>Nie znaleziono foobara2000, więc nie da się zmienić kolejności jego playlisty. Podaj jego lokalizację w Okno &gt; Ustawienia... albo ustaw kolejność bezpośrednio w foobarze2000.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="818"/>
-        <location filename="../panels/record_dialog.py" line="1178"/>
+        <location filename="../panels/record_dialog.py" line="853"/>
+        <location filename="../panels/record_dialog.py" line="1213"/>
         <source>MDRem: {error}</source>
         <translation>MDRem: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="827"/>
+        <location filename="../panels/record_dialog.py" line="862"/>
         <source>The deck was told to start recording.
 
 Is it now showing record-pause (REC lit, paused)?</source>
@@ -2877,39 +2972,39 @@ Is it now showing record-pause (REC lit, paused)?</source>
 Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="837"/>
+        <location filename="../panels/record_dialog.py" line="872"/>
         <source>Cancelled -- the deck was not recording.</source>
         <translation>Anulowano — magnetofon nie nagrywał.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="879"/>
+        <location filename="../panels/record_dialog.py" line="914"/>
         <source>Lost contact with foobar2000: {error}</source>
         <translation>Utracono łączność z foobar2000: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="954"/>
+        <location filename="../panels/record_dialog.py" line="989"/>
         <source>Disc {disc} of {discs}, track {index} of {count}: {title} -- {elapsed} of {total}</source>
         <translation>Płyta {disc} z {discs}, ścieżka {index} z {count}: {title} — {elapsed} z {total}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="966"/>
+        <location filename="../panels/record_dialog.py" line="1001"/>
         <source>Recording {index} of {count}: {title} -- {elapsed} of {total}</source>
         <translation>Nagrywanie {index} z {count}: {title} — {elapsed} z {total}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="998"/>
-        <location filename="../panels/record_dialog.py" line="1072"/>
-        <location filename="../panels/record_dialog.py" line="1193"/>
+        <location filename="../panels/record_dialog.py" line="1033"/>
+        <location filename="../panels/record_dialog.py" line="1107"/>
+        <location filename="../panels/record_dialog.py" line="1228"/>
         <source>Close</source>
         <translation>Zamknij</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="990"/>
+        <location filename="../panels/record_dialog.py" line="1025"/>
         <source>Playback stopped at track {reached} of {count}, so the disc is incomplete. Titling it now would name tracks that were never recorded.</source>
         <translation>Odtwarzanie zatrzymało się na utworze {reached} z {count}, więc płyta jest niekompletna. Nazwanie jej teraz oznaczałoby tytuły dla utworów, które nie zostały nagrane.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="1000"/>
+        <location filename="../panels/record_dialog.py" line="1035"/>
         <source>Recording finished. The titles can be written now.</source>
         <translation>Nagrywanie zakończone. Można teraz zapisać tytuły.</translation>
     </message>
@@ -2918,12 +3013,12 @@ Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
         <translation type="vanished">Szukam okładki...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="1155"/>
+        <location filename="../panels/record_dialog.py" line="1190"/>
         <source>Write the album and track titles onto the disc now?</source>
         <translation>Zapisać teraz tytuł albumu i nazwy utworów na płycie?</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="1172"/>
+        <location filename="../panels/record_dialog.py" line="1207"/>
         <source>MDRem: not connected</source>
         <translation>MDRem: brak połączenia</translation>
     </message>

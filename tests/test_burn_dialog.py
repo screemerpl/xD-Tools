@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 from mdtools import app_settings, cdburn, decode, foobar
 from mdtools.app_window import MainWindow
-from mdtools.panels.burn_dialog import BurnDialog, _BurnWorker
+from mdtools.panels.burn_dialog import COL_ARTIST, COL_STATUS, COL_TITLE, BurnDialog, _BurnWorker
 from mdtools.project import MEDIUM_CD, MEDIUM_MD
 
 
@@ -53,8 +53,8 @@ def test_each_track_gets_a_verdict_before_the_button(qt_app, tmp_path, burnable,
     sources = _sources(tmp_path, 1) + [(_write_wav(tmp_path / "hi.wav", rate=48000), "Hi-res", "A")]
     dialog = BurnDialog(sources, album="Album", artist="Artist")
 
-    assert dialog.table.item(0, 3).text() == "OK"
-    assert "44100" in dialog.table.item(1, 3).text()
+    assert dialog.table.item(0, COL_STATUS).text() == "OK"
+    assert "44100" in dialog.table.item(1, COL_STATUS).text()
     assert dialog.burn_button.isEnabled() is False, "a disc that cannot be written must not offer to be"
 
 
@@ -64,7 +64,7 @@ def test_a_track_that_will_be_converted_says_so_without_blocking_the_burn(qt_app
 
     dialog = BurnDialog(sources, album="Album", artist="Artist")
 
-    assert "converted" in dialog.table.item(1, 3).text()
+    assert "converted" in dialog.table.item(1, COL_STATUS).text()
     assert dialog.burn_button.isEnabled() is True
 
 
@@ -99,8 +99,8 @@ def test_a_missing_tool_does_not_hide_what_the_plan_says(qt_app, tmp_path, monke
 
 def test_an_edited_title_is_what_reaches_the_disc(qt_app, tmp_path, burnable):
     dialog = BurnDialog(_sources(tmp_path, 2), album="Album", artist="Artist")
-    dialog.table.item(0, 0).setText("Corrected Title")
-    dialog.table.item(0, 1).setText("Corrected Artist")
+    dialog.table.item(0, COL_TITLE).setText("Corrected Title")
+    dialog.table.item(0, COL_ARTIST).setText("Corrected Artist")
 
     plan = dialog.build_plan()
 
@@ -114,7 +114,7 @@ def test_an_emptied_title_falls_back_to_the_filename(qt_app, tmp_path, burnable)
     """A disc of blank track names is worse than one named after its
     files."""
     dialog = BurnDialog(_sources(tmp_path, 1), album="Album", artist="Artist")
-    dialog.table.item(0, 0).setText("   ")
+    dialog.table.item(0, COL_TITLE).setText("   ")
 
     assert dialog.build_plan().tracks[0].title == "01"
 

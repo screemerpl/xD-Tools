@@ -41,6 +41,41 @@ MIN_DISC_MINUTES = 5
 MAX_DISC_MINUTES = 320  # MDLP's LP4, the longest any of these media manage
 
 
+def leading_number(value) -> int | None:
+    """The number a tag starts with, or None.
+
+    Tags say `1`, `01` and `1/2` for the same thing, and foobar2000 renders
+    a field the file does not have as `?` -- so this reads the digits at the
+    front and gives up on anything else rather than guessing. Lives here
+    rather than in foobar.py because the same tags are read straight out of
+    the files too, and that side has no business importing a REST client."""
+    digits = ""
+    for char in str(value).strip():
+        if not char.isdigit():
+            break
+        digits += char
+    return int(digits) if digits else None
+
+
+def breaks_from_disc_numbers(numbers: list[int | None]) -> list[int]:
+    """Where a run of tracks changes disc -- indices, in the form
+    `plan_from_breaks()` takes.
+
+    Empty when they describe a single disc, which is also what an untagged
+    album looks like. Assumes the tracks are already in disc order: a break
+    is simply where the number changes, so an interleaved list would
+    produce one at every other track."""
+    breaks: list[int] = []
+    previous: int | None = None
+    for index, number in enumerate(numbers):
+        if number is None:
+            continue
+        if previous is not None and number != previous and index > 0:
+            breaks.append(index)
+        previous = number
+    return breaks
+
+
 @dataclass
 class DiscPlan:
     """One disc: which tracks, and where they sit in the whole album."""

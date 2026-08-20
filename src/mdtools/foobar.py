@@ -40,6 +40,7 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
+from mdtools.multidisc import breaks_from_disc_numbers, leading_number
 from mdtools.project import ProjectMetadata, Track, apply_compilation_naming
 
 DEFAULT_BASE_URL = "http://localhost:8880"
@@ -530,20 +531,6 @@ def replace_current_playlist(
     raise FoobarError("foobar2000 would not keep the tracks in the order they were given")
 
 
-def leading_number(value: str) -> int | None:
-    """The number a tag starts with, or None.
-
-    Tags say `1`, `01` and `1/2` for the same thing, and foobar2000 renders
-    a field the file does not have as `?` -- so this reads the digits at the
-    front and gives up on anything else rather than guessing."""
-    digits = ""
-    for char in str(value).strip():
-        if not char.isdigit():
-            break
-        digits += char
-    return int(digits) if digits else None
-
-
 def sort_by_disc_and_track(items: list[PlaylistItem]) -> list[PlaylistItem]:
     """The album's own order: disc first, then track.
 
@@ -586,21 +573,10 @@ def disc_breaks(items: list[PlaylistItem]) -> list[int]:
     """Where the files themselves say one disc ends and the next begins --
     indices into `items`, in the form multidisc.plan_from_breaks() takes.
 
-    Empty when they describe a single disc, which is also what an untagged
-    playlist looks like. Assumes the list is already in disc order (see
-    sort_by_disc_and_track): a break is simply where the disc number
-    changes, so an interleaved list would produce one at every other
-    track."""
-    breaks: list[int] = []
-    previous: int | None = None
-    for index, item in enumerate(items):
-        disc = leading_number(item.disc_number)
-        if disc is None:
-            continue
-        if previous is not None and disc != previous and index > 0:
-            breaks.append(index)
-        previous = disc
-    return breaks
+    Assumes the list is already in disc order (see sort_by_disc_and_track);
+    the rule itself is multidisc's, since the same question is asked of
+    files on disk by the burning side."""
+    return breaks_from_disc_numbers([leading_number(item.disc_number) for item in items])
 
 
 def total_seconds(items: list[PlaylistItem]) -> int:

@@ -44,6 +44,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from mdtools.embedded_cover import flac_tags
+from mdtools.multidisc import breaks_from_disc_numbers, leading_number
 
 # What foobar2000 plays out of the box, plus the common lossless oddities.
 # A generous list rather than a strict one: a file it turns out not to
@@ -232,6 +233,29 @@ def _commonest(values: list[str]) -> str:
 def _year_from(value: str) -> int | None:
     match = re.search(r"(\d{4})", value or "")
     return int(match.group(1)) if match else None
+
+
+def disc_numbers(paths: list[Path | str]) -> list[int | None]:
+    """The disc each file says it belongs to, or None where it says nothing.
+
+    Only FLAC is read -- the same limit album_from_folder() already works
+    under, and for the same reason: this project owns a FLAC comment parser
+    and no tag library, so anything else honestly reports nothing rather
+    than being read badly."""
+    numbers: list[int | None] = []
+    for path in paths:
+        path = Path(path)
+        tags = flac_tags(path) if path.suffix.lower() == ".flac" else {}
+        numbers.append(leading_number(tags.get("DISCNUMBER", "")))
+    return numbers
+
+
+def disc_breaks(paths: list[Path | str]) -> list[int]:
+    """Where these files say one disc ends and the next begins.
+
+    Empty for a single-disc album and for anything untagged, so a caller
+    can use it without asking whether it applies."""
+    return breaks_from_disc_numbers(disc_numbers(paths))
 
 
 def total_bytes(paths: list[Path]) -> int:

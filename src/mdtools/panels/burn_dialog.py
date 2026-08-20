@@ -52,9 +52,22 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mdtools import app_settings, cdburn, cdrip, embedded_cover, mixtape_cover
+from mdtools import (
+    app_settings,
+    audio_folder,
+    cdburn,
+    cdrip,
+    decode,
+    embedded_cover,
+    mixtape_cover,
+    multidisc,
+)
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
 from mdtools.project import ProjectMetadata, Track
+
+# The track table's columns. Named because a Disc column was put in front
+# of the other four, so every read of a row moved along by one.
+COL_DISC, COL_TITLE, COL_ARTIST, COL_LENGTH, COL_STATUS = range(5)
 
 # Decoding is a small fraction of a burn in wall-clock terms, but it is the
 # part that happens before anything irreversible, so it gets a visible share
@@ -178,6 +191,12 @@ class BurnDialog(QDialog):
         self._sources = [(Path(path), title, track_artist) for path, title, track_artist in sources]
         self._worker: _BurnWorker | None = None
         self._burning = False
+        # One plan per disc, and which of them is on the drive now. A list
+        # of one for an ordinary album, so the single-disc path is the same
+        # code rather than a special case.
+        self._plans: list[cdburn.BurnPlan] = []
+        self._disc = 0
+        self._advance_when_finished = False
         self.result_metadata: ProjectMetadata | None = None
 
         layout = QVBoxLayout(self)
@@ -244,18 +263,21 @@ class BurnDialog(QDialog):
         return row
 
     def _build_tracks_table(self) -> QWidget:
-        self.table = QTableWidget(len(self._sources), 4)
+        self.table = QTableWidget(len(self._sources), 5)
         self.table.setHorizontalHeaderLabels(
-            [self.tr("Title"), self.tr("Artist"), self.tr("Length"), self.tr("Status")]
+            [self.tr("Disc"), self.tr("Title"), self.tr("Artist"), self.tr("Length"), self.tr("Status")]
         )
         header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(COL_TITLE, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(COL_ARTIST, QHeaderView.ResizeMode.Stretch)
+        # Nothing to say until there is more than one disc, exactly as in
+        # the recording dialog's own table.
+        self.table.setColumnHidden(COL_DISC, True)
 
         for row, (path, title, artist) in enumerate(self._sources):
-            self.table.setItem(row, 0, QTableWidgetItem(title or path.stem))
-            self.table.setItem(row, 1, QTableWidgetItem(artist))
-            for column in (2, 3):
+            self.table.setItem(row, COL_TITLE, QTableWidgetItem(title or path.stem))
+            self.table.setItem(row, COL_ARTIST, QTableWidgetItem(artist))
+            for column in (COL_DISC, COL_LENGTH, COL_STATUS):
                 item = QTableWidgetItem("")
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self.table.setItem(row, column, item)
@@ -286,6 +308,28 @@ class BurnDialog(QDialog):
         self.eject_check = QCheckBox(self.tr("Eject when finished"))
         self.eject_check.setChecked(True)
         form.addRow("", self.eject_check)
+
+        self.multi_check = QCheckBox(self.tr("Burn across several discs"))
+        self.multi_check.setToolTip(
+            self.tr(
+                "For an album longer than one disc. Each disc is written and ejected on its own, and you "
+                "are asked to put the next blank one in."
+            )
+        )
+        self.multi_check.toggled.connect(lambda _checked: self._rebuild_plan())
+        form.addRow("", self.multi_check)
+
+        self.disc_minutes_spin = QSpinBox()
+        self.disc_minutes_spin.setRange(multidisc.MIN_DISC_MINUTES, 99)
+        self.disc_minutes_spin.setValue(
+            int(cdburn.DEFAULT_CAPACITY_SECTORS / cdburn.SECTORS_PER_SECOND / 60)
+        )
+        self.disc_minutes_spin.setSuffix(self.tr(" min"))
+        self.disc_minutes_spin.setToolTip(
+            self.tr("What one blank holds: 80 minutes on an ordinary CD-R, 74 on an older one.")
+        )
+        self.disc_minutes_spin.valueChanged.connect(lambda _value: self._rebuild_plan())
+        form.addRow(self.tr("One disc holds"), self.disc_minutes_spin)
         return box
 
     def _ensure_cover(self) -> None:
@@ -356,51 +400,137 @@ class BurnDialog(QDialog):
         """
         sources = []
         for row, (path, _title, _artist) in enumerate(self._sources):
-            title = self.table.item(row, 0).text().strip() if self.table.item(row, 0) else ""
-            artist = self.table.item(row, 1).text().strip() if self.table.item(row, 1) else ""
+            title_item = self.table.item(row, COL_TITLE)
+            artist_item = self.table.item(row, COL_ARTIST)
+            title = title_item.text().strip() if title_item else ""
+            artist = artist_item.text().strip() if artist_item else ""
             sources.append((path, title or path.stem, artist))
         return sources
 
+    def capacity_sectors(self) -> int:
+        return int(self.disc_minutes_spin.value() * 60 * cdburn.SECTORS_PER_SECOND)
+
     def build_plan(self) -> cdburn.BurnPlan:
+        """The whole album as one disc -- what a single-disc burn writes,
+        and the measuring stick the split below is worked out from."""
         return cdburn.build_burn_plan(
             self.track_sources(),
             album=self.album_edit.text().strip(),
             artist=self.artist_edit.text().strip(),
+            capacity_sectors=self.capacity_sectors(),
         )
 
+    def build_disc_plans(self) -> list[cdburn.BurnPlan]:
+        """One plan per disc -- a list of one for an ordinary album.
+
+        The files are measured once and those durations reused for every
+        per-disc plan (`analyze` is memoised across the lot), so splitting
+        costs no extra reads.
+
+        Where the split falls comes from the files themselves when they say
+        so: a two-disc rip carries DISCNUMBER, and honouring it beats
+        balancing by running time, which would put the break wherever the
+        arithmetic preferred. Only when they say nothing is the time-based
+        split used.
+        """
+        sources = self.track_sources()
+        measured: dict[Path, object] = {}
+
+        def analyze(path):
+            path = Path(path)
+            if path not in measured:
+                measured[path] = decode.analyze(path)
+            return measured[path]
+
+        capacity = self.capacity_sectors()
+        album = self.album_edit.text().strip()
+        artist = self.artist_edit.text().strip()
+        whole = cdburn.build_burn_plan(
+            sources, album=album, artist=artist, capacity_sectors=capacity, analyze=analyze
+        )
+        if not self.multi_check.isChecked():
+            return [whole]
+
+        tracks = [
+            Track(title=track.title, time_seconds=track.seconds, artist=track.artist)
+            for track in whole.tracks
+        ]
+        declared = audio_folder.disc_breaks([path for path, _title, _artist in sources])
+        # The lead-in is part of what a disc holds, so the music has that
+        # much less room -- the same arithmetic BurnPlan.total_sectors does.
+        usable = (capacity - cdburn.LEAD_IN_SECTORS) / cdburn.SECTORS_PER_SECOND
+        split = (
+            multidisc.plan_from_breaks(tracks, declared, usable)
+            if declared
+            else multidisc.split_discs(tracks, usable)
+        )
+        if split.count <= 1:
+            return [whole]
+
+        return [
+            cdburn.build_burn_plan(
+                sources[disc.first_index : disc.last_index + 1],
+                album=f"{album} [{disc.number}/{split.count}]".strip(),
+                artist=artist,
+                capacity_sectors=capacity,
+                analyze=analyze,
+            )
+            for disc in split.discs
+        ]
+
     def _rebuild_plan(self) -> None:
-        self.plan = self.build_plan()
-        self._show_plan(self.plan)
+        self._plans = self.build_disc_plans()
+        # Kept: "the plan" has always meant the disc about to be written,
+        # and for an ordinary album nothing about this has changed.
+        self.plan = self._plans[0]
+        self._show_plans(self._plans)
 
-    def _show_plan(self, plan: cdburn.BurnPlan) -> None:
-        for row, track in enumerate(plan.tracks):
-            if row >= self.table.rowCount():
-                break
-            self.table.item(row, 2).setText(_mmss(track.seconds) if track.properties else "-")
-            self.table.item(row, 3).setText(self._status_for(plan, row + 1))
+    def _show_plans(self, plans: list[cdburn.BurnPlan]) -> None:
+        several = len(plans) > 1
+        self.table.setColumnHidden(COL_DISC, not several)
+        row = 0
+        for index, plan in enumerate(plans, start=1):
+            for number, track in enumerate(plan.tracks, start=1):
+                if row >= self.table.rowCount():
+                    break
+                self.table.item(row, COL_DISC).setText(str(index) if several else "")
+                self.table.item(row, COL_LENGTH).setText(
+                    _mmss(track.seconds) if track.properties else "-"
+                )
+                self.table.item(row, COL_STATUS).setText(self._status_for(plan, number))
+                row += 1
 
-        lines = [
+        lines = []
+        for index, plan in enumerate(plans, start=1):
             # Phrased to avoid a bare "{count} tracks": Polish alone has
             # three plural forms, and a label is not worth a plural rule.
-            self.tr("Tracks: {count} -- {length} of an available {capacity}").format(
+            line = self.tr("Tracks: {count} -- {length} of an available {capacity}").format(
                 count=len(plan.tracks),
                 length=_mmss(plan.total_seconds),
                 capacity=_mmss(plan.capacity_sectors / cdburn.SECTORS_PER_SECOND),
             )
-        ]
-        for problem in plan.problems_for(0):
-            lines.append(self._describe(problem))
+            if several:
+                line = self.tr("Disc {number}: {summary}").format(number=index, summary=line)
+            lines.append(line)
+            for problem in plan.problems_for(0):
+                lines.append(self._describe(problem))
 
-        dropped = self._cd_text_losses(plan)
+        dropped: list[str] = []
+        for plan in plans:
+            for character in self._cd_text_losses(plan):
+                if character not in dropped:
+                    dropped.append(character)
         if dropped:
             lines.append(
-                self.tr("CD-Text cannot carry these characters and they will be left out: {characters}").format(
-                    characters=" ".join(dropped)
-                )
+                self.tr(
+                    "CD-Text cannot carry these characters and they will be left out: {characters}"
+                ).format(characters=" ".join(dropped))
             )
 
-        self.summary_label.setText("\n".join(lines))
-        self.burn_button.setEnabled(plan.can_burn and not cdburn.missing_tools())
+        self.summary_label.setText(chr(10).join(lines))
+        self.burn_button.setEnabled(
+            all(plan.can_burn for plan in plans) and not cdburn.missing_tools()
+        )
 
     def _status_for(self, plan: cdburn.BurnPlan, track_number: int) -> str:
         entries = plan.problems_for(track_number) + plan.notes_for(track_number)
@@ -451,7 +581,12 @@ class BurnDialog(QDialog):
         designed for the disc that was just written."""
         year_text = self.year_edit.text().strip()
         sources = self.track_sources()
-        plan = self.plan if getattr(self, "plan", None) else self.build_plan()
+        # Every disc's tracks, end to end: the label describes the album,
+        # which is all of it, exactly as the multi-disc recording flow hands
+        # back the whole record rather than one disc of it.
+        measured = [track for plan in self._plans for track in plan.tracks]
+        if not measured:
+            measured = self.build_plan().tracks
         return ProjectMetadata(
             album=self.album_edit.text().strip(),
             artist=self.artist_edit.text().strip(),
@@ -459,7 +594,7 @@ class BurnDialog(QDialog):
             tracks=[
                 Track(
                     title=title,
-                    time_seconds=int(plan.tracks[index].seconds) if index < len(plan.tracks) else None,
+                    time_seconds=int(measured[index].seconds) if index < len(measured) else None,
                     artist=artist,
                 )
                 for index, (_path, title, artist) in enumerate(sources)
@@ -469,10 +604,9 @@ class BurnDialog(QDialog):
 
     def _start(self) -> None:
         self._rebuild_plan()
-        if not self.plan.can_burn:
+        if not all(plan.can_burn for plan in self._plans):
             return
-        device = self.selected_device()
-        if not device:
+        if not self.selected_device():
             QMessageBox.warning(
                 self,
                 self.tr("Burn Audio CD"),
@@ -481,14 +615,21 @@ class BurnDialog(QDialog):
             return
 
         simulate = self.simulate_check.isChecked()
-        question = (
-            self.tr("Run through the whole burn with the laser off? Nothing will be written to the disc.")
-            if simulate
-            else self.tr(
+        if simulate:
+            question = self.tr(
+                "Run through the whole burn with the laser off? Nothing will be written to the disc."
+            )
+        elif len(self._plans) > 1:
+            question = self.tr(
+                "Write this album to {discs} discs, one after another?\n\nEach is written and ejected on "
+                "its own and you will be asked for the next blank. A CD-R cannot be rewritten: once this "
+                "starts, a disc is either finished or wasted."
+            ).format(discs=len(self._plans))
+        else:
+            question = self.tr(
                 "Write {count} tracks to the disc in the drive?\n\nA CD-R cannot be rewritten: once this "
                 "starts, the disc is either finished or wasted."
             ).format(count=len(self.plan.tracks))
-        )
         if (
             QMessageBox.question(
                 self,
@@ -501,7 +642,20 @@ class BurnDialog(QDialog):
         ):
             return
 
+        self._disc = 0
+        self._burn_current_disc()
+
+    def _burn_current_disc(self) -> None:
+        """Starts one disc. Called once for an ordinary album, and once per
+        disc for a long one."""
+        plan = self._plans[self._disc]
+        several = len(self._plans) > 1
+        # A folder per disc: track numbering restarts on each, so one shared
+        # folder would leave a longer previous disc's scratch WAVs sitting
+        # beside a shorter one's.
         work_dir = Path(app_settings.cd_rip_folder()) / "burn"
+        if several:
+            work_dir = work_dir / f"disc{self._disc + 1}"
         try:
             cdrip.ensure_folder(work_dir)
         except cdrip.CdRipError as exc:
@@ -509,13 +663,21 @@ class BurnDialog(QDialog):
             return
 
         self._set_running(True)
+        if several:
+            self.stage_label.setText(
+                self.tr("Disc {number} of {count}...").format(
+                    number=self._disc + 1, count=len(self._plans)
+                )
+            )
         self._worker = _BurnWorker(
-            self.plan,
-            device,
+            plan,
+            self.selected_device(),
             work_dir,
             speed=self.speed_spin.value(),
-            simulate=simulate,
-            eject=self.eject_check.isChecked(),
+            simulate=self.simulate_check.isChecked(),
+            # Every disc but the last has to come out for the next one to go
+            # in, so the checkbox only governs the final one.
+            eject=self.eject_check.isChecked() or self._disc + 1 < len(self._plans),
             parent=self,
         )
         self._worker.stage.connect(self._on_stage)
@@ -543,6 +705,8 @@ class BurnDialog(QDialog):
             self.speed_spin,
             self.simulate_check,
             self.eject_check,
+            self.multi_check,
+            self.disc_minutes_spin,
             self.burn_button,
         ):
             widget.setEnabled(not running)
@@ -563,11 +727,23 @@ class BurnDialog(QDialog):
 
     def _on_succeeded(self) -> None:
         self.result_metadata = self.metadata()
+        if self._disc + 1 < len(self._plans):
+            # Asked for from _on_worker_finished, not here: this thread is
+            # still running, and starting the next disc now would have its
+            # own worker cleared away the moment this one finishes.
+            self._advance_when_finished = True
+            return
         if self.simulate_check.isChecked():
             QMessageBox.information(
                 self,
                 self.tr("Burn Audio CD"),
                 self.tr("The test run finished without an error. Nothing was written to the disc."),
+            )
+        elif len(self._plans) > 1:
+            QMessageBox.information(
+                self,
+                self.tr("Burn Audio CD"),
+                self.tr("All {count} discs are written.").format(count=len(self._plans)),
             )
         else:
             QMessageBox.information(
@@ -580,6 +756,34 @@ class BurnDialog(QDialog):
     def _on_worker_finished(self) -> None:
         self._worker = None
         self._set_running(False)
+        if not self._advance_when_finished:
+            return
+        self._advance_when_finished = False
+        if not self._ask_for_next_disc():
+            self.stage_label.setText(
+                self.tr("Stopped after disc {number}. The discs already written are finished.").format(
+                    number=self._disc + 1
+                )
+            )
+            return
+        self._disc += 1
+        self.progress_bar.setValue(0)
+        self._burn_current_disc()
+
+    def _ask_for_next_disc(self) -> bool:
+        return (
+            QMessageBox.question(
+                self,
+                self.tr("Burn Audio CD"),
+                self.tr(
+                    "Disc {done} of {count} is written and ejected.\n\nPut the next blank disc in the "
+                    "drive and close the tray, then continue with disc {next}."
+                ).format(done=self._disc + 1, count=len(self._plans), next=self._disc + 2),
+                QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Ok,
+            )
+            == QMessageBox.StandardButton.Ok
+        )
 
     def reject(self) -> None:
         """Stopping mid-burn is a decision with a physical cost, so it is

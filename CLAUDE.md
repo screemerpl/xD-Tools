@@ -75,7 +75,8 @@ src/mdtools/
   audio_folder.py           which files in a folder are the album, and in what order (no Qt)
   album_sort.py             one folder of downloads split into one folder per album (no Qt)
   tape.py                   where a cassette is turned over: sides, leader tape, lengths (no Qt)
-  multidisc.py              where an album too long for one disc is cut into several (no Qt)
+  multidisc.py              where an album too long for one disc is cut into several, and
+                            what a disc-number tag means (no Qt)
   telegram_bot.py           Telethon behind one class: sign-in, chat, downloads (experimental)
   translate.py              MyMemory, for showing a bot's message in the user's language
   auto_layout.py            places cover art on a disc label and the logo on its slider (no Qt UI beyond items)
@@ -2888,6 +2889,61 @@ failure. A burn that finishes correctly with a motionless progress bar is a
 cosmetic problem; one that stops because the output read differently would
 be a wasted disc. `build_windows.ps1` needed no change for the new binaries
 -- it already `--add-data`s the whole `bin/win64` folder.
+
+**A set of discs, on both sides of the CD flow.** The same `multidisc.py`
+split now drives three media, and the two CD halves each got the half of it
+they needed:
+
+**Burning across several CD-Rs** -- "Burn across several discs" on
+`BurnDialog`, plus "One disc holds" (80 minutes, or 74 for an older blank;
+stated rather than guessed, exactly as the MiniDisc side states its
+recording mode). `build_disc_plans()` returns one `BurnPlan` per disc --
+a list of one for an ordinary album, so nothing about a single-disc burn
+changed -- and the burn runs them in order, ejecting between discs
+whatever the Eject checkbox says, because the tray has to open for the next
+blank to go in. Details worth keeping:
+- **The files are measured once.** `decode.analyze` is memoised across the
+  whole call, so splitting an album costs no extra reads of it.
+- **The split leaves room for the lead-in**, since `BurnPlan.total_sectors`
+  counts one: splitting against the raw stated capacity would produce discs
+  that then do not fit.
+- **Every disc's CD-Text says which disc it is** (`[1/2]` appended to the
+  album), for the same reason the MiniDisc titles do: two discs of one
+  album carrying identical text are two discs nobody can tell apart.
+- **Each disc gets its own scratch folder.** Track numbering restarts on
+  every disc, so one shared folder would leave a longer disc's WAVs sitting
+  beside a shorter one's.
+- **The next disc is started from `_on_worker_finished`, never from
+  `_on_succeeded`** -- the worker is still running there, and its own
+  `finished` would clear away the newly started one. The recording flow's
+  multi-disc chain has the same shape for the same reason.
+- **`can_burn` is checked for every disc**, not for the album: the whole
+  thing overrunning is the point, and each disc of it still has to fit.
+
+**Ripping a set as one album** -- "Rip several discs as one album" on
+`CdRipDialog`. Each disc is read, identified and ripped on its own, and the
+dialog then asks for the next; what carries across is what makes it one
+album rather than several:
+- **`cdrip.build_rip_plan()` takes a `disc_number`**, which writes
+  DISCNUMBER *and* puts the disc in front of the filename. Both are
+  load-bearing: the tag is what puts the album back into its own order
+  afterwards (`foobar.sort_by_disc_and_track`, and `audio_folder.disc_breaks`
+  for the burn), and the prefix is what stops disc two's `01 - ...` landing
+  on top of disc one's in the folder they share. A single-disc rip passes
+  nothing and is byte-for-byte what it was.
+- **One folder for the set**, fixed by the first disc. MusicBrainz
+  routinely identifies the second disc as its own release ("... [Disc 2]"),
+  and a folder per disc would be two albums.
+- **The album, artist and year are put back after each identification**,
+  for the same reason. The *titles* are the new disc's own -- those are
+  what the lookup is for.
+- **`clean_stale_rip_folders()` runs only before the first disc.** It keeps
+  the folder about to be written, so running it again would in principle be
+  harmless -- but it is the routine that deletes rips, and pointing it at a
+  folder that already holds half the album is not a risk worth taking.
+- **The playlist is loaded with every disc's files**, not the last disc's:
+  `_RipWorker` takes `playlist_paths` for exactly this, and what gets
+  recorded afterwards is the album.
 
 **`BurnDialog` is `RecordDialog`'s sibling, and the two differences are
 both consequences of the disc being one-shot.** Same editable
