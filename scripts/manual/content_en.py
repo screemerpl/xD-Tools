@@ -8,7 +8,7 @@ TITLE = "xD-Tools"
 SUBTITLE = "Retro Media Studio - User Manual"
 TITLE_NOTE = "Designing labels, recording MiniDiscs and cassettes, burning CD-Rs, and titling discs"
 COVER_CAPTION = "What talks to what: commands over USB, keys over infrared, audio over S/PDIF."
-VERSION_LINE = "Version 0.3.0"
+VERSION_LINE = "Version 0.3.1"
 AUTHOR_LINE = 'Artur "Screemer" Jakubowicz'
 DATE_LINE = "August 2026"
 TOC_TITLE = "Contents"
@@ -448,8 +448,8 @@ BOOK = [
                 "head": ["Group", "Keys"],
                 "rows": [
                     ["Transport", "Previous, Play, Next, scan back, Pause, scan forward, Stop, Power, Eject."],
-                    ["Tracks", "1 to 10, selected directly. Higher numbers exist in the firmware but have "
-                               "no button here - use >25 on the deck."],
+                    ["Tracks", "1 to 10, selected directly - as many as the physical remote has keys "
+                               "for. 11 to 25 are in extended mode, below."],
                     ["Play Mode", "Continuous, Shuffle, Program, Repeat, A-B, >25."],
                     ["Display", "Display, Scroll."],
                     ["Titling", "Name, Enter, Delete, Cancel."],
@@ -465,6 +465,49 @@ BOOK = [
             {"tip": "**Record pressed while the deck is already recording adds a track mark.** That is how "
                     "the automatic recording splits a gapless album, and you can use it by hand the same "
                     "way."},
+            {"h2": "Extended mode"},
+            {"p": "The window above is the physical remote, key for key. Tick **Extended mode** and it "
+                  "grows the rest of what the adapter can send - codes that exist, and were verified "
+                  "against a real deck, but that no key on the plastic remote reaches. The choice is "
+                  "remembered, so the window opens the way you left it."},
+            {"fig": ("remote-extended", "Extended mode. Tracks up to 25, the deck's own character entry, "
+                                        "and the two keys that edit the disc.")},
+            {"table": {
+                "head": ["Added", "What it is"],
+                "rows": [
+                    ["Tracks 11-25", "One code each, so they are one press like the first ten. Past 25 "
+                                     "the number is typed rather than pressed, which is what titling "
+                                     "does on its own."],
+                    ["Char, Num", "The deck's own character entry - switching its character sets and "
+                                  "picking with the jog dial. This app bypasses that by sending "
+                                  "character codes directly, so these are here for completeness."],
+                    ["Clear 2", "One of three keys the deck's code table calls Clear. It does nothing "
+                                "in name-edit mode, wherever the cursor is; it most likely clears a "
+                                "play program."],
+                    ["D.Pre", "Recognised by the deck as a recording command. Which one of that group "
+                              "does what has never been told apart."],
+                    ["Erase Track, Divide", "These edit the disc itself - erasing the current track, or "
+                                            "splitting it in two."],
+                ],
+            }},
+            {"warn": "**Erase Track and Divide change what is on the disc.** The deck asks on its own "
+                     "display first and does nothing until Enter, so Cancel backs out - but read the "
+                     "display before pressing Enter, because nothing here can undo it."},
+            {"h2": "Typing on your own keyboard"},
+            {"p": "The RM-D10P this stands in for is a keyboard, and in extended mode so is this window: "
+                  "with it open, every letter, digit and symbol you type goes straight to the deck. There "
+                  "is no text box and no on-screen keyboard on purpose - the remote has keys because a "
+                  "deck has none, and the computer running this already has better ones."},
+            {"p": "Put the deck into name-edit mode first: press **Name**, or select a track and then "
+                  "**Name**. Then type. **Backspace** deletes, **Enter** commits the title, and the "
+                  "**arrow keys** move the cursor along the field."},
+            {"note": "Accented letters lose their marks on the way, exactly as they do when titles are "
+                     "written from a project - `ł` arrives as `l`. A character with no Latin equivalent "
+                     "at all is refused and said so on the status line, rather than being sent as "
+                     "something else."},
+            {"tip": "Typing is paced to what the deck can take - about three or four keypresses a second. "
+                    "Type faster than that and it keeps up by waiting, because two presses arriving too "
+                    "close together are read as one key held down."},
         ],
     },
     # ------------------------------------------------------------------
@@ -513,9 +556,12 @@ BOOK = [
             {"warn": "**A deck holds edited titles in volatile memory until the disc is ejected.** Pull "
                      "the power first and everything you just wrote is gone. The dialog offers to eject "
                      "for you when it is done - say yes."},
-            {"h2": "Tracks past 25"},
-            {"p": "The firmware's key table stops at track 25, so there is no way to select a higher track "
-                  "on the deck at all. Those titles are listed as skipped rather than silently dropped."},
+            {"h2": "Tracks above 25"},
+            {"p": "The remote itself has number keys only up to 25, but the adapter types a higher number "
+                  "in rather than pressing one key, so tracks 26 to 99 are written like any other. The "
+                  "deck's number field commits on the second digit, so a track past 99 cannot be selected "
+                  "at all - those titles are listed as skipped rather than silently dropped, and only an "
+                  "LP4 disc ever gets that long."},
         ],
     },
     # ------------------------------------------------------------------
@@ -610,6 +656,45 @@ BOOK = [
             {"p": "An MD holds 80 minutes in SP. xD-Tools warns when the playlist is longer than that, but "
                   "it can only warn - LP2 and LP4 have to be set on the deck itself, and there is no way "
                   "to read back which mode it is in."},
+            {"h2": "An album that takes more than one disc"},
+            {"p": "A double album does not fit on a MiniDisc, and a MiniDisc cannot be turned over the "
+                  "way a cassette can. **Record across several discs** records it a disc at a time "
+                  "instead: one disc, its titles, eject, the next blank, and so on."},
+            {"p": "Tick it and the track list gains a **Disc** column showing where the album is cut, "
+                  "with a line underneath saying how full each disc ends up. **One disc holds** is the "
+                  "number that decides it - 80 minutes in SP, 160 in LP2. xD-Tools cannot read which "
+                  "mode the deck is in, so that number is yours to state."},
+            {"ol": [
+                "Each disc is recorded exactly as a single one is: armed, confirmed, played, marked.",
+                "**Two seconds after the last track of that disc, the titles go out by themselves** - "
+                "no question, no button. Nobody sits through forty minutes of album, and a MiniDisc "
+                "keeps an edited title list in memory only until the disc is ejected.",
+                "The disc is ejected, and xD-Tools asks you to put the next blank one in.",
+                "The last disc finishes the same way and the run ends.",
+            ]},
+            {"note": "Each disc is titled with the album's name and **[1/2]**, **[2/2]** after it. Two "
+                     "discs of one album titled identically are two discs nobody can tell apart on a "
+                     "shelf. The tracks on each are numbered from one, which is how the deck numbers "
+                     "them anyway."},
+            {"warn": "The preview that Upload Tracklist normally shows is given up here - there is "
+                     "nobody at the machine to read it. That is why every title, and every character "
+                     "the deck cannot show, is on screen in this window **before** the first note "
+                     "plays."},
+            {"h2": "Where the album is cut, and in what order"},
+            {"p": "xD-Tools puts the playlist into the album's own order as the window opens: by disc "
+                  "number first, then by track number, both read from the files themselves. A "
+                  "two-disc set dropped into foobar2000 as one folder arrives interleaved, because both "
+                  "discs number their tracks from one - this is what puts it right, and foobar2000's own "
+                  "playlist is reordered to match, since that is what actually gets played."},
+            {"p": "If the files say how many discs there are, the splits are placed where they say and "
+                  "the option is ticked for you. Otherwise the album is divided as evenly as its running "
+                  "order allows, into the fewest discs that fit."},
+            {"ul": [
+                "**Move Up** / **Move Down** change the order the album is recorded in.",
+                "**Start Disc Here** makes the selected track the first of a new disc; pressed again on "
+                "the same track, it takes that split away.",
+                "**Split Automatically** throws away the splits you placed and works them out again.",
+            ]},
         ],
     },
     # ------------------------------------------------------------------
@@ -683,6 +768,24 @@ BOOK = [
             {"warn": "Loading the copied tracks into foobar2000 **empties its current playlist**. "
                      "Anything you had queued up there is gone, so move it elsewhere first if you want "
                      "to keep it."},
+            {"h2": "A set of several CDs"},
+            {"p": "**Rip several discs as one album** copies a boxed set as one album rather than as "
+                  "two unrelated ones. Each disc is read, identified and ripped on its own, and xD-Tools "
+                  "then asks for the next."},
+            {"ul": [
+                "They all land in **one folder**, the one the first disc made. A later disc is often "
+                "identified under a title of its own - \"... [Disc 2]\" - and a folder per disc would "
+                "be two albums.",
+                "The album, artist and year stay the ones from the first disc. The **titles** are each "
+                "disc's own, which is what the lookup is for.",
+                "Every file is tagged with the disc it came from, and carries that number in its name. "
+                "That is what lets everything afterwards - the playlist, a recording, a burn - put the "
+                "set back in its own order.",
+                "When you stop adding discs, foobar2000's playlist holds the whole set, and the "
+                "recording that follows records all of it.",
+            ]},
+            {"note": "You can stop after any disc: the question offers to carry on or to record what has "
+                     "been ripped so far."},
         ],
     },
     {
@@ -741,6 +844,26 @@ BOOK = [
                 "A blank CD-R. A disc that already holds something cannot take a fresh burn.",
                 "Nothing else: cdrecord and SoX are bundled on Windows.",
             ]},
+            {"h2": "An album that takes more than one disc"},
+            {"p": "**Burn across several discs** writes a long album onto as many CD-Rs as it needs. "
+                  "**One disc holds** is what that depends on: 80 minutes on an ordinary blank, 74 on an "
+                  "older one."},
+            {"p": "The track list gains a **Disc** column showing where the album is cut, and the "
+                  "summary gives each disc's own length. Every disc is measured against the disc it goes "
+                  "on - the album overrunning is the point - so the Burn button stays off until each of "
+                  "them fits."},
+            {"ol": [
+                "Each disc is written and then ejected, whatever **Eject when finished** says: the tray "
+                "has to open for the next blank to go in.",
+                "xD-Tools asks you to put that blank in, and writes the next disc.",
+                "You can stop at any of those questions; the discs already written are finished.",
+            ]},
+            {"note": "Each disc's CD-Text carries the album's name with **[1/2]**, **[2/2]** after it, "
+                     "for the same reason MiniDisc titles do."},
+            {"p": "Where the cut falls comes from the files when they say - a ripped boxed set carries "
+                  "its disc numbers, and those are honoured rather than balanced over. The same four "
+                  "buttons as the recording window are here too: **Move Up**, **Move Down**, **Start "
+                  "Disc Here** and **Split Automatically**."},
         ],
     },
     # ------------------------------------------------------------------

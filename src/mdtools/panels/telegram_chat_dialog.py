@@ -2,7 +2,7 @@
 chat with the user's own bot: shows whatever it sends (text, inline
 buttons, file attachments), lets the user reply, downloads any file the
 bot offers, and hands the resulting folder to the existing Record Folder
-to MiniDisc flow (panels/folder_record_dialog.py) -- MDTools doesn't care
+to MiniDisc flow (panels/folder_record_dialog.py) -- xD-Tools doesn't care
 where the audio came from once it's on disk, same as a ripped CD or a
 folder of files already picked by hand.
 

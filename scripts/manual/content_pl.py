@@ -13,7 +13,7 @@ TITLE = "xD-Tools"
 SUBTITLE = "Studio Retro Nośników — instrukcja obsługi"
 TITLE_NOTE = "Projektowanie etykiet, nagrywanie MiniDisców i kaset, wypalanie CD-R i nadawanie tytułów"
 COVER_CAPTION = "Co z czym rozmawia: komendy przez USB, klawisze przez podczerwień, dźwięk przez S/PDIF."
-VERSION_LINE = "Wersja 0.3.0"
+VERSION_LINE = "Wersja 0.3.1"
 AUTHOR_LINE = 'Artur "Screemer" Jakubowicz'
 DATE_LINE = "Sierpień 2026"
 TOC_TITLE = "Spis treści"
@@ -447,8 +447,8 @@ BOOK = [
                 "rows": [
                     ["Transport", "Poprzedni, Play, Następny, przewijanie wstecz, Pauza, przewijanie w "
                                   "przód, Stop, Zasilanie, Wysuń."],
-                    ["Utwory", "Od 1 do 10, wybierane wprost. Wyższe numery są w firmwarze, ale nie mają "
-                               "tu przycisku — użyj >25 na magnetofonie."],
+                    ["Utwory", "Od 1 do 10, wybierane wprost — tyle, ile klawiszy ma fizyczny pilot. "
+                               "Od 11 do 25 są w trybie rozszerzonym, niżej."],
                     ["Tryb odtwarzania", "Continuous, Shuffle, Program, Repeat, A-B, >25."],
                     ["Wyświetlacz", "Display, Scroll."],
                     ["Nazywanie", "Name, Enter, Delete, Cancel."],
@@ -463,6 +463,52 @@ BOOK = [
                      "rozdział o rozwiązywaniu problemów."},
             {"tip": "**Record naciśnięty w trakcie nagrywania stawia znacznik ścieżki.** Tak automatyczne "
                     "nagrywanie dzieli album bez przerw i tak samo można tego użyć ręcznie."},
+            {"h2": "Tryb rozszerzony"},
+            {"p": "Okno powyżej to fizyczny pilot, klawisz w klawisz. Zaznacz **Tryb rozszerzony**, a "
+                  "dojdzie reszta tego, co przystawka umie wysłać — kody, które istnieją i zostały "
+                  "sprawdzone na prawdziwym magnetofonie, ale do których żaden klawisz plastikowego "
+                  "pilota nie sięga. Wybór jest zapamiętywany, więc okno otwiera się tak, jak je "
+                  "zostawiłeś."},
+            {"fig": ("remote-extended", "Tryb rozszerzony. Ścieżki do 25, własna metoda wpisywania znaków "
+                                        "magnetofonu i dwa klawisze edytujące płytę.")},
+            {"table": {
+                "head": ["Co dochodzi", "Czym jest"],
+                "rows": [
+                    ["Ścieżki 11–25", "Każda ma własny kod, więc to jedno naciśnięcie, tak jak przy "
+                                      "pierwszej dziesiątce. Powyżej 25 numer się wpisuje, a nie "
+                                      "naciska — i tym zajmuje się już samo nadawanie tytułów."],
+                    ["Char, Num", "Własna metoda wpisywania znaków magnetofonu — przełączanie zestawów "
+                                  "znaków i wybór pokrętłem. Program omija ją, wysyłając kody znaków "
+                                  "wprost, więc te klawisze są tu dla kompletu."],
+                    ["Clear 2", "Jeden z trzech klawiszy, które tabela kodów magnetofonu nazywa Clear. "
+                                "W trybie edycji nazwy nie robi nic, gdziekolwiek stoi kursor; "
+                                "najpewniej kasuje program odtwarzania."],
+                    ["D.Pre", "Magnetofon rozpoznaje go jako polecenie zapisu. Nigdy nie udało się "
+                              "rozróżnić, który klawisz z tej grupy co robi."],
+                    ["Erase Track, Divide", "Te edytują samą płytę — kasują bieżącą ścieżkę albo dzielą "
+                                            "ją na dwie."],
+                ],
+            }},
+            {"warn": "**Erase Track i Divide zmieniają zawartość płyty.** Magnetofon najpierw pyta na "
+                     "własnym wyświetlaczu i nie robi nic do czasu Entera, więc Cancel się z tego "
+                     "wycofuje — ale przeczytaj wyświetlacz, zanim naciśniesz Enter, bo nic tutaj tego "
+                     "nie cofnie."},
+            {"h2": "Pisanie z własnej klawiatury"},
+            {"p": "RM-D10P, którego to okno zastępuje, jest klawiaturą — i w trybie rozszerzonym to okno "
+                  "też nią jest: kiedy jest otwarte, każda wpisana litera, cyfra i znak idzie prosto do "
+                  "magnetofonu. Nie ma tu ani pola tekstowego, ani klawiatury ekranowej, i to celowo — "
+                  "pilot ma klawisze dlatego, że magnetofon ich nie ma, a komputer, na którym to działa, "
+                  "ma lepsze."},
+            {"p": "Najpierw wprowadź magnetofon w tryb edycji nazwy: naciśnij **Name** albo wybierz "
+                  "ścieżkę i dopiero potem **Name**. Potem pisz. **Backspace** kasuje, **Enter** "
+                  "zatwierdza tytuł, a **strzałki** przesuwają kursor po polu."},
+            {"note": "Litery z ogonkami tracą po drodze znaki diakrytyczne, dokładnie tak samo jak przy "
+                     "zapisywaniu tytułów z projektu — `ł` dociera jako `l`. Znak, który nie ma żadnego "
+                     "łacińskiego odpowiednika, jest odrzucany i wypisany w linii stanu, a nie wysyłany "
+                     "jako coś innego."},
+            {"tip": "Pisanie jest dostosowane do tempa, jakie magnetofon przyjmuje — jakieś trzy, cztery "
+                    "naciśnięcia na sekundę. Kiedy piszesz szybciej, program nadąża, czekając: dwa "
+                    "naciśnięcia zbyt blisko siebie magnetofon czyta jako jeden przytrzymany klawisz."},
         ],
     },
     # ------------------------------------------------------------------
@@ -512,9 +558,11 @@ BOOK = [
                      "Odetnij wcześniej zasilanie, a wszystko, co właśnie zapisałeś, przepada. Po "
                      "skończeniu program proponuje wysunięcie — zgódź się."},
             {"h2": "Ścieżki powyżej 25"},
-            {"p": "Tablica klawiszy firmware'u kończy się na ścieżce 25, więc wyższej po prostu nie da się "
-                  "wybrać na magnetofonie. Takie tytuły są wypisane jako pominięte, a nie po cichu "
-                  "wyrzucone."},
+            {"p": "Sam pilot ma klawisze numeryczne tylko do 25, ale przystawka wyższy numer wpisuje, "
+                  "zamiast naciskać jeden klawisz — ścieżki od 26 do 99 zapisują się więc tak samo jak "
+                  "każda inna. Pole numeru w magnetofonie domyka się po drugiej cyfrze, więc ścieżki "
+                  "powyżej 99 nie da się wybrać w ogóle; takie tytuły są wypisane jako pominięte, a nie "
+                  "po cichu wyrzucone. Tak długa bywa tylko płyta nagrana w LP4."},
         ],
     },
     # ------------------------------------------------------------------
@@ -611,6 +659,44 @@ BOOK = [
             {"p": "MD mieści 80 minut w SP. xD-Tools ostrzega, gdy playlista jest dłuższa, ale może "
                   "wyłącznie ostrzec — LP2 i LP4 trzeba ustawić na samym magnetofonie i nie da się "
                   "odczytać, w którym trybie jest."},
+            {"h2": "Album, który nie mieści się na jednej płycie"},
+            {"p": "Podwójny album nie zmieści się na MiniDysku, a MiniDysku nie da się odwrócić tak jak "
+                  "kasety. **Nagraj na kilka płyt** nagrywa go płyta po płycie: jedna płyta, jej tytuły, "
+                  "wysunięcie, kolejny czysty krążek i tak dalej."},
+            {"p": "Po zaznaczeniu lista utworów dostaje kolumnę **Płyta** pokazującą, gdzie album jest "
+                  "cięty, a pod nią linijkę z zapełnieniem każdej płyty. Decyduje o tym pole **Jedna "
+                  "płyta mieści** - 80 minut w SP, 160 w LP2. xD-Tools nie potrafi odczytać trybu "
+                  "magnetofonu, więc tę liczbę podajesz Ty."},
+            {"ol": [
+                "Każda płyta jest nagrywana dokładnie tak jak pojedyncza: uzbrojenie, potwierdzenie, "
+                "odtwarzanie, znaczniki ścieżek.",
+                "**Dwie sekundy po ostatnim utworze tej płyty tytuły idą same** - bez pytania, bez "
+                "przycisku. Nikt nie siedzi przy komputerze przez czterdzieści minut albumu, a MiniDysk "
+                "trzyma zmienione tytuły w pamięci tylko do wysunięcia płyty.",
+                "Płyta jest wysuwana, a xD-Tools prosi o kolejny czysty krążek.",
+                "Ostatnia płyta kończy się tak samo i na tym przebieg się zamyka.",
+            ]},
+            {"note": "Każda płyta dostaje nazwę albumu z dopiskiem **[1/2]**, **[2/2]**. Dwie płyty tego "
+                     "samego albumu opisane identycznie to dwie płyty nie do odróżnienia na półce. "
+                     "Ścieżki na każdej numerowane są od jedynki - i tak numeruje je sam magnetofon."},
+            {"warn": "Podgląd, który normalnie pokazuje okno wysyłania tytułów, jest tu pominięty - nie "
+                     "ma go komu przeczytać. Dlatego każdy tytuł i każdy znak, którego magnetofon nie "
+                     "potrafi wyświetlić, widać w tym oknie **zanim** zabrzmi pierwsza nuta."},
+            {"h2": "Gdzie album jest cięty i w jakiej kolejności"},
+            {"p": "xD-Tools układa playlistę we własnej kolejności albumu już przy otwarciu okna: "
+                  "najpierw numer płyty, potem numer ścieżki, jedno i drugie prosto z plików. Komplet "
+                  "dwupłytowy wrzucony do foobara2000 jako jeden folder przychodzi przeplatany, bo obie "
+                  "płyty numerują ścieżki od jedynki - to właśnie prostuje, a playlista w foobarze jest "
+                  "przestawiana pod to, bo to ona jest odtwarzana."},
+            {"p": "Jeżeli pliki mówią, ile jest płyt, podziały stają tam, gdzie one wskazują, a opcja "
+                  "zaznacza się sama. W przeciwnym razie album dzieli się możliwie równo, na najmniejszą "
+                  "liczbę płyt, która wystarczy."},
+            {"ul": [
+                "**Przesuń w górę** / **Przesuń w dół** zmieniają kolejność nagrywania.",
+                "**Zacznij tu nową płytę** czyni z zaznaczonej ścieżki pierwszą na nowej płycie; "
+                "naciśnięty ponownie na tej samej ścieżce - zabiera ten podział.",
+                "**Podziel automatycznie** odrzuca ręcznie ustawione podziały i wylicza je od nowa.",
+            ]},
         ],
     },
     # ------------------------------------------------------------------
@@ -685,6 +771,24 @@ BOOK = [
             {"warn": "Załadowanie zgranych ścieżek do foobar2000 **czyści jego bieżącą playlistę**. To, "
                      "co miałeś tam przygotowane, przepadnie - przenieś to wcześniej gdzie indziej, "
                      "jeśli chcesz zachować."},
+            {"h2": "Wydanie na kilku płytach CD"},
+            {"p": "**Zgraj kilka płyt jako jeden album** przenosi komplet jako jeden album, a nie jako "
+                  "dwa niezwiązane. Każda płyta jest osobno odczytywana, identyfikowana i zgrywana, po "
+                  "czym xD-Tools prosi o następną."},
+            {"ul": [
+                "Wszystkie trafiają do **jednego folderu** - tego, który utworzyła pierwsza płyta. "
+                "Kolejna bywa identyfikowana pod własnym tytułem - \"... [Disc 2]\" - a folder na "
+                "płytę to byłyby dwa albumy.",
+                "Album, wykonawca i rok zostają te z pierwszej płyty. **Tytuły** są własne każdej płyty "
+                "i po to właśnie jest to sprawdzanie.",
+                "Każdy plik dostaje tag z numerem swojej płyty i numer ten w nazwie. To dzięki temu "
+                "wszystko dalej - playlista, nagrywanie, wypalanie - potrafi ułożyć komplet po jego "
+                "własnemu.",
+                "Kiedy przestaniesz dokładać płyty, playlista foobara2000 trzyma cały komplet, a "
+                "nagranie po niej obejmuje całość.",
+            ]},
+            {"note": "Możesz zakończyć po dowolnej płycie: pytanie proponuje kontynuować albo nagrać to, "
+                     "co zostało już zgrane."},
         ],
     },
     {
@@ -743,6 +847,26 @@ BOOK = [
                 "Czystej płyty CD-R. Płyta, na której już coś jest, nie przyjmie nowego zapisu.",
                 "Niczego więcej: cdrecord i SoX są dołączone w wersji na Windows.",
             ]},
+            {"h2": "Album, który nie mieści się na jednej płycie"},
+            {"p": "**Wypal na kilka płyt** zapisuje długi album na tylu krążkach CD-R, ilu potrzeba. "
+                  "Zależy to od pola **Jedna płyta mieści**: 80 minut na zwykłym krążku, 74 na "
+                  "starszym."},
+            {"p": "Lista utworów dostaje kolumnę **Płyta** pokazującą miejsce cięcia, a podsumowanie "
+                  "podaje długość każdej płyty osobno. Każda mierzona jest względem krążka, na który "
+                  "pójdzie - to, że album się nie mieści, jest przecież założeniem - więc przycisk Wypal "
+                  "pozostaje wyłączony, dopóki nie zmieszczą się wszystkie."},
+            {"ol": [
+                "Każda płyta jest nagrywana i wysuwana niezależnie od pola **Wysuń po zakończeniu**: "
+                "taca musi się otworzyć, żeby włożyć następny krążek.",
+                "xD-Tools prosi o ten krążek i wypala kolejną płytę.",
+                "Przy każdym z tych pytań można zakończyć; płyty już nagrane są gotowe.",
+            ]},
+            {"note": "CD-Text każdej płyty niesie nazwę albumu z dopiskiem **[1/2]**, **[2/2]** - z tego "
+                     "samego powodu co tytuły na MiniDysku."},
+            {"p": "Miejsce cięcia bierze się z plików, kiedy te je znają - zgrany komplet niesie numery "
+                  "swoich płyt i są one respektowane, a nie zastępowane wyrównywaniem po czasie. Są tu "
+                  "też te same cztery przyciski co w oknie nagrywania: **Przesuń w górę**, **Przesuń w "
+                  "dół**, **Zacznij tu nową płytę** i **Podziel automatycznie**."},
         ],
     },
     # ------------------------------------------------------------------

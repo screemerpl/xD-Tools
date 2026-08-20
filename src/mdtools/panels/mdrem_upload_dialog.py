@@ -15,7 +15,9 @@ infrared back, no Control A1 on this model -- so "sent successfully" only
 ever means the adapter accepted the command, never that the disc now says
 what we think it says. The dialog therefore shows exactly what it is about
 to write *before* writing it, and says plainly afterwards that the result
-needs checking by eye.
+needs checking by eye. (The one exception is the unattended mode the
+multi-disc recording flow uses -- see __init__ for why the preview is
+given up there, and where it happens instead.)
 
 Progress cannot be reported by the device either, so it is driven by
 elapsed time against a per-step estimate, corrected at every real step
@@ -80,16 +82,16 @@ class _UploadWorker(QThread):
     def run(self) -> None:
         try:
             with mdrem.MDRemClient(self._port) as client:
-                # Set explicitly every time rather than trusting whatever a
-                # previous upload left the firmware on -- it keeps this in
-                # RAM until the board is reset.
-                count = mdrem.DEFAULT_CLEAR_COUNT if self._clear_first else 0
-                client.command(f"TIMING COUNT {count}")
+                # Whether to erase first is said in each command's own name
+                # (see UploadStep.command), not by putting the board into a
+                # TIMING COUNT beforehand and trusting it to stay there.
                 for index, step in enumerate(self._steps):
                     if self._cancelled:
                         return
                     self.step_started.emit(index, step.label)
-                    client.command(step.command, timeout_ms=mdrem.TITLE_TIMEOUT_MS)
+                    client.command(
+                        step.command(self._clear_first), timeout_ms=mdrem.TITLE_TIMEOUT_MS
+                    )
         except mdrem.MDRemError as exc:
             self.failed.emit(str(exc))
             return
@@ -102,10 +104,28 @@ class MDRemUploadDialog(QDialog):
     nothing reaches the disc before the user has seen exactly what would --
     especially the transliterated form of any non-ASCII title."""
 
-    def __init__(self, metadata: ProjectMetadata, port: str, parent=None, clear_default: bool = True):
+    def __init__(
+        self,
+        metadata: ProjectMetadata,
+        port: str,
+        parent=None,
+        clear_default: bool = True,
+        unattended: bool = False,
+    ):
         """`clear_default` is False when the caller already knows the disc
         has nothing to erase -- a recording that just finished -- which is
-        worth roughly half the total time."""
+        worth roughly half the total time.
+
+        `unattended` gives up the preview this dialog exists for: it starts
+        writing as soon as it opens, ejects without asking and closes itself
+        when it is done. Only the multi-disc recording flow passes it, and
+        only because the user is not at the machine -- that flow records a
+        disc, titles it, ejects it and asks for the next one, so a
+        confirmation between the music ending and the titles being written
+        would leave the deck sitting with an untitled disc until somebody
+        came back. Everything the preview would have shown (the
+        transliterated titles, anything dropped) was already on screen in
+        the recording dialog before the album started playing."""
         super().__init__(parent)
         self.setWindowTitle(self.tr("Upload Tracklist"))
         self.resize(480, 470)
@@ -113,6 +133,11 @@ class MDRemUploadDialog(QDialog):
         self._plan = mdrem.build_upload_plan(metadata)
         self._worker: _UploadWorker | None = None
         self._closing = False
+        self._unattended = unattended
+        # Read by the caller after exec(): whether every title actually went
+        # out. A failed upload must not let a multi-disc run carry on to the
+        # next disc as though this one were finished.
+        self.succeeded = False
 
         # Progress state: cumulative estimate of the steps already done,
         # plus a timer running within the current one.
@@ -182,6 +207,13 @@ class MDRemUploadDialog(QDialog):
 
         self._refresh_summary()
 
+        if self._unattended and not self._plan.is_empty:
+            # Through a zero-delay timer rather than called here, so the
+            # worker starts once this dialog is actually on screen and its
+            # progress is visible from the first title rather than from
+            # whenever exec() got round to showing it.
+            QTimer.singleShot(0, self._start)
+
     # --- text ---------------------------------------------------------
 
     def _refresh_summary(self) -> None:
@@ -211,9 +243,10 @@ class MDRemUploadDialog(QDialog):
             )
         if self._plan.skipped_tracks:
             parts.append(
-                self.tr("The deck can only be told to select tracks 1-{max}, so these were skipped: {titles}").format(
-                    max=mdrem.MAX_TRACK, titles=", ".join(self._plan.skipped_tracks)
-                )
+                self.tr(
+                    "The deck's own track number field takes two digits, so tracks past "
+                    "{max} cannot be selected and were skipped: {titles}"
+                ).format(max=mdrem.MAX_TRACK, titles=", ".join(self._plan.skipped_tracks))
             )
         return "\n\n".join(parts)
 
@@ -278,13 +311,14 @@ class MDRemUploadDialog(QDialog):
 
     def _on_succeeded(self) -> None:
         self._ticker.stop()
+        self.succeeded = True
         self.progress.setValue(_PROGRESS_SCALE)
         self.status_label.setText(
             self.tr("Everything was sent in {elapsed}. The deck cannot report back, so check the titles on it yourself.").format(
                 elapsed=_mmss(self._total_clock.elapsed() / 1000.0)
             )
         )
-        self._offer_eject()
+        self._eject(ask=not self._unattended)
 
     def _on_worker_finished(self) -> None:
         """The single place the run actually ends, whatever ended it --
@@ -298,23 +332,32 @@ class MDRemUploadDialog(QDialog):
         self.close_btn.setEnabled(True)
         if self._closing:
             super().reject()
+        elif self._unattended and self.succeeded:
+            # Nobody is here to press Close, and the recording flow behind
+            # this is waiting on exec() to return before it can ask for the
+            # next disc. A *failed* upload deliberately stays open: that is
+            # the one outcome somebody has to see.
+            self.accept()
 
-    def _offer_eject(self) -> None:
+    def _eject(self, ask: bool = True) -> None:
         """A MiniDisc deck keeps an edited TOC in volatile memory until the
         disc is ejected -- without this, everything just written is lost the
-        moment the deck loses power. Asked rather than done silently: it
-        physically opens the tray."""
-        answer = QMessageBox.question(
-            self,
-            self.tr("Save to Disc"),
-            self.tr(
-                "Titles are only held in the deck's memory until the disc is ejected -- they are lost if it "
-                "powers off first.\n\nEject now to write them permanently?"
-            ),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if answer != QMessageBox.StandardButton.Yes:
-            return
+        moment the deck loses power. Normally asked rather than done
+        silently, since it physically opens the tray; unattended it is not,
+        because the tray opening is exactly the signal the multi-disc flow
+        needs to ask for the next disc."""
+        if ask:
+            answer = QMessageBox.question(
+                self,
+                self.tr("Save to Disc"),
+                self.tr(
+                    "Titles are only held in the deck's memory until the disc is ejected -- they are lost if it "
+                    "powers off first.\n\nEject now to write them permanently?"
+                ),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if answer != QMessageBox.StandardButton.Yes:
+                return
         try:
             with mdrem.MDRemClient(self._port) as client:
                 client.command("SEND EJECT")

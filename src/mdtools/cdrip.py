@@ -455,6 +455,7 @@ def build_rip_plan(
     album: str = "",
     year: int | None = None,
     track_artists: list[str] | None = None,
+    disc_number: int | None = None,
 ) -> RipPlan:
     """What will be written where, and under what tags -- computed without
     touching the disc or the filesystem, so the dialog can show it and the
@@ -469,7 +470,15 @@ def build_rip_plan(
     every track with the release's own artist would write "Various Artists"
     twelve times and throw away the only information that says who actually
     plays on each one -- which is what the J-card and the generated cover
-    are then built from."""
+    are then built from.
+
+    `disc_number` is given only when several discs are being ripped into one
+    album, and does two things: it writes DISCNUMBER, which is what puts the
+    album back into its own order afterwards (see
+    foobar.sort_by_disc_and_track), and it puts the disc in front of the
+    filename. Both discs of a set number their tracks from one, so without
+    that prefix the second disc's files would land on top of the first
+    disc's in the folder they share."""
     tasks = []
     for index, track in enumerate(toc.tracks):
         title = ""
@@ -481,6 +490,8 @@ def build_rip_plan(
         if track_artists is not None and index < len(track_artists):
             performer = track_artists[index].strip()
         stem = f"{track.number:02d} - {sanitize_filename(title)}"
+        if disc_number:
+            stem = f"{disc_number}-{stem}"
         tags = {
             "TITLE": title,
             "TRACKNUMBER": str(track.number),
@@ -498,6 +509,8 @@ def build_rip_plan(
             tags["ARTIST"] = performer or artist.strip()
         if year is not None:
             tags["DATE"] = str(year)
+        if disc_number:
+            tags["DISCNUMBER"] = str(disc_number)
         tasks.append(
             RipTask(
                 number=track.number,

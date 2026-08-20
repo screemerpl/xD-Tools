@@ -224,7 +224,11 @@ whether an adapter answers. Two things then appear:
   exactly what it will write first, then works through it with a progress
   bar.
 - **Remote...** on the startup screen opens a software remote -- transport,
-  track numbers, play modes, display and titling keys.
+  track numbers, play modes, display and titling keys. That is the physical
+  Sony remote, key for key; **Extended mode** adds everything else the
+  adapter can send -- tracks up to 25, the deck's own character entry, the
+  keys that erase or divide a track -- and turns your own keyboard into the
+  deck's, typing straight into a title as you press the keys.
 
 Worth knowing before you use it:
 
@@ -277,7 +281,7 @@ Load the album in foobar2000, connect its S/PDIF output to the deck, then:
 6. The album, artist, year and track list become the project's metadata,
    its cover art is looked up, and **the disc label lays itself out**: the
    full-face template, the cover cropped to the cut outline, and the
-   MiniDisc logo on the write-protect slider sticker. Note this **replaces
+   MiniDisc logo on the sliding dust shutter's sticker. Note this **replaces
    whatever was on the disc page** -- it is a starting point to adjust, not
    an addition to your design.
 
@@ -292,6 +296,30 @@ Two caveats:
   between.
 - **Set the recording mode (SP/LP2) on the deck yourself.** xD-Tools has no
   reliable way to read or change it.
+
+### An album across several discs
+
+A double album does not fit on a MiniDisc, and a MiniDisc cannot be turned
+over. **Record across several discs**, in the recording window, records it a
+disc at a time: one disc, then -- two seconds after its last track, without
+asking -- its titles, then eject, then a prompt for the next blank. Each disc
+is titled `Album [1/2]`, `Album [2/2]`, and its tracks are numbered from one,
+which is how the deck numbers them anyway.
+
+Where the album is cut comes from the files when they say so: the playlist is
+put into disc-then-track order as the window opens (a two-disc set dropped
+into foobar2000 as one folder arrives interleaved, because both discs number
+their tracks from one), foobar2000's own playlist is reordered to match, and
+the splits are placed where the disc numbers say. Otherwise the album is
+divided as evenly as its running order allows, into the fewest discs that
+fit. **Move Up/Down**, **Start Disc Here** and **Split Automatically** adjust
+any of it by hand.
+
+The same option exists on both CD flows: **Burn across several discs** writes
+a long album onto as many CD-Rs as it needs, ejecting between them and asking
+for the next blank, and **Rip several discs as one album** copies a boxed set
+into one folder as a single album, tagging each file with the disc it came
+from.
 
 ### Recording an album from a folder of files
 

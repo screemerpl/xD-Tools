@@ -545,7 +545,7 @@ def draw_ir_circuit(path: Path) -> None:
 
 SIGNAL_CHAIN_STRINGS = {
     "en": {
-        "pc": "PC - MDTools",
+        "pc": "PC - xD-Tools",
         "pc_sub": "foobar2000 + Beefweb",
         "adapter": "MDRem adapter",
         "adapter_sub": "RP2040, virtual COM port",
@@ -556,7 +556,7 @@ SIGNAL_CHAIN_STRINGS = {
         "spdif": "S/PDIF (audio)",
     },
     "pl": {
-        "pc": "Komputer - MDTools",
+        "pc": "Komputer - xD-Tools",
         "pc_sub": "foobar2000 + Beefweb",
         "adapter": "Przystawka MDRem",
         "adapter_sub": "RP2040, wirtualny port COM",
@@ -567,7 +567,7 @@ SIGNAL_CHAIN_STRINGS = {
         "spdif": "S/PDIF (dzwiek)",
     },
     "ja": {
-        "pc": "PC - MDTools",
+        "pc": "PC - xD-Tools",
         "pc_sub": "foobar2000 + Beefweb",
         "adapter": "MDRem アダプター",
         "adapter_sub": "RP2040 / 仮想COMポート",
@@ -589,7 +589,7 @@ def _demo_album_folder() -> Path:
     Empty is enough: that dialog only ever lists filenames and asks foobar
     (stood in for here) what the tags say, so it never opens one. Under the
     temp folder rather than anywhere the reader might have real music."""
-    folder = Path(tempfile.gettempdir()) / "MDTools Manual" / f"{DEMO_ARTIST} - {DEMO_ALBUM} ({DEMO_YEAR})"
+    folder = Path(tempfile.gettempdir()) / "xD-Tools Manual" / f"{DEMO_ARTIST} - {DEMO_ALBUM} ({DEMO_YEAR})"
     folder.mkdir(parents=True, exist_ok=True)
     for index, (title, _length) in enumerate(DEMO_TRACKS, start=1):
         (folder / f"{index:02d} {title}.flac").write_bytes(b"")
@@ -684,7 +684,13 @@ def capture_language(app, code: str) -> None:
     _capture_cd(out, code, metadata)
 
     # -- everything MDRem, with the hardware and foobar2000 stood in for
+    # Both remote modes: extended is a mode nobody can see without ticking
+    # the box, which is exactly why the manual shows it.
+    app_settings.set_mdrem_extended_remote(False)
     save(RemoteDialog("COM7"), out / "remote.png")
+    app_settings.set_mdrem_extended_remote(True)
+    save(RemoteDialog("COM7"), out / "remote-extended.png")
+    app_settings.set_mdrem_extended_remote(False)
     save(MDRemUploadDialog(metadata, "COM7"), out / "upload.png", settle_ms=400)
     save(RecordDialog("COM7", "http://localhost:8880"), out / "record.png", settle_ms=400)
 

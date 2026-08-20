@@ -20,7 +20,7 @@ give; QSS was chosen over a pip theme package for the same
 zero-dependency reasoning as the palette-only version, and over a
 Kvantum-based theme because Kvantum is a Linux/X11-only style engine
 needing a compiled system plugin that cannot be bundled into a PyInstaller
-Windows build at all (MDTools' primary target).
+Windows build at all (xD-Tools' primary target).
 
 Every colour used by both layers is defined once, below, so the palette
 and the stylesheet can never drift into disagreeing about what "the

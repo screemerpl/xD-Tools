@@ -25,7 +25,7 @@ DEFAULT_SCREEN_DPI = 96.0
 DEFAULT_EXPORT_DPI = 300.0
 DEFAULT_BAKE_DPI = DEFAULT_EXPORT_DPI * 3
 
-# MDTools' own Telegram API credentials are **injected at build time, never
+# xD-Tools' own Telegram API credentials are **injected at build time, never
 # written in this file** -- see _bundled_telegram_credentials() below.
 _TELEGRAM_API_ID_ENV = "MDTOOLS_TELEGRAM_API_ID"
 _TELEGRAM_API_HASH_ENV = "MDTOOLS_TELEGRAM_API_HASH"
@@ -36,6 +36,7 @@ _BAKE_DPI_KEY = "bake_dpi"
 _MDREM_ENABLED_KEY = "mdrem_enabled"
 _EXPERIMENTAL_FEATURES_ENABLED_KEY = "experimental_features_enabled"
 _MDREM_PORT_KEY = "mdrem_port"
+_MDREM_EXTENDED_REMOTE_KEY = "mdrem_extended_remote"
 _FOOBAR_URL_KEY = "foobar_url"
 _FOOBAR_EXE_KEY = "foobar_exe"
 _CD_RIP_FOLDER_KEY = "cd_rip_folder"
@@ -132,6 +133,27 @@ def experimental_features_enabled() -> bool:
 
 def set_experimental_features_enabled(value: bool) -> None:
     _settings().setValue(_EXPERIMENTAL_FEATURES_ENABLED_KEY, bool(value))
+
+
+def mdrem_extended_remote() -> bool:
+    """Whether the software remote shows every key code the firmware knows,
+    rather than the ones a physical RM-D10P actually has a button for.
+
+    Remembered rather than asked each time: it is a property of how someone
+    uses the deck, not of the disc in front of them, and the dialog is
+    rebuilt from scratch on every open.
+
+    Same string-handling caveat as mdrem_enabled() above -- an IniFormat
+    QSettings hands a bool back as the text "true"/"false", and
+    bool("false") is True."""
+    value = _settings().value(_MDREM_EXTENDED_REMOTE_KEY, False)
+    if isinstance(value, str):
+        return value.strip().lower() in ("true", "1", "yes")
+    return bool(value)
+
+
+def set_mdrem_extended_remote(value: bool) -> None:
+    _settings().setValue(_MDREM_EXTENDED_REMOTE_KEY, bool(value))
 
 
 def mdrem_port() -> str:
@@ -232,7 +254,7 @@ def set_music_folder(value: str) -> None:
 
 
 def _bundled_telegram_credentials() -> tuple[str, str]:
-    """MDTools' own registered API ID/Hash, or `("", "")` if this build was
+    """xD-Tools' own registered API ID/Hash, or `("", "")` if this build was
     made without them.
 
     **Injected at build time and deliberately absent from the source tree**,
