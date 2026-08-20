@@ -2029,7 +2029,9 @@ before spending four minutes writing an empty title.
 
 **Tracks above 25 are written like any other now, and the erase choice
 is said per command -- both because the firmware grew the API for it
-(2026-08-20), not because anything here got cleverer.** Two changes, and
+(2026-08-20), not because anything here got cleverer. Verified through
+MDTools the same day, on a real 56-track disc: nothing reported as
+skipped and every title landed on its own track, tracks 26-56 included.** Two changes, and
 the reasoning behind each is the firmware's own repo, whose CLAUDE.md
 holds the measurements:
 - **`MAX_TRACK` is 99, not 25.** 25 was the number of *keys on the
