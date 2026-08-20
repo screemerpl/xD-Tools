@@ -35,8 +35,15 @@ must stay left alone:
   names** (`app_settings.py`). They exist on people's disks with their
   files in them; a rename would not move anything, it would just start
   looking somewhere else and report the downloads missing.
-- **The package, the repository and its URL** (`mdtools`,
-  `github.com/screemerpl/MDTools`), which are what they are.
+- **The Python package** (`mdtools`), which is an import path.
+
+The repository was on that list too, and is not any more: it was renamed
+to **`github.com/screemerpl/xD-Tools`** on 2026-08-20 at the user's
+request, because the name is what a person reads on the repo's own page.
+GitHub keeps a permanent redirect from the old URL, so an existing clone
+and every link ever posted still work -- but new references should use the
+new one, and the MusicBrainz User-Agent (`musicbrainz.py`, which names the
+project to a service that requires identification) was moved with it.
 
 A rename of a translated string makes lupdate see a new string and mark
 the old one `vanished` (not `obsolete` -- both forms exist and only the

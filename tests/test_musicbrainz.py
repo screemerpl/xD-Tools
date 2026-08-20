@@ -192,4 +192,7 @@ def test_every_request_identifies_the_application():
         return _Response(json.dumps(PAYLOAD).encode())
 
     musicbrainz.lookup_disc(_toc(), opener=open_url)
-    assert "MDTools" in seen[0]
+    # Named, not merely non-empty: the app and a link back to it are what
+    # the service asks for. (This used to pass on the word "MDTools" left
+    # in the repository URL, which outlived the rename of everything else.)
+    assert "xD-Tools" in seen[0]
