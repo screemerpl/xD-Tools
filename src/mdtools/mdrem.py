@@ -23,6 +23,9 @@ the MDRem firmware's own CLAUDE.md for the full findings):
 - The deck accepts roughly 3.5 keypresses per second and there is no
   feedback channel of any kind, so a full album takes minutes and nothing
   can confirm it worked except the user's own eyes.
+- A track number above 25 has no key of its own and is typed instead, and
+  the deck's number field commits on the second digit -- which is where
+  MAX_TRACK's 99 comes from, and why it is not the TOC's own 254.
 - Nothing is written to the disc until it is ejected.
 """
 
@@ -85,8 +88,23 @@ DETECT_TIMEOUT_MS = 700
 # has nothing to do with).
 _POLL_CHUNK_MS = 200
 
-# The firmware's key table stops at TRACK25.
-MAX_TRACK = 25
+# The remote has number keys only up to 25; above that the firmware types
+# the number instead -- ">25" opens a number field on the deck's display and
+# the digits are tapped in on the same keys as tracks 1-10. Confirmed on an
+# MDS-JE480 for tracks 37, 42, 44 and 50, so 26-99 are as sendable as any
+# other. Nothing in MDTools has to know that: the firmware's own
+# TITLETRACK <n> takes the whole 1-254 range and picks the spelling.
+DIRECT_KEY_MAX = 25
+
+# Where we stop anyway, and it is not the TOC's limit (254). The number
+# field commits by itself on the *second* digit -- established by leaving
+# ten seconds before an ENTER that turned out to be unnecessary -- so a
+# three-digit number would select the first two digits' track and write
+# this title over that one's. The firmware warns and sends regardless,
+# which is right for a diagnostic tool; here a wrong track number destroys
+# a good title on a disc nothing can read back, so those are reported as
+# skipped instead. Only an LP4 disc gets anywhere near this.
+MAX_TRACK = 99
 
 # Timing constants measured on a real MDS-JE480, used only to estimate how
 # long an upload will take so the progress dialog can say something useful
@@ -96,12 +114,17 @@ MAX_TRACK = 25
 _STEP_OVERHEAD_S = 6.0  # STOP/TRACK/PAUSE/NAME/ENTER plus the settle waits
 _SECONDS_PER_CLEAR = 0.435
 _SECONDS_PER_CHAR = 0.285
+# A track above 25 is selected by typing its number rather than by one key
+# press: ">25" and then its digits, spaced by the firmware's TIMING DIGIT.
+_SECONDS_PER_DIGIT = 0.2
 
-# The firmware's default number of delete presses before typing, which it
+# How many delete presses the firmware sends before typing, which it
 # overshoots on purpose because the old title's length can't be read back.
 # Clearing is the single most expensive part of writing a title -- roughly
 # 17 s of the ~25 s a track takes -- so skipping it on a disc whose titles
-# are still empty very nearly halves a whole upload.
+# are still empty very nearly halves a whole upload. Nothing here sets it:
+# it is the firmware's own default, and its CLEAR form treats it as a floor
+# (max(COUNT, len(title) + 8)), which is what this estimate mirrors.
 DEFAULT_CLEAR_COUNT = 40
 
 
@@ -326,8 +349,26 @@ def disc_title(metadata: ProjectMetadata) -> str:
 @dataclass
 class UploadStep:
     label: str  # shown in the progress dialog
-    command: str  # the line sent to the firmware
     text: str  # the title this step writes, already transliterated
+    track: int | None = None  # None means the disc's own title
+
+    def command(self, clearing: bool) -> str:
+        """The line sent to the firmware for this step.
+
+        Whether the deck's name field is emptied first is said in the
+        command's own name -- TITLETRACKCLEAR / TITLETRACKNOCLEAR -- rather
+        than by setting the firmware's global TIMING COUNT beforehand. That
+        global lives in the board's RAM until it is reset, so the same
+        command meant different things depending on what the last session
+        left behind, and a host wanting certainty had to write it before
+        every single upload and hope nothing else got in between. Saying it
+        per command removes the shared state instead of managing it, which
+        is why the firmware grew these forms.
+        """
+        suffix = "CLEAR" if clearing else "NOCLEAR"
+        if self.track is None:
+            return f"TITLEDISC{suffix} {self.text}"
+        return f"TITLETRACK{suffix} {self.track} {self.text}"
 
 
 @dataclass
@@ -351,7 +392,16 @@ def estimated_step_seconds(step: UploadStep, clearing: bool = True) -> float:
     feedback channel, elapsed time against this estimate is the only thing
     a progress bar can possibly be driven by."""
     presses = max(DEFAULT_CLEAR_COUNT, len(step.text) + 8) if clearing else 0
-    return _STEP_OVERHEAD_S + presses * _SECONDS_PER_CLEAR + len(step.text) * _SECONDS_PER_CHAR
+    digits = 0.0
+    if step.track is not None and step.track > DIRECT_KEY_MAX:
+        # ">25" plus one press per digit, where a direct key is one press.
+        digits = len(str(step.track)) * _SECONDS_PER_DIGIT
+    return (
+        _STEP_OVERHEAD_S
+        + digits
+        + presses * _SECONDS_PER_CLEAR
+        + len(step.text) * _SECONDS_PER_CHAR
+    )
 
 
 def estimated_seconds(plan: UploadPlan, clearing: bool = True) -> float:
@@ -361,9 +411,9 @@ def estimated_seconds(plan: UploadPlan, clearing: bool = True) -> float:
 def build_upload_plan(metadata: ProjectMetadata) -> UploadPlan:
     """Disc title first, then one step per track.
 
-    Tracks past MAX_TRACK are reported rather than sent: the firmware's key
-    table simply has no code for them, so there is no way to select those
-    tracks on the deck at all."""
+    Tracks past MAX_TRACK are reported rather than sent -- see that
+    constant for why the line is drawn at two digits rather than at the
+    TOC's own 254."""
     plan = UploadPlan()
 
     def note_dropped(result: Transliteration) -> None:
@@ -377,7 +427,6 @@ def build_upload_plan(metadata: ProjectMetadata) -> UploadPlan:
         plan.steps.append(
             UploadStep(
                 label=QCoreApplication.translate("MDRem", "Disc title"),
-                command=f"TITLEDISC {title.text}",
                 text=title.text,
             )
         )
@@ -393,8 +442,8 @@ def build_upload_plan(metadata: ProjectMetadata) -> UploadPlan:
         plan.steps.append(
             UploadStep(
                 label=QCoreApplication.translate("MDRem", "Track {n}").format(n=index),
-                command=f"TITLETRACK {index} {converted.text}",
                 text=converted.text,
+                track=index,
             )
         )
 

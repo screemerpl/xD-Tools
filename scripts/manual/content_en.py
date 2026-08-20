@@ -513,9 +513,12 @@ BOOK = [
             {"warn": "**A deck holds edited titles in volatile memory until the disc is ejected.** Pull "
                      "the power first and everything you just wrote is gone. The dialog offers to eject "
                      "for you when it is done - say yes."},
-            {"h2": "Tracks past 25"},
-            {"p": "The firmware's key table stops at track 25, so there is no way to select a higher track "
-                  "on the deck at all. Those titles are listed as skipped rather than silently dropped."},
+            {"h2": "Tracks above 25"},
+            {"p": "The remote itself has number keys only up to 25, but the adapter types a higher number "
+                  "in rather than pressing one key, so tracks 26 to 99 are written like any other. The "
+                  "deck's number field commits on the second digit, so a track past 99 cannot be selected "
+                  "at all - those titles are listed as skipped rather than silently dropped, and only an "
+                  "LP4 disc ever gets that long."},
         ],
     },
     # ------------------------------------------------------------------

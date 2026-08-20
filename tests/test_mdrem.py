@@ -65,48 +65,87 @@ def test_disc_title_skips_whatever_is_missing():
 # --- upload plan -----------------------------------------------------------
 
 
+def _commands(plan, clearing=True):
+    return [step.command(clearing) for step in plan.steps]
+
+
 def test_plan_writes_the_disc_title_then_one_step_per_track():
     plan = mdrem.build_upload_plan(_album(["The Only Ones", "Glass Heart"]))
-    assert [step.command for step in plan.steps] == [
-        "TITLEDISC Caskets - Lost Souls (2021)",
-        "TITLETRACK 1 The Only Ones",
-        "TITLETRACK 2 Glass Heart",
+    assert _commands(plan) == [
+        "TITLEDISCCLEAR Caskets - Lost Souls (2021)",
+        "TITLETRACKCLEAR 1 The Only Ones",
+        "TITLETRACKCLEAR 2 Glass Heart",
+    ]
+
+
+def test_whether_to_erase_first_is_said_in_the_command_not_in_a_global():
+    """TIMING COUNT lives in the board's RAM until it is reset, so the same
+    command meant different things depending on what ran before it. The
+    firmware grew CLEAR/NOCLEAR forms to remove that shared state, and this
+    is the whole reason the host stopped setting the global at all."""
+    plan = mdrem.build_upload_plan(_album(["The Only Ones"]))
+    assert _commands(plan, clearing=False) == [
+        "TITLEDISCNOCLEAR Caskets - Lost Souls (2021)",
+        "TITLETRACKNOCLEAR 1 The Only Ones",
     ]
 
 
 def test_plan_transliterates_and_collects_every_dropped_character():
     plan = mdrem.build_upload_plan(_album(["日本", "Zażółć"], album="Ünïcode"))
-    assert plan.steps[-1].command == "TITLETRACK 2 Zazolc"
+    assert plan.steps[-1].command(True) == "TITLETRACKCLEAR 2 Zazolc"
     assert plan.dropped == ["日", "本"]
 
 
-def test_tracks_past_the_decks_last_selectable_number_are_skipped_not_sent():
-    """The firmware has no key code for tracks beyond MAX_TRACK, so there
-    is no way to select them on the deck -- reported rather than dropped."""
+def test_a_track_above_25_is_sent_like_any_other():
+    """The remote's number keys stop at 25; the firmware types the number
+    instead (">25" and its digits, confirmed on an MDS-JE480 for 37, 42, 44
+    and 50), so nothing here has to spell it differently -- TITLETRACK
+    takes the whole range."""
+    titles = [f"Track {i}" for i in range(1, 45)]
+    plan = mdrem.build_upload_plan(_album(titles))
+
+    assert "TITLETRACKCLEAR 44 Track 44" in _commands(plan)
+    assert plan.skipped_tracks == []
+
+
+def test_tracks_needing_three_digits_are_skipped_not_sent():
+    """The number field commits on the second digit, so a three-digit
+    number would select the first two digits' track and write this title
+    over that one's -- on a disc nothing can read back. Reported rather
+    than dropped, and rather than guessed at."""
     titles = [f"Track {i}" for i in range(1, mdrem.MAX_TRACK + 3)]
     plan = mdrem.build_upload_plan(_album(titles))
 
-    commands = [step.command for step in plan.steps]
-    assert f"TITLETRACK {mdrem.MAX_TRACK} Track {mdrem.MAX_TRACK}" in commands
-    assert not any(f"TITLETRACK {mdrem.MAX_TRACK + 1}" in c for c in commands)
+    commands = _commands(plan)
+    assert f"TITLETRACKCLEAR {mdrem.MAX_TRACK} Track {mdrem.MAX_TRACK}" in commands
+    assert not any(f" {mdrem.MAX_TRACK + 1} " in c for c in commands)
     assert plan.skipped_tracks == [f"Track {mdrem.MAX_TRACK + 1}", f"Track {mdrem.MAX_TRACK + 2}"]
 
 
 def test_a_track_whose_title_is_entirely_unsupported_is_not_sent_as_an_empty_title():
     plan = mdrem.build_upload_plan(_album(["日本語"]))
-    assert [s.command for s in plan.steps] == ["TITLEDISC Caskets - Lost Souls (2021)"]
+    assert _commands(plan) == ["TITLEDISCCLEAR Caskets - Lost Souls (2021)"]
 
 
 def test_plan_numbering_follows_the_track_list_not_the_sendable_subset():
     """A track that transliterates to nothing must not shift the numbers of
     the ones after it -- track 3 is still TRACK3 on the deck."""
     plan = mdrem.build_upload_plan(_album(["One", "日本語", "Three"]))
-    assert [s.command for s in plan.steps][1:] == ["TITLETRACK 1 One", "TITLETRACK 3 Three"]
+    assert _commands(plan)[1:] == ["TITLETRACKCLEAR 1 One", "TITLETRACKCLEAR 3 Three"]
 
 
 def test_empty_metadata_gives_an_empty_plan():
     plan = mdrem.build_upload_plan(ProjectMetadata())
     assert plan.is_empty
+
+
+def test_typing_a_track_number_costs_a_little_more_than_pressing_one_key():
+    """Not much -- three presses rather than one -- but the estimate is
+    what the progress bar is driven by, so it should not pretend the two
+    are the same."""
+    direct = mdrem.UploadStep(label="", text="Title", track=25)
+    typed = mdrem.UploadStep(label="", text="Title", track=26)
+    assert mdrem.estimated_step_seconds(typed) > mdrem.estimated_step_seconds(direct)
 
 
 def test_estimate_grows_with_the_amount_being_written():

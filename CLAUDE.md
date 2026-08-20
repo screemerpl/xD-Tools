@@ -2027,6 +2027,50 @@ whatever had no equivalent at all in `dropped`** rather than discarding it
 silently -- CJK titles lose everything, and the user deserves to know that
 before spending four minutes writing an empty title.
 
+**Tracks above 25 are written like any other now, and the erase choice
+is said per command -- both because the firmware grew the API for it
+(2026-08-20), not because anything here got cleverer.** Two changes, and
+the reasoning behind each is the firmware's own repo, whose CLAUDE.md
+holds the measurements:
+- **`MAX_TRACK` is 99, not 25.** 25 was the number of *keys on the
+  remote*, never a limit of the disc -- a MiniDisc TOC holds 254 tracks
+  and an LP2/LP4 recording routinely passes 25. The firmware now types a
+  higher number instead of pressing one key (`>25`, then its digits on the
+  same keys tracks 1-10 use), confirmed on an MDS-JE480 for tracks 37, 42,
+  44 and 50. Nothing in MDTools spells that out: `TITLETRACK <n>` takes
+  the whole range and the firmware picks the spelling. **99 is where we
+  stop anyway, and it is a real edge, not caution**: the deck's number
+  field commits by itself on the *second* digit (established by leaving
+  ten seconds before an ENTER that turned out to be unnecessary), so a
+  three-digit number would select the first two digits' track and write
+  this title over that one's. The firmware warns and sends regardless,
+  which is right for a diagnostic tool; here a wrong track number destroys
+  a good title on a disc nothing can read back, so those stay reported as
+  `skipped_tracks`.
+- **`UploadStep.command` is a method taking `clearing`, and the worker no
+  longer sends `TIMING COUNT`.** That global lives in the board's RAM
+  until it is reset, so the same command meant different things depending
+  on what the previous session left behind -- a host wanting certainty had
+  to write it before every upload and hope nothing got in between. The
+  firmware's `TITLETRACKCLEAR` / `TITLETRACKNOCLEAR` (and the same pair on
+  `TITLEDISC`) say it per command and ignore the global, which removes the
+  shared state rather than managing it. The estimate is unchanged: `CLEAR`
+  clears `max(COUNT, len(title) + 8)` with `COUNT` at its default 40,
+  which is exactly what `estimated_step_seconds()` already computed --
+  `DEFAULT_CLEAR_COUNT` is now documentation of the firmware's default
+  rather than something we set.
+
+**`TITLETRACKNEXT` exists and is deliberately not used.** It skips the
+number entirely -- press NEXT, name whatever the deck landed on -- so it
+is one press instead of four and has no dependence on `>25` at all, which
+makes it the only route to a track past 99 if that ever matters. It is
+also the route with no redundancy: `TITLETRACK` opens with STOP and a
+track number, so a lost first press still lands on the right track,
+whereas one swallowed NEXT silently shifts *every remaining title by one*
+with nothing able to report it. That already happened once on the
+firmware's own bench (`ST45TEST44`, from a TOC wait 1 s too short). With
+no feedback channel, the redundant route is the right default.
+
 **The adapter is identified by asking it, not by its USB IDs.** The board
 reports VID:PID 2E8A:0003, which is both its own bootloader's ID and a
 generic Waveshare one -- so `detect_port()` opens each port and sends
@@ -2419,8 +2463,9 @@ Details that are load-bearing:
   whole*, not taken from the plan, so a title corrected in the table is the
   one that reaches the deck -- and slicing is also what renumbers them:
   track 16 of the album is track 1 of disc two, which is how the deck
-  numbers it. (It also keeps most discs under `mdrem.MAX_TRACK`, though
-  that is a side effect and not the fix for it.)
+  numbers it. (It also keeps every disc well under `mdrem.MAX_TRACK`,
+  though that is a side effect and not the fix for it -- and since that
+  limit became 99 it is not a consideration at all.)
 - **`result_metadata` stays the whole album**, every disc of it: the label
   describes the record, not one of its discs.
 

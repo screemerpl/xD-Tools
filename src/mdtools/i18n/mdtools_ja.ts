@@ -1165,12 +1165,12 @@ foobar2000が起動し、Beefweb Remote Control (foo_beefweb) コンポーネン
 <context>
     <name>MDRem</name>
     <message>
-        <location filename="../mdrem.py" line="379"/>
+        <location filename="../mdrem.py" line="429"/>
         <source>Disc title</source>
         <translation>ディスクタイトル</translation>
     </message>
     <message>
-        <location filename="../mdrem.py" line="395"/>
+        <location filename="../mdrem.py" line="444"/>
         <source>Track {n}</source>
         <translation>トラック {n}</translation>
     </message>
@@ -1233,12 +1233,17 @@ foobar2000が起動し、Beefweb Remote Control (foo_beefweb) コンポーネン
         <translation>{count} 件のタイトルを赤外線でディスクに書き込みます。所要時間は約 {time} です。アダプターをデッキに向けて、終わるまで動かさないでください。</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="298"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="247"/>
+        <source>The deck&apos;s own track number field takes two digits, so tracks past {max} cannot be selected and were skipped: {titles}</source>
+        <translation>デッキのトラック番号入力欄は2桁までなので、{max}を超えるトラックは選択できず、スキップしました: {titles}</translation>
+    </message>
+    <message>
+        <location filename="../panels/mdrem_upload_dialog.py" line="299"/>
         <source>Writing {index} of {total}: {what} -- about {remaining} left</source>
         <translation>書き込み中 {index}/{total}: {what} — 残り約 {remaining}</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="316"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="317"/>
         <source>Everything was sent in {elapsed}. The deck cannot report back, so check the titles on it yourself.</source>
         <translation>すべて {elapsed} で送信しました。デッキは応答を返せないため、タイトルはご自身で確認してください。</translation>
     </message>
@@ -1252,12 +1257,11 @@ foobar2000が起動し、Beefweb Remote Control (foo_beefweb) コンポーネン
         <translation>デッキが表示できないため、次の文字は削除されました: {chars}</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="246"/>
         <source>The deck can only be told to select tracks 1-{max}, so these were skipped: {titles}</source>
-        <translation>デッキで選択できるのはトラック 1〜{max} のみのため、次はスキップされました: {titles}</translation>
+        <translation type="vanished">デッキで選択できるのはトラック 1〜{max} のみのため、次はスキップされました: {titles}</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="263"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="264"/>
         <source>Stop</source>
         <translation>停止</translation>
     </message>
@@ -1266,7 +1270,7 @@ foobar2000が起動し、Beefweb Remote Control (foo_beefweb) コンポーネン
         <translation type="vanished">書き込み中: {what}</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="309"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="310"/>
         <source>Upload failed: {error}</source>
         <translation>転送に失敗しました: {error}</translation>
     </message>
@@ -1275,18 +1279,18 @@ foobar2000が起動し、Beefweb Remote Control (foo_beefweb) コンポーネン
         <translation type="vanished">すべて送信しました。デッキは応答を返せないため、タイトルはご自身で確認してください。</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="330"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="331"/>
         <source>Close</source>
         <translation>閉じる</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="351"/>
-        <location filename="../panels/mdrem_upload_dialog.py" line="364"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="352"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="365"/>
         <source>Save to Disc</source>
         <translation>ディスクに保存</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="353"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="354"/>
         <source>Titles are only held in the deck&apos;s memory until the disc is ejected -- they are lost if it powers off first.
 
 Eject now to write them permanently?</source>
@@ -1295,12 +1299,12 @@ Eject now to write them permanently?</source>
 今すぐ取り出して恒久的に書き込みますか?</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="364"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="365"/>
         <source>Could not eject: {error}</source>
         <translation>取り出せませんでした: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/mdrem_upload_dialog.py" line="380"/>
+        <location filename="../panels/mdrem_upload_dialog.py" line="381"/>
         <source>Stopping after the current title...</source>
         <translation>現在のタイトルの後に停止します...</translation>
     </message>

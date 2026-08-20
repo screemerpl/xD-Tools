@@ -512,9 +512,11 @@ BOOK = [
                      "Odetnij wcześniej zasilanie, a wszystko, co właśnie zapisałeś, przepada. Po "
                      "skończeniu program proponuje wysunięcie — zgódź się."},
             {"h2": "Ścieżki powyżej 25"},
-            {"p": "Tablica klawiszy firmware'u kończy się na ścieżce 25, więc wyższej po prostu nie da się "
-                  "wybrać na magnetofonie. Takie tytuły są wypisane jako pominięte, a nie po cichu "
-                  "wyrzucone."},
+            {"p": "Sam pilot ma klawisze numeryczne tylko do 25, ale przystawka wyższy numer wpisuje, "
+                  "zamiast naciskać jeden klawisz — ścieżki od 26 do 99 zapisują się więc tak samo jak "
+                  "każda inna. Pole numeru w magnetofonie domyka się po drugiej cyfrze, więc ścieżki "
+                  "powyżej 99 nie da się wybrać w ogóle; takie tytuły są wypisane jako pominięte, a nie "
+                  "po cichu wyrzucone. Tak długa bywa tylko płyta nagrana w LP4."},
         ],
     },
     # ------------------------------------------------------------------
