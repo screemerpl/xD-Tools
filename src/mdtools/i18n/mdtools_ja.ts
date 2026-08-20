@@ -1165,12 +1165,12 @@ foobar2000が起動し、Beefweb Remote Control (foo_beefweb) コンポーネン
 <context>
     <name>MDRem</name>
     <message>
-        <location filename="../mdrem.py" line="429"/>
+        <location filename="../mdrem.py" line="461"/>
         <source>Disc title</source>
         <translation>ディスクタイトル</translation>
     </message>
     <message>
-        <location filename="../mdrem.py" line="444"/>
+        <location filename="../mdrem.py" line="476"/>
         <source>Track {n}</source>
         <translation>トラック {n}</translation>
     </message>
@@ -3103,72 +3103,154 @@ Is it now showing record-pause (REC lit, paused)?</source>
 <context>
     <name>RemoteDialog</name>
     <message>
-        <location filename="../panels/remote_dialog.py" line="86"/>
+        <location filename="../panels/remote_dialog.py" line="216"/>
         <source>Remote</source>
         <translation>リモコン</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="91"/>
+        <location filename="../panels/remote_dialog.py" line="225"/>
+        <source>Extended mode -- every key the adapter knows</source>
+        <translation>拡張モード — アダプターが知っているすべてのキー</translation>
+    </message>
+    <message>
+        <location filename="../panels/remote_dialog.py" line="228"/>
+        <source>Standard mode is the physical remote, key for key. Extended mode adds what has no key on it: tracks 11 to 25, the deck&apos;s own character entry, the rest of the recording group, the two keys that edit the disc, and typing.</source>
+        <translation>標準モードは実物のリモコンそのもので、キーの構成も同じです。拡張モードはそこに載っていないものを加えます。トラック11〜25、デッキ自身の文字入力、録音グループの残り、ディスクを編集する2つのキー、そしてキーボード入力です。</translation>
+    </message>
+    <message>
+        <location filename="../panels/remote_dialog.py" line="242"/>
         <source>Transport</source>
         <translation>操作</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="93"/>
+        <location filename="../panels/remote_dialog.py" line="244"/>
         <source>Play Mode</source>
         <translation>再生モード</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="94"/>
+        <location filename="../panels/remote_dialog.py" line="245"/>
         <source>Display</source>
         <translation>表示</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="95"/>
+        <location filename="../panels/remote_dialog.py" line="246"/>
         <source>Titling</source>
         <translation>タイトル入力</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="97"/>
+        <location filename="../panels/remote_dialog.py" line="249"/>
         <source>Recording</source>
         <translation>録音</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="99"/>
+        <location filename="../panels/remote_dialog.py" line="251"/>
         <source>These start or arm recording on the deck. A write-protected disc ignores them.</source>
         <translation>これらはデッキの録音を開始または待機させます。書き込み禁止のディスクでは無視されます。</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="103"/>
+        <location filename="../panels/remote_dialog.py" line="255"/>
+        <source>Disc Editing</source>
+        <translation>ディスクの編集</translation>
+    </message>
+    <message>
+        <location filename="../panels/remote_dialog.py" line="258"/>
+        <source>These change what is on the disc. The deck asks on its own display before doing anything and waits for Enter -- read what it is asking before pressing it.</source>
+        <translation>これらはディスクの中身を変更します。デッキは実行前に自身の表示で確認を求め、Enterを待ちます。押す前に何を聞かれているか読んでください。</translation>
+    </message>
+    <message>
+        <location filename="../panels/remote_dialog.py" line="265"/>
         <source>Connecting...</source>
         <translation>接続中...</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="127"/>
+        <location filename="../panels/remote_dialog.py" line="293"/>
         <source>Tracks</source>
         <translation>トラック</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="150"/>
+        <location filename="../panels/remote_dialog.py" line="310"/>
+        <source>Typing</source>
+        <translation>文字入力</translation>
+    </message>
+    <message>
+        <location filename="../panels/remote_dialog.py" line="314"/>
+        <source>Type on your own keyboard and every letter, digit and symbol goes straight to the deck, which has to be in name-edit mode first -- press Name, or select a track and then Name. Backspace deletes, Enter commits the title, and the arrow keys move the cursor. Accented letters lose their marks; anything the deck cannot show at all is refused rather than sent as something else.</source>
+        <translation>お使いのキーボードで入力すると、文字・数字・記号がそのままデッキへ送られます。デッキは先に名前編集モードにしておく必要があります（Nameを押すか、トラックを選んでからName）。Backspaceで削除、Enterでタイトル確定、矢印キーでカーソル移動です。アクセント付きの文字は記号が落ちます。デッキがまったく表示できないものは、別の文字に置き換えず送信を断ります。</translation>
+    </message>
+    <message>
+        <location filename="../panels/remote_dialog.py" line="410"/>
+        <source>The deck cannot show {chars} -- nothing was sent.</source>
+        <translation>デッキは {chars} を表示できません。何も送信していません。</translation>
+    </message>
+    <message>
+        <location filename="../panels/remote_dialog.py" line="417"/>
+        <source>Typed: {text}</source>
+        <translation>入力: {text}</translation>
+    </message>
+    <message>
+        <location filename="../panels/remote_dialog.py" line="450"/>
         <source>Not connected: {error}</source>
         <translation>未接続: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="152"/>
+        <location filename="../panels/remote_dialog.py" line="452"/>
         <source>Connected on {port}.</source>
         <translation>{port} に接続しました。</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="156"/>
+        <location filename="../panels/remote_dialog.py" line="429"/>
+        <location filename="../panels/remote_dialog.py" line="456"/>
         <source>Not connected -- nothing was sent.</source>
         <translation>未接続のため、何も送信されませんでした。</translation>
     </message>
     <message>
         <location filename="../panels/remote_dialog.py" line="161"/>
+        <source>While the deck is in name-edit mode this scrolls the character under the cursor instead of changing track, so it will quietly corrupt a title.</source>
+        <translation>デッキが名前編集モードのときは、トラックを変えるのではなくカーソル位置の文字を送るため、タイトルを黙って壊します。</translation>
+    </message>
+    <message>
+        <location filename="../panels/remote_dialog.py" line="167"/>
+        <source>Opens a track number field on the deck&apos;s display, which closes itself as soon as two digits have been typed -- no Enter needed, and no room for a third digit.</source>
+        <translation>デッキの表示にトラック番号の入力欄を開きます。2桁目を入力した時点で自動的に確定するので、Enterは不要で、3桁目の余地もありません。</translation>
+    </message>
+    <message>
+        <location filename="../panels/remote_dialog.py" line="173"/>
+        <source>Pressed while the deck is already recording, this puts a track mark in -- which is how this app splits an album that plays without gaps.</source>
+        <translation>録音中に押すとトラックマークが入ります。切れ目なく続くアルバムをこのアプリが分割しているのは、この方法です。</translation>
+    </message>
+    <message>
+        <location filename="../panels/remote_dialog.py" line="179"/>
+        <source>Switches the deck&apos;s own character set, part of the entry method this app bypasses by sending character codes directly. Known to work, and of no use here.</source>
+        <translation>デッキ自身の文字セットを切り替えます。このアプリは文字コードを直接送ることでその入力方法を迂回しています。動作は確認済みですが、ここでは使い道がありません。</translation>
+    </message>
+    <message>
+        <location filename="../panels/remote_dialog.py" line="185"/>
+        <source>One of three keys the deck&apos;s code table calls Clear. Tried in name-edit mode with the cursor at the start, in the middle, and held down: it does nothing there. It most likely clears a play program.</source>
+        <translation>デッキのコード表がClearと呼ぶ3つのキーのひとつです。名前編集モードで、カーソルを先頭に置いた場合・途中に置いた場合・押しっぱなしにした場合を試しましたが、そこでは何も起きません。おそらく再生プログラムを消すキーです。</translation>
+    </message>
+    <message>
+        <location filename="../panels/remote_dialog.py" line="192"/>
+        <source>Recognised by the deck as a recording command, but which of that group does what was never told apart -- they have only been tried on a write-protected disc, where every one of them answers the same way.</source>
+        <translation>デッキは録音系のコマンドとして認識しますが、このグループのどれが何をするのかは区別できていません。書き込み禁止のディスクでしか試しておらず、そこではどれも同じ反応を返すためです。</translation>
+    </message>
+    <message>
+        <location filename="../panels/remote_dialog.py" line="199"/>
+        <source>Erases the track the deck is sitting on. Tried on a real disc: it asks on the display first and does nothing until Enter, so Cancel backs out of it.</source>
+        <translation>デッキが止まっているトラックを消去します。実際のディスクで確認済みで、まず表示で確認を求め、Enterを押すまで何もしません。Cancelで取り消せます。</translation>
+    </message>
+    <message>
+        <location filename="../panels/remote_dialog.py" line="205"/>
+        <source>Splits the current track in two. Never tried on an unprotected disc -- Erase, the one key of this group that has been, asked before acting.</source>
+        <translation>現在のトラックを2つに分割します。書き込み可能なディスクでは未検証です。このグループで唯一試されたEraseは、実行前に確認を求めました。</translation>
+    </message>
+    <message>
+        <location filename="../panels/remote_dialog.py" line="437"/>
+        <location filename="../panels/remote_dialog.py" line="461"/>
         <source>{key} failed: {error}</source>
         <translation>{key} に失敗しました: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="165"/>
+        <location filename="../panels/remote_dialog.py" line="465"/>
         <source>Sent: {key}</source>
         <translation>送信: {key}</translation>
     </message>

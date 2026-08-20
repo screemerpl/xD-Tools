@@ -448,8 +448,8 @@ BOOK = [
                 "head": ["Group", "Keys"],
                 "rows": [
                     ["Transport", "Previous, Play, Next, scan back, Pause, scan forward, Stop, Power, Eject."],
-                    ["Tracks", "1 to 10, selected directly. Higher numbers exist in the firmware but have "
-                               "no button here - use >25 on the deck."],
+                    ["Tracks", "1 to 10, selected directly - as many as the physical remote has keys "
+                               "for. 11 to 25 are in extended mode, below."],
                     ["Play Mode", "Continuous, Shuffle, Program, Repeat, A-B, >25."],
                     ["Display", "Display, Scroll."],
                     ["Titling", "Name, Enter, Delete, Cancel."],
@@ -465,6 +465,49 @@ BOOK = [
             {"tip": "**Record pressed while the deck is already recording adds a track mark.** That is how "
                     "the automatic recording splits a gapless album, and you can use it by hand the same "
                     "way."},
+            {"h2": "Extended mode"},
+            {"p": "The window above is the physical remote, key for key. Tick **Extended mode** and it "
+                  "grows the rest of what the adapter can send - codes that exist, and were verified "
+                  "against a real deck, but that no key on the plastic remote reaches. The choice is "
+                  "remembered, so the window opens the way you left it."},
+            {"fig": ("remote-extended", "Extended mode. Tracks up to 25, the deck's own character entry, "
+                                        "and the two keys that edit the disc.")},
+            {"table": {
+                "head": ["Added", "What it is"],
+                "rows": [
+                    ["Tracks 11-25", "One code each, so they are one press like the first ten. Past 25 "
+                                     "the number is typed rather than pressed, which is what titling "
+                                     "does on its own."],
+                    ["Char, Num", "The deck's own character entry - switching its character sets and "
+                                  "picking with the jog dial. This app bypasses that by sending "
+                                  "character codes directly, so these are here for completeness."],
+                    ["Clear 2", "One of three keys the deck's code table calls Clear. It does nothing "
+                                "in name-edit mode, wherever the cursor is; it most likely clears a "
+                                "play program."],
+                    ["D.Pre", "Recognised by the deck as a recording command. Which one of that group "
+                              "does what has never been told apart."],
+                    ["Erase Track, Divide", "These edit the disc itself - erasing the current track, or "
+                                            "splitting it in two."],
+                ],
+            }},
+            {"warn": "**Erase Track and Divide change what is on the disc.** The deck asks on its own "
+                     "display first and does nothing until Enter, so Cancel backs out - but read the "
+                     "display before pressing Enter, because nothing here can undo it."},
+            {"h2": "Typing on your own keyboard"},
+            {"p": "The RM-D10P this stands in for is a keyboard, and in extended mode so is this window: "
+                  "with it open, every letter, digit and symbol you type goes straight to the deck. There "
+                  "is no text box and no on-screen keyboard on purpose - the remote has keys because a "
+                  "deck has none, and the computer running this already has better ones."},
+            {"p": "Put the deck into name-edit mode first: press **Name**, or select a track and then "
+                  "**Name**. Then type. **Backspace** deletes, **Enter** commits the title, and the "
+                  "**arrow keys** move the cursor along the field."},
+            {"note": "Accented letters lose their marks on the way, exactly as they do when titles are "
+                     "written from a project - `ł` arrives as `l`. A character with no Latin equivalent "
+                     "at all is refused and said so on the status line, rather than being sent as "
+                     "something else."},
+            {"tip": "Typing is paced to what the deck can take - about three or four keypresses a second. "
+                    "Type faster than that and it keeps up by waiting, because two presses arriving too "
+                    "close together are read as one key held down."},
         ],
     },
     # ------------------------------------------------------------------

@@ -128,6 +128,38 @@ _SECONDS_PER_DIGIT = 0.2
 DEFAULT_CLEAR_COUNT = 40
 
 
+# A character is its own 20-bit code, `0x61D00 | ascii` -- the RM-D10P's
+# own keyboard protocol, and a different length from the 12-bit 0x07xx
+# block the deck's function keys live in. Restated here only because of
+# the space below; everything else asks the firmware by name.
+CHAR_CODE_BASE = 0x61D00
+CHAR_CODE_BITS = 20
+
+# Typing on a real keyboard, a character at a time, needs the same gap
+# between presses the firmware leaves inside its own TEXT command: the deck
+# counts a press only after three frames *and* a clear pause, so two
+# characters sent back to back read as one key held down rather than as two
+# presses. Faster is not "drops characters", it is "means something else".
+MIN_CHARACTER_GAP_S = 0.15
+
+
+def character_command(char: str) -> str | None:
+    """The firmware line that types one character, or None if the deck
+    cannot show it at all.
+
+    Space is the one character that cannot go through `SEND`: the firmware
+    splits that command on whitespace, so the argument would be empty. It
+    goes out as its raw code instead -- which is why CHAR_CODE_BASE has to
+    exist here, and would stop being necessary the day the firmware learns
+    a `SPACE` key name.
+    """
+    if len(char) != 1 or not (0x20 <= ord(char) <= 0x7E):
+        return None
+    if char == " ":
+        return f"RAW {CHAR_CODE_BASE | 0x20:X} {CHAR_CODE_BITS}"
+    return f"SEND {char}"
+
+
 class MDRemError(Exception):
     """Any failure talking to the device: port won't open, no reply in
     time, or the firmware answered ERR."""

@@ -447,8 +447,8 @@ BOOK = [
                 "rows": [
                     ["Transport", "Poprzedni, Play, Następny, przewijanie wstecz, Pauza, przewijanie w "
                                   "przód, Stop, Zasilanie, Wysuń."],
-                    ["Utwory", "Od 1 do 10, wybierane wprost. Wyższe numery są w firmwarze, ale nie mają "
-                               "tu przycisku — użyj >25 na magnetofonie."],
+                    ["Utwory", "Od 1 do 10, wybierane wprost — tyle, ile klawiszy ma fizyczny pilot. "
+                               "Od 11 do 25 są w trybie rozszerzonym, niżej."],
                     ["Tryb odtwarzania", "Continuous, Shuffle, Program, Repeat, A-B, >25."],
                     ["Wyświetlacz", "Display, Scroll."],
                     ["Nazywanie", "Name, Enter, Delete, Cancel."],
@@ -463,6 +463,52 @@ BOOK = [
                      "rozdział o rozwiązywaniu problemów."},
             {"tip": "**Record naciśnięty w trakcie nagrywania stawia znacznik ścieżki.** Tak automatyczne "
                     "nagrywanie dzieli album bez przerw i tak samo można tego użyć ręcznie."},
+            {"h2": "Tryb rozszerzony"},
+            {"p": "Okno powyżej to fizyczny pilot, klawisz w klawisz. Zaznacz **Tryb rozszerzony**, a "
+                  "dojdzie reszta tego, co przystawka umie wysłać — kody, które istnieją i zostały "
+                  "sprawdzone na prawdziwym magnetofonie, ale do których żaden klawisz plastikowego "
+                  "pilota nie sięga. Wybór jest zapamiętywany, więc okno otwiera się tak, jak je "
+                  "zostawiłeś."},
+            {"fig": ("remote-extended", "Tryb rozszerzony. Ścieżki do 25, własna metoda wpisywania znaków "
+                                        "magnetofonu i dwa klawisze edytujące płytę.")},
+            {"table": {
+                "head": ["Co dochodzi", "Czym jest"],
+                "rows": [
+                    ["Ścieżki 11–25", "Każda ma własny kod, więc to jedno naciśnięcie, tak jak przy "
+                                      "pierwszej dziesiątce. Powyżej 25 numer się wpisuje, a nie "
+                                      "naciska — i tym zajmuje się już samo nadawanie tytułów."],
+                    ["Char, Num", "Własna metoda wpisywania znaków magnetofonu — przełączanie zestawów "
+                                  "znaków i wybór pokrętłem. Program omija ją, wysyłając kody znaków "
+                                  "wprost, więc te klawisze są tu dla kompletu."],
+                    ["Clear 2", "Jeden z trzech klawiszy, które tabela kodów magnetofonu nazywa Clear. "
+                                "W trybie edycji nazwy nie robi nic, gdziekolwiek stoi kursor; "
+                                "najpewniej kasuje program odtwarzania."],
+                    ["D.Pre", "Magnetofon rozpoznaje go jako polecenie zapisu. Nigdy nie udało się "
+                              "rozróżnić, który klawisz z tej grupy co robi."],
+                    ["Erase Track, Divide", "Te edytują samą płytę — kasują bieżącą ścieżkę albo dzielą "
+                                            "ją na dwie."],
+                ],
+            }},
+            {"warn": "**Erase Track i Divide zmieniają zawartość płyty.** Magnetofon najpierw pyta na "
+                     "własnym wyświetlaczu i nie robi nic do czasu Entera, więc Cancel się z tego "
+                     "wycofuje — ale przeczytaj wyświetlacz, zanim naciśniesz Enter, bo nic tutaj tego "
+                     "nie cofnie."},
+            {"h2": "Pisanie z własnej klawiatury"},
+            {"p": "RM-D10P, którego to okno zastępuje, jest klawiaturą — i w trybie rozszerzonym to okno "
+                  "też nią jest: kiedy jest otwarte, każda wpisana litera, cyfra i znak idzie prosto do "
+                  "magnetofonu. Nie ma tu ani pola tekstowego, ani klawiatury ekranowej, i to celowo — "
+                  "pilot ma klawisze dlatego, że magnetofon ich nie ma, a komputer, na którym to działa, "
+                  "ma lepsze."},
+            {"p": "Najpierw wprowadź magnetofon w tryb edycji nazwy: naciśnij **Name** albo wybierz "
+                  "ścieżkę i dopiero potem **Name**. Potem pisz. **Backspace** kasuje, **Enter** "
+                  "zatwierdza tytuł, a **strzałki** przesuwają kursor po polu."},
+            {"note": "Litery z ogonkami tracą po drodze znaki diakrytyczne, dokładnie tak samo jak przy "
+                     "zapisywaniu tytułów z projektu — `ł` dociera jako `l`. Znak, który nie ma żadnego "
+                     "łacińskiego odpowiednika, jest odrzucany i wypisany w linii stanu, a nie wysyłany "
+                     "jako coś innego."},
+            {"tip": "Pisanie jest dostosowane do tempa, jakie magnetofon przyjmuje — jakieś trzy, cztery "
+                    "naciśnięcia na sekundę. Kiedy piszesz szybciej, program nadąża, czekając: dwa "
+                    "naciśnięcia zbyt blisko siebie magnetofon czyta jako jeden przytrzymany klawisz."},
         ],
     },
     # ------------------------------------------------------------------
