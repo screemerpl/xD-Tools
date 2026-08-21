@@ -18,7 +18,7 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QGraphicsPixmapItem, QMessageBox
 
 from mdtools import cd_layout, gallery
-from mdtools.app_window import CD_INSERT_TEMPLATE, CD_LABEL_TEMPLATE, MainWindow
+from mdtools.app_window import CD_INSERT_FRONT_TEMPLATE, CD_INSERT_TEMPLATE, CD_LABEL_TEMPLATE, MainWindow
 from mdtools.canvas.scene import DesignScene
 from mdtools.constants import mm_to_px
 from mdtools.project import MEDIUM_CD, PAGE_COVER, PAGE_DISC, ProjectMetadata, Track
@@ -442,6 +442,59 @@ def test_an_unfolded_sheet_is_refused(qt_app):
         cd_layout.build_insert(scene, _metadata())
 
 
+# -- the front-only insert (build_front_insert) ---------------------------
+#
+# The slim case's front-only insert has no fold at all -- the back of that
+# case is bare plastic tray, with nowhere for a second panel to go -- so
+# build_front_insert() is build_insert()'s own right-panel cover placement
+# (place_insert_cover(), unchanged), just stretched across the *whole*
+# unfolded card instead of half of it.
+
+
+def _front_scene() -> DesignScene:
+    return DesignScene(CoverTemplate(name="Front", width_mm=120.0, height_mm=120.0, medium=MEDIUM_CD))
+
+
+def test_the_front_only_cover_fills_the_whole_card(qt_app):
+    scene = _front_scene()
+    whole = scene.cut_shape_rects()[0]
+
+    cd_layout.build_front_insert(scene, _metadata())
+    cover = [item for item in scene.print_items() if isinstance(item, QGraphicsPixmapItem)][-1]
+
+    footprint = _footprint(cover)
+    assert footprint.left() == pytest.approx(whole.left(), abs=1.0)
+    assert footprint.top() == pytest.approx(whole.top(), abs=1.0)
+    assert footprint.width() == pytest.approx(whole.width(), abs=1.0)
+    assert footprint.height() == pytest.approx(whole.height(), abs=1.0)
+
+
+def test_the_front_only_insert_builds_nothing_but_the_cover(qt_app):
+    """No fold means no left panel -- nowhere for a track list or an
+    artist panel to go, unlike build_insert()'s own two-panel version."""
+    scene = _front_scene()
+
+    added = cd_layout.build_front_insert(scene, _metadata())
+
+    assert len(added) == 1
+    assert isinstance(added[0], QGraphicsPixmapItem)
+
+
+def test_the_front_only_insert_refuses_a_folded_sheet(qt_app):
+    """That is build_insert()'s job, not this one."""
+    scene = _insert_scene()
+
+    with pytest.raises(cd_layout.CdLayoutError):
+        cd_layout.build_front_insert(scene, _metadata())
+
+
+def test_the_front_only_insert_needs_cover_art(qt_app):
+    scene = _front_scene()
+
+    with pytest.raises(cd_layout.CdLayoutError):
+        cd_layout.build_front_insert(scene, ProjectMetadata())
+
+
 # -- through the application ---------------------------------------------
 
 
@@ -465,6 +518,26 @@ def test_laying_out_a_cd_project_builds_both_pages(qt_app, monkeypatch):
     assert window.project.pages[PAGE_COVER].template.name == CD_INSERT_TEMPLATE
     assert window.project.pages[PAGE_DISC].print_items()
     assert window.project.pages[PAGE_COVER].print_items()
+
+
+def test_the_front_only_insert_builds_through_the_application(qt_app, monkeypatch):
+    """_auto_layout_cd_insert(template_name=CD_INSERT_FRONT_TEMPLATE) --
+    the toolbar Template dropdown's "Generated from Metadata" path for
+    this variant -- against the real bundled template, not a hand-built
+    stand-in."""
+    monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
+    window = MainWindow(show_startup_dialog=False)
+    _cd_project(window)
+    metadata = _metadata()
+    window.project.metadata = metadata
+
+    window._auto_layout_cd_insert(metadata, template_name=CD_INSERT_FRONT_TEMPLATE)
+
+    scene = window.project.pages[PAGE_COVER]
+    assert scene.template.name == CD_INSERT_FRONT_TEMPLATE
+    items = scene.print_items()
+    assert len(items) == 1
+    assert isinstance(items[0], QGraphicsPixmapItem)
 
 
 def test_the_mark_survives_the_trip_through_clip_layers(qt_app, monkeypatch):

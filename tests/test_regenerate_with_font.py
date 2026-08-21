@@ -77,6 +77,60 @@ def _md_window(monkeypatch) -> MainWindow:
     return window
 
 
+def _md_window_no_slider(monkeypatch) -> MainWindow:
+    """A MiniDisc project whose disc page is already on the plain "Full
+    disc label" (no slider) variant -- for checking that "Regenerate with
+    Font..." preserves it rather than silently rebuilding the "(with
+    Slider)" twin (see app_window._auto_layout_method_for_page's own
+    disc_template_name parameter)."""
+    from mdtools.project import PAGE_DISC
+    from mdtools.templates.models import CoverTemplate, DiscTemplate
+
+    with_slider = DiscTemplate(
+        name="full label",
+        width_mm=69.4,
+        height_mm=66.4,
+        shape="full_label",
+        corner_radius_mm=4.0,
+        slider_notch_width_mm=27.5,
+        slider_notch_height_mm=17.5,
+        slider_notch_corner_radius_mm=2.5,
+        slider_notch_top_mm=24.3,
+        slider_notch_buffer_mm=0.8,
+        slider_travel_mm=19.4,
+        slider_width_mm=27.5,
+        slider_height_mm=17.5,
+        slider_corner_radius_mm=2.5,
+    )
+    no_slider = DiscTemplate(
+        name="full label no slider",
+        width_mm=69.4,
+        height_mm=66.4,
+        shape="full_label",
+        corner_radius_mm=4.0,
+        slider_notch_width_mm=27.5,
+        slider_notch_height_mm=17.5,
+        slider_notch_corner_radius_mm=2.5,
+        slider_notch_top_mm=24.3,
+        slider_notch_buffer_mm=0.8,
+        slider_travel_mm=19.4,
+    )
+    monkeypatch.setattr(
+        registry,
+        "load_templates",
+        lambda: {
+            "disc": [with_slider, no_slider],
+            "cover": [CoverTemplate(name="plain", width_mm=126.0, height_mm=73.0)],
+        },
+    )
+    monkeypatch.setattr("mdtools.app_window.FULL_LABEL_TEMPLATE", with_slider.name)
+    monkeypatch.setattr("mdtools.app_window.FULL_LABEL_NO_SLIDER_TEMPLATE", no_slider.name)
+    window = MainWindow(show_startup_dialog=False)
+    window.project.metadata = _metadata()
+    window.apply_template(PAGE_DISC, no_slider)
+    return window
+
+
 def _cd_window(monkeypatch) -> MainWindow:
     monkeypatch.setattr(QMessageBox, "information", lambda *a, **k: None)
     window = MainWindow(show_startup_dialog=False)
@@ -85,6 +139,20 @@ def _cd_window(monkeypatch) -> MainWindow:
     window.apply_template(PAGE_DISC, next(t for t in templates["disc"] if t.name == CD_LABEL_TEMPLATE))
     window.apply_template(PAGE_COVER, next(t for t in templates["cover"] if t.name == CD_INSERT_TEMPLATE))
     window.project.metadata = _metadata()
+    return window
+
+
+def _cd_window_front_insert(monkeypatch) -> MainWindow:
+    """A CD project whose cover page is already on the front-only insert --
+    for checking that "Regenerate with Font..." preserves it rather than
+    silently rebuilding the folded, two-panel one (see
+    app_window._auto_layout_method_for_page's own cover_template_name
+    parameter)."""
+    from mdtools.app_window import CD_INSERT_FRONT_TEMPLATE
+
+    window = _cd_window(monkeypatch)
+    front = next(t for t in registry.load_templates()["cover"] if t.name == CD_INSERT_FRONT_TEMPLATE)
+    window.apply_template(PAGE_COVER, front)
     return window
 
 
@@ -216,6 +284,71 @@ def test_two_previews_in_a_row_do_not_compound(qt_app, monkeypatch):
 
     restored_texts = sorted(i.toPlainText() for i in window.project.pages[PAGE_DISC].print_items() if isinstance(i, QGraphicsTextItem))
     assert restored_texts == original_texts
+
+
+# -- the disc page's own template (with/without slider) is preserved -----
+
+
+def test_preview_does_not_swap_the_no_slider_variant_back_to_the_slider_one(qt_app, monkeypatch):
+    window = _md_window_no_slider(monkeypatch)
+    window.current_page = PAGE_DISC
+    seen = {}
+
+    def _check():
+        seen["template"] = window.project.pages[PAGE_DISC].template.name
+
+    _run_dialog(monkeypatch, window, family="Courier New", after_preview=_check)
+
+    assert seen["template"] == "full label no slider"
+
+
+def test_accepting_does_not_swap_the_no_slider_variant_back_to_the_slider_one(qt_app, monkeypatch):
+    window = _md_window_no_slider(monkeypatch)
+    window.current_page = PAGE_DISC
+
+    _run_dialog(
+        monkeypatch,
+        window,
+        family="Courier New",
+        preview=False,
+        final=RegenerateFontDialog.DialogCode.Accepted,
+        confirm=QMessageBox.StandardButton.Yes,
+    )
+
+    assert window.project.pages[PAGE_DISC].template.name == "full label no slider"
+
+
+def test_preview_does_not_swap_the_front_only_insert_back_to_the_folded_one(qt_app, monkeypatch):
+    from mdtools.app_window import CD_INSERT_FRONT_TEMPLATE
+
+    window = _cd_window_front_insert(monkeypatch)
+    window.current_page = PAGE_COVER
+    seen = {}
+
+    def _check():
+        seen["template"] = window.project.pages[PAGE_COVER].template.name
+
+    _run_dialog(monkeypatch, window, family="Courier New", after_preview=_check)
+
+    assert seen["template"] == CD_INSERT_FRONT_TEMPLATE
+
+
+def test_accepting_does_not_swap_the_front_only_insert_back_to_the_folded_one(qt_app, monkeypatch):
+    from mdtools.app_window import CD_INSERT_FRONT_TEMPLATE
+
+    window = _cd_window_front_insert(monkeypatch)
+    window.current_page = PAGE_COVER
+
+    _run_dialog(
+        monkeypatch,
+        window,
+        family="Courier New",
+        preview=False,
+        final=RegenerateFontDialog.DialogCode.Accepted,
+        confirm=QMessageBox.StandardButton.Yes,
+    )
+
+    assert window.project.pages[PAGE_COVER].template.name == CD_INSERT_FRONT_TEMPLATE
 
 
 # -- accepting regenerates every page ------------------------------------

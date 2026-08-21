@@ -205,6 +205,113 @@ def test_the_cover_goes_behind_the_seeded_insertion_mark(qt_app, monkeypatch):
     assert all(text.zValue() > cover.zValue() for text in texts)
 
 
+# --- the "Full disc label" (no slider) variant ------------------------------
+#
+# app_window._auto_layout_disc_label() takes an optional template_name so it
+# can build either "Full disc label (with Slider)" (the default, used by the
+# full-project layout / Tools panel magic wand / post-recording layout -- see
+# _auto_layout_project) or the plain "Full disc label" -- same layout, minus
+# a slider shape for the logo to land on. See app_window.py's own notes on
+# _auto_layout_template_names_for_page/_auto_layout_method_for_page for how
+# the Template dropdown and "Regenerate with Font..." pick which one to
+# rebuild.
+
+
+def _window_with_both_full_labels(monkeypatch):
+    """A MainWindow with *both* full-label variants registered, so a test
+    can switch between them the way the Template dropdown would."""
+    from mdtools.app_window import MainWindow
+    from mdtools.templates import registry
+    from mdtools.templates.models import CoverTemplate
+
+    with_slider = _full_label(with_slider=True)
+    no_slider = _full_label(with_slider=False)
+    no_slider.name = "Full disc label"
+    monkeypatch.setattr(
+        registry,
+        "load_templates",
+        lambda: {
+            "disc": [with_slider, no_slider],
+            "cover": [CoverTemplate(name="plain", width_mm=126.0, height_mm=73.0)],
+        },
+    )
+    monkeypatch.setattr("mdtools.app_window.FULL_LABEL_TEMPLATE", with_slider.name)
+    monkeypatch.setattr("mdtools.app_window.FULL_LABEL_NO_SLIDER_TEMPLATE", no_slider.name)
+    return MainWindow(show_startup_dialog=False), with_slider, no_slider
+
+
+def test_the_no_slider_variant_is_offered_as_a_second_generatable_template(qt_app, monkeypatch):
+    window, with_slider, no_slider = _window_with_both_full_labels(monkeypatch)
+    from mdtools.project import PAGE_DISC
+
+    names = window._auto_layout_template_names_for_page(PAGE_DISC)
+
+    # A subset check, not equality: the small sticker label family (see
+    # test_sticker_disc_label.py) also lives on PAGE_DISC and has its own
+    # two generatable names alongside these full-face ones.
+    assert {with_slider.name, no_slider.name} <= names
+    assert window._can_auto_generate_page(PAGE_DISC, no_slider)
+    assert window._can_auto_generate_page(PAGE_DISC, with_slider)
+
+
+def test_passing_the_no_slider_template_name_builds_that_template(qt_app, monkeypatch):
+    from mdtools.project import PAGE_DISC, ProjectMetadata
+
+    window, with_slider, no_slider = _window_with_both_full_labels(monkeypatch)
+
+    window._auto_layout_disc_label(
+        ProjectMetadata(album="A", artist="B", cover_art=_image_bytes()), template_name=no_slider.name
+    )
+
+    assert window.project.pages[PAGE_DISC].template.name == no_slider.name
+
+
+def test_the_no_slider_variant_gets_no_orphan_logo_item(qt_app, monkeypatch):
+    """Regression: scene.add_image() was being called unconditionally
+    before checking whether there was actually a slider to place the logo
+    on, leaving an unpositioned, un-undo-tracked image sitting on the page
+    whenever there wasn't one."""
+    from mdtools.project import PAGE_DISC, ProjectMetadata
+
+    window, with_slider, no_slider = _window_with_both_full_labels(monkeypatch)
+
+    window._auto_layout_disc_label(
+        ProjectMetadata(album="A", artist="B", cover_art=_image_bytes()), template_name=no_slider.name
+    )
+
+    items = window.project.pages[PAGE_DISC].print_items()
+    pixmaps = [item for item in items if not hasattr(item, "toPlainText")]
+    # Just the cover -- no second image for a logo with nowhere to go.
+    assert len(pixmaps) == 1
+
+
+def test_the_no_slider_variant_still_gets_the_cover_and_insertion_mark(qt_app, monkeypatch):
+    from mdtools.project import PAGE_DISC, ProjectMetadata
+
+    window, with_slider, no_slider = _window_with_both_full_labels(monkeypatch)
+
+    window._auto_layout_disc_label(
+        ProjectMetadata(album="A", artist="B", cover_art=_image_bytes()), template_name=no_slider.name
+    )
+
+    items = window.project.pages[PAGE_DISC].print_items()
+    texts = [item for item in items if hasattr(item, "toPlainText")]
+    assert texts, "the insertion mark must still be there"
+
+
+def test_leaving_template_name_unset_still_defaults_to_the_slider_variant(qt_app, monkeypatch):
+    """Every caller that doesn't know about the no-slider variant at all
+    (_auto_layout_project, the Tools panel's magic wand, the post-recording
+    layout) must keep building exactly what it always has."""
+    from mdtools.project import PAGE_DISC, ProjectMetadata
+
+    window, with_slider, no_slider = _window_with_both_full_labels(monkeypatch)
+
+    window._auto_layout_disc_label(ProjectMetadata(album="A", artist="B", cover_art=_image_bytes()))
+
+    assert window.project.pages[PAGE_DISC].template.name == with_slider.name
+
+
 # --- the insertion mark's colour -------------------------------------------
 
 

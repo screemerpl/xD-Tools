@@ -594,10 +594,36 @@ def build_insert(
     return added
 
 
+def build_front_insert(scene: DesignScene, metadata: ProjectMetadata) -> list:
+    """The slim case's front-only insert: build_insert()'s own right panel
+    (place_insert_cover(), unchanged), covering the *whole* card instead of
+    just the half of it right of a crease.
+
+    There is no fold here at all -- the card is only the front cover, since
+    a slim case's back is bare plastic tray with no pocket for a second
+    panel (see this module's own header) -- so there is nowhere for a track
+    list or artist panel to go, and this builds nothing but the cover.
+    Raises rather than returning quietly if the page turns out to actually
+    be folded (that is build_insert()'s job, not this one) or has no cut
+    shape at all.
+    """
+    if scene.fold_panel_rects():
+        raise CdLayoutError("this page is a folded insert, not a front-only one")
+    rects = scene.cut_shape_rects()
+    if not rects:
+        raise CdLayoutError("this page has no cut shape to place the cover on")
+    if not metadata.cover_art:
+        raise CdLayoutError("there is no cover art to build the insert from")
+
+    cover = place_insert_cover(scene, rects[0], metadata.cover_art)
+    return [cover] if cover is not None else []
+
+
 __all__ = [
     "CdLayoutError",
     "build_case_back",
     "build_disc_label",
+    "build_front_insert",
     "build_insert",
     "lighten",
     "place_artist_panel",

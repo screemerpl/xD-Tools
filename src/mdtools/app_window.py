@@ -24,7 +24,12 @@ from PySide6.QtWidgets import (
 )
 
 from mdtools import album_sort, app_settings, cover_filters, gallery, i18n, mixtape_cover, recent_projects, user_paths
-from mdtools.auto_layout import place_cover_on_label, place_logo_on_slider, recolour_insertion_mark
+from mdtools.auto_layout import (
+    build_sticker_label,
+    place_cover_on_label,
+    place_logo_on_slider,
+    recolour_insertion_mark,
+)
 from mdtools.gallery import save_downloaded_cover
 from mdtools.jcard_layout import build_jcard
 from mdtools.metadata_lookup import MetadataLookupError, find_artist_photo, find_cover
@@ -46,7 +51,7 @@ from mdtools.panels.erase_dialog import EraseDiscDialog
 from mdtools.panels.experimental_settings_dialog import ExperimentalSettingsDialog
 from mdtools import foobar
 from mdtools.audio_folder import album_from_folder
-from mdtools.cd_layout import CdLayoutError, build_case_back, build_disc_label, build_insert
+from mdtools.cd_layout import CdLayoutError, build_case_back, build_disc_label, build_front_insert, build_insert
 from mdtools import tape
 from mdtools.tape_layout import TapeLayoutError, build_side_label
 from mdtools.tape_layout import build_jcard as build_tape_jcard
@@ -96,11 +101,27 @@ from mdtools.templates.template_dialog import TemplateManagerDialog
 # label with its slider sticker, and the plain three-panel J-card (the
 # window variant would cut a hole through the cover artwork).
 FULL_LABEL_TEMPLATE = "Full disc label (with Slider)"
+# The same full-face label, minus the slider cutout/sticker -- built by the
+# exact same _auto_layout_disc_label(), just with no slider shape for the
+# MiniDisc logo to land on (auto_layout.place_logo_on_slider() already
+# no-ops gracefully when there's nothing to place it on).
+FULL_LABEL_NO_SLIDER_TEMPLATE = "Full disc label"
+# The small chamfered "sticker" disc label -- a different shape from the
+# full-face templates above, built by _auto_layout_sticker_label() instead
+# of _auto_layout_disc_label() (see auto_layout.build_sticker_label()).
+# The no-slider twin is the same relationship FULL_LABEL_NO_SLIDER_TEMPLATE
+# has to FULL_LABEL_TEMPLATE: same layout, no slider to fill.
+STICKER_TEMPLATE = "MiniDisc Disc Label (with Slider)"
+STICKER_NO_SLIDER_TEMPLATE = "MiniDisc Disc Label"
 JCARD_TEMPLATE = "MiniDisc Cover (J-Card)"
 # The CD equivalents. The folded insert rather than the flat front, because
 # it is the one with somewhere to put a track list.
 CD_LABEL_TEMPLATE = "CD Disc Label (Standard Hub)"
 CD_INSERT_TEMPLATE = "CD Slim Case Insert (Folded, 2 Panels)"
+# The same insert, minus the fold -- built by the exact same
+# _auto_layout_cd_insert(), just placing the cover across the whole card
+# instead of just its right panel (see cd_layout.build_front_insert()).
+CD_INSERT_FRONT_TEMPLATE = "CD Slim Case Insert (Front)"
 # The cassette's: one inlay card and the same sticker twice, once per face.
 TAPE_JCARD_TEMPLATE = "Cassette J-Card"
 TAPE_LABEL_TEMPLATE = "Cassette Shell Label"
@@ -1557,16 +1578,29 @@ class MainWindow(QMainWindow):
         self.template_combo.setCurrentIndex(index)
         self.template_combo.blockSignals(False)
 
-    def _auto_layout_template_name_for_page(self, page: str) -> str | None:
-        """Which template name the *content* generator for `page` actually
-        builds -- the other half of _auto_layout_method_for_page(): that
-        one says what to run, this one says which template it demands.
-        Every _auto_layout_* method above looks its own template up by one
-        fixed name rather than accepting whatever is currently on the
-        page, so "Generated from Metadata" is only ever offered in the
-        Template dropdown when the template being switched to is this
-        exact one. None means no known algorithm exists yet for this page
-        under the current medium.
+    def _auto_layout_template_names_for_page(self, page: str) -> set[str]:
+        """Every template name the *content* generator for `page` actually
+        knows how to build -- the other half of _auto_layout_method_for_
+        page(): that one says what to run, this one says which template(s)
+        it can run against. "Generated from Metadata" is only ever offered
+        in the Template dropdown when the template being switched to is
+        one of these. An empty set means no known algorithm exists yet for
+        this page under the current medium.
+
+        Most pages have exactly one -- most _auto_layout_* methods above
+        look their own template up by one fixed name rather than accepting
+        whatever is currently on the page. Three are exceptions: the
+        MiniDisc disc label, where _auto_layout_disc_label() can build
+        either the full-face label or its "(with Slider)" twin (see its
+        own docstring for why that's safe -- the slider-logo placement
+        already no-ops gracefully with nothing to place it on); the small
+        chamfered sticker label, the same story one level down --
+        _auto_layout_sticker_label() building either
+        STICKER_TEMPLATE or STICKER_NO_SLIDER_TEMPLATE; and the CD
+        insert, where _auto_layout_cd_insert() can build either the folded
+        two-panel insert or the front-only one (see its own docstring --
+        the front-only build is just the folded one's right-panel cover
+        placement, stretched across the whole unfolded card instead).
 
         The case back has no entry here on purpose -- see
         _can_auto_generate_page(), which checks it structurally instead,
@@ -1575,33 +1609,39 @@ class MainWindow(QMainWindow):
         name.
         """
         if self.project is None:
-            return None
+            return set()
         if self.project.medium == MEDIUM_TAPE:
             return {
-                PAGE_COVER: TAPE_JCARD_TEMPLATE,
-                PAGE_SIDE_A: TAPE_LABEL_TEMPLATE,
-                PAGE_SIDE_B: TAPE_LABEL_TEMPLATE,
-            }.get(page)
+                PAGE_COVER: {TAPE_JCARD_TEMPLATE},
+                PAGE_SIDE_A: {TAPE_LABEL_TEMPLATE},
+                PAGE_SIDE_B: {TAPE_LABEL_TEMPLATE},
+            }.get(page, set())
         if self.project.medium == MEDIUM_CD:
             return {
-                PAGE_DISC: CD_LABEL_TEMPLATE,
-                PAGE_COVER: CD_INSERT_TEMPLATE,
-            }.get(page)
+                PAGE_DISC: {CD_LABEL_TEMPLATE},
+                PAGE_COVER: {CD_INSERT_TEMPLATE, CD_INSERT_FRONT_TEMPLATE},
+            }.get(page, set())
         return {
-            PAGE_DISC: FULL_LABEL_TEMPLATE,
-            PAGE_COVER: JCARD_TEMPLATE,
-        }.get(page)
+            PAGE_DISC: {
+                FULL_LABEL_TEMPLATE,
+                FULL_LABEL_NO_SLIDER_TEMPLATE,
+                STICKER_TEMPLATE,
+                STICKER_NO_SLIDER_TEMPLATE,
+            },
+            PAGE_COVER: {JCARD_TEMPLATE},
+        }.get(page, set())
 
     def _can_auto_generate_page(self, page: str, template) -> bool:
         """Whether "Generated from Metadata" is a real option once `page`
         is switched onto `template`.
 
-        Every automatic layout in this file is written against one
-        specific, hardcoded template (see _auto_layout_template_name_for_
-        page) -- there is no generic "fill any shape in" algorithm, so
-        switching to a template nothing here knows how to build for would
-        make that button a silent no-op. Disabling it is the honest
-        answer until a real generator for that template exists.
+        Every automatic layout in this file is written against one or more
+        specific, hardcoded templates (see
+        _auto_layout_template_names_for_page) -- there is no generic "fill
+        any shape in" algorithm, so switching to a template nothing here
+        knows how to build for would make that button a silent no-op.
+        Disabling it is the honest answer until a real generator for that
+        template exists.
 
         The case back is the one page with no fixed target template --
         build_case_back() works from whatever three-panel shape is
@@ -1611,7 +1651,7 @@ class MainWindow(QMainWindow):
         """
         if page == PAGE_BACK:
             return len(getattr(template, "fold_offsets_mm", None) or []) == 2
-        return template.name == self._auto_layout_template_name_for_page(page)
+        return template.name in self._auto_layout_template_names_for_page(page)
 
     def _on_template_combo_changed(self, index: int) -> None:
         """Picking a different entry in the toolbar's Template dropdown.
@@ -1727,7 +1767,15 @@ class MainWindow(QMainWindow):
 
         if page == PAGE_BACK:
             self.apply_template(page, template)
-        method = self._auto_layout_method_for_page(page)
+        # disc_template_name/cover_template_name: the exact template the
+        # user just picked in the dropdown, not whatever happens to be on
+        # the page right now (still the *old* one at this point, for every
+        # page but the case back) -- only meaningful for the two pages
+        # with more than one buildable template, silently ignored
+        # everywhere else.
+        method = self._auto_layout_method_for_page(
+            page, disc_template_name=template.name, cover_template_name=template.name
+        )
         if method is None:
             self._refresh_template_combo()
             return
@@ -2450,10 +2498,20 @@ class MainWindow(QMainWindow):
         finally:
             self._reusing_cover_filter = previous
 
-    def _auto_layout_disc_label(self, metadata: ProjectMetadata) -> None:
+    def _auto_layout_disc_label(self, metadata: ProjectMetadata, *, template_name: str | None = None) -> None:
         """The full-face template, the cover across it cropped to the cut
-        outline, and the MiniDisc logo on the slider sticker."""
-        template = self._template_named("disc", FULL_LABEL_TEMPLATE)
+        outline, and the MiniDisc logo on the slider sticker.
+
+        `template_name` defaults to the "(with Slider)" variant -- the
+        canonical first draft every "build the whole project" caller wants
+        (`_auto_layout_project`, the Tools panel's magic wand, the
+        post-recording layout). Passing `FULL_LABEL_NO_SLIDER_TEMPLATE`
+        instead builds the exact same way, just without a slider shape for
+        the MiniDisc logo to land on: `place_logo_on_slider()` already
+        returns None gracefully for a template with no slider (see its own
+        docstring), so no logo item is ever added rather than something
+        having to notice and remove one afterwards."""
+        template = self._template_named("disc", template_name or FULL_LABEL_TEMPLATE)
         if template is None:
             return
 
@@ -2491,13 +2549,72 @@ class MainWindow(QMainWindow):
             cover.setZValue(min((item.zValue() for item in behind), default=0.0) - 1.0)
             self.undo_stack.push(AddItemCommand(scene, cover, self.tr("Cover Art")))
         logo_path = gallery.gallery_dir() / "mdlogo.png"
-        logo = scene.add_image(str(logo_path)) if logo_path.exists() else None
-        if place_logo_on_slider(scene, logo) is not None:
-            self.undo_stack.push(AddItemCommand(scene, logo, self.tr("MiniDisc Logo")))
+        # Only added when there's actually a slider shape to place it on --
+        # place_logo_on_slider() already no-ops for a template without one
+        # (see its own docstring), but scene.add_image() itself doesn't
+        # know that, so calling it unconditionally would leave an
+        # unpositioned, un-undo-tracked orphan image sitting on the scene
+        # for the no-slider variant.
+        if len(scene.cut_shape_rects()) >= 2 and logo_path.exists():
+            logo = scene.add_image(str(logo_path))
+            if place_logo_on_slider(scene, logo) is not None:
+                self.undo_stack.push(AddItemCommand(scene, logo, self.tr("MiniDisc Logo")))
         self.undo_stack.endMacro()
 
         # The cover is deliberately oversized so it covers the label
         # completely; this is what trims the overhang back to the cut shape.
+        self._clip_layers()
+
+    def _auto_layout_sticker_label(self, metadata: ProjectMetadata, *, template_name: str | None = None) -> None:
+        """The small chamfered "sticker" disc label: cover art across the
+        face, a top band carrying the insertion mark, and a bottom band
+        carrying Artist / a rule / Album + the year -- the same
+        background/accent/ink palette the J-card's back panel uses, scaled
+        down to fit a label a fraction of that panel's size. See
+        auto_layout.build_sticker_label() for where the actual layout
+        happens; this method is the same shape as _auto_layout_disc_label()
+        just above, targeting a different template family.
+
+        `template_name` defaults to the "(with Slider)" variant, matching
+        _auto_layout_disc_label()'s own default for the full-face
+        templates. Passing `STICKER_NO_SLIDER_TEMPLATE` instead builds the
+        exact same way, just without a slider shape for the cover snippet
+        or the MiniDisc logo to land on -- build_sticker_label() and
+        place_logo_on_slider() both already no-op gracefully for a
+        template with no slider.
+        """
+        template = self._template_named("disc", template_name or STICKER_TEMPLATE)
+        if template is None:
+            return
+
+        background = self._choose_cover_background(metadata.cover_art, self.tr("Disc Label Background"))
+        if background is None:
+            return
+
+        # Clip Layers works on the *current* page, so the disc page has to be
+        # the one on screen before any of this runs.
+        self.page_combo.setCurrentIndex(self.page_combo.findData(PAGE_DISC))
+        self.apply_template(PAGE_DISC, template)
+        scene = self.project.pages[PAGE_DISC]
+
+        self.undo_stack.beginMacro(self.tr("Lay Out Disc Label"))
+        for item in build_sticker_label(scene, metadata, background_art=background):
+            self.undo_stack.push(AddItemCommand(scene, item, self.tr("Disc Label")))
+
+        logo_path = gallery.gallery_dir() / "mdlogo.png"
+        # Same "only when there's actually a slider" guard
+        # _auto_layout_disc_label() uses, and for the same reason: calling
+        # scene.add_image() unconditionally would leave an unpositioned,
+        # un-undo-tracked orphan image on the no-slider variant.
+        if len(scene.cut_shape_rects()) >= 2 and logo_path.exists():
+            logo = scene.add_image(str(logo_path))
+            if place_logo_on_slider(scene, logo) is not None:
+                self.undo_stack.push(AddItemCommand(scene, logo, self.tr("MiniDisc Logo")))
+        self.undo_stack.endMacro()
+
+        # The cover is deliberately oversized so it covers the label (and
+        # the slider) completely; this is what trims the overhang back to
+        # each cut shape.
         self._clip_layers()
 
     def _auto_layout_cover(self, metadata: ProjectMetadata) -> None:
@@ -2588,22 +2705,33 @@ class MainWindow(QMainWindow):
             self.undo_stack.push(AddItemCommand(scene, item, self.tr("Case Back")))
         self.undo_stack.endMacro()
 
-    def _auto_layout_cd_insert(self, metadata: ProjectMetadata) -> None:
+    def _auto_layout_cd_insert(self, metadata: ProjectMetadata, *, template_name: str | None = None) -> None:
         """The folded slim-case insert: cover on the right panel always;
         the left panel is the track list, or -- if this project also has a
         case back -- the artist's name, year and photo instead, since the
         track list already lives on the tray card and repeating it here
         would just be the same list twice (see cd_layout.build_insert).
 
+        `template_name` defaults to the folded, two-panel insert -- the
+        canonical first draft every "build the whole project" caller wants.
+        Passing `CD_INSERT_FRONT_TEMPLATE` instead builds the exact same
+        cover placement (cd_layout.build_front_insert(), which reuses
+        place_insert_cover() unchanged) across the *whole* card rather than
+        just its right panel: there is no fold, so there is nowhere for a
+        track list or artist panel to go, and the artist-photo lookup is
+        skipped outright rather than fetching a photo with no panel to put
+        it on.
+
         Not run through Clip Layers, for the same reason the J-card is not:
         nothing overhangs, and clipping would rasterise a track list that is
         still worth editing.
         """
-        template = self._template_named("cover", CD_INSERT_TEMPLATE)
+        is_front_only = template_name == CD_INSERT_FRONT_TEMPLATE
+        template = self._template_named("cover", template_name or CD_INSERT_TEMPLATE)
         if template is None:
             return
 
-        has_case_back = PAGE_BACK in self.project.pages
+        has_case_back = not is_front_only and PAGE_BACK in self.project.pages
         artist_photo = None
         if has_case_back:
             # A network lookup, so the same wait-cursor courtesy
@@ -2621,7 +2749,10 @@ class MainWindow(QMainWindow):
         scene = self.project.pages[PAGE_COVER]
 
         try:
-            items = build_insert(scene, metadata, has_case_back=has_case_back, artist_photo=artist_photo)
+            if is_front_only:
+                items = build_front_insert(scene, metadata)
+            else:
+                items = build_insert(scene, metadata, has_case_back=has_case_back, artist_photo=artist_photo)
         except CdLayoutError:
             return
 
@@ -2713,14 +2844,32 @@ class MainWindow(QMainWindow):
 
     # -- Regenerate with Font... ---------------------------------------------
 
-    def _auto_layout_method_for_page(self, page: str):
+    def _auto_layout_method_for_page(
+        self, page: str, *, disc_template_name: str | None = None, cover_template_name: str | None = None
+    ):
         """Which single-page auto-layout call rebuilds `page`, for whichever
         medium the project currently is -- the mapping "Regenerate with
-        Font..."'s preview uses to redo only the page on screen, without
-        touching any other page. None means this page has no automatic
-        layout of its own (should not happen for a page a real project
-        actually has, but a template gone missing already makes every one
-        of these a silent no-op, and this is no different)."""
+        Font..."'s preview and the Template dropdown's "Generated from
+        Metadata" both use to rebuild only the page in question. None means
+        this page has no automatic layout of its own (should not happen
+        for a page a real project actually has, but a template gone
+        missing already makes every one of these a silent no-op, and this
+        is no different).
+
+        `disc_template_name`/`cover_template_name` only matter for the two
+        pages with more than one template a generator can build (see
+        _auto_layout_template_names_for_page) -- a MiniDisc disc page (the
+        full-face label or the small sticker label, and each of those has
+        its own "(with Slider)" twin besides -- see
+        _auto_layout_minidisc_disc_label()) and a CD cover page (the
+        folded two-panel insert or the front-only one). Each says which of
+        its page's templates to build, and both are silently ignored
+        everywhere else. Left `None`, _auto_layout_minidisc_disc_label()/
+        _auto_layout_cd_insert() each fall back to their own default (the
+        "(with Slider)" full-face disc label, the folded insert) on their
+        own, which keeps every *other* caller (the full-project layout,
+        the Tools panel's magic wand, the post-recording layout -- none of
+        which go through this method at all) built exactly as before."""
         metadata = self.project.metadata
         if self.project.medium == MEDIUM_TAPE:
             plan = self._tape_plan(metadata)
@@ -2732,13 +2881,27 @@ class MainWindow(QMainWindow):
         if self.project.medium == MEDIUM_CD:
             return {
                 PAGE_DISC: self._auto_layout_cd_disc_label,
-                PAGE_COVER: self._auto_layout_cd_insert,
+                PAGE_COVER: lambda m: self._auto_layout_cd_insert(m, template_name=cover_template_name),
                 PAGE_BACK: self._auto_layout_cd_case_back,
             }.get(page)
         return {
-            PAGE_DISC: self._auto_layout_disc_label,
+            PAGE_DISC: lambda m: self._auto_layout_minidisc_disc_label(m, template_name=disc_template_name),
             PAGE_COVER: self._auto_layout_cover,
         }.get(page)
+
+    def _auto_layout_minidisc_disc_label(self, metadata: ProjectMetadata, *, template_name: str | None = None) -> None:
+        """Routes to whichever of the two MiniDisc disc-label families
+        `template_name` actually names: _auto_layout_disc_label() for the
+        full-face label (either variant), _auto_layout_sticker_label() for
+        the small chamfered sticker (either variant). `None` -- every
+        caller except the Template dropdown's "Generated from Metadata"
+        and "Regenerate with Font..." -- defaults to the full-face label,
+        matching _auto_layout_disc_label()'s own default and so every
+        pre-existing caller's behaviour."""
+        if template_name in (STICKER_TEMPLATE, STICKER_NO_SLIDER_TEMPLATE):
+            self._auto_layout_sticker_label(metadata, template_name=template_name)
+        else:
+            self._auto_layout_disc_label(metadata, template_name=template_name)
 
     def _snapshot_page(self, page: str) -> dict:
         return scene_to_dict(self.project.pages[page])
@@ -2781,6 +2944,15 @@ class MainWindow(QMainWindow):
             return
         page = self.current_page
         metadata = self.project.metadata
+        # Captured once, up front: which of the (possibly several)
+        # templates a page's generator can build is whatever is already on
+        # the page *before* this ran, and both Preview and the final
+        # rebuild must keep rebuilding that same one -- e.g. a MiniDisc
+        # disc label built without its slider must not silently gain one
+        # back just because its font changed. Passed as both kwargs below;
+        # each is only consumed by whichever page kind actually has more
+        # than one buildable template, and ignored otherwise.
+        current_template_name = scene.template.name
 
         if not metadata.album and not metadata.artist:
             QMessageBox.information(
@@ -2807,7 +2979,9 @@ class MainWindow(QMainWindow):
 
         def _run_preview(family: str) -> None:
             nonlocal preview_snapshot
-            method = self._auto_layout_method_for_page(page)
+            method = self._auto_layout_method_for_page(
+                page, disc_template_name=current_template_name, cover_template_name=current_template_name
+            )
             if method is None:
                 return
             if preview_snapshot is None:
@@ -2842,7 +3016,9 @@ class MainWindow(QMainWindow):
                 # pressed with no Preview click first), and rebuilding is
                 # cheap and exactly idempotent with what Preview itself
                 # already does, so there is no reason to special-case it.
-                method = self._auto_layout_method_for_page(page)
+                method = self._auto_layout_method_for_page(
+                page, disc_template_name=current_template_name, cover_template_name=current_template_name
+            )
                 if method is not None:
                     with font_family_override(chosen_family), self._reused_cover_filter():
                         method(metadata)
