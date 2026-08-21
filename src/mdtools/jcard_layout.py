@@ -223,6 +223,31 @@ def _inset(area: QRectF, millimetres: float) -> QRectF:
     return area.adjusted(padding, padding, -padding, -padding)
 
 
+def window_on_track_panel(template) -> bool:
+    """Whether this cover template's die-cut window lands on the panel that
+    would otherwise carry the track list -- i.e. whether build_jcard has to
+    turn the whole card end-for-end (see its own `flipped` parameter).
+
+    A window is a hole, so whatever is printed on the panel it lands on has
+    a hole in it. Through a track list that is destructive: it takes out the
+    middle of the one thing the panel exists to say, and no arrangement of
+    what is left puts it back. Through the cover artwork it is the *point*
+    -- a die-cut sleeve, the disc's own label showing through the front of
+    the case. So the panel with the window is the one that gets the
+    artwork, which for a window cut to the right of the last fold line
+    means the front and the back swap over.
+
+    `cutout_side == "left"` needs no flip: that window is measured leftward
+    from the *first* fold line, so it already lands on the front panel, and
+    the plain arrangement is right as it stands.
+    """
+    if not getattr(template, "fold_offsets_mm", None):
+        return False
+    if getattr(template, "cutout_width_mm", 0.0) <= 0 or getattr(template, "cutout_height_mm", 0.0) <= 0:
+        return False
+    return getattr(template, "cutout_side", "right") == "right"
+
+
 def reading_size(panel: QRectF) -> tuple[float, float]:
     """A turned panel's size as it is actually read: the front and back are
     laid out flat as tall narrow strips, but the card goes into the case
@@ -262,7 +287,9 @@ def _place_turned(item: QGraphicsItem, panel: QRectF, x: float, y: float, *, clo
 # --- front -----------------------------------------------------------------
 
 
-def place_front_cover(scene: DesignScene, panel: QRectF, cover_art: bytes) -> QGraphicsItem | None:
+def place_front_cover(
+    scene: DesignScene, panel: QRectF, cover_art: bytes, *, flipped: bool = False
+) -> QGraphicsItem | None:
     """The cover, rotated a quarter turn anticlockwise so its own top edge
     ends up running down the card's left edge, stretched to fill the panel.
 
@@ -281,14 +308,21 @@ def place_front_cover(scene: DesignScene, panel: QRectF, cover_art: bytes) -> QG
     if natural.width() <= 0 or natural.height() <= 0:
         return item
 
-    # Anticlockwise, so the cover's top edge ends up down the left side.
-    item.setRotation(-90)
+    # Anticlockwise, so the cover's top edge ends up down the left side --
+    # clockwise on a flipped card, which is that same card read from the
+    # other end (see build_jcard). Either way the quarter turn swaps width
+    # and height, so the crossed scale factors below are unchanged and the
+    # artwork still comes out exactly panel-sized; only which way up it is
+    # differs, which is the whole point of the flip.
+    item.setRotation(90 if flipped else -90)
     set_item_scale(item, panel.width() / natural.height(), panel.height() / natural.width())
     _move_top_left_to(item, panel.topLeft())
     return item
 
 
-def place_front_logo(scene: DesignScene, panel: QRectF, logo_path: str) -> QGraphicsItem | None:
+def place_front_logo(
+    scene: DesignScene, panel: QRectF, logo_path: str, *, flipped: bool = False
+) -> QGraphicsItem | None:
     """A small MiniDisc logo in the front's bottom-right corner -- turned
     the same quarter turn as the cover it sits on.
 
@@ -307,7 +341,10 @@ def place_front_logo(scene: DesignScene, panel: QRectF, logo_path: str) -> QGrap
     width, height = reading_size(panel)
     margin = mm_to_px(FRONT_LOGO_MARGIN_MM)
     side = mm_to_px(FRONT_LOGO_HEIGHT_MM)
-    _place_turned(item, panel, x=width - margin - side, y=height - margin - side)
+    # Reading coordinates, so this stays the bottom-right corner *as read*
+    # whichever way the card is turned -- _place_turned maps it onto
+    # whichever physical corner that actually is.
+    _place_turned(item, panel, x=width - margin - side, y=height - margin - side, clockwise=flipped)
     return item
 
 
@@ -320,13 +357,25 @@ def spine_caption(metadata: ProjectMetadata) -> str:
 
 
 def place_spine(
-    scene: DesignScene, panel: QRectF, metadata: ProjectMetadata, accent: str, logo_path: str
+    scene: DesignScene,
+    panel: QRectF,
+    metadata: ProjectMetadata,
+    accent: str,
+    logo_path: str,
+    *,
+    flipped: bool = False,
 ) -> list[QGraphicsItem]:
     """Accent band, the caption rotated to read down it, and the logo.
 
     The caption is fitted against a *swapped* rectangle -- the spine is
     8.3mm wide and 73mm tall, so once rotated the text has the panel's
-    height to run along and its width to be tall in."""
+    height to run along and its width to be tall in.
+
+    `flipped` turns the strip end-for-end with the rest of the card (see
+    build_jcard): the caption rotates the other way, and the logo moves to
+    the strip's other end so that it still sits at the caption's *foot*
+    once the card is the right way up. Turning the caption and not the logo
+    would leave the logo at the head of the spine, above the text."""
     added: list[QGraphicsItem] = [_filled_rect(scene, panel, accent)]
     ink = readable_text_colour(accent)
 
@@ -338,7 +387,10 @@ def place_spine(
         set_item_scale(logo, scale, scale)
         placed = _scene_rect_of(logo)
         logo_span = placed.height()
-        _move_top_left_to(logo, QPointF(inner.left(), inner.bottom() - placed.height()))
+        # The foot of the strip *as read*, which on a flipped card is its
+        # top edge on the sheet rather than its bottom.
+        logo_top = inner.top() if flipped else inner.bottom() - placed.height()
+        _move_top_left_to(logo, QPointF(inner.left(), logo_top))
         added.append(logo)
 
     caption = spine_caption(metadata)
@@ -350,7 +402,9 @@ def place_spine(
         item.setTransformOriginPoint(item.boundingRect().center())
         # Clockwise, so the caption reads top-to-bottom with the case
         # standing upright -- the way a CD or MD spine conventionally does.
-        item.setRotation(90)
+        # Anticlockwise on a flipped card, which is that same direction
+        # once the card itself has been turned end-for-end.
+        item.setRotation(-90 if flipped else 90)
         # Centred along the strip rather than pinned to its top. A short
         # caption on a 118mm tray-card spine otherwise sat in the top
         # two-thirds and left the rest looking empty -- reported directly.
@@ -359,7 +413,11 @@ def place_spine(
         span = item.boundingRect().width()
         available = inner.height() - logo_span
         offset = max(0.0, (available - span) / 2)
-        _move_top_left_to(item, QPointF(inner.left(), inner.top() + offset))
+        # Centred in what the logo leaves, which is the space below it
+        # normally and above it on a flipped card, the logo having moved to
+        # the other end.
+        top = inner.top() + (logo_span if flipped else 0.0) + offset
+        _move_top_left_to(item, QPointF(inner.left(), top))
         added.append(item)
     return added
 
@@ -375,6 +433,7 @@ def place_back(
     accent: str,
     *,
     turned: bool = True,
+    flipped: bool = False,
     heading_scale: float = 1.0,
     columns: int = 0,
     track_columns: list[str] | None = None,
@@ -388,6 +447,11 @@ def place_back(
     card goes into the case that way round, so a track list left upright
     reads sideways. It is laid out here in *reading* coordinates (x along
     the 73mm side), with _place_turned doing the conversion.
+
+    `flipped` turns the panel end-for-end with the rest of the card (see
+    build_jcard) -- the same reading-coordinate layout, mapped onto the
+    panel the other way round. Ignored when `turned=False`, which has no
+    quarter turn to reverse.
 
     `turned=False` lays the same panel out upright, for a CD slim case
     insert, which is read the way it is printed. Only the mapping from
@@ -445,7 +509,7 @@ def place_back(
 
     def put(item: QGraphicsItem, x: float, y: float) -> None:
         if turned:
-            _place_turned(item, panel, x=x, y=y, clockwise=True)
+            _place_turned(item, panel, x=x, y=y, clockwise=not flipped)
         else:
             _move_top_left_to(item, QPointF(panel.left() + x, panel.top() + y))
 
@@ -535,24 +599,46 @@ def place_back(
 # --- the whole card --------------------------------------------------------
 
 
-def build_jcard(scene: DesignScene, metadata: ProjectMetadata, logo_path: str) -> JCard:
+def build_jcard(
+    scene: DesignScene, metadata: ProjectMetadata, logo_path: str, *, flipped: bool | None = None
+) -> JCard:
     """Lays out all three panels. Returns an empty JCard if the scene isn't
-    a folded cover, or the metadata has no cover art to take colours from."""
+    a folded cover, or the metadata has no cover art to take colours from.
+
+    `flipped` turns the whole card end-for-end: the artwork goes on the
+    panel *after* the folds and the track list on the panel before them,
+    and every element on all three panels rotates the other way so each
+    still reads the right way up. It is one rigid 180-degree turn of the
+    finished card, not a mirror -- a mirror is not something putting a card
+    into a case differently can achieve, and would print every word
+    backwards.
+
+    `None`, which every caller uses, decides it from the template itself
+    via window_on_track_panel(): a die-cut window has to fall on the
+    artwork, so a template carrying one to the right of its last fold line
+    is flipped and a plain one is not. The parameter stays overridable
+    because "which way round is this card" is worth being able to assert on
+    directly, rather than only through a template that happens to have a
+    hole in it."""
     panels = scene.fold_panel_rects()
     if len(panels) < 3 or not metadata.cover_art:
         return JCard()
 
-    front, spine, back = panels[0], panels[1], panels[2]
+    if flipped is None:
+        flipped = window_on_track_panel(scene.template)
+
+    spine = panels[1]
+    cover_panel, track_panel = (panels[2], panels[0]) if flipped else (panels[0], panels[2])
     background = dominant_colour(metadata.cover_art)
     accent = accent_colour(metadata.cover_art, against=background)
     card = JCard(background=background, accent=accent)
 
-    # Back and spine first so the front cover, added later, can never be
-    # painted over by a panel block.
-    for item in place_back(scene, back, metadata, background, accent):
+    # Track list and spine first so the cover artwork, added later, can
+    # never be painted over by a panel block.
+    for item in place_back(scene, track_panel, metadata, background, accent, flipped=flipped):
         card.add(item)
-    for item in place_spine(scene, spine, metadata, accent, logo_path):
+    for item in place_spine(scene, spine, metadata, accent, logo_path, flipped=flipped):
         card.add(item)
-    card.add(place_front_cover(scene, front, metadata.cover_art))
-    card.add(place_front_logo(scene, front, logo_path))
+    card.add(place_front_cover(scene, cover_panel, metadata.cover_art, flipped=flipped))
+    card.add(place_front_logo(scene, cover_panel, logo_path, flipped=flipped))
     return card

@@ -3820,16 +3820,32 @@ template only the user themselves could have produced.
 **"Generated from Metadata" is disabled whenever nothing here actually
 knows how to build the chosen template -- explicit, deliberate scope, not
 an oversight to fix incidentally later.** Every `_auto_layout_*` method in
-this file targets one specific, hardcoded template *by name*
+this file targets specific, hardcoded template *names*
 (`FULL_LABEL_TEMPLATE`, `CD_LABEL_TEMPLATE`, `JCARD_TEMPLATE`,
-`CD_INSERT_TEMPLATE`, `TAPE_JCARD_TEMPLATE`, `TAPE_LABEL_TEMPLATE`) rather
-than accepting whatever happens to be on the page -- there is no generic
-"fill any shape in" generator. `_auto_layout_template_name_for_page(page)`
-states that same mapping from the dropdown's side (page + medium -> the
-one template name a generator exists for), and
-`_can_auto_generate_page(page, template)` compares the template being
-switched to against it, disabling the button (with a tooltip explaining
-why) rather than leaving it to silently do nothing on click. **The case
+`CD_INSERT_TEMPLATE`, `TAPE_JCARD_TEMPLATE`, `TAPE_LABEL_TEMPLATE`, plus
+the variants beside them -- `FULL_LABEL_NO_SLIDER_TEMPLATE`,
+`STICKER_TEMPLATE`, `STICKER_NO_SLIDER_TEMPLATE`, `CD_INSERT_FRONT_TEMPLATE`,
+`JCARD_WINDOW_TEMPLATE`) rather than accepting whatever happens to be on the
+page -- there is no generic "fill any shape in" generator.
+**`_auto_layout_template_names_for_page(page)` returns a `set` and is named
+in the plural** (it was `_auto_layout_template_name_for_page`, singular,
+returning one name or `None`, until several pages turned out to have more
+than one buildable template -- grep for the old name if a note anywhere
+still uses it). It states that same mapping from the dropdown's side (page +
+medium -> every template name a generator exists for), and
+`_can_auto_generate_page(page, template)` checks whether the template being
+switched to is *in* it, disabling the button (with a tooltip explaining
+why) rather than leaving it to silently do nothing on click.
+
+**Every bundled built-in template is in one of those sets now** (13 of 13 --
+see the J-card window note further down, which was the last gap), so the
+disabled state is no longer reachable from `defaults.json` alone. It is
+still a real guard rather than dead code: `_offer_template_replacement()`
+only shows this dialog for a `builtin` template, and a built-in **renamed**
+through the Template Manager stops matching by name, at which point
+disabling the button is exactly right. A non-builtin template never reaches
+this question at all -- it applies immediately, being already the user's own
+considered choice. **The case
 back is the one exception, and needs a structural check instead of a name
 match**: `build_case_back()` never demands one particular template by
 name -- see its own docstring above -- it works from whatever three-panel
@@ -3955,8 +3971,61 @@ is nothing left to tell an album from its own single. It also breaks ties in
 `_auto_layout_cover`).** `DesignScene.fold_panel_rects()` splits the cut
 shape at its fold lines into front / spine / back (58.85 / 8.3 / 58.85 mm);
 it returns `[]` for anything unfolded, so "no panels" and "not a cover" are
-the same case for callers. It targets the **plain** J-card template -- the
-window variant would cut a hole through the cover artwork.
+the same case for callers.
+
+**It builds the window variant too, by turning the whole card end-for-end
+-- and the note that used to sit here, saying it targeted the plain
+template only because "the window variant would cut a hole through the
+cover artwork", was wrong about which panel.** The 40x40mm window is cut to
+the *right* of the last fold line, so it lands on `panels[2]` -- the **track
+list**, not the front cover. That is the destructive case: it takes out the
+middle of the one thing that panel exists to say, and no arrangement of what
+is left puts it back. Through the artwork the same hole is the *point* of the
+template -- a die-cut sleeve, the disc's own label showing through the front
+of the case, which is what the user asked for when this was finally built
+("we want tracklist to be on the side without window and artwork on the
+window side").
+
+So `build_jcard(..., flipped=...)` swaps which panel gets which content and
+rotates every element on all three panels the other way.
+`jcard_layout.window_on_track_panel(template)` is what decides it, from the
+template's own geometry rather than by name: a cutout with area, on the
+`"right"` side. A `cutout_side == "left"` window needs no flip -- measured
+leftward from the *first* fold line, it already lands on the front panel.
+
+Four things worth keeping about that flip:
+- **It is one rigid 180-degree turn of the finished card, not a mirror.** A
+  mirror is not something putting a card into a case differently can
+  achieve, and would print every word backwards. So every rotation flips
+  sign: the cover -90 -> +90, the spine caption +90 -> -90, `place_back`'s
+  `_place_turned(clockwise=True)` -> `clockwise=False`, the front logo
+  anticlockwise -> clockwise. Turning only some of them is the easy bug --
+  it leaves a card whose spine reads up while its track list reads down.
+- **The spine has to border the *foot* of the read content on both panels,
+  never its head** (explicit user constraint). This falls out of the turn
+  for free rather than needing its own arithmetic, because the panels swap
+  sides *and* swap turn direction: on both cards, reading-down ends up
+  pointing at the fold. `test_the_spine_borders_the_foot_of_the_read_content`
+  pins it down for the plain and flipped cards alike, by checking that
+  `place_back`'s footer lands nearer the spine than its heading does.
+- **The spine's own logo moves to the strip's other end.** `place_spine`
+  puts it at the caption's foot, which on a flipped card is the strip's
+  *top* edge on the sheet. Turning the caption and leaving the logo would
+  put the logo above the text. The caption's centring follows it -- it is
+  centred in the space the logo leaves, which is below it normally and
+  above it when flipped.
+- **Still no trip through Clip Layers, window or not.** The window is a hole
+  in the *cut* path, so export and the cutter already take it out of the
+  artwork; there is nothing to bake into the layer, and clipping would
+  rasterise the track list for no gain. This is the same reasoning the plain
+  card already had, and the window does not change it.
+
+With this, **every one of the 13 built-in template/page/medium combinations
+has an auto-generator** -- the window J-card was the last one without.
+`tests/test_jcard_window_variant.py` covers the layout,
+`test_page_template_dropdown.py` the "Generated from Metadata" wiring, and
+both re-assert the plain card's own arrangement as a regression guard, since
+one 180-degree turn away from correct looks entirely plausible in isolation.
 
 **Every colour on the card comes from the cover (`palette.py`).** Pillow
 quantises a thumbnail of it; the most common swatch becomes the back

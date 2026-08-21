@@ -29,6 +29,7 @@ from mdtools.app_window import (
     FULL_LABEL_NO_SLIDER_TEMPLATE,
     FULL_LABEL_TEMPLATE,
     JCARD_TEMPLATE,
+    JCARD_WINDOW_TEMPLATE,
     STICKER_NO_SLIDER_TEMPLATE,
     STICKER_TEMPLATE,
     MainWindow,
@@ -99,6 +100,25 @@ def _sticker_no_slider(name=STICKER_NO_SLIDER_TEMPLATE, builtin=True) -> DiscTem
 def _jcard(name=JCARD_TEMPLATE, builtin=True, items=None) -> CoverTemplate:
     return CoverTemplate(
         name=name, width_mm=126.0, height_mm=73.0, fold_offsets_mm=[58.85, 67.15], builtin=builtin, items=items or []
+    )
+
+
+def _jcard_window(name=JCARD_WINDOW_TEMPLATE, builtin=True) -> CoverTemplate:
+    """The plain card plus the 40x40mm die-cut window, right of the last
+    fold line -- the real defaults.json geometry."""
+    return CoverTemplate(
+        name=name,
+        width_mm=126.0,
+        height_mm=73.0,
+        corner_radius_mm=2.0,
+        fold_offsets_mm=[58.85, 67.15],
+        cutout_width_mm=40.0,
+        cutout_height_mm=40.0,
+        cutout_radius_mm=1.0,
+        cutout_from_fold_mm=10.3,
+        cutout_from_bottom_mm=3.45,
+        cutout_side="right",
+        builtin=builtin,
     )
 
 
@@ -661,3 +681,99 @@ def test_reselecting_the_current_template_does_nothing(qt_app, monkeypatch, _md_
 
     assert not shown
     assert window.project.pages[PAGE_DISC] is original
+
+
+# -- the die-cut window J-card -------------------------------------------------
+
+
+def test_generated_is_also_enabled_for_the_window_jcard(qt_app, monkeypatch):
+    """The window variant builds through the same _auto_layout_cover() as the
+    plain card -- build_jcard() turns the whole card end-for-end so the hole
+    falls on the artwork instead of through the track list -- so it gets a
+    generator of its own too."""
+    monkeypatch.setattr(
+        registry,
+        "load_templates",
+        lambda: _templates(disc=[_full_label()], cover=[_jcard(), _jcard_window()]),
+    )
+    window = _window(monkeypatch)
+    window.page_combo.setCurrentIndex(window.page_combo.findData(PAGE_COVER))
+    window.apply_template(PAGE_COVER, _jcard())
+    window._refresh_template_combo()
+    captured = {}
+
+    def fake_exec(self):
+        captured["enabled"] = self.buttons()[1].isEnabled()
+        self._clicked = self.buttons()[2]  # Cancel
+        return 0
+
+    monkeypatch.setattr(app_module.QMessageBox, "exec", fake_exec)
+    monkeypatch.setattr(app_module.QMessageBox, "clickedButton", lambda self: self._clicked)
+
+    _select(window, JCARD_WINDOW_TEMPLATE)
+
+    assert captured["enabled"] is True
+
+
+def test_generated_builds_the_window_jcard_with_nothing_under_the_hole(qt_app, monkeypatch):
+    """End to end through the dropdown: the artwork ends up on the panel with
+    the window in it, and no text is printed where the hole is."""
+    from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsTextItem
+
+    from mdtools.constants import px_to_mm
+
+    monkeypatch.setattr(
+        registry,
+        "load_templates",
+        lambda: _templates(disc=[_full_label()], cover=[_jcard(), _jcard_window()]),
+    )
+    window = _window(monkeypatch)
+    window.project.metadata = _metadata()
+    window.page_combo.setCurrentIndex(window.page_combo.findData(PAGE_COVER))
+    window.apply_template(PAGE_COVER, _jcard())
+    window._refresh_template_combo()
+    _fake_message_box(monkeypatch, clicked_index=1)  # Generated from Metadata
+
+    _select(window, JCARD_WINDOW_TEMPLATE)
+
+    scene = window.project.pages[PAGE_COVER]
+    assert scene.template.name == JCARD_WINDOW_TEMPLATE
+    items = scene.print_items()
+    assert items
+
+    def bounds(item):
+        rect = item.mapToScene(item.boundingRect()).boundingRect()
+        return px_to_mm(rect.left()), px_to_mm(rect.right()), px_to_mm(rect.top()), px_to_mm(rect.bottom())
+
+    # The window: left = last fold (67.15) + 10.3, bottom = 73 - 3.45.
+    win_left, win_right = 77.45, 117.45
+    win_bottom, win_top = 69.55, 29.55
+
+    for item in items:
+        if isinstance(item, QGraphicsTextItem):
+            left, right, top, bottom = bounds(item)
+            over_hole = left < win_right and right > win_left and top < win_bottom and bottom > win_top
+            assert not over_hole, f"{item.toPlainText()!r} is printed over the window"
+
+    pixmaps = [i for i in items if isinstance(i, QGraphicsPixmapItem)]
+    artwork = max(pixmaps, key=lambda i: (lambda b: (b[1] - b[0]) * (b[3] - b[2]))(bounds(i)))
+    left, right, _, _ = bounds(artwork)
+    # On the panel after the folds, spanning the hole -- the die-cut is the
+    # point of this template.
+    assert left == pytest.approx(67.15, abs=0.2)
+    assert right == pytest.approx(126.0, abs=0.2)
+
+
+def test_the_plain_jcard_is_still_generatable_on_its_own(qt_app, monkeypatch):
+    """Adding the window variant must not have taken the plain card's own
+    generator away from it."""
+    monkeypatch.setattr(
+        registry,
+        "load_templates",
+        lambda: _templates(disc=[_full_label()], cover=[_jcard(), _jcard_window()]),
+    )
+    window = _window(monkeypatch)
+    window.current_page = PAGE_COVER
+
+    assert window._can_auto_generate_page(PAGE_COVER, _jcard()) is True
+    assert window._can_auto_generate_page(PAGE_COVER, _jcard_window()) is True

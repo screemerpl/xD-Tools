@@ -114,6 +114,15 @@ FULL_LABEL_NO_SLIDER_TEMPLATE = "Full disc label"
 STICKER_TEMPLATE = "MiniDisc Disc Label (with Slider)"
 STICKER_NO_SLIDER_TEMPLATE = "MiniDisc Disc Label"
 JCARD_TEMPLATE = "MiniDisc Cover (J-Card)"
+# The same three-panel card with a 40x40mm die-cut window in it. Built by
+# the exact same _auto_layout_cover(), which hands build_jcard() a card
+# turned end-for-end: the window has to fall on the *artwork* (a die-cut
+# sleeve showing the disc through the front of the case) rather than
+# through the middle of the track list, so the front and back panels swap
+# over and every element on all three rotates the other way. See
+# jcard_layout.window_on_track_panel(), which is what actually decides it
+# from the template's own geometry.
+JCARD_WINDOW_TEMPLATE = "MiniDisc Cover (J-Card + Window)"
 # The CD equivalents. The folded insert rather than the flat front, because
 # it is the one with somewhere to put a track list.
 CD_LABEL_TEMPLATE = "CD Disc Label (Standard Hub)"
@@ -1589,7 +1598,7 @@ class MainWindow(QMainWindow):
 
         Most pages have exactly one -- most _auto_layout_* methods above
         look their own template up by one fixed name rather than accepting
-        whatever is currently on the page. Three are exceptions: the
+        whatever is currently on the page. Four are exceptions: the
         MiniDisc disc label, where _auto_layout_disc_label() can build
         either the full-face label or its "(with Slider)" twin (see its
         own docstring for why that's safe -- the slider-logo placement
@@ -1600,7 +1609,11 @@ class MainWindow(QMainWindow):
         insert, where _auto_layout_cd_insert() can build either the folded
         two-panel insert or the front-only one (see its own docstring --
         the front-only build is just the folded one's right-panel cover
-        placement, stretched across the whole unfolded card instead).
+        placement, stretched across the whole unfolded card instead); and
+        the MiniDisc J-card, where _auto_layout_cover() can build either
+        the plain card or the die-cut window variant (build_jcard() turns
+        the card end-for-end for the latter, so the window lands on the
+        artwork instead of through the track list).
 
         The case back has no entry here on purpose -- see
         _can_auto_generate_page(), which checks it structurally instead,
@@ -1628,7 +1641,7 @@ class MainWindow(QMainWindow):
                 STICKER_TEMPLATE,
                 STICKER_NO_SLIDER_TEMPLATE,
             },
-            PAGE_COVER: {JCARD_TEMPLATE},
+            PAGE_COVER: {JCARD_TEMPLATE, JCARD_WINDOW_TEMPLATE},
         }.get(page, set())
 
     def _can_auto_generate_page(self, page: str, template) -> bool:
@@ -2617,15 +2630,25 @@ class MainWindow(QMainWindow):
         # each cut shape.
         self._clip_layers()
 
-    def _auto_layout_cover(self, metadata: ProjectMetadata) -> None:
+    def _auto_layout_cover(self, metadata: ProjectMetadata, *, template_name: str | None = None) -> None:
         """The three-panel J-card: cover art turned onto the front, an
         accent band down the spine, and the track list on the back.
+
+        `template_name` defaults to the plain card. Passing
+        `JCARD_WINDOW_TEMPLATE` instead builds the die-cut window variant,
+        which is the same call throughout -- build_jcard() reads the window
+        off the template it was given and turns the whole card end-for-end
+        for it, so the hole falls on the artwork rather than through the
+        middle of the track list. Nothing here has to know that happened.
 
         Deliberately *not* run through Clip Layers, unlike the disc label.
         Nothing here overhangs by more than a pen width, and clipping would
         rasterise the panel blocks and the track list -- turning text that
-        is still worth editing into a flat image."""
-        template = self._template_named("cover", JCARD_TEMPLATE)
+        is still worth editing into a flat image. That holds for the window
+        variant too: the window is a hole in the *cut* path, so export and
+        the cutter both already take it out of the artwork, with nothing to
+        bake into the layer itself."""
+        template = self._template_named("cover", template_name or JCARD_TEMPLATE)
         if template is None:
             return
 
@@ -2856,20 +2879,23 @@ class MainWindow(QMainWindow):
         missing already makes every one of these a silent no-op, and this
         is no different).
 
-        `disc_template_name`/`cover_template_name` only matter for the two
+        `disc_template_name`/`cover_template_name` only matter for the
         pages with more than one template a generator can build (see
         _auto_layout_template_names_for_page) -- a MiniDisc disc page (the
         full-face label or the small sticker label, and each of those has
         its own "(with Slider)" twin besides -- see
-        _auto_layout_minidisc_disc_label()) and a CD cover page (the
-        folded two-panel insert or the front-only one). Each says which of
-        its page's templates to build, and both are silently ignored
-        everywhere else. Left `None`, _auto_layout_minidisc_disc_label()/
+        _auto_layout_minidisc_disc_label()), a MiniDisc cover page (the
+        plain J-card or the die-cut window variant) and a CD cover page
+        (the folded two-panel insert or the front-only one). Each says
+        which of its page's templates to build, and both are silently
+        ignored everywhere else. Left `None`,
+        _auto_layout_minidisc_disc_label()/_auto_layout_cover()/
         _auto_layout_cd_insert() each fall back to their own default (the
-        "(with Slider)" full-face disc label, the folded insert) on their
-        own, which keeps every *other* caller (the full-project layout,
-        the Tools panel's magic wand, the post-recording layout -- none of
-        which go through this method at all) built exactly as before."""
+        "(with Slider)" full-face disc label, the plain J-card, the folded
+        insert) on their own, which keeps every *other* caller (the
+        full-project layout, the Tools panel's magic wand, the
+        post-recording layout -- none of which go through this method at
+        all) built exactly as before."""
         metadata = self.project.metadata
         if self.project.medium == MEDIUM_TAPE:
             plan = self._tape_plan(metadata)
@@ -2886,7 +2912,7 @@ class MainWindow(QMainWindow):
             }.get(page)
         return {
             PAGE_DISC: lambda m: self._auto_layout_minidisc_disc_label(m, template_name=disc_template_name),
-            PAGE_COVER: self._auto_layout_cover,
+            PAGE_COVER: lambda m: self._auto_layout_cover(m, template_name=cover_template_name),
         }.get(page)
 
     def _auto_layout_minidisc_disc_label(self, metadata: ProjectMetadata, *, template_name: str | None = None) -> None:

@@ -1354,17 +1354,18 @@ Wysunąć teraz, żeby zapisać je trwale?</translation>
         <translation type="vanished">MDTools - Projektant etykiet MiniDisc</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="192"/>
+        <location filename="../app_window.py" line="222"/>
         <source>Page</source>
         <translation>Strona</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="193"/>
+        <location filename="../app_window.py" line="223"/>
         <source>Editing:</source>
         <translation>Edycja:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2552"/>
+        <location filename="../app_window.py" line="2615"/>
+        <location filename="../app_window.py" line="2702"/>
         <source>Disc Label</source>
         <translation>Etykieta płyty</translation>
     </message>
@@ -1373,284 +1374,284 @@ Wysunąć teraz, żeby zapisać je trwale?</translation>
         <translation type="vanished">Okładka / J-Card</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="124"/>
+        <location filename="../app_window.py" line="154"/>
         <source>xD-Tools - Retro Media Studio</source>
         <translation>xD-Tools — Studio Retro Nośników</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="208"/>
+        <location filename="../app_window.py" line="238"/>
         <source>+</source>
         <translation>+</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="213"/>
+        <location filename="../app_window.py" line="243"/>
         <source>-</source>
         <translation>-</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="228"/>
+        <location filename="../app_window.py" line="268"/>
         <source>Regenerate with Font...</source>
         <translation>Wygeneruj ponownie z czcionką...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="233"/>
+        <location filename="../app_window.py" line="273"/>
         <source>Zoom</source>
         <translation>Powiększenie</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="238"/>
-        <location filename="../app_window.py" line="444"/>
+        <location filename="../app_window.py" line="278"/>
+        <location filename="../app_window.py" line="484"/>
         <source>Zoom Out</source>
         <translation>Pomniejsz</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="241"/>
-        <location filename="../app_window.py" line="443"/>
+        <location filename="../app_window.py" line="281"/>
+        <location filename="../app_window.py" line="483"/>
         <source>Zoom In</source>
         <translation>Powiększ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="242"/>
+        <location filename="../app_window.py" line="282"/>
         <source>100%</source>
         <translation>100%</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="243"/>
+        <location filename="../app_window.py" line="283"/>
         <source>Fit</source>
         <translation>Dopasuj</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="246"/>
+        <location filename="../app_window.py" line="286"/>
         <source>Grayscale</source>
         <translation>Skala szarości</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="249"/>
+        <location filename="../app_window.py" line="289"/>
         <source>Temporarily preview the canvas in grayscale -- view only, click again to restore color</source>
         <translation>Tymczasowy podgląd widoku w skali szarości -- tylko podgląd, kliknij ponownie, aby przywrócić kolor</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="264"/>
+        <location filename="../app_window.py" line="304"/>
         <source>Grayscale preview/export brightness</source>
         <translation>Jasność podglądu/eksportu w skali szarości</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="270"/>
+        <location filename="../app_window.py" line="310"/>
         <source>Grayscale preview/export contrast</source>
         <translation>Kontrast podglądu/eksportu w skali szarości</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="274"/>
+        <location filename="../app_window.py" line="314"/>
         <source>Brightness:</source>
         <translation>Jasność:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="276"/>
+        <location filename="../app_window.py" line="316"/>
         <source>Contrast:</source>
         <translation>Kontrast:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="308"/>
+        <location filename="../app_window.py" line="348"/>
         <source>Tools</source>
         <translation>Narzędzia</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="328"/>
+        <location filename="../app_window.py" line="368"/>
         <source>Properties</source>
         <translation>Właściwości</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="338"/>
+        <location filename="../app_window.py" line="378"/>
         <source>Layers</source>
         <translation>Warstwy</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="348"/>
+        <location filename="../app_window.py" line="388"/>
         <source>&amp;File</source>
         <translation>&amp;Plik</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="349"/>
+        <location filename="../app_window.py" line="389"/>
         <source>New...</source>
         <translation>Nowy...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="350"/>
+        <location filename="../app_window.py" line="390"/>
         <source>Open Project...</source>
         <translation>Otwórz projekt...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="351"/>
+        <location filename="../app_window.py" line="391"/>
         <source>Open Recent</source>
         <translation>Otwórz ostatnie</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="353"/>
+        <location filename="../app_window.py" line="393"/>
         <source>Save</source>
         <translation>Zapisz</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="354"/>
+        <location filename="../app_window.py" line="394"/>
         <source>Save As...</source>
         <translation>Zapisz jako...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="356"/>
+        <location filename="../app_window.py" line="396"/>
         <source>Import Metadata from Project...</source>
         <translation>Importuj metadane z projektu...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="358"/>
+        <location filename="../app_window.py" line="398"/>
         <source>Export Cut SVG...</source>
         <translation>Eksportuj cięcie SVG...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="359"/>
+        <location filename="../app_window.py" line="399"/>
         <source>Export Print PNG...</source>
         <translation>Eksportuj wydruk PNG...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="360"/>
+        <location filename="../app_window.py" line="400"/>
         <source>Export Print PNG (Grayscale)...</source>
         <translation>Eksportuj wydruk PNG (skala szarości)...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="362"/>
+        <location filename="../app_window.py" line="402"/>
         <source>Print...</source>
         <translation>Drukuj...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="368"/>
+        <location filename="../app_window.py" line="408"/>
         <source>Close Project</source>
         <translation>Zamknij projekt</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="371"/>
+        <location filename="../app_window.py" line="411"/>
         <source>Exit</source>
         <translation>Zakończ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="373"/>
+        <location filename="../app_window.py" line="413"/>
         <source>&amp;Edit</source>
         <translation>&amp;Edycja</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="374"/>
+        <location filename="../app_window.py" line="414"/>
         <source>&amp;Undo</source>
         <translation>&amp;Cofnij</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="377"/>
+        <location filename="../app_window.py" line="417"/>
         <source>&amp;Redo</source>
         <translation>&amp;Ponów</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="381"/>
-        <location filename="../app_window.py" line="1061"/>
+        <location filename="../app_window.py" line="421"/>
+        <location filename="../app_window.py" line="1101"/>
         <source>Cut</source>
         <translation>Wytnij</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="382"/>
+        <location filename="../app_window.py" line="422"/>
         <source>Copy</source>
         <translation>Kopiuj</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="383"/>
-        <location filename="../app_window.py" line="1069"/>
-        <location filename="../app_window.py" line="1072"/>
+        <location filename="../app_window.py" line="423"/>
+        <location filename="../app_window.py" line="1109"/>
+        <location filename="../app_window.py" line="1112"/>
         <source>Paste</source>
         <translation>Wklej</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="388"/>
+        <location filename="../app_window.py" line="428"/>
         <source>Delete</source>
         <translation>Usuń</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2778"/>
-        <location filename="../app_window.py" line="2787"/>
-        <location filename="../app_window.py" line="2821"/>
+        <location filename="../app_window.py" line="2986"/>
+        <location filename="../app_window.py" line="2995"/>
+        <location filename="../app_window.py" line="3031"/>
         <source>Regenerate with Font</source>
         <translation>Wygeneruj ponownie z czcionką</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2823"/>
+        <location filename="../app_window.py" line="3033"/>
         <source>Are you sure? This regenerates this label using &quot;{family}&quot;, and resets the undo history.</source>
         <translation>Czy na pewno? To wygeneruje ponownie tę etykietę czcionką &quot;{family}&quot; i zresetuje historię cofania.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="210"/>
+        <location filename="../app_window.py" line="240"/>
         <source>Add Page...</source>
         <translation>Dodaj stronę...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="215"/>
+        <location filename="../app_window.py" line="245"/>
         <source>Remove This Page</source>
         <translation>Usuń tę stronę</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="496"/>
+        <location filename="../app_window.py" line="536"/>
         <source>About xD-Tools...</source>
         <translation>O programie xD-Tools...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="853"/>
-        <location filename="../app_window.py" line="859"/>
-        <location filename="../app_window.py" line="874"/>
-        <location filename="../app_window.py" line="880"/>
+        <location filename="../app_window.py" line="893"/>
+        <location filename="../app_window.py" line="899"/>
+        <location filename="../app_window.py" line="914"/>
+        <location filename="../app_window.py" line="920"/>
         <source>Add Page</source>
         <translation>Dodaj stronę</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="854"/>
+        <location filename="../app_window.py" line="894"/>
         <source>This project already has every page it can have.</source>
         <translation>Ten projekt ma już wszystkie strony, jakie może mieć.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="859"/>
+        <location filename="../app_window.py" line="899"/>
         <source>Page:</source>
         <translation>Strona:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="875"/>
+        <location filename="../app_window.py" line="915"/>
         <source>There are no templates for that page (Templates &gt; Manage Templates).</source>
         <translation>Nie ma szablonów dla tej strony (Szablony &gt; Zarządzaj szablonami).</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="218"/>
-        <location filename="../app_window.py" line="880"/>
+        <location filename="../app_window.py" line="248"/>
+        <location filename="../app_window.py" line="920"/>
         <source>Template:</source>
         <translation>Szablon:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="910"/>
-        <location filename="../app_window.py" line="917"/>
+        <location filename="../app_window.py" line="950"/>
+        <location filename="../app_window.py" line="957"/>
         <source>Remove Page</source>
         <translation>Usuń stronę</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1375"/>
+        <location filename="../app_window.py" line="1415"/>
         <source>xD-Tools Project (*.mdproj)</source>
         <translation>Projekt xD-Tools (*.mdproj)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1951"/>
+        <location filename="../app_window.py" line="2022"/>
         <source>Restart xD-Tools for the new language to take full effect.</source>
         <translation>Uruchom ponownie xD-Tools, aby nowy język w pełni obowiązywał.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2677"/>
+        <location filename="../app_window.py" line="2841"/>
         <source>Shell Label Background</source>
         <translation>Tło etykiety na obudowę</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2694"/>
+        <location filename="../app_window.py" line="2858"/>
         <source>Lay Out Shell Label</source>
         <translation>Rozmieść etykietę kasety</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2696"/>
+        <location filename="../app_window.py" line="2860"/>
         <source>Shell Label</source>
         <translation>Etykieta kasety</translation>
     </message>
@@ -1659,12 +1660,12 @@ Wysunąć teraz, żeby zapisać je trwale?</translation>
         <translation type="vanished">Etykieta płyty i okładka są częścią każdego projektu i nie da się ich usunąć.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="919"/>
+        <location filename="../app_window.py" line="959"/>
         <source>Remove the {page} page? Everything on it is deleted, and the undo history is reset.</source>
         <translation>Usunąć stronę „{page}”? Wszystko, co na niej jest, zostanie skasowane, a historia cofania wyzerowana.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2292"/>
+        <location filename="../app_window.py" line="2363"/>
         <source>This replaces everything on {pages} and resets the undo history.
 
 The project&apos;s metadata is left alone.</source>
@@ -1673,22 +1674,22 @@ The project&apos;s metadata is left alone.</source>
 Metadane projektu zostają nietknięte.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2313"/>
+        <location filename="../app_window.py" line="2384"/>
         <source>{first} and {last}</source>
         <translation>{first} i {last}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2576"/>
+        <location filename="../app_window.py" line="2726"/>
         <source>Lay Out Case Back</source>
         <translation>Rozmieść tył pudełka</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2578"/>
+        <location filename="../app_window.py" line="2728"/>
         <source>Case Back</source>
         <translation>Tył pudełka</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2618"/>
+        <location filename="../app_window.py" line="2782"/>
         <source>Lay Out Case Insert</source>
         <translation>Rozmieść wkładkę</translation>
     </message>
@@ -1701,12 +1702,12 @@ Metadane projektu zostają nietknięte.</translation>
         <translation type="vanished">Metadane...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="406"/>
+        <location filename="../app_window.py" line="446"/>
         <source>Record to MiniDisc from foobar2000...</source>
         <translation>Nagraj na MiniDisc z foobar2000...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="400"/>
+        <location filename="../app_window.py" line="440"/>
         <source>Record CD to MiniDisc...</source>
         <translation>Nagraj CD na MiniDisc...</translation>
     </message>
@@ -1715,42 +1716,42 @@ Metadane projektu zostają nietknięte.</translation>
         <translation type="vanished">xD-Tools — Studio MiniDisc i CD</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="396"/>
+        <location filename="../app_window.py" line="436"/>
         <source>&amp;Recording</source>
         <translation>&amp;Nagrywanie</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="403"/>
+        <location filename="../app_window.py" line="443"/>
         <source>Record Folder to MiniDisc...</source>
         <translation>Nagraj folder na MiniDisc...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="413"/>
+        <location filename="../app_window.py" line="453"/>
         <source>Burn Audio CD from Folder...</source>
         <translation>Wypal płytę audio CD z folderu...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="416"/>
+        <location filename="../app_window.py" line="456"/>
         <source>Burn Audio CD from foobar2000...</source>
         <translation>Wypal płytę audio CD z foobar2000...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="423"/>
+        <location filename="../app_window.py" line="463"/>
         <source>Erase MiniDisc...</source>
         <translation>Skasuj MiniDisc...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="430"/>
+        <location filename="../app_window.py" line="470"/>
         <source>Remote Control...</source>
         <translation>Pilot...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="439"/>
+        <location filename="../app_window.py" line="479"/>
         <source>&amp;Templates</source>
         <translation>&amp;Szablony</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="440"/>
+        <location filename="../app_window.py" line="480"/>
         <source>Manage Templates...</source>
         <translation>Zarządzaj szablonami...</translation>
     </message>
@@ -1759,57 +1760,57 @@ Metadane projektu zostają nietknięte.</translation>
         <translation type="vanished">Zmień szablon tej strony...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="442"/>
+        <location filename="../app_window.py" line="482"/>
         <source>&amp;View</source>
         <translation>&amp;Widok</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="445"/>
+        <location filename="../app_window.py" line="485"/>
         <source>Fit to Window</source>
         <translation>Dopasuj do okna</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="458"/>
+        <location filename="../app_window.py" line="498"/>
         <source>Experi&amp;mental</source>
         <translation>&amp;Eksperymentalne</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="460"/>
+        <location filename="../app_window.py" line="500"/>
         <source>Experimental Settings...</source>
         <translation>Ustawienia eksperymentalne...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="467"/>
+        <location filename="../app_window.py" line="507"/>
         <source>Download Album from Telegram Bot...</source>
         <translation>Pobierz album z bota Telegram...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="477"/>
+        <location filename="../app_window.py" line="517"/>
         <source>Sort Telegram Downloads into Album Folders...</source>
         <translation>Posortuj pobrane pliki z Telegrama na foldery albumów...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="480"/>
+        <location filename="../app_window.py" line="520"/>
         <source>Record from Telegram Downloads...</source>
         <translation>Nagraj z pobranych plików Telegrama...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="485"/>
+        <location filename="../app_window.py" line="525"/>
         <source>Burn Telegram Downloads to Audio CD...</source>
         <translation>Wypal pobrane z Telegrama na płytę audio CD...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="491"/>
+        <location filename="../app_window.py" line="531"/>
         <source>&amp;Window</source>
         <translation>&amp;Okno</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="492"/>
+        <location filename="../app_window.py" line="532"/>
         <source>Settings...</source>
         <translation>Ustawienia...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="494"/>
+        <location filename="../app_window.py" line="534"/>
         <source>&amp;Help</source>
         <translation>&amp;Pomoc</translation>
     </message>
@@ -1818,12 +1819,12 @@ Metadane projektu zostają nietknięte.</translation>
         <translation type="vanished">O programie MDTools...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="551"/>
+        <location filename="../app_window.py" line="591"/>
         <source>Unsaved Changes</source>
         <translation>Niezapisane zmiany</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="552"/>
+        <location filename="../app_window.py" line="592"/>
         <source>This project has changes that have not been saved.
 
 Save them before continuing?</source>
@@ -1832,14 +1833,14 @@ Save them before continuing?</source>
 Zapisać je przed kontynuowaniem?</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="652"/>
+        <location filename="../app_window.py" line="692"/>
         <source>&apos;{name}&apos; has unverified placeholder dimensions -- measure your physical media/case and correct it in Templates &gt; Manage Templates before cutting anything for real.</source>
         <translation>Szablon &apos;{name}&apos; ma niezweryfikowane wymiary zastępcze -- zmierz swój fizyczny nośnik/pudełko i popraw go w Szablony &gt; Zarządzaj szablonami, zanim wytniesz cokolwiek naprawdę.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1648"/>
-        <location filename="../app_window.py" line="1698"/>
-        <location filename="../app_window.py" line="1709"/>
+        <location filename="../app_window.py" line="1711"/>
+        <location filename="../app_window.py" line="1761"/>
+        <location filename="../app_window.py" line="1772"/>
         <source>Change Template</source>
         <translation>Zmiana szablonu</translation>
     </message>
@@ -1856,200 +1857,201 @@ The other page and the project&apos;s metadata are left alone.</source>
 Druga strona i metadane projektu pozostają nietknięte.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="911"/>
+        <location filename="../app_window.py" line="951"/>
         <source>That page is part of every project of this kind and cannot be removed.</source>
         <translation>Ta strona należy do każdego projektu tego rodzaju i nie można jej usunąć.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="992"/>
+        <location filename="../app_window.py" line="1032"/>
         <source>Add Text</source>
         <translation>Dodaj tekst</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="999"/>
+        <location filename="../app_window.py" line="1039"/>
         <source>Add Rectangle</source>
         <translation>Dodaj prostokąt</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1006"/>
-        <location filename="../app_window.py" line="1086"/>
+        <location filename="../app_window.py" line="1046"/>
+        <location filename="../app_window.py" line="1126"/>
         <source>Delete Layer</source>
         <translation>Usuń warstwę</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1035"/>
-        <location filename="../app_window.py" line="1042"/>
+        <location filename="../app_window.py" line="1075"/>
+        <location filename="../app_window.py" line="1082"/>
         <source>Rename Layer</source>
         <translation>Zmień nazwę warstwy</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1035"/>
+        <location filename="../app_window.py" line="1075"/>
         <source>Layer name:</source>
         <translation>Nazwa warstwy:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1104"/>
-        <location filename="../app_window.py" line="1115"/>
-        <location filename="../app_window.py" line="1125"/>
+        <location filename="../app_window.py" line="1144"/>
+        <location filename="../app_window.py" line="1155"/>
+        <location filename="../app_window.py" line="1165"/>
         <source>Insert Metadata Text</source>
         <translation>Wstaw tekst z metadanych</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1134"/>
-        <location filename="../app_window.py" line="1140"/>
+        <location filename="../app_window.py" line="1174"/>
+        <location filename="../app_window.py" line="1180"/>
         <source>Add Image</source>
         <translation>Dodaj obraz</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1134"/>
+        <location filename="../app_window.py" line="1174"/>
         <source>Images (*.png *.jpg *.jpeg *.bmp)</source>
         <translation>Obrazy (*.png *.jpg *.jpeg *.bmp)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1152"/>
+        <location filename="../app_window.py" line="1192"/>
         <source>Insert Asset</source>
         <translation>Wstaw zasób</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1163"/>
+        <location filename="../app_window.py" line="1203"/>
         <source>Clip Layers</source>
         <translation>Przycinaj warstwy</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1166"/>
+        <location filename="../app_window.py" line="1206"/>
         <source>Clip Image</source>
         <translation>Przycięcie obrazu</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1184"/>
+        <location filename="../app_window.py" line="1224"/>
         <source>Bake Layers</source>
         <translation>Spłaszcz warstwy</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1196"/>
+        <location filename="../app_window.py" line="1236"/>
         <source>Import Metadata from Project</source>
         <translation>Importuj metadane z projektu</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1205"/>
+        <location filename="../app_window.py" line="1245"/>
         <source>Import Metadata</source>
         <translation>Importuj metadane</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1205"/>
+        <location filename="../app_window.py" line="1245"/>
         <source>Could not read project:
 {error}</source>
         <translation>Nie można odczytać projektu:
 {error}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1208"/>
+        <location filename="../app_window.py" line="1248"/>
         <source>Imported metadata from {path}</source>
         <translation>Zaimportowano metadane z {path}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1212"/>
-        <location filename="../app_window.py" line="1230"/>
+        <location filename="../app_window.py" line="1252"/>
+        <location filename="../app_window.py" line="1270"/>
         <source>Open Project</source>
         <translation>Otwórz projekt</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1230"/>
+        <location filename="../app_window.py" line="1270"/>
         <source>Could not open project:
 {error}</source>
         <translation>Nie można otworzyć projektu:
 {error}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1251"/>
+        <location filename="../app_window.py" line="1291"/>
         <source>(No Recent Projects)</source>
         <translation>(Brak ostatnich projektów)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1271"/>
-        <location filename="../app_window.py" line="1295"/>
+        <location filename="../app_window.py" line="1311"/>
+        <location filename="../app_window.py" line="1335"/>
         <source>Saved {path}</source>
         <translation>Zapisano {path}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1285"/>
+        <location filename="../app_window.py" line="1325"/>
         <source>Save Project As</source>
         <translation>Zapisz projekt jako</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1303"/>
+        <location filename="../app_window.py" line="1343"/>
         <source>Export Cut SVG</source>
         <translation>Eksportuj cięcie SVG</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1303"/>
+        <location filename="../app_window.py" line="1343"/>
         <source>SVG (*.svg)</source>
         <translation>SVG (*.svg)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1308"/>
+        <location filename="../app_window.py" line="1348"/>
         <source>Exported cut outline to {path}</source>
         <translation>Wyeksportowano kontur cięcia do {path}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1343"/>
+        <location filename="../app_window.py" line="1383"/>
         <source>Export Print PNG (Grayscale)</source>
         <translation>Eksportuj wydruk PNG (skala szarości)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1432"/>
+        <location filename="../app_window.py" line="1472"/>
         <source>Record CD to {medium}...</source>
         <translation>Nagraj CD na {medium}...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1433"/>
+        <location filename="../app_window.py" line="1473"/>
         <source>Record Folder to {medium}...</source>
         <translation>Nagraj folder na {medium}...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1434"/>
+        <location filename="../app_window.py" line="1474"/>
         <source>Record to {medium} from foobar2000...</source>
         <translation>Nagraj na {medium} z foobara2000...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1454"/>
+        <location filename="../app_window.py" line="1494"/>
         <source>Record from Telegram Downloads to {medium}...</source>
         <translation>Nagraj pobrane z Telegrama na {medium}...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1651"/>
+        <location filename="../app_window.py" line="1714"/>
         <source>Switch this page to &quot;{name}&quot;? Everything currently on it is removed, and the undo history is reset.</source>
         <translation>Zmienić tę stronę na &quot;{name}&quot;? Wszystko, co się na niej obecnie znajduje, zostanie usunięte, a historia cofania zresetowana.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1655"/>
+        <location filename="../app_window.py" line="1718"/>
         <source>Empty Template</source>
         <translation>Pusty szablon</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1656"/>
+        <location filename="../app_window.py" line="1719"/>
         <source>Generated from Metadata</source>
         <translation>Wygenerowany z metadanych</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1661"/>
+        <location filename="../app_window.py" line="1724"/>
         <source>There is no automatic layout for this template yet -- it can still be used as a blank starting point.</source>
         <translation>Nie ma jeszcze automatycznego układu dla tego szablonu -- nadal można go użyć jako pustego punktu wyjścia.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2453"/>
-        <location filename="../app_window.py" line="2530"/>
+        <location filename="../app_window.py" line="2534"/>
+        <location filename="../app_window.py" line="2603"/>
+        <location filename="../app_window.py" line="2680"/>
         <source>Disc Label Background</source>
         <translation>Tło etykiety na płytę</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2620"/>
+        <location filename="../app_window.py" line="2784"/>
         <source>Case Insert</source>
         <translation>Wkładka</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1781"/>
-        <location filename="../app_window.py" line="1788"/>
+        <location filename="../app_window.py" line="1852"/>
+        <location filename="../app_window.py" line="1859"/>
         <source>Download Album from Telegram Bot</source>
         <translation>Pobierz album z bota Telegram</translation>
     </message>
@@ -2058,8 +2060,8 @@ Druga strona i metadane projektu pozostają nietknięte.</translation>
         <translation type="vanished">Najpierw ustaw API ID, API Hash i nazwę użytkownika bota w Experimental &gt; Experimental Settings...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1839"/>
-        <location filename="../app_window.py" line="1843"/>
+        <location filename="../app_window.py" line="1910"/>
+        <location filename="../app_window.py" line="1914"/>
         <source>Sort into Album Folders</source>
         <translation>Posortuj na foldery albumów</translation>
     </message>
@@ -2068,65 +2070,65 @@ Druga strona i metadane projektu pozostają nietknięte.</translation>
         <translation type="vanished">Wykryto tylko jeden album -- nie ma czego sortować.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1844"/>
+        <location filename="../app_window.py" line="1915"/>
         <source>Sorted into {count} album folders.</source>
         <translation>Posortowano na {count} folderów albumów.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1954"/>
+        <location filename="../app_window.py" line="2025"/>
         <source>Restart Now</source>
         <translation>Uruchom ponownie teraz</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1955"/>
+        <location filename="../app_window.py" line="2026"/>
         <source>Later</source>
         <translation>Później</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2094"/>
+        <location filename="../app_window.py" line="2165"/>
         <source>Choose Album Folder</source>
         <translation>Wybierz folder albumu</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2112"/>
-        <location filename="../app_window.py" line="2137"/>
-        <location filename="../app_window.py" line="2144"/>
-        <location filename="../app_window.py" line="2170"/>
+        <location filename="../app_window.py" line="2183"/>
+        <location filename="../app_window.py" line="2208"/>
+        <location filename="../app_window.py" line="2215"/>
+        <location filename="../app_window.py" line="2241"/>
         <source>Burn Audio CD</source>
         <translation>Wypal płytę audio CD</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2113"/>
+        <location filename="../app_window.py" line="2184"/>
         <source>There are no audio files in that folder.</source>
         <translation>W tym folderze nie ma plików dźwiękowych.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2145"/>
+        <location filename="../app_window.py" line="2216"/>
         <source>foobar2000&apos;s playlist is empty, or its files are not reachable from here.</source>
         <translation>Playlista foobar2000 jest pusta albo jej pliki są stąd nieosiągalne.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2171"/>
+        <location filename="../app_window.py" line="2242"/>
         <source>Put this album&apos;s details into the open project, ready to design its label?</source>
         <translation>Wstawić dane tego albumu do otwartego projektu, żeby zaprojektować etykietę?</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2270"/>
-        <location filename="../app_window.py" line="2280"/>
+        <location filename="../app_window.py" line="2341"/>
+        <location filename="../app_window.py" line="2351"/>
         <source>Auto-Layout Disc Label</source>
         <translation>Ułóż etykietę płyty automatycznie</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1699"/>
-        <location filename="../app_window.py" line="2271"/>
-        <location filename="../app_window.py" line="2779"/>
+        <location filename="../app_window.py" line="1762"/>
+        <location filename="../app_window.py" line="2342"/>
+        <location filename="../app_window.py" line="2987"/>
         <source>Fill in the album and artist in the Tools panel&apos;s Metadata... first.</source>
         <translation>Uzupełnij najpierw album i wykonawcę w Metadanych... na panelu narzędzi.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1711"/>
-        <location filename="../app_window.py" line="2282"/>
-        <location filename="../app_window.py" line="2789"/>
+        <location filename="../app_window.py" line="1774"/>
+        <location filename="../app_window.py" line="2353"/>
+        <location filename="../app_window.py" line="2997"/>
         <source>No cover art could be found for this album, and the layout is built around it. Add an image yourself, or fetch one with the Metadata dialog&apos;s lookup.</source>
         <translation>Nie udało się znaleźć okładki dla tego albumu, a cały układ jest na niej oparty. Dodaj obraz samodzielnie albo pobierz okładkę wyszukiwarką w oknie Metadane...</translation>
     </message>
@@ -2139,7 +2141,7 @@ Druga strona i metadane projektu pozostają nietknięte.</translation>
         <translation type="vanished">Nie udało się znaleźć okładki dla tego albumu, a cały układ jest na niej oparty. Dodaj obraz samodzielnie albo pobierz okładkę wyszukiwarką w Projekt &gt; Metadane...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2290"/>
+        <location filename="../app_window.py" line="2361"/>
         <source>Auto-Layout</source>
         <translation>Układ automatyczny</translation>
     </message>
@@ -2152,14 +2154,14 @@ The project&apos;s metadata is left alone.</source>
 Metadane projektu pozostaną nietknięte.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2512"/>
-        <location filename="../app_window.py" line="2655"/>
+        <location filename="../app_window.py" line="2662"/>
+        <location filename="../app_window.py" line="2819"/>
         <source>Lay Out J-Card</source>
         <translation>Ułożenie okładki J-card</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2514"/>
-        <location filename="../app_window.py" line="2657"/>
+        <location filename="../app_window.py" line="2664"/>
+        <location filename="../app_window.py" line="2821"/>
         <source>J-Card</source>
         <translation>Okładka J-card</translation>
     </message>
@@ -2172,23 +2174,25 @@ The cover page and the project&apos;s metadata are left alone.</source>
 Strona okładki i metadane projektu pozostaną nietknięte.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2473"/>
-        <location filename="../app_window.py" line="2550"/>
+        <location filename="../app_window.py" line="2554"/>
+        <location filename="../app_window.py" line="2613"/>
+        <location filename="../app_window.py" line="2700"/>
         <source>Lay Out Disc Label</source>
         <translation>Ułożenie etykiety płyty</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2482"/>
+        <location filename="../app_window.py" line="2563"/>
         <source>Cover Art</source>
         <translation>Okładka</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2486"/>
+        <location filename="../app_window.py" line="2574"/>
+        <location filename="../app_window.py" line="2625"/>
         <source>MiniDisc Logo</source>
         <translation>Logo MiniDisc</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1315"/>
+        <location filename="../app_window.py" line="1355"/>
         <source>Export Print PNG</source>
         <translation>Eksportuj wydruk PNG</translation>
     </message>
@@ -2197,14 +2201,14 @@ Strona okładki i metadane projektu pozostaną nietknięte.</translation>
         <translation type="vanished">MDTools - Studio MiniDisc</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1315"/>
-        <location filename="../app_window.py" line="1343"/>
+        <location filename="../app_window.py" line="1355"/>
+        <location filename="../app_window.py" line="1383"/>
         <source>PNG (*.png)</source>
         <translation>PNG (*.png)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1320"/>
-        <location filename="../app_window.py" line="1348"/>
+        <location filename="../app_window.py" line="1360"/>
+        <location filename="../app_window.py" line="1388"/>
         <source>Exported print artwork to {path}</source>
         <translation>Wyeksportowano grafikę do druku do {path}</translation>
     </message>
@@ -2213,47 +2217,47 @@ Strona okładki i metadane projektu pozostaną nietknięte.</translation>
         <translation type="vanished">Projekt MDTools (*.mdproj)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1782"/>
+        <location filename="../app_window.py" line="1853"/>
         <source>Set the bot username first, in Experimental &gt; Experimental Settings...</source>
         <translation>Najpierw ustaw nazwę użytkownika bota w Experimental &gt; Experimental Settings...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1790"/>
+        <location filename="../app_window.py" line="1861"/>
         <source>This build has no Telegram API credentials. Register an app at my.telegram.org and add its API ID and API Hash to settings.ini to sign in.</source>
         <translation>Ta wersja nie ma danych dostępowych API Telegrama. Zarejestruj aplikację na my.telegram.org i dodaj jej API ID oraz API Hash do settings.ini, aby móc się zalogować.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1836"/>
+        <location filename="../app_window.py" line="1907"/>
         <source>These tracks all belong to one album -- there is nothing to separate.</source>
         <translation>Wszystkie te utwory należą do jednego albumu -- nie ma czego rozdzielać.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1838"/>
+        <location filename="../app_window.py" line="1909"/>
         <source>Everything is already sorted into album folders.</source>
         <translation>Wszystko jest już posortowane na foldery albumów.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1903"/>
+        <location filename="../app_window.py" line="1974"/>
         <source>Save as Template</source>
         <translation>Zapisz jako szablon</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1903"/>
+        <location filename="../app_window.py" line="1974"/>
         <source>Template name:</source>
         <translation>Nazwa szablonu:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1922"/>
+        <location filename="../app_window.py" line="1993"/>
         <source>Saved template &apos;{name}&apos;</source>
         <translation>Zapisano szablon &apos;{name}&apos;</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1931"/>
+        <location filename="../app_window.py" line="2002"/>
         <source>Language</source>
         <translation>Język</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1950"/>
+        <location filename="../app_window.py" line="2021"/>
         <source>Language Changed</source>
         <translation>Zmieniono język</translation>
     </message>
