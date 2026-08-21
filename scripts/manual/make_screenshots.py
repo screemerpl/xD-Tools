@@ -290,6 +290,28 @@ def _install_cover_stand_in() -> None:
         module.fetch_into = fake_fetch
 
 
+def _install_cover_filter_stand_in() -> None:
+    """CoverFilterDialog.exec() opens a real modal event loop -- every disc/
+    shell label the automatic layout builds (main-disc, cd-label, the
+    cassette shell labels) shows it. This script runs with a real display,
+    not offscreen (see doc/README.md), so an un-stubbed dialog does not
+    hang the *process* -- it just sits there waiting for someone to click a
+    tile, which looks exactly like a hang and blocks the whole run on it.
+
+    Auto-accepts "No Filter" for all of them, the same default
+    tests/conftest.py's own _auto_accept_cover_filter_dialog fixture uses --
+    the artwork comes back byte-for-byte unchanged, closest to how these
+    builders behaved before this dialog existed."""
+    from mdtools import cover_filters
+    from mdtools.panels.cover_filter_dialog import CoverFilterDialog
+
+    def fake_exec(self):
+        self.result_filter_id = cover_filters.FILTER_NONE
+        return CoverFilterDialog.DialogCode.Accepted
+
+    CoverFilterDialog.exec = fake_exec
+
+
 def _demo_playlist_items():
     from mdtools import foobar
 
@@ -791,7 +813,7 @@ def _capture_cd(out: Path, code: str, metadata) -> None:
     from mdtools.canvas.scene import DesignScene
     from mdtools.project import PAGE_BACK
 
-    tray = next(t for t in templates["cover"] if t.name.startswith("CD Jewel Case Back"))
+    tray = next(t for t in templates["case_back"] if t.name.startswith("CD Jewel Case Back"))
     window.project.pages[PAGE_BACK] = DesignScene(tray)
     window._refresh_page_combo()
     window._auto_layout_cd_case_back(metadata)
@@ -993,6 +1015,7 @@ def main() -> int:
     _install_cd_stand_ins()
     _install_burner_stand_ins()
     _install_cover_stand_in()
+    _install_cover_filter_stand_in()
     _install_folder_stand_in()
 
     draw_ir_circuit(OUT_DIR / "ir-circuit.png")

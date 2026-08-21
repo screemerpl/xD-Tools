@@ -198,6 +198,43 @@ class MainWindow(QMainWindow):
         # had nowhere to appear.
         self.page_combo.currentIndexChanged.connect(self._on_page_combo_changed)
         toolbar.addWidget(self.page_combo)
+        # Add/remove a page -- used to be Templates > "Add Page..."/"Remove
+        # This Page"; moved beside the page selector they act on, as a
+        # plain +/- pair rather than two menu entries. Both still go
+        # through _add_page()/_remove_page(), which already ask their own
+        # questions (which page to add, confirming a removal) -- nothing
+        # about the underlying behaviour changed, only where it's reached
+        # from.
+        self.add_page_btn = QPushButton(self.tr("+"))
+        self.add_page_btn.setFixedWidth(28)
+        self.add_page_btn.setToolTip(self.tr("Add Page..."))
+        self.add_page_btn.clicked.connect(self._add_page)
+        toolbar.addWidget(self.add_page_btn)
+        self.remove_page_btn = QPushButton(self.tr("-"))
+        self.remove_page_btn.setFixedWidth(28)
+        self.remove_page_btn.setToolTip(self.tr("Remove This Page"))
+        self.remove_page_btn.clicked.connect(self._remove_page)
+        toolbar.addWidget(self.remove_page_btn)
+        toolbar.addWidget(QLabel(self.tr("Template:")))
+        self.template_combo = QComboBox()
+        # Filled from the registry, filtered to the current page's own
+        # template kind and the project's medium -- see
+        # _refresh_template_combo(). Usually one entry (there's normally
+        # only one built-in per page/medium), plus any custom ones the
+        # user has cloned or saved -- see _on_template_combo_changed() for
+        # what picking a different one actually does.
+        #
+        # A page's own kind (disc/cover/label/case_back) changes with the
+        # page selector, and their template names vary a lot in length --
+        # "CD Disc Label (Standard Hub)" against "CD Jewel Case Back (Tray
+        # Card)" against just "sticker". Qt's default AdjustToContentsOnFirstShow
+        # locks the combo's width to whatever happened to be in it the
+        # first time it was shown, which then truncates every longer name
+        # that shows up later -- AdjustToContents keeps it sized to
+        # whatever is actually selected right now.
+        self.template_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+        self.template_combo.currentIndexChanged.connect(self._on_template_combo_changed)
+        toolbar.addWidget(self.template_combo)
         self.regenerate_font_btn = QPushButton(self.tr("Regenerate with Font..."))
         self.regenerate_font_btn.clicked.connect(self._open_regenerate_font_dialog)
         toolbar.addWidget(self.regenerate_font_btn)
@@ -406,12 +443,11 @@ class MainWindow(QMainWindow):
         # gates two entries in the Experimental menu, which is built
         # further down. It runs once both menus exist.
 
+        # Changing a page's template, and adding/removing a page, both moved
+        # to the page toolbar -- the Template dropdown next to the page
+        # selector, and the +/- buttons beside it (see _build_page_toolbar).
         templates_menu = self.menuBar().addMenu(self.tr("&Templates"))
         templates_menu.addAction(self.tr("Manage Templates..."), self._manage_templates)
-        templates_menu.addAction(self.tr("Change Template for This Page..."), self._change_page_template)
-        templates_menu.addSeparator()
-        templates_menu.addAction(self.tr("Add Page..."), self._add_page)
-        templates_menu.addAction(self.tr("Remove This Page"), self._remove_page)
 
         view_menu = self.menuBar().addMenu(self.tr("&View"))
         view_menu.addAction(self.tr("Zoom In"), self.view.zoom_in).setShortcut(QKeySequence.StandardKey.ZoomIn)
@@ -618,6 +654,7 @@ class MainWindow(QMainWindow):
         self._refresh_layers()
         self.properties_panel.set_item(None)
         self._warn_if_unverified(scene)
+        self._refresh_template_combo()
 
     def _warn_if_unverified(self, scene: DesignScene) -> None:
         if not scene.template.verified:
@@ -807,59 +844,6 @@ class MainWindow(QMainWindow):
                 item_from_dict(scene, item_data)
         elif page_template_kind(page) == "disc":
             scene.seed_disc_defaults()
-
-    def _change_page_template(self) -> None:
-        """Swaps the current page onto a different template.
-
-        Until this existed, a template could only be chosen when the project
-        was created -- picking the wrong one meant starting over."""
-        if self.project is None:
-            return
-        scene = self._current_scene()
-        if scene is None:
-            return
-
-        from mdtools.templates import registry
-
-        kind = page_template_kind(self.current_page)
-        # Only this project's own medium: a CD project has no use for a
-        # J-card and swapping one in would describe a case it does not have.
-        templates = [
-            t
-            for t in registry.load_templates()[kind]
-            if getattr(t, "medium", MEDIUM_MD) == self.project.medium
-        ]
-        if not templates:
-            return
-        names = [template.name for template in templates]
-        current = scene.template.name
-        chosen_name, ok = QInputDialog.getItem(
-            self,
-            self.tr("Change Template"),
-            self.tr("Template for this page:"),
-            names,
-            names.index(current) if current in names else 0,
-            False,
-        )
-        if not ok:
-            return
-        template = templates[names.index(chosen_name)]
-        if template.name == current:
-            return
-
-        answer = QMessageBox.warning(
-            self,
-            self.tr("Change Template"),
-            self.tr(
-                "Changing the template clears this page: every layer on it is removed, and the undo history "
-                "is reset.\n\nThe other page and the project's metadata are left alone."
-            ),
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Cancel,
-        )
-        if answer != QMessageBox.StandardButton.Ok:
-            return
-        self.apply_template(self.current_page, template)
 
     def _add_page(self) -> None:
         """Adds one of the pages this project does not have yet.
@@ -1521,6 +1505,242 @@ class MainWindow(QMainWindow):
         chosen = self.page_combo.currentData()
         if chosen is not None and chosen != self.current_page:
             self._show_page(chosen)
+
+    def _template_choices_for_current_page(self) -> list:
+        """Every template that could be picked for the page on screen --
+        the current page's own kind (disc/cover/label/case_back), filtered
+        to the project's medium so a CD project is never offered a J-card
+        by name alone. Shared by the toolbar dropdown's own refresh and by
+        what picking an entry in it actually does, so the two can never
+        disagree about which templates exist."""
+        if self.project is None:
+            return []
+        from mdtools.templates import registry
+
+        kind = page_template_kind(self.current_page)
+        return [
+            t
+            for t in registry.load_templates()[kind]
+            if getattr(t, "medium", MEDIUM_MD) == self.project.medium
+        ]
+
+    def _refresh_template_combo(self) -> None:
+        """Rebuilds the toolbar's Template dropdown from the page on
+        screen -- usually one entry (there's normally only a single
+        built-in template per page/medium), plus whatever the user has
+        cloned or saved of their own.
+
+        Selecting the current page's own template by *name*, not identity:
+        `scene.template` is whatever object was handed to DesignScene when
+        the page was built, never the same Python object a fresh
+        registry.load_templates() call returns.
+        """
+        self.template_combo.blockSignals(True)
+        self.template_combo.clear()
+        scene = self._current_scene()
+        if scene is None:
+            self.template_combo.blockSignals(False)
+            return
+        templates = self._template_choices_for_current_page()
+        current_name = scene.template.name
+        for template in templates:
+            self.template_combo.addItem(template.name, template.name)
+        index = self.template_combo.findData(current_name)
+        if index < 0:
+            # The page's own template isn't among the current choices at
+            # all (e.g. it was since deleted from the registry) -- show
+            # what is actually on screen rather than silently jumping to
+            # the first entry, which would make picking anything else
+            # look like a no-op the first time.
+            self.template_combo.addItem(current_name, current_name)
+            index = self.template_combo.count() - 1
+        self.template_combo.setCurrentIndex(index)
+        self.template_combo.blockSignals(False)
+
+    def _auto_layout_template_name_for_page(self, page: str) -> str | None:
+        """Which template name the *content* generator for `page` actually
+        builds -- the other half of _auto_layout_method_for_page(): that
+        one says what to run, this one says which template it demands.
+        Every _auto_layout_* method above looks its own template up by one
+        fixed name rather than accepting whatever is currently on the
+        page, so "Generated from Metadata" is only ever offered in the
+        Template dropdown when the template being switched to is this
+        exact one. None means no known algorithm exists yet for this page
+        under the current medium.
+
+        The case back has no entry here on purpose -- see
+        _can_auto_generate_page(), which checks it structurally instead,
+        because build_case_back() itself works from whatever three-panel
+        shape is already on the page rather than demanding one template by
+        name.
+        """
+        if self.project is None:
+            return None
+        if self.project.medium == MEDIUM_TAPE:
+            return {
+                PAGE_COVER: TAPE_JCARD_TEMPLATE,
+                PAGE_SIDE_A: TAPE_LABEL_TEMPLATE,
+                PAGE_SIDE_B: TAPE_LABEL_TEMPLATE,
+            }.get(page)
+        if self.project.medium == MEDIUM_CD:
+            return {
+                PAGE_DISC: CD_LABEL_TEMPLATE,
+                PAGE_COVER: CD_INSERT_TEMPLATE,
+            }.get(page)
+        return {
+            PAGE_DISC: FULL_LABEL_TEMPLATE,
+            PAGE_COVER: JCARD_TEMPLATE,
+        }.get(page)
+
+    def _can_auto_generate_page(self, page: str, template) -> bool:
+        """Whether "Generated from Metadata" is a real option once `page`
+        is switched onto `template`.
+
+        Every automatic layout in this file is written against one
+        specific, hardcoded template (see _auto_layout_template_name_for_
+        page) -- there is no generic "fill any shape in" algorithm, so
+        switching to a template nothing here knows how to build for would
+        make that button a silent no-op. Disabling it is the honest
+        answer until a real generator for that template exists.
+
+        The case back is the one page with no fixed target template --
+        build_case_back() works from whatever three-panel shape is
+        already there (see its own docstring), so the check here is
+        structural (two fold lines, i.e. three panels) instead of a name
+        match.
+        """
+        if page == PAGE_BACK:
+            return len(getattr(template, "fold_offsets_mm", None) or []) == 2
+        return template.name == self._auto_layout_template_name_for_page(page)
+
+    def _on_template_combo_changed(self, index: int) -> None:
+        """Picking a different entry in the toolbar's Template dropdown.
+
+        A custom (non-builtin) template is applied outright -- it is
+        already the user's own choice, saved via Tools > "Save as
+        Template..." or the Template Manager, so there's nothing left to
+        ask; the page becomes exactly what that template holds, same as
+        File > New does for a template carrying items. A built-in
+        template asks first, because it is shared and picking one is
+        typically not a one-off -- and offers a choice File > New never
+        needed: start the page empty, or, where a generator for this
+        exact template exists, build it fresh from the project's own
+        metadata.
+        """
+        if self.project is None or index < 0:
+            return
+        name = self.template_combo.itemData(index)
+        if name is None:
+            return
+        scene = self._current_scene()
+        if scene is not None and name == scene.template.name:
+            return  # the refresh landing here again, not a real choice
+        template = next((t for t in self._template_choices_for_current_page() if t.name == name), None)
+        if template is None:
+            self._refresh_template_combo()
+            return
+
+        if not template.builtin:
+            self.apply_template(self.current_page, template)
+            return
+
+        self._offer_template_replacement(template)
+
+    def _offer_template_replacement(self, template) -> None:
+        """The question a built-in template asks in the toolbar dropdown:
+        start the page empty, or build it fresh from the project's own
+        metadata -- see _can_auto_generate_page() for why that second
+        option isn't always available."""
+        page = self.current_page
+        can_generate = self._can_auto_generate_page(page, template)
+
+        box = QMessageBox(self)
+        box.setWindowTitle(self.tr("Change Template"))
+        box.setText(
+            self.tr(
+                "Switch this page to \"{name}\"? Everything currently on it is removed, and the "
+                "undo history is reset."
+            ).format(name=template.name)
+        )
+        empty_btn = box.addButton(self.tr("Empty Template"), QMessageBox.ButtonRole.AcceptRole)
+        generate_btn = box.addButton(self.tr("Generated from Metadata"), QMessageBox.ButtonRole.AcceptRole)
+        generate_btn.setEnabled(can_generate)
+        if not can_generate:
+            generate_btn.setToolTip(
+                self.tr(
+                    "There is no automatic layout for this template yet -- it can still be used "
+                    "as a blank starting point."
+                )
+            )
+        cancel_btn = box.addButton(QMessageBox.StandardButton.Cancel)
+        box.setDefaultButton(cancel_btn)
+        box.exec()
+        clicked = box.clickedButton()
+
+        if clicked is empty_btn:
+            self.apply_template(page, template)
+            return
+        if clicked is generate_btn and can_generate:
+            self._generate_page_from_metadata(page, template)
+            return
+        # Cancel, or the dialog was otherwise dismissed -- the page is
+        # untouched, but the dropdown already shows the template that was
+        # merely being considered, so it has to be put back.
+        self._refresh_template_combo()
+
+    def _generate_page_from_metadata(self, page: str, template) -> None:
+        """Switches `page` onto `template` and builds it from the
+        project's own metadata -- the "Generated from Metadata" half of
+        _offer_template_replacement(), split out because the case back
+        needs an explicit template swap first (build_case_back() never
+        does one itself, see _can_auto_generate_page()) while every other
+        page's own _auto_layout_* method already applies its target
+        template internally.
+
+        Shares the same "is there actually anything to build from"
+        guards _auto_layout_from_metadata() uses -- there is no point
+        clearing the page for a generator that has nothing to draw.
+        """
+        metadata = self.project.metadata
+        if not metadata.album and not metadata.artist:
+            QMessageBox.information(
+                self,
+                self.tr("Change Template"),
+                self.tr("Fill in the album and artist in the Tools panel's Metadata... first."),
+            )
+            self._refresh_template_combo()
+            return
+
+        if not metadata.cover_art:
+            self._fetch_cover_into_metadata(metadata)
+        if not metadata.cover_art:
+            QMessageBox.warning(
+                self,
+                self.tr("Change Template"),
+                self.tr(
+                    "No cover art could be found for this album, and the layout is built around "
+                    "it. Add an image yourself, or fetch one with the Metadata dialog's lookup."
+                ),
+            )
+            self._refresh_template_combo()
+            return
+
+        if page == PAGE_BACK:
+            self.apply_template(page, template)
+        method = self._auto_layout_method_for_page(page)
+        if method is None:
+            self._refresh_template_combo()
+            return
+        method(metadata)
+        # Belt and suspenders: every _auto_layout_* method above applies
+        # its own template internally and that already refreshes this
+        # combo via apply_template() -> _show_page(). But some of them can
+        # still bail out before doing so (e.g. the cover-background picker
+        # being cancelled midway) -- in that case the dropdown's own
+        # selection has already moved to the template that was merely
+        # being considered, and needs putting back to whatever is actually
+        # on the page.
+        self._refresh_template_combo()
 
     def _sync_experimental_menu(self) -> None:
         """Shows/hides the whole Experimental menu per Window > Settings'

@@ -8,7 +8,7 @@ of those had to stop counting.
 """
 
 import pytest
-from PySide6.QtWidgets import QInputDialog, QMessageBox
+from PySide6.QtWidgets import QMessageBox
 
 from mdtools.app_window import MainWindow
 from mdtools.canvas.scene import DesignScene
@@ -29,10 +29,11 @@ from mdtools.templates.models import CoverTemplate
 @pytest.fixture(autouse=True)
 def _isolated_templates(tmp_path, monkeypatch):
     """Only test_changing_the_third_pages_template_offers_case_back_templates
-    actually reads the template registry (via _change_page_template()), but
-    every other file that does keeps this isolated -- without it, that one
-    test's result depends on whatever templates.json happens to already
-    exist on the machine running it, real per-user file included."""
+    actually reads the template registry (via the toolbar's own Template
+    dropdown, refreshed whenever the page changes), but every other file
+    that does keeps this isolated -- without it, that one test's result
+    depends on whatever templates.json happens to already exist on the
+    machine running it, real per-user file included."""
     monkeypatch.setattr(registry, "user_templates_path", lambda: tmp_path / "templates.json")
 
 
@@ -101,26 +102,27 @@ def test_switching_to_the_third_page_shows_its_scene(qt_app):
     assert window.view.scene() is window.project.pages[PAGE_BACK]
 
 
-def test_changing_the_third_pages_template_offers_case_back_templates(qt_app, monkeypatch):
+def test_changing_the_third_pages_template_offers_case_back_templates(qt_app):
     """It takes its own family (page_template_kind(PAGE_BACK) == "case_back"),
     not disc templates and not the front-cover/insert family either -- the
     two used to be conflated under "cover", which is exactly what let a
-    slim-case insert be offered (and picked) as a case back."""
+    slim-case insert be offered (and picked) as a case back.
+
+    Exercised through the toolbar's Template dropdown (_refresh_template_
+    combo(), run automatically as part of switching to the page) rather
+    than the retired Templates > "Change Template for This Page..." menu
+    action -- same underlying filtering, reached a different way now."""
     window = _three_page_window(qt_app)
     window.project.medium = MEDIUM_CD  # case_back templates only exist for CD
     window.page_combo.setCurrentIndex(window.page_combo.findData(PAGE_BACK))
 
-    offered: list[list[str]] = []
-    monkeypatch.setattr(
-        QInputDialog, "getItem", lambda *args: (offered.append(list(args[3])), ("", False))[1]
-    )
-    window._change_page_template()
+    offered = [window.template_combo.itemData(i) for i in range(window.template_combo.count())]
 
-    assert offered and all("Disc Label" not in name for name in offered[0])
+    assert offered and all("Disc Label" not in name for name in offered)
     # The actual bug this split fixes: a slim-case insert must never be
     # offered as a case back (or vice versa), even though both are plain
     # CoverTemplate rectangles.
-    assert all("Slim Case Insert" not in name for name in offered[0])
+    assert all("Slim Case Insert" not in name for name in offered)
 
 
 # -- saving --------------------------------------------------------------

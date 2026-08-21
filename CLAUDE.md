@@ -222,8 +222,10 @@ without one is the normal case, so nothing may assume it exists:
 - File > New offers it as a third combo whose first entry is `(none)`,
   which is the default -- a checkbox beside a combo would have been two
   controls and two states for one question.
-- Templates > **Add Page...** / **Remove This Page** add or drop it later.
-  Only optional pages can be removed: the disc and cover pages are what a
+- The **+**/**-** buttons on the toolbar, beside the page selector, add or
+  drop it later (moved off the Templates menu -- see "The page toolbar's
+  Template dropdown" below). Only optional pages can be removed: the disc
+  and cover pages are what a
   project *is*, and `_remove_page()` says so rather than letting a project
   be emptied. Removing resets the undo stack, for the same reason
   `apply_template()` does -- its commands reference items on a scene that
@@ -346,8 +348,8 @@ a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
   physical case, `verified: true`.
 - **CD-R support: the medium is a project-level choice, not a per-page one.**
   `Project.medium` is picked once in `NewDesignDialog` (a combo above the two
-  template pickers) and decides which templates that dialog and Templates >
-  "Change Template for This Page..." offer at all -- `DiscTemplate.medium` /
+  template pickers) and decides which templates that dialog and the
+  toolbar's own Template dropdown offer at all -- `DiscTemplate.medium` /
   `CoverTemplate.medium` carry the same value, defaulting to `"md"` so every
   template and every `.mdproj` written before CD support existed stays a
   MiniDisc one (that is the truth about them, not a fallback). A project holds
@@ -403,8 +405,9 @@ a toolbar dropdown. Saved as a single self-contained `.mdproj` JSON file
   filed under the same `kind == "cover"` family, and that let either be
   picked in place of the other.** Same `CoverTemplate` dataclass (a plain
   folded rectangle either way), but the Template Manager, the New Project
-  dialog and Templates > Add Page... all read `registry.load_templates()
-  [page_template_kind(page)]` with no page-name special-casing, so a
+  dialog and the toolbar's own Add Page (+) button all read
+  `registry.load_templates()[page_template_kind(page)]` with no
+  page-name special-casing, so a
   CD-Slim-Case-Insert could be selected as a Rear Case template and vice
   versa -- reported directly, found in the Template Manager. Fixed the same
   way the cassette shell label's own "cover" -> "label" split was:
@@ -3751,16 +3754,22 @@ salted per process and would repaint the cover on every run.
 Metadata...'s own "Lookup Track List..." button should still search for
 whatever the user typed, because there they asked for a search.
 
-**Templates > "Change Template for This Page..." (`app_window.apply_template`)
-swaps a page onto a different template.** Until it existed a template could
-only be chosen at File > New, so picking the wrong one meant starting over.
+**`app_window.apply_template` swaps a page onto a different template.**
+Until it existed a template could only be chosen at File > New, so picking
+the wrong one meant starting over. It originally shipped as a Templates >
+"Change Template for This Page..." menu action (`_change_page_template()`,
+a plain `QInputDialog.getItem()` picker); that menu action and method are
+gone now, replaced by the toolbar's own Template dropdown (see "The page
+toolbar's Template dropdown" below), which calls `apply_template` the same
+way once its own, richer confirmation flow decides to.
 
 **It empties the page rather than migrating it**, per explicit user
 instruction ("zmiana szablonu to wykasowanie jego zawartości i warstw --
 dlatego user musi potwierdzić"). Item coordinates are meaningless across a
-template of a different size and shape, so the menu action confirms first
-and `apply_template` then rebuilds the scene from scratch. Two details that
-are easy to get wrong:
+template of a different size and shape, so the caller confirms first (the
+toolbar dropdown's own dialog now, not a menu action) and `apply_template`
+then rebuilds the scene from scratch. Two details that are easy to get
+wrong:
 - **The undo stack is reset.** Its commands reference items on the scene
   being discarded; undoing one afterwards would try to put them back into a
   scene that no longer exists.
@@ -3773,6 +3782,96 @@ are easy to get wrong:
   adjusts those two anyway, so leaving the page bare only means retyping
   them. `_populate_new_scene()` is now the single place both File > New and
   a template change go through, so the two can't drift apart again.
+
+**The page toolbar's Template dropdown (`self.template_combo`, between the
+page selector and "Regenerate with Font...") replaced Templates > "Change
+Template for This Page..." outright, and does more than that menu action
+ever did.** It lists every template for the *current page's own kind*
+(disc/cover/label/case_back) and the project's medium --
+`_template_choices_for_current_page()`, shared by the dropdown's own
+refresh and by what picking an entry in it actually does, so the two can
+never disagree about which templates exist. `_refresh_template_combo()`
+is called from `_show_page()`, so it always reflects reality after any
+page switch, `apply_template()` call, or project load/creation with no
+separate wiring needed at each of those call sites. It selects the
+current page's own template *by name* (`scene.template.name`), not
+identity -- a freshly loaded registry entry is never the same Python
+object `scene.template` already is -- and, if that name is no longer
+found in the filtered list at all (e.g. the template was since deleted
+from `templates.json` by hand), appends it back in as an extra entry
+rather than silently jumping the selection to whatever the first entry
+happens to be, which would make picking anything else look like a no-op
+the first time.
+
+**Picking a different entry branches on `template.builtin`
+(`_on_template_combo_changed`)** -- the same flag `registry.py`'s own
+"built-in templates can be edited but not deleted" rule already keys off
+of, reused here for a different question. A **custom** (non-builtin)
+template -- one saved via Tools > "Save as Template..." or added through
+the Template Manager -- applies immediately, no confirmation: it is
+already the user's own considered choice, and the page becomes exactly
+what it holds (its own saved items if it has any, same as File > New). A
+**built-in** template asks first (`_offer_template_replacement()`, a
+plain three-button `QMessageBox`: Empty Template / Generated from
+Metadata / Cancel) -- built-in templates are shared, so switching to one
+is treated as a real decision the way it never needed to be for a
+template only the user themselves could have produced.
+
+**"Generated from Metadata" is disabled whenever nothing here actually
+knows how to build the chosen template -- explicit, deliberate scope, not
+an oversight to fix incidentally later.** Every `_auto_layout_*` method in
+this file targets one specific, hardcoded template *by name*
+(`FULL_LABEL_TEMPLATE`, `CD_LABEL_TEMPLATE`, `JCARD_TEMPLATE`,
+`CD_INSERT_TEMPLATE`, `TAPE_JCARD_TEMPLATE`, `TAPE_LABEL_TEMPLATE`) rather
+than accepting whatever happens to be on the page -- there is no generic
+"fill any shape in" generator. `_auto_layout_template_name_for_page(page)`
+states that same mapping from the dropdown's side (page + medium -> the
+one template name a generator exists for), and
+`_can_auto_generate_page(page, template)` compares the template being
+switched to against it, disabling the button (with a tooltip explaining
+why) rather than leaving it to silently do nothing on click. **The case
+back is the one exception, and needs a structural check instead of a name
+match**: `build_case_back()` never demands one particular template by
+name -- see its own docstring above -- it works from whatever three-panel
+shape is already on the page, so `_can_auto_generate_page()` checks
+`len(template.fold_offsets_mm) == 2` (two fold lines make three panels)
+for `PAGE_BACK` specifically, rather than comparing against a fixed name
+that does not exist for this page.
+
+**`_generate_page_from_metadata(page, template)` shares the exact same
+"is there actually anything to build from" guards
+`_auto_layout_from_metadata()` already uses** (missing album/artist,
+missing/unfetchable cover art) -- there is no point clearing a page for a
+generator with nothing to draw. It only calls `apply_template()` itself
+for the case back (`build_case_back()` never does, unlike every other
+page's own `_auto_layout_*`, which already applies its target template
+internally as the first thing it does); every other page's generator
+method handles the template swap on its own, so calling it a second time
+here would be a duplicate, harmless but pointless. It defensively calls
+`_refresh_template_combo()` again at the end regardless of which path
+ran -- most `_auto_layout_*` methods can still bail out partway (e.g. the
+cover-background picker being cancelled), and when that happens the
+dropdown's own selection has already visibly moved to the template that
+was merely being considered, which has to be put back to whatever is
+actually on the page.
+
+**Add/remove page moved the same way**: Templates > "Add Page..." /
+"Remove This Page" are gone from the menu bar, replaced by plain **+**/
+**-** `QPushButton`s beside the page selector (`add_page_btn`/
+`remove_page_btn`), wired straight to the same `_add_page()`/
+`_remove_page()` -- neither method changed at all, only where the click
+comes from. The Templates menu is now just "Manage Templates...".
+
+**`template_combo` needs `setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy
+.AdjustToContents)`, not Qt's default `AdjustToContentsOnFirstShow`.**
+Reported directly from a regenerated manual screenshot: "CD Jewel Case
+Back (Tray Card)" rendered truncated as "...Tray Carc" with no ellipsis.
+The default policy locks the combo's pixel width to whatever was in it
+the *first* time it was ever shown -- since this combo's contents change
+with the page selector, and different page kinds have very differently
+sized template names ("sticker" against "CD Jewel Case Back (Tray
+Card)"), a name longer than whatever happened to be first shown gets cut
+off with no visual indication anything is missing.
 
 **After a recording, the disc page lays itself out (`auto_layout.py` +
 `app_window._auto_layout_disc_label`)**: the full-face template, the cover

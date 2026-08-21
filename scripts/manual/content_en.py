@@ -220,15 +220,20 @@ BOOK = [
                   "can have a third: the **case back**, the tray card that sits behind the disc, with a "
                   "printed strip down each side of the case. It is offered when the project is created "
                   "(the **Case back** row, which starts at *(none)*), and can be added or dropped later "
-                  "from **Templates > Add Page...** and **Remove This Page**."},
+                  "with the **+**/**-** buttons on the toolbar, next to the page selector."},
             {"note": "The disc label and the cover are part of every project and cannot be removed. Only "
                      "the optional pages can, and removing one deletes everything on it -- so it asks "
                      "first, and resets the undo history afterwards."},
             {"h2": "Changing a template later"},
-            {"p": "**Templates > Change Template for This Page...** switches the page you are on to a "
-                  "different one."},
-            {"warn": "This **clears the page**: every layer on it is removed and the undo history is "
-                     "reset. It asks first. The other page and the metadata are untouched."},
+            {"p": "The **Template** dropdown on the toolbar, next to the page selector, lists every "
+                  "template available for the page you are on. Picking one of your own -- built with "
+                  "**Save as Template...** or added in the Template Manager -- switches the page onto it "
+                  "right away. Picking a built-in one asks first, and offers a choice: start the page "
+                  "**empty**, or build it fresh from the project's metadata with **Generated from "
+                  "Metadata** -- offered only for the one template each page's automatic layout actually "
+                  "knows how to build; for any other, only the empty option is available."},
+            {"warn": "Either way, this **clears the page**: every layer on it is removed and the undo "
+                     "history is reset. The other page and the metadata are untouched."},
         ],
     },
     # ------------------------------------------------------------------

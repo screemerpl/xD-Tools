@@ -389,13 +389,22 @@ restyle or delete them like anything else.
 
 ### Changing a template on an existing project
 
-**Templates > Change Template for This Page...** switches the page you're on
-to a different template -- previously only possible when creating a project.
+The **Template** dropdown on the toolbar, next to the page selector, lists
+every template available for the page you're on -- previously only possible
+when creating a project. Picking one of your own (built with **Save as
+Template...** or added in the Template Manager) switches the page onto it
+right away; picking a built-in one asks first, offering **Empty Template** or,
+where the page's automatic layout actually has a generator for that exact
+template, **Generated from Metadata**.
 
-**It clears the page**: every layer on it is removed and the undo history is
-reset, so it asks for confirmation first. The other page and the project's
-metadata are left alone. A disc page then starts again the way a new one
-does, with the "▲ INSERT THIS END" triangle and label ready to reposition.
+**Either way it clears the page**: every layer on it is removed and the undo
+history is reset, so a built-in choice asks for confirmation first. The other
+page and the project's metadata are left alone. A disc page started empty
+then begins again the way a new one does, with the "▲ INSERT THIS END"
+triangle and label ready to reposition.
+
+Adding or removing an optional page (a CD project's case back) is the **+**/
+**-** pair right beside the page selector.
 
 ## Setup
 

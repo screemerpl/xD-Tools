@@ -217,15 +217,21 @@ BOOK = [
             {"p": "Projekt zaczyna się od dwóch stron — etykiety płyty i okładki — a projekt CD może mieć "
                   "trzecią: **tył pudełka**, czyli tackę, która siedzi za płytą, z zadrukowanym paskiem "
                   "wzdłuż każdego boku pudełka. Proponowana jest przy zakładaniu projektu (wiersz **Tył "
-                  "pudełka**, który zaczyna od *(brak)*), a później można ją dołożyć lub zdjąć przez "
-                  "**Szablony > Dodaj stronę...** i **Usuń tę stronę**."},
+                  "pudełka**, który zaczyna od *(brak)*), a później można ją dołożyć lub zdjąć przyciskami "
+                  "**+**/**-** na pasku narzędzi, obok wyboru strony."},
             {"note": "Etykieta płyty i okładka są częścią każdego projektu i nie da się ich usunąć. Zdjąć "
                      "można tylko strony opcjonalne, a usunięcie kasuje wszystko, co na nich jest — "
                      "dlatego program pyta wcześniej i zeruje potem historię cofania."},
             {"h2": "Zmiana szablonu później"},
-            {"p": "**Szablony > Zmień szablon tej strony...** przełącza bieżącą stronę na inny szablon."},
-            {"warn": "To **czyści stronę**: znikają wszystkie warstwy, a historia cofania jest zerowana. "
-                     "Program pyta wcześniej. Druga strona i metadane pozostają nietknięte."},
+            {"p": "Rozwijana lista **Szablon** na pasku narzędzi, obok wyboru strony, pokazuje każdy "
+                  "szablon dostępny dla bieżącej strony. Wybranie własnego (zapisanego przez **Zapisz "
+                  "jako szablon...** albo dodanego w Menedżerze szablonów) od razu przełącza stronę na "
+                  "niego. Wybranie wbudowanego pyta najpierw i daje wybór: zacząć stronę **pustą** albo "
+                  "zbudować ją od nowa z metadanych projektu przyciskiem **Wygenerowany z metadanych** — "
+                  "dostępnym tylko dla tego jednego szablonu, który automatyczny układ danej strony "
+                  "faktycznie umie zbudować; dla każdego innego dostępna jest tylko opcja pustej strony."},
+            {"warn": "W obu przypadkach **czyści to stronę**: znikają wszystkie warstwy, a historia "
+                     "cofania jest zerowana. Druga strona i metadane pozostają nietknięte."},
         ],
     },
     # ------------------------------------------------------------------
