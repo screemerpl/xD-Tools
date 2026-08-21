@@ -131,3 +131,49 @@ def test_cancel_rejects_the_dialog(qt_app):
     dialog.reject()
 
     assert dialog.result() == QDialog.DialogCode.Rejected
+
+
+def test_picking_a_font_previews_it_straight_away(qt_app, monkeypatch):
+    """Asked for directly. Picking a face *is* the decision this dialog
+    exists for, so the page should show what it does without needing a
+    second click on Preview."""
+    from PySide6.QtWidgets import QFontDialog
+
+    dialog = RegenerateFontDialog()
+    seen: list[str] = []
+    dialog.preview_requested.connect(seen.append)
+    monkeypatch.setattr(
+        QFontDialog, "getFont", staticmethod(lambda initial, parent=None: (True, QFont("Courier New")))
+    )
+
+    dialog._pick_font()
+
+    assert seen == ["Courier New"]
+    assert dialog.selected_family == "Courier New"
+
+
+def test_cancelling_the_font_dialog_previews_nothing(qt_app, monkeypatch):
+    from PySide6.QtWidgets import QFontDialog
+
+    dialog = RegenerateFontDialog()
+    seen: list[str] = []
+    dialog.preview_requested.connect(seen.append)
+    monkeypatch.setattr(
+        QFontDialog, "getFont", staticmethod(lambda initial, parent=None: (False, QFont("Courier New")))
+    )
+
+    dialog._pick_font()
+
+    assert seen == []
+
+
+def test_the_preview_button_still_works_on_its_own(qt_app):
+    """It stays for re-running a preview after an undo or a cancelled pick."""
+    dialog = RegenerateFontDialog()
+    seen: list[str] = []
+    dialog.preview_requested.connect(seen.append)
+
+    dialog._on_preview_clicked()
+
+    assert seen == [dialog.selected_family]
+

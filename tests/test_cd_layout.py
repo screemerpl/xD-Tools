@@ -576,3 +576,70 @@ def test_the_bundled_mark_is_a_real_image(qt_app):
 
     assert not pixmap.isNull()
     assert pixmap.width() > 200
+
+
+# -- the Digital Audio mark's colour ------------------------------------------
+#
+# It ships as pure black, so on a dark panel it was present and invisible --
+# reported directly, for every place it is used. It is a mask (one opaque
+# colour plus alpha), so recolouring it is lossless.
+
+
+def _mark_colours(item):
+    """Every opaque colour in a placed mark, sampled off its own pixmap."""
+    image = item.pixmap().toImage()
+    found = set()
+    for y in range(0, image.height(), 3):
+        for x in range(0, image.width(), 3):
+            colour = image.pixelColor(x, y)
+            if colour.alpha() > 200:
+                found.add((colour.red(), colour.green(), colour.blue()))
+    return found
+
+
+def _smallest_pixmap(items):
+    pixmaps = [i for i in items if hasattr(i, "pixmap")]
+    assert pixmaps
+    return min(pixmaps, key=lambda i: i.mapToScene(i.boundingRect()).boundingRect().width())
+
+
+def test_the_disc_labels_mark_is_scored_against_the_artwork_as_placed(qt_app):
+    """Not against the raw cover the rest of the palette comes from.
+
+    What the mark sits on is the *lightened* sleeve: a mid-toned album's raw
+    dominant colour is around 0.12 relative luminance while its lightened
+    artwork is around 0.48, so scoring it the same way as the text hands a
+    white mark to a pale grey background. The text survives that on its
+    shadow; a bare mark has none.
+    """
+    logo = str(gallery.gallery_dir() / "cd_digital_audio.png")
+
+    dark = _label_scene()
+    mark = _smallest_pixmap(cd_layout.build_disc_label(dark, _metadata(cover_art=_cover((16, 22, 40))), logo))
+    assert _mark_colours(mark) == {(255, 255, 255)}, "a dark sleeve lightens to a dark grey -- white reads"
+
+    mid = _label_scene()
+    mark = _smallest_pixmap(cd_layout.build_disc_label(mid, _metadata(cover_art=_cover((110, 96, 90))), logo))
+    assert _mark_colours(mark) == {(0, 0, 0)}, "a mid sleeve lightens to a pale grey -- white would vanish"
+
+    light = _label_scene()
+    mark = _smallest_pixmap(cd_layout.build_disc_label(light, _metadata(cover_art=_cover((238, 232, 210))), logo))
+    assert _mark_colours(mark) == {(0, 0, 0)}
+
+
+def test_the_tray_cards_mark_takes_the_panel_it_is_printed_on(qt_app):
+    """The tray card's middle panel is the cover's dominant colour itself,
+    which for most sleeves is dark -- so this is the case that was reported."""
+    logo = str(gallery.gallery_dir() / "cd_digital_audio.png")
+
+    scene = DesignScene(
+        CoverTemplate(name="Tray Card", width_mm=151.0, height_mm=117.5, fold_offsets_mm=[6.5, 144.5])
+    )
+    items = cd_layout.build_case_back(scene, _metadata(cover_art=_cover((16, 22, 40))), logo)
+    marks = [i for i in items if hasattr(i, "pixmap")]
+    assert marks
+
+    # The panel mark: the widest of them (the two spine copies are narrower).
+    panel_mark = max(marks, key=lambda i: i.mapToScene(i.boundingRect()).boundingRect().width())
+    assert _mark_colours(panel_mark) == {(255, 255, 255)}
+

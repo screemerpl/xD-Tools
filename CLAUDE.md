@@ -3967,6 +3967,91 @@ Single" score *identically* to "Popular Monster", so without the count there
 is nothing left to tell an album from its own single. It also breaks ties in
 `best_match`, so the fuller release wins among equals.
 
+### The 2026-08-21 bugfix round
+
+Thirteen reports in one message, and four of them turned out to be fewer
+bugs than they looked:
+
+**Two "not centred" reports were one bug, in `place_spine()`.** The MiniDisc
+J-card's spine and the cassette's are the same function, and it pinned the
+rotated caption to `inner.left()` -- so a caption narrower than the strip
+(which is every caption on a 12.7mm cassette spine) put all its slack
+against one fold line. It now centres across the strip. Both cards fixed by
+the one change; nothing else about either moved.
+
+**"Insert This End should be bigger" was really "stop letting the arrow
+decide".** `_fit_group_into_band(horizontal=True)` scaled every item by one
+*shared* factor, so the seeded "▲" -- 20pt, more than twice the label's own
+height -- held the words beside it to **4.4pt** on a 37mm sticker while
+leaving **9.05mm of the band empty on the right**. Each item is now sized to
+the band height on its own, with the leader keeping its height-derived size
+and the rest sharing whatever width is left; the row is then centred. Same
+album, same band: **5.8pt** and 0.50mm of slack each side. `STICKER_MARK_GAP_MM`
+(1.6mm) is the arrow's own breathing room, its own constant rather than
+borrowing `STICKER_MARK_PADDING_MM` as the gap. The docstring already
+*claimed* each item used the whole band height -- it did not, and that is
+worth remembering as a case where the comment was right about the intent and
+wrong about the code.
+
+**The Digital Audio mark ships as pure black, and was invisible on every
+dark panel.** It is a *mask* -- verified: exactly one opaque colour in
+`cd_digital_audio.png` -- so `palette.tint_monochrome_png()` recolours it
+losslessly, keeping the alpha. Threaded as an explicit `ink`/`logo_ink`
+parameter rather than applied globally, because **the MiniDisc logo beside
+it is black *and* white (256 opaque colours)** and flattening that would
+erase the wordmark inside it: `None` means "place the file as it is", which
+is what every MiniDisc and cassette caller still does. Three surfaces, three
+different inks, and the third is the one that needed measuring:
+- the tray card's middle panel takes `readable_text_colour(background)`;
+- its two spines take `readable_text_colour(accent)` (black on a yellow
+  accent -- correct, and visibly different from the panel's white);
+- **the CD disc label scores against the artwork *as placed*, not against
+  the raw cover the rest of that palette comes from.** What the mark sits on
+  there is the *lightened* sleeve. Measured: a mid-toned album's raw
+  dominant is 0.12 relative luminance while its lightened artwork is 0.48,
+  so scoring it the palette's way hands a white mark to a pale grey
+  background. The label's *text* survives that on its shadow (see the note
+  on that palette further up); a bare mark has none.
+
+**Add Page was two `QInputDialog`s and a missing question.**
+`panels/add_page_dialog.py`'s `AddPageDialog` asks all three at once --
+page, template, empty-or-generated -- and the template list is rebuilt on
+every page change, since a page's template family changes with it.
+`can_generate` is *passed in* rather than worked out there, so
+`MainWindow._can_auto_generate_page` stays the only place that logic lives.
+Its `generate` property reads the radio's **enabled** state as well as its
+checked one: a disabled-but-checked radio would promise a layout that then
+silently did nothing.
+
+**The magic wand and the post-recording layout ignoring the chosen templates
+is one bug, because they are one method.** `_auto_layout_project()` called
+every `_auto_layout_*` with no template name, so each fell back to its own
+hardcoded default and *replaced* the user's choice -- a project set up with
+the small sticker disc label came back with the full-face one.
+`_generator_template_name_for_page(page)` now answers "what may this page be
+rebuilt onto" once, for every caller, and returns `None` -- meaning skip the
+page entirely -- for a **custom** template (explicit instruction: it is the
+user's own, may carry its own saved layers, and nothing here knows how to
+build it) or a built-in renamed so nothing matches it by name. The cassette
+branch checks all three of its pages the same way, and passes only the sides
+it is actually going to build, so a project whose shell labels both use a
+custom template is never even asked the background-treatment question.
+
+**Toolbar > "Regenerate"**, left of "Regenerate with Font...", is that same
+call minus the font substitution -- the way back to a page's default look
+after a font has been tried on it. It shares its preconditions with the font
+version via `_regeneration_metadata()`, and says so plainly rather than
+doing nothing when the page's template has no generator.
+
+**Two small ones.** Picking a face in `RegenerateFontDialog` now previews it
+immediately (picking *is* the decision the dialog exists for; the Preview
+button stays for re-running it). And the album picker is sorted
+alphabetically -- but the ranking is not thrown away, it just stops deciding
+the display order: `search_albums()`'s own top pick is still what the list
+opens on, so pressing Enter picks exactly what it picked before. A test that
+selected "the second entry" had to change to select by *content*, which is
+what it always meant.
+
 **The same automatic layout also builds the J-card (`jcard_layout.py` +
 `_auto_layout_cover`).** `DesignScene.fold_panel_rects()` splits the cut
 shape at its fold lines into front / spine / back (58.85 / 8.3 / 58.85 mm);
@@ -4099,6 +4184,27 @@ the disc label. Nothing on it overhangs by more than a pen width (and
 export clips to the cut path anyway), while clipping would rasterise the
 panel blocks and the track list -- turning text still worth editing into a
 flat image.
+
+**The one exception is a die-cut window, and it is deliberately *not*
+`_clip_layers()`.** A window template's artwork spans the hole on purpose
+and export already takes it out at render time -- but the layer still
+carries those pixels, so on screen the window was invisible and the card
+looked exactly like the plain one ("artwork is not cropped to the window").
+`MainWindow._bake_cover_window()` bakes it in, and applies **only the
+pixmap half** of `plan_clip_layers()`'s plan. Running the whole-page
+operation instead was tried and rejected on measurement: it also rasterised
+two panel background blocks, which are only "partially outside" because a
+full-height rect pokes past the card's own 2mm rounded corners -- material
+that falls outside the cut line and is never printed either way (the plain
+J-card has had that same harmless overhang all along). Baking those into
+pixmaps is exactly what the rule above exists to prevent. Only the cover
+image is rebuilt; every text layer and every panel block stays editable,
+and no page switch is needed since it works on the scene it is handed.
+One consequence worth knowing for tests: a rasterised layer is a whole
+number of pixels, so the artwork's *bounding box* rounds outward by up to
+one (0.26mm at 96dpi, measured at 0.92px). Nothing printed moves --
+everything outside the cut path in that raster is transparent -- but an
+assertion tighter than that on the artwork's edge will fail.
 
 **`cd_layout.py` lays out a CD project's two pages, and leans on the
 MiniDisc layouts rather than restating them.** `auto_layout.place_cover_on_label()`

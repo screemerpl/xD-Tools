@@ -81,6 +81,12 @@ class RegenerateFontDialog(QDialog):
         # regenerate is accepted -- "last selected" is what was asked for,
         # and a cancelled regenerate shouldn't lose the choice either.
         app_settings.set_last_regenerate_font_family(self._family)
+        # And previewed straight away, without waiting for a second click on
+        # Preview -- asked for directly. Picking a face *is* the decision
+        # this dialog exists for, so showing what it does to the page is
+        # what the user wanted to see next in every case; the Preview button
+        # stays for re-running it after a cancelled pick or an undo.
+        self.preview_requested.emit(self._family)
 
     def _on_preview_clicked(self) -> None:
         self.preview_requested.emit(self._family)

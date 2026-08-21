@@ -757,11 +757,24 @@ def test_generated_builds_the_window_jcard_with_nothing_under_the_hole(qt_app, m
 
     pixmaps = [i for i in items if isinstance(i, QGraphicsPixmapItem)]
     artwork = max(pixmaps, key=lambda i: (lambda b: (b[1] - b[0]) * (b[3] - b[2]))(bounds(i)))
-    left, right, _, _ = bounds(artwork)
+    left, right, top, bottom = bounds(artwork)
     # On the panel after the folds, spanning the hole -- the die-cut is the
     # point of this template.
-    assert left == pytest.approx(67.15, abs=0.2)
-    assert right == pytest.approx(126.0, abs=0.2)
+    #
+    # Half a millimetre of tolerance rather than 0.2: generating this page
+    # bakes the window into the artwork (MainWindow._bake_cover_window), and
+    # a rasterised layer is a whole number of pixels, so its bounding box
+    # rounds outward by up to one -- 0.26mm at the default 96dpi, measured
+    # at 0.92px. Nothing printed moves: everything outside the cut path in
+    # that raster is transparent.
+    assert left == pytest.approx(67.15, abs=0.5)
+    assert right == pytest.approx(126.0, abs=0.5)
+    # What actually matters, and what no rounding can fake: the artwork
+    # covers the whole window.
+    assert left <= win_left
+    assert right >= win_right
+    assert top <= win_top
+    assert bottom >= win_bottom
 
 
 def test_the_plain_jcard_is_still_generatable_on_its_own(qt_app, monkeypatch):

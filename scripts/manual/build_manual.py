@@ -38,6 +38,7 @@ from PySide6.QtGui import (  # noqa: E402
     QPageLayout,
     QPageSize,
     QPainter,
+    QPalette,
     QPdfWriter,
     QTextDocument,
 )
@@ -57,6 +58,8 @@ NARROW_FIGURE_WIDTH_MM = 105.0  # for the tall, narrow dialogs
 NARROW_FIGURES = {"remote", "upload", "record", "metadata", "startup", "settings", "about", "new-project"}
 
 ACCENT = "#1c4f63"
+# Body text's own colour. Never left to the palette -- see make_document.
+BODY_INK = "#1a1a1a"
 RULE = "#c8d4db"
 
 # Type sizes, in points. Converted to pixels via pt() before they reach the
@@ -296,6 +299,29 @@ def make_document(html: str, images: dict[str, QImage], body_size: QSizeF, lang:
     # page -- which came out at roughly a third of the intended size.
     font.setPixelSize(pt(BODY_PT))
     doc.setDefaultFont(font)
+    # **Body text needs an explicit colour or it does not print at all.**
+    # Everything this file styles inline -- headings, captions, the title
+    # block -- carries its own `color:` and was always fine. Everything else
+    # (paragraphs, list items, table cells, the text inside a note/warn/tip
+    # box) comes out of setHtml() with BrushStyle.NoBrush: no colour of its
+    # own, to be resolved against a palette when it is painted. That palette
+    # is not one this code controls, and on a dark-mode desktop its Text role
+    # is white -- so the manual painted white text onto a white page and
+    # every paragraph vanished, headings and rules still present.
+    #
+    # Found by rebuilding the unchanged manual on a different machine: the
+    # PDFs in doc/ were produced on Windows 10 in light mode, and the same
+    # source on Windows 11 in dark mode lost all of its body copy.
+    #
+    # Measured, rather than reasoned about, because two plausible fixes do
+    # nothing at all. Rendering a one-paragraph document to a real PDF and
+    # reading the darkest ink back: no fix and setting the QPainter's pen
+    # both leave the body blank (only the heading's own #1c4f63 inks);
+    # a default style sheet and a mergeCharFormat sweep both ink it. The
+    # style sheet is the one used here because an inline `color:` still
+    # beats it, so the accent colours above survive -- a sweep would flatten
+    # them to this grey.
+    doc.setDefaultStyleSheet("p,li,td,th,ul,ol,div,body{color:%s;}" % BODY_INK)
     doc.setDocumentMargin(0)
     for name, image in images.items():
         doc.addResource(QTextDocument.ResourceType.ImageResource, QUrl(name), image)
@@ -335,6 +361,17 @@ def paint(doc: QTextDocument, path: Path, content, body_size: QSizeF, footer_hei
     writer.setCreator("xD-Tools")
 
     painter = QPainter(writer)
+    # A QPdfWriter whose output file cannot be opened -- on Windows, most
+    # often because a PDF viewer still has the previous build of it open --
+    # fails here *silently*: QPainter simply comes back inactive, every
+    # drawing call after it is a no-op, and this function used to go on to
+    # report a page count for a file it had not written. That cost a long
+    # detour once: a stale PL manual, left over from a build before a fix,
+    # looked exactly like the fix not working. Say so instead.
+    if not painter.isActive():
+        raise RuntimeError(
+            f"could not open {path} for writing -- close it if a PDF viewer still has it open"
+        )
     body_height = body_size.height()
     page_count = doc.pageCount()
 
@@ -397,11 +434,31 @@ def build(lang: str) -> None:
     print(f"  {out.relative_to(ROOT)} -- {pages} pages")
 
 
+def _force_light_palette(app: QApplication) -> None:
+    """Build against a light palette whatever the host machine's theme is.
+
+    Not the fix for the invisible-body-text bug -- make_document's default
+    style sheet is, and it is the one that was measured to work. This is
+    here for everything else that reads the palette on the way to a page
+    meant for white paper (table rules, selection colours, any widget Qt
+    constructs internally while laying rich text out), so that the same
+    source builds the same document on a light-mode and a dark-mode
+    desktop. Cheap, and it removes a whole class of "works on my machine".
+    """
+    palette = app.palette()
+    palette.setColor(QPalette.ColorRole.Text, QColor(BODY_INK))
+    palette.setColor(QPalette.ColorRole.WindowText, QColor(BODY_INK))
+    palette.setColor(QPalette.ColorRole.Base, QColor("#ffffff"))
+    palette.setColor(QPalette.ColorRole.Window, QColor("#ffffff"))
+    app.setPalette(palette)
+
+
 def main(argv: list[str]) -> int:
     # A QApplication, not QGuiApplication: QTextDocument's HTML layout
     # pulls in widget-level font resolution on Windows.
     app = QApplication(argv[:1])
     app.setApplicationName("MDTools")
+    _force_light_palette(app)
     languages = argv[1:] or ["en", "pl", "ja"]
     for lang in languages:
         build(lang)

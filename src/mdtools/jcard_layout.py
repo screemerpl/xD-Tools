@@ -22,6 +22,7 @@ them; turning that into undoable commands is the caller's job.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QBrush, QColor, QPen
@@ -30,7 +31,7 @@ from PySide6.QtWidgets import QGraphicsItem
 from mdtools.canvas.items import SCALE_ROLE, set_item_scale, set_text_shadow
 from mdtools.canvas.scene import DesignScene
 from mdtools.constants import mm_to_px
-from mdtools.palette import accent_colour, dominant_colour, readable_text_colour
+from mdtools.palette import accent_colour, dominant_colour, readable_text_colour, tint_monochrome_png
 from mdtools.project import ProjectMetadata, numbered_track_lines, track_list_columns
 
 # Breathing room inside a panel, in millimetres. The back panel's text needs
@@ -223,6 +224,19 @@ def _inset(area: QRectF, millimetres: float) -> QRectF:
     return area.adjusted(padding, padding, -padding, -padding)
 
 
+def has_cover_window(template) -> bool:
+    """Whether this cover template has a die-cut window in it at all.
+
+    Every CoverTemplate carries the `cutout_*` fields, so "has a window"
+    has to mean a window with area rather than merely the fields existing.
+    Which *panel* it lands on is a separate question -- see
+    window_on_track_panel().
+    """
+    if not getattr(template, "fold_offsets_mm", None):
+        return False
+    return getattr(template, "cutout_width_mm", 0.0) > 0 and getattr(template, "cutout_height_mm", 0.0) > 0
+
+
 def window_on_track_panel(template) -> bool:
     """Whether this cover template's die-cut window lands on the panel that
     would otherwise carry the track list -- i.e. whether build_jcard has to
@@ -241,9 +255,7 @@ def window_on_track_panel(template) -> bool:
     from the *first* fold line, so it already lands on the front panel, and
     the plain arrangement is right as it stands.
     """
-    if not getattr(template, "fold_offsets_mm", None):
-        return False
-    if getattr(template, "cutout_width_mm", 0.0) <= 0 or getattr(template, "cutout_height_mm", 0.0) <= 0:
+    if not has_cover_window(template):
         return False
     return getattr(template, "cutout_side", "right") == "right"
 
@@ -351,6 +363,20 @@ def place_front_logo(
 # --- spine -----------------------------------------------------------------
 
 
+def _logo_item(scene: DesignScene, logo_path: str, ink: str | None):
+    """The logo, tinted to `ink` first when one is given -- see place_spine's
+    own `logo_ink` note for when that is right and when it is not."""
+    if not logo_path:
+        return None
+    if ink is None:
+        return scene.add_image(logo_path)
+    try:
+        data = Path(logo_path).read_bytes()
+    except OSError:
+        return None
+    return scene.add_image_from_data(tint_monochrome_png(data, ink))
+
+
 def spine_caption(metadata: ProjectMetadata) -> str:
     parts = [str(metadata.year) if metadata.year else "", metadata.album.strip(), metadata.artist.strip()]
     return "  ·  ".join(part for part in parts if part)
@@ -364,12 +390,20 @@ def place_spine(
     logo_path: str,
     *,
     flipped: bool = False,
+    logo_ink: str | None = None,
 ) -> list[QGraphicsItem]:
     """Accent band, the caption rotated to read down it, and the logo.
 
     The caption is fitted against a *swapped* rectangle -- the spine is
     8.3mm wide and 73mm tall, so once rotated the text has the panel's
     height to run along and its width to be tall in.
+
+    `logo_ink`, given, recolours the logo to that colour before placing
+    it -- for a mark that is a mask rather than a picture (the Digital
+    Audio mark, which is one opaque colour). Left `None`, which is what
+    every MiniDisc and cassette caller does, the file is placed exactly as
+    it is: the MiniDisc logo is black *and* white, and tinting it would
+    erase the wordmark inside it. See palette.tint_monochrome_png.
 
     `flipped` turns the strip end-for-end with the rest of the card (see
     build_jcard): the caption rotates the other way, and the logo moves to
@@ -380,7 +414,7 @@ def place_spine(
     ink = readable_text_colour(accent)
 
     inner = _inset(panel, SPINE_PADDING_MM)
-    logo = scene.add_image(logo_path)
+    logo = _logo_item(scene, logo_path, logo_ink)
     logo_span = 0.0
     if logo is not None and logo.boundingRect().height() > 0:
         scale = inner.width() / logo.boundingRect().width()
@@ -417,7 +451,16 @@ def place_spine(
         # normally and above it on a flipped card, the logo having moved to
         # the other end.
         top = inner.top() + (logo_span if flipped else 0.0) + offset
-        _move_top_left_to(item, QPointF(inner.left(), top))
+        # And centred *across* the strip, between the two fold lines, not
+        # pinned to the left one. _text() fits the caption inside the
+        # spine's width, so a short caption -- or any caption at all, on a
+        # 12.7mm cassette spine -- comes out narrower than the strip, and
+        # anchoring it at inner.left() left every millimetre of that slack
+        # against the other cut line. Reported on the MiniDisc and cassette
+        # J-cards alike, which is one bug: both spines are this function.
+        placed = _scene_rect_of(item)
+        left = inner.left() + max(0.0, (inner.width() - placed.width()) / 2)
+        _move_top_left_to(item, QPointF(left, top))
         added.append(item)
     return added
 

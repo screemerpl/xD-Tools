@@ -13,20 +13,21 @@ TITLE = "xD-Tools"
 SUBTITLE = "Studio Retro Nośników — instrukcja obsługi"
 TITLE_NOTE = "Projektowanie etykiet, nagrywanie MiniDisców i kaset, wypalanie CD-R i nadawanie tytułów"
 COVER_CAPTION = "Co z czym rozmawia: komendy przez USB, klawisze przez podczerwień, dźwięk przez S/PDIF."
-VERSION_LINE = "Wersja 0.3.1"
+VERSION_LINE = "Wersja 0.3.2"
 AUTHOR_LINE = 'Artur "Screemer" Jakubowicz'
 DATE_LINE = "Sierpień 2026"
 TOC_TITLE = "Spis treści"
-FOOTER_LEFT = "xD-Tools — Studio MiniDisc i CD — instrukcja obsługi"
+FOOTER_LEFT = "xD-Tools — Studio Retro Nośników — instrukcja obsługi"
 
 BOOK = [
     # ------------------------------------------------------------------
     {
         "title": "Czym to jest",
         "blocks": [
-            {"p": "xD-Tools to warsztat do MiniDisc i CD-R na komputer. (Za x podstaw M albo C — "
-                  "zaczęło się jako żart, a wyszło z tego opis). Zaczęło się od projektanta etykiet, a "
-                  "wyrosło z tego kilka narzędzi dzielących jeden plik projektu:"},
+            {"p": "xD-Tools to komputerowy warsztat do starych nośników muzyki: MiniDisc, CD-R i "
+                  "kasety magnetofonowej. (Za x podstaw M albo C — zaczęło się jako żart, a wyszło z "
+                  "tego opis). Zaczęło się od projektanta etykiet, a wyrosło z tego kilka narzędzi "
+                  "dzielących jeden plik projektu:"},
             {"ul": [
                 "**Projektowanie** etykiet: naklejki na MiniDisc i wkładki J-card albo pierścienia na "
                 "płytę CD i wkładki do pudełka slim — wraz z eksportem gotowym do druku i cięcia.",
@@ -99,17 +100,21 @@ BOOK = [
             {"ul": [
                 "**Otwórz wybrany** albo dwuklik — powrót do ostatniego projektu.",
                 "**Otwórz inny projekt...** — wskazanie pliku `.mdproj` w dowolnym miejscu.",
-                "**Nowy projekt...** — wybór szablonu dla każdej z dwóch stron.",
+                "**Nowy projekt...** — wybór nośnika, a potem szablonu dla każdej strony, jaką ma.",
                 "**Multiprint...** — złożenie grafik z kilku różnych projektów na jednej kartce. To nie "
                 "otwiera żadnego projektu; to samodzielne zadanie.",
                 "**Pilot...** — programowy pilot. Też samodzielny, widoczny tylko przy włączonym MDRem.",
             ]},
-            {"h2": "Projekt to dwie strony plus metadane"},
-            {"p": "Każdy projekt zawiera dokładnie jeden projekt **Etykiety płyty** i jeden **Okładki / "
-                  "J-Card**, przełączane listą w lewym górnym rogu okna. Obok nich trzyma tytuł albumu, "
-                  "wykonawcę, rok i listę utworów — z których korzystają zarówno projekty etykiet, jak i "
-                  "nadawanie tytułów oraz automatyczne układanie."},
-            {"fig": ("new-project", "Plik > Nowy pyta o jeden szablon każdego rodzaju.")},
+            {"h2": "Projekt to jego strony plus metadane"},
+            {"p": "Ile stron i jakich — o tym decyduje nośnik. Projekt MiniDisc ma **Etykietę płyty** i "
+                  "**Okładkę / J-Card**. Projekt CD ma etykietę płyty i **Wkładkę do pudełka**, a jako "
+                  "trzecią może wziąć **Tył pudełka**. Projekt kasety nie ma etykiety płyty wcale: ma "
+                  "wkładkę **J-Card** i po jednej **etykiecie na każdą stronę** taśmy. Przełączasz się "
+                  "między nimi listą w lewym górnym rogu okna."},
+            {"p": "Obok stron każdy projekt trzyma tytuł albumu, wykonawcę, rok i listę utworów — z "
+                  "których korzystają zarówno same projekty, jak i nadawanie tytułów oraz automatyczne "
+                  "układanie."},
+            {"fig": ("new-project", "Plik > Nowy pyta o jeden szablon na stronę.")},
             {"p": "**Plik > Zapisz** (Ctrl+S) zapisuje to wszystko — oba projekty, metadane i wstawione "
                   "obrazy — do jednego pliku `.mdproj`. Obrazy są osadzone, a nie dowiązane, więc "
                   "przeniesienie projektu ani skasowanie oryginalnego zdjęcia niczego nie zepsuje."},
@@ -178,7 +183,7 @@ BOOK = [
         "title": "Szablony",
         "blocks": [
             {"p": "Szablon to fizyczny kształt drukowanej rzeczy: rozmiar, narożniki i miejsca zagięć. "
-                  "xD-Tools ma sześć wbudowanych."},
+                  "xD-Tools ma dwanaście wbudowanych, na trzy nośniki."},
             {"table": {
                 "head": ["Szablon", "Co to jest"],
                 "rows": [
@@ -189,10 +194,24 @@ BOOK = [
                     ["Full disc label", "Etykieta na całą powierzchnię kasety, 71 × 68 mm pomniejszone o "
                                         "margines 0,8 mm, z wyciętą osłoną."],
                     ["Full disc label (with Slider)", "Cała powierzchnia plus naklejka osłony, wpasowana "
-                                                      "w wycięcie, w którym leży. Tego używa "
-                                                      "automatyczne układanie."],
+                                                      "w wycięcie, w którym leży. To proponuje Plik > "
+                                                      "Nowy przy nowym projekcie MiniDisc."],
                     ["MiniDisc Cover (J-Card)", "Trzypanelowa wkładka do pudełka: przód, grzbiet, tył."],
-                    ["MiniDisc Cover (J-Card + Window)", "To samo z wyciętym okienkiem."],
+                    ["MiniDisc Cover (J-Card + Window)", "To samo z okienkiem 40 × 40 mm wyciętym w "
+                                                         "przodzie, przez które widać płytę."],
+                    ["CD Disc Label (Standard Hub)", "Pierścień na wierzch płyty CD-R: 117 mm średnicy z "
+                                                     "otworem 35 mm na piastę."],
+                    ["CD Slim Case Insert (Front)", "Jedna karta 120 × 120 mm — przód pudełka slim, bez "
+                                                    "zagięcia i bez listy utworów."],
+                    ["CD Slim Case Insert (Folded, 2 Panels)", "240 × 120 mm zgięte w połowie: okładka na "
+                                                               "prawym panelu, lista utworów na lewym, "
+                                                               "czytana przez przezroczysty tył pudełka."],
+                    ["CD Jewel Case Back (Tray Card)", "151 × 117,5 mm: panel 138 mm z zadrukowanym "
+                                                       "grzbietem 6,5 mm po każdej stronie, na tackę za "
+                                                       "płytą."],
+                    ["Cassette J-Card", "Wkładka 4 × 4 cale: przód, grzbiet i zakładka wsuwana do środka."],
+                    ["Cassette Shell Label", "90 × 40,8 mm, wycinana wokół otworu na szpule, z górnymi "
+                                             "narożnikami ściętymi pod 45 stopni. Jedna na stronę."],
                 ],
             }},
             {"note": "**Osłona** to przesuwana klapka na kasecie, która chroni płytę od kurzu — magnetofon "
@@ -219,6 +238,10 @@ BOOK = [
                   "wzdłuż każdego boku pudełka. Proponowana jest przy zakładaniu projektu (wiersz **Tył "
                   "pudełka**, który zaczyna od *(brak)*), a później można ją dołożyć lub zdjąć przyciskami "
                   "**+**/**-** na pasku narzędzi, obok wyboru strony."},
+            {"p": "Przycisk **+** pyta o wszystko w jednym okienku: o którą stronę, o szablon i o to, czy "
+                  "zacząć ją pustą, czy od razu wypełnić danymi albumu. Lista szablonów zmienia się wraz "
+                  "z wybraną stroną, a wypełnianie jest wygaszone przy szablonie, dla którego "
+                  "automatyczny układ nie ma przepisu."},
             {"note": "Etykieta płyty i okładka są częścią każdego projektu i nie da się ich usunąć. Zdjąć "
                      "można tylko strony opcjonalne, a usunięcie kasuje wszystko, co na nich jest — "
                      "dlatego program pyta wcześniej i zeruje potem historię cofania."},
@@ -227,11 +250,24 @@ BOOK = [
                   "szablon dostępny dla bieżącej strony. Wybranie własnego (zapisanego przez **Zapisz "
                   "jako szablon...** albo dodanego w Menedżerze szablonów) od razu przełącza stronę na "
                   "niego. Wybranie wbudowanego pyta najpierw i daje wybór: zacząć stronę **pustą** albo "
-                  "zbudować ją od nowa z metadanych projektu przyciskiem **Wygenerowany z metadanych** — "
-                  "dostępnym tylko dla tego jednego szablonu, który automatyczny układ danej strony "
-                  "faktycznie umie zbudować; dla każdego innego dostępna jest tylko opcja pustej strony."},
+                  "zbudować ją od nowa z metadanych projektu przyciskiem **Wygenerowany z metadanych**, "
+                  "który działa dla każdego szablonu dołączonego do programu. Wygaszony jest tylko w "
+                  "jednym przypadku: gdy wbudowany szablon został przemianowany i żaden układ już go po "
+                  "nazwie nie rozpoznaje."},
             {"warn": "W obu przypadkach **czyści to stronę**: znikają wszystkie warstwy, a historia "
                      "cofania jest zerowana. Druga strona i metadane pozostają nietknięte."},
+            {"h2": "Przebudowa strony"},
+            {"p": "Dwa przyciski na pasku narzędzi budują oglądaną stronę od nowa z metadanych projektu, "
+                  "nie ruszając jej szablonu. **Wygeneruj ponownie** używa domyślnych krojów i stylu "
+                  "strony — i tą samą drogą wraca się do nich po wypróbowaniu innego kroju. "
+                  "**Wygeneruj ponownie z czcionką...** otwiera zamiast tego okno wyboru czcionki: po "
+                  "wskazaniu kroju strona od razu rysuje się na nowo, więc wynik widać jeszcze przed "
+                  "zatwierdzeniem. Z wyboru brany jest tylko sam krój — rozmiary i grubości nadal "
+                  "pochodzą z układu, który dopasowuje je do każdego panelu."},
+            {"warn": "Oba czyszczą stronę i zerują historię cofania, i oba pytają, zanim to zrobią. Na "
+                     "stronie z Twoim własnym szablonem nie ma czego przebudowywać — automatyczny układ "
+                     "zna tylko kształty wbudowane — i program to napisze, zamiast zostawiać cię z "
+                     "pytaniem, dlaczego nic się nie stało."},
         ],
     },
     # ------------------------------------------------------------------
@@ -286,12 +322,16 @@ BOOK = [
     {
         "title": "Automatyczne układanie",
         "blocks": [
-            {"p": "**Różdżka** w panelu Narzędzia buduje obie strony z okładki i listy utworów albumu. To "
-                  "najszybsza droga od „mam płytę” do „mam co wydrukować”."},
+            {"p": "**Różdżka** w panelu Narzędzia wypełnia każdą stronę projektu okładką i listą utworów "
+                  "albumu. To najszybsza droga od „mam płytę” do „mam co wydrukować”."},
+            {"p": "Każdą stronę buduje **na tym szablonie, który ta strona już ma** — nie zmienia twojego "
+                  "wyboru kształtu. Stronę z twoim własnym szablonem pomija w całości: automatyczny układ "
+                  "zna tylko kształty wbudowane, a w szablonie zapisanym samodzielnie może już leżeć "
+                  "dokładnie to, o co ci chodziło."},
             {"p": "Najpierw wypełnij album i wykonawcę w **Metadanych...** — po tym program szuka. "
                   "Jeżeli nie ma jeszcze okładki, najpierw ją znajdzie."},
-            {"warn": "To **zastępuje obie strony** i zeruje historię cofania, więc program prosi o "
-                     "potwierdzenie. Same metadane zostają nietknięte."},
+            {"warn": "To **zastępuje zawartość każdej budowanej strony** i zeruje historię cofania, więc "
+                     "program prosi o potwierdzenie. Same metadane zostają nietknięte."},
             {"h2": "Co powstaje"},
             {"p": "**Etykieta płyty**: szablon na całą powierzchnię, okładka rozciągnięta na nią i "
                   "przycięta do linii cięcia oraz logo MiniDisc na naklejce osłony. Trójkąt kierunku "
@@ -644,7 +684,8 @@ BOOK = [
                 "końce.",
                 "Po zakończeniu albumu program proponuje zapisanie tytułów, wziętych z samej playlisty.",
                 "Na koniec album, wykonawca, rok i lista utworów stają się metadanymi projektu, okładka "
-                "zostaje wyszukana, a **obie strony układają się same**.",
+                "zostaje wyszukana, a **strony projektu układają się same**, każda na szablonie, który "
+                "już ma.",
             ]},
             {"warn": "Ten ostatni krok **zastępuje wszystko na obu stronach**. Po nagraniu nie pyta — "
                      "właśnie przeszedłeś przez kilka potwierdzeń i przesiedziałeś album w czasie "

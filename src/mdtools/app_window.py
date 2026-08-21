@@ -31,7 +31,7 @@ from mdtools.auto_layout import (
     recolour_insertion_mark,
 )
 from mdtools.gallery import save_downloaded_cover
-from mdtools.jcard_layout import build_jcard
+from mdtools.jcard_layout import build_jcard, has_cover_window
 from mdtools.metadata_lookup import MetadataLookupError, find_artist_photo, find_cover
 from mdtools.canvas.items import get_item_name, set_item_name
 from mdtools.canvas.scene import DesignScene, font_family_override
@@ -44,6 +44,7 @@ from mdtools.io.png_export import export_png, render_scene_to_image
 from mdtools.io.project_io import item_from_dict, item_to_dict, load_project, save_project, scene_from_dict, scene_to_dict
 from mdtools.io.svg_export import export_svg
 from mdtools.panels.about_dialog import AboutDialog
+from mdtools.panels.add_page_dialog import AddPageDialog
 from mdtools.panels.asset_gallery_dialog import AssetGalleryDialog
 from mdtools.panels.cd_rip_dialog import CdRipDialog
 from mdtools.panels.cover_filter_dialog import CoverFilterDialog
@@ -265,6 +266,12 @@ class MainWindow(QMainWindow):
         self.template_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self.template_combo.currentIndexChanged.connect(self._on_template_combo_changed)
         toolbar.addWidget(self.template_combo)
+        self.regenerate_btn = QPushButton(self.tr("Regenerate"))
+        self.regenerate_btn.setToolTip(
+            self.tr("Rebuild this page from the project's metadata, with its default fonts and styling")
+        )
+        self.regenerate_btn.clicked.connect(self._regenerate_current_page)
+        toolbar.addWidget(self.regenerate_btn)
         self.regenerate_font_btn = QPushButton(self.tr("Regenerate with Font..."))
         self.regenerate_font_btn.clicked.connect(self._open_regenerate_font_dialog)
         toolbar.addWidget(self.regenerate_font_btn)
@@ -882,6 +889,11 @@ class MainWindow(QMainWindow):
         the disc and cover pages are created with the project. The template
         is picked from the family that page takes, so this needs no list of
         its own -- see project.page_template_kind().
+
+        One dialog asks all of it -- which page, which template, and empty
+        or built from the metadata. It was two `QInputDialog`s and no third
+        question at all; both were reported together (see AddPageDialog's
+        own docstring).
         """
         if self.project is None:
             return
@@ -895,34 +907,20 @@ class MainWindow(QMainWindow):
             )
             return
 
-        names = [page_title(page, self.project.medium) for page in missing]
-        chosen, ok = QInputDialog.getItem(self, self.tr("Add Page"), self.tr("Page:"), names, 0, False)
-        if not ok:
-            return
-        page = missing[names.index(chosen)]
-
-        from mdtools.templates import registry
-
-        templates = [
-            t
-            for t in registry.load_templates()[page_template_kind(page)]
-            if getattr(t, "medium", MEDIUM_MD) == self.project.medium
-        ]
-        if not templates:
-            QMessageBox.warning(
-                self,
-                self.tr("Add Page"),
-                self.tr("There are no templates for that page (Templates > Manage Templates)."),
-            )
-            return
-        template_names = [t.name for t in templates]
-        chosen_template, ok = QInputDialog.getItem(
-            self, self.tr("Add Page"), self.tr("Template:"), template_names, 0, False
+        dialog = AddPageDialog(
+            pages=[(page, page_title(page, self.project.medium)) for page in missing],
+            templates_for=self._templates_for_page,
+            can_generate=self._can_auto_generate_page,
+            parent=self,
         )
-        if not ok:
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        page = dialog.selected_page
+        chosen = dialog.selected_template
+        if page is None or chosen is None:
             return
 
-        template = copy.deepcopy(templates[template_names.index(chosen_template)])
+        template = copy.deepcopy(chosen)
         scene = DesignScene(template)
         self._populate_new_scene(scene, template, page)
         self.project.pages[page] = scene
@@ -930,6 +928,31 @@ class MainWindow(QMainWindow):
         self.current_page = page
         self._refresh_page_combo()
         self._show_page(page)
+        if dialog.generate:
+            # The page exists and is on screen by now, which is what this
+            # needs: every _auto_layout_* method works on a page the
+            # project already has, and some of them switch to it and run
+            # Clip Layers.
+            self._generate_page_from_metadata(page, template)
+
+    def _templates_for_page(self, page: str) -> list:
+        """Every template `page` can take, for this project's medium.
+
+        The page's own family decides the list (project.page_template_kind
+        -- several pages share "cover"), and the medium filters it, or a CD
+        project would be offered a MiniDisc J-card. The same pairing
+        _refresh_template_combo() and NewDesignDialog already read, kept in
+        one method now that AddPageDialog needs it per page change too.
+        """
+        from mdtools.templates import registry
+
+        if self.project is None:
+            return []
+        return [
+            template
+            for template in registry.load_templates().get(page_template_kind(page), [])
+            if getattr(template, "medium", MEDIUM_MD) == self.project.medium
+        ]
 
     def _remove_page(self) -> None:
         """Removes the page on screen, if it is one the project can do
@@ -2438,6 +2461,65 @@ class MainWindow(QMainWindow):
 
         return next((t for t in registry.load_templates()[kind] if t.name == name), None)
 
+    def _generator_template_name_for_page(self, page: str) -> str | None:
+        """The template already on `page`, if an automatic layout can build
+        that one -- otherwise None, meaning "leave this page alone".
+
+        This is what stops a whole-project layout (the Tools panel's magic
+        wand, and the layout offered after a recording) from imposing its
+        own idea of which template each page should have. Both used to call
+        each `_auto_layout_*` method with no template name at all, so every
+        one of them fell back to its own hardcoded default and *replaced*
+        whatever the user had chosen -- a project deliberately set up with
+        the small sticker disc label came back with the full-face one,
+        every time. Reported directly, for the magic wand and then for the
+        post-recording layout, which is one bug: they are the same method.
+
+        Two answers mean "skip":
+        - **A custom template.** It is the user's own, may carry its own
+          saved layers, and nothing here knows how to build it -- explicit
+          instruction ("if custom template is selected autogenerate should
+          not generate this page"). Note a *renamed* built-in reads as
+          buildable-by-name only if the name still matches, which is the
+          same rule the Template dropdown already applies.
+        - **A built-in nothing can generate**, which after the J-card
+          window variant landed means only a built-in the user has renamed
+          through the Template Manager.
+
+        Anything else returns its own name, which the caller passes back as
+        both `disc_template_name` and `cover_template_name` -- each is
+        consumed only by the page kind that has more than one buildable
+        template and ignored otherwise, exactly as
+        "Regenerate with Font..." already does it.
+        """
+        if self.project is None:
+            return None
+        scene = self.project.pages.get(page)
+        template = getattr(scene, "template", None)
+        if template is None:
+            return None
+        if not getattr(template, "builtin", False):
+            return None
+        if not self._can_auto_generate_page(page, template):
+            return None
+        return template.name
+
+    def _generate_page_up_to_its_template(self, page: str, metadata: ProjectMetadata) -> bool:
+        """Rebuild `page` onto the template it already has, or do nothing.
+
+        Returns whether it built anything, so a caller can tell "skipped
+        on purpose" from "built" -- see _generator_template_name_for_page
+        for when it skips.
+        """
+        name = self._generator_template_name_for_page(page)
+        if name is None:
+            return False
+        method = self._auto_layout_method_for_page(page, disc_template_name=name, cover_template_name=name)
+        if method is None:
+            return False
+        method(metadata)
+        return True
+
     def _auto_layout_project(self, metadata: ProjectMetadata) -> None:
         """Turns an album into a first draft of the project's pages: the
         disc label and the J-card, or a CD's ring label, case insert and --
@@ -2461,17 +2543,22 @@ class MainWindow(QMainWindow):
         if self.project.medium == MEDIUM_TAPE:
             self._auto_layout_tape(metadata)
             return
+        # Every page below is built *onto the template it already has*,
+        # and skipped when that template is the user's own -- see
+        # _generator_template_name_for_page. The page order is unchanged
+        # (the disc label goes last on a CD because it switches the page
+        # combo and runs Clip Layers).
         if self.project.medium == MEDIUM_CD:
-            self._auto_layout_cd_insert(metadata)
+            self._generate_page_up_to_its_template(PAGE_COVER, metadata)
             # Only if the project has one: the case back is optional, and
             # laying out a page that does not exist is not a thing to do
             # quietly or loudly.
             if PAGE_BACK in self.project.pages:
-                self._auto_layout_cd_case_back(metadata)
-            self._auto_layout_cd_disc_label(metadata)
+                self._generate_page_up_to_its_template(PAGE_BACK, metadata)
+            self._generate_page_up_to_its_template(PAGE_DISC, metadata)
             return
-        self._auto_layout_cover(metadata)
-        self._auto_layout_disc_label(metadata)
+        self._generate_page_up_to_its_template(PAGE_COVER, metadata)
+        self._generate_page_up_to_its_template(PAGE_DISC, metadata)
 
     def _choose_cover_background(self, cover_art: bytes, title: str) -> bytes | None:
         """Shows CoverFilterDialog for `cover_art` and returns the filtered
@@ -2664,6 +2751,40 @@ class MainWindow(QMainWindow):
             self.undo_stack.push(AddItemCommand(scene, item, self.tr("J-Card")))
         self.undo_stack.endMacro()
 
+        if has_cover_window(template):
+            self._bake_cover_window(scene)
+
+    def _bake_cover_window(self, scene) -> None:
+        """Bake a die-cut window into the cover artwork, and nothing else.
+
+        The artwork spans the window deliberately, and export already takes
+        the hole out of it at render time -- but the *layer* still carries
+        those pixels, so on screen the window is invisible and the card
+        looks exactly like the plain one. Reported directly ("artwork is not
+        cropped to the window").
+
+        Deliberately **not** self._clip_layers(), which is the whole-page
+        operation: that also rasterises the panel background blocks, whose
+        own overhang past the card's rounded corners falls outside the cut
+        line and so is never printed anyway (the plain J-card has had that
+        same harmless overhang all along). Turning those into pixmaps is
+        exactly what the "a J-card is not run through Clip Layers" rule
+        exists to prevent. Only pixmap layers are rebuilt here, which on
+        this page means the cover image alone -- every text layer and every
+        panel block stays editable, and no page switch is needed either,
+        since this works on the scene it is handed rather than on whichever
+        page happens to be on screen.
+        """
+        _removed, images, _shapes = scene.plan_clip_layers()
+        if not images:
+            return
+        label = self.tr("Clip Layers")
+        self.undo_stack.beginMacro(label)
+        for item, new_pixmap in images:
+            self.undo_stack.push(SetPixmapCommand(item, item.pixmap(), new_pixmap, self.tr("Clip Image")))
+        self.undo_stack.endMacro()
+        self._refresh_layers()
+
     def _auto_layout_cd_disc_label(self, metadata: ProjectMetadata) -> None:
         """The ring: the cover lightened across the whole face, the album's
         details in the bands clear of the hub, and the Digital Audio mark.
@@ -2800,10 +2921,26 @@ class MainWindow(QMainWindow):
         return tape.split_sides(metadata.tracks, self.project.tape_total_minutes)
 
     def _auto_layout_tape(self, metadata: ProjectMetadata) -> None:
-        """The inlay card, and a shell label for each side of the tape."""
+        """The inlay card, and a shell label for each side of the tape.
+
+        Each of the three pages is skipped when its own template is not one
+        an automatic layout can build -- see
+        _generator_template_name_for_page. The two shell labels are handled
+        together rather than one call each, so the background-treatment
+        question is still asked once for the pair; passing only the sides
+        that are actually going to be built also means a project whose
+        labels both use a custom template is never asked it at all.
+        """
         plan = self._tape_plan(metadata)
-        self._auto_layout_tape_jcard(metadata, plan)
-        self._auto_layout_tape_sides(metadata, plan)
+        if self._generator_template_name_for_page(PAGE_COVER) is not None:
+            self._auto_layout_tape_jcard(metadata, plan)
+        sides = tuple(
+            page
+            for page in (PAGE_SIDE_A, PAGE_SIDE_B)
+            if self._generator_template_name_for_page(page) is not None
+        )
+        if sides:
+            self._auto_layout_tape_sides(metadata, plan, pages=sides)
 
     def _auto_layout_tape_jcard(self, metadata: ProjectMetadata, plan: tape.TapePlan) -> None:
         jcard = self._template_named("cover", TAPE_JCARD_TEMPLATE)
@@ -2949,6 +3086,88 @@ class MainWindow(QMainWindow):
         if page == self.current_page:
             self._show_page(page)
 
+    def _regeneration_metadata(self, title: str) -> ProjectMetadata | None:
+        """The metadata a single-page rebuild needs, or None with the reason
+        already on screen.
+
+        Shared by the toolbar's "Regenerate" and "Regenerate with Font..."
+        buttons, whose preconditions are identical: an album to build from,
+        and cover art, which every one of these layouts is built around.
+        """
+        metadata = self.project.metadata
+        if not metadata.album and not metadata.artist:
+            QMessageBox.information(
+                self,
+                title,
+                self.tr("Fill in the album and artist in the Tools panel's Metadata... first."),
+            )
+            return None
+        if not metadata.cover_art:
+            self._fetch_cover_into_metadata(metadata)
+        if not metadata.cover_art:
+            QMessageBox.warning(
+                self,
+                title,
+                self.tr(
+                    "No cover art could be found for this album, and the layout is built around it. Add "
+                    "an image yourself, or fetch one with the Metadata dialog's lookup."
+                ),
+            )
+            return None
+        return metadata
+
+    def _regenerate_current_page(self) -> None:
+        """Toolbar > "Regenerate": rebuild the current page from the
+        project's metadata with its own default styling.
+
+        The same call "Regenerate with Font..." makes, minus the font
+        substitution -- so this is the way back to a page's default look
+        after a font has been tried on it, as well as the quickest way to
+        rebuild a page that has been edited into a corner. It confirms
+        first for the same reason that one does: it clears the page and
+        resets the undo history.
+
+        The template is not changed: whatever is on the page is what gets
+        rebuilt, which for a custom template means there is nothing to do
+        (see _generator_template_name_for_page).
+        """
+        if self.project is None:
+            return
+        scene = self._current_scene()
+        if scene is None:
+            return
+        page = self.current_page
+        title = self.tr("Regenerate")
+        name = self._generator_template_name_for_page(page)
+        if name is None:
+            QMessageBox.information(
+                self,
+                title,
+                self.tr(
+                    "This page's template is not one the automatic layout knows how to build, so there "
+                    "is nothing to regenerate. Pick a built-in template for this page first."
+                ),
+            )
+            return
+        metadata = self._regeneration_metadata(title)
+        if metadata is None:
+            return
+        answer = QMessageBox.warning(
+            self,
+            title,
+            self.tr("Are you sure? This rebuilds this page from the metadata, and resets the undo history."),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        method = self._auto_layout_method_for_page(page, disc_template_name=name, cover_template_name=name)
+        if method is None:
+            return
+        with self._reused_cover_filter():
+            method(metadata)
+        self._refresh_layers()
+
     def _open_regenerate_font_dialog(self) -> None:
         """Toolbar > "Regenerate with Font...": preview a different font on
         the current page, then, only if accepted and confirmed, rebuild
@@ -2980,24 +3199,7 @@ class MainWindow(QMainWindow):
         # than one buildable template, and ignored otherwise.
         current_template_name = scene.template.name
 
-        if not metadata.album and not metadata.artist:
-            QMessageBox.information(
-                self,
-                self.tr("Regenerate with Font"),
-                self.tr("Fill in the album and artist in the Tools panel's Metadata... first."),
-            )
-            return
-        if not metadata.cover_art:
-            self._fetch_cover_into_metadata(metadata)
-        if not metadata.cover_art:
-            QMessageBox.warning(
-                self,
-                self.tr("Regenerate with Font"),
-                self.tr(
-                    "No cover art could be found for this album, and the layout is built around it. Add "
-                    "an image yourself, or fetch one with the Metadata dialog's lookup."
-                ),
-            )
+        if self._regeneration_metadata(self.tr("Regenerate with Font")) is None:
             return
 
         dialog = RegenerateFontDialog(self)

@@ -176,18 +176,28 @@ class MetadataDialog(QDialog):
 
         chosen = candidates[0]
         if len(candidates) > 1:
-            labels = [self._candidate_label(c) for c in candidates]
+            # Listed alphabetically -- asked for directly. search_albums()
+            # returns them ranked by match score, which is the right order
+            # for *picking* one automatically but a poor one for reading:
+            # with a dozen pressings of the same album the eye has nothing
+            # to scan by. The ranking is not thrown away, it just stops
+            # deciding the display order -- the best match is still what
+            # the list opens on, so pressing Enter picks exactly what it
+            # picked before this changed.
+            best = candidates[0]
+            ordered = sorted(candidates, key=lambda c: self._candidate_label(c).casefold())
+            labels = [self._candidate_label(c) for c in ordered]
             label, ok = QInputDialog.getItem(
                 self,
                 self.tr("Select Album"),
                 self.tr("Multiple matches were found -- choose the correct one:"),
                 labels,
-                0,
+                ordered.index(best),
                 False,
             )
             if not ok:
                 return
-            chosen = candidates[labels.index(label)]
+            chosen = ordered[labels.index(label)]
 
         result = self._run_lookup(lambda: fetch_tracks(chosen.collection_id, fallback_year=chosen.year))
         if result is None:

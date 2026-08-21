@@ -116,14 +116,64 @@ def test_choosing_a_case_back_gives_the_project_three_pages(qt_app, monkeypatch)
 
 
 def test_a_case_back_can_be_added_to_an_open_project(qt_app, monkeypatch):
+    """Page, template and empty-or-generated are one dialog now (see
+    AddPageDialog) -- it used to be two QInputDialogs and no third
+    question."""
+    from mdtools.panels.add_page_dialog import AddPageDialog
+
     window = _cd_window(with_back=False)
-    answers = iter([("Case Back", True), (TRAY_CARD, True)])
-    monkeypatch.setattr(QInputDialog, "getItem", staticmethod(lambda *a, **k: next(answers)))
+    seen = {}
+
+    def fake_exec(self):
+        seen["pages"] = [self.page_combo.itemText(i) for i in range(self.page_combo.count())]
+        seen["templates"] = [self.template_combo.itemText(i) for i in range(self.template_combo.count())]
+        return AddPageDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(AddPageDialog, "exec", fake_exec)
 
     window._add_page()
 
     assert PAGE_BACK in window.project.pages
     assert window.current_page == PAGE_BACK, "the new page is what you want to look at"
+    assert window.project.pages[PAGE_BACK].template.name == TRAY_CARD
+    # One dialog really did offer both questions at once.
+    assert seen["pages"] == ["Case Back"]
+    assert TRAY_CARD in seen["templates"]
+
+
+def test_adding_a_page_can_build_it_from_the_metadata(qt_app, monkeypatch):
+    """The other half of the same report: the dialog offers empty or
+    generated, so a new tray card does not have to be laid out by hand."""
+    import io as _io
+
+    from PIL import Image
+
+    from mdtools.panels.add_page_dialog import AddPageDialog
+    from mdtools.project import ProjectMetadata, Track
+
+    out = _io.BytesIO()
+    Image.new("RGB", (240, 240), (14, 30, 60)).save(out, format="PNG")
+
+    window = _cd_window(with_back=False)
+    window.project.metadata = ProjectMetadata(
+        album="Album",
+        artist="Artist",
+        year=2020,
+        tracks=[Track(title=f"Track {i}", time_seconds=200) for i in range(1, 7)],
+        cover_art=out.getvalue(),
+    )
+
+    def fake_exec(self):
+        assert self.generate_radio.isEnabled(), "a tray card is three panels, so it can be generated"
+        self.generate_radio.setChecked(True)
+        return AddPageDialog.DialogCode.Accepted
+
+    monkeypatch.setattr(AddPageDialog, "exec", fake_exec)
+
+    window._add_page()
+
+    assert PAGE_BACK in window.project.pages
+    assert window.project.pages[PAGE_BACK].print_items(), "the page should have been built, not left empty"
 
 
 def test_the_disc_and_cover_pages_cannot_be_removed(qt_app, monkeypatch):

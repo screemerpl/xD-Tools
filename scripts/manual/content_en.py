@@ -8,7 +8,7 @@ TITLE = "xD-Tools"
 SUBTITLE = "Retro Media Studio - User Manual"
 TITLE_NOTE = "Designing labels, recording MiniDiscs and cassettes, burning CD-Rs, and titling discs"
 COVER_CAPTION = "What talks to what: commands over USB, keys over infrared, audio over S/PDIF."
-VERSION_LINE = "Version 0.3.1"
+VERSION_LINE = "Version 0.3.2"
 AUTHOR_LINE = 'Artur "Screemer" Jakubowicz'
 DATE_LINE = "August 2026"
 TOC_TITLE = "Contents"
@@ -96,18 +96,21 @@ BOOK = [
             {"ul": [
                 "**Open Selected** / double-click - reopen a recent project.",
                 "**Open Other Project...** - browse for a `.mdproj` file anywhere.",
-                "**New Project...** - pick a template for each of the two pages.",
+                "**New Project...** - choose the medium, then a template for each page it has.",
                 "**Multiprint...** - put artwork from several different projects on one sheet of paper. "
                 "This one does not open a project at all; it is a standalone job.",
                 "**Remote...** - the software remote. Also standalone, and only shown when MDRem is "
                 "enabled.",
             ]},
-            {"h2": "A project is two pages plus metadata"},
-            {"p": "Every project holds exactly one **Disc Label** design and one **Cover / J-Card** "
-                  "design, switched with the dropdown at the top left of the main window. Alongside them "
-                  "it holds the album title, artist, year and track list - which the label designs, the "
-                  "titling and the automatic layout all draw on."},
-            {"fig": ("new-project", "File > New asks for one template of each kind.")},
+            {"h2": "A project is its pages plus metadata"},
+            {"p": "How many pages, and which, comes from the medium. A MiniDisc project holds a **Disc "
+                  "Label** and a **Cover / J-Card**. A CD project holds a disc label and a **Case "
+                  "Insert**, and can take a **Case Back** as a third. A cassette project has no disc "
+                  "label at all: it holds the inlay **J-Card** and one **shell label per side**. You "
+                  "switch between them with the dropdown at the top left of the main window."},
+            {"p": "Alongside the pages, every project holds the album title, artist, year and track "
+                  "list - which the designs, the titling and the automatic layout all draw on."},
+            {"fig": ("new-project", "File > New asks for one template per page.")},
             {"p": "**File > Save** (Ctrl+S) writes all of that - both designs, the metadata, and any "
                   "images you placed - into a single `.mdproj` file. Images are embedded, not linked, so "
                   "moving the project or deleting the original picture cannot break it."},
@@ -179,7 +182,7 @@ BOOK = [
         "title": "Templates",
         "blocks": [
             {"p": "A template is the physical shape of the thing you are printing: its size, its corners, "
-                  "and where it folds. xD-Tools ships with six."},
+                  "and where it folds. xD-Tools ships with twelve, across the three media."},
             {"table": {
                 "head": ["Template", "What it is"],
                 "rows": [
@@ -191,10 +194,25 @@ BOOK = [
                     ["Full disc label", "A label covering the whole 71 x 68 mm face of the cartridge, "
                                         "inset by a 0.8 mm margin, with the shutter cut out of it."],
                     ["Full disc label (with Slider)", "The full face plus the shutter sticker, nested into "
-                                                      "the cutout it sits in. This is what the automatic "
-                                                      "layout uses."],
+                                                      "the cutout it sits in. What File > New offers a "
+                                                      "new MiniDisc project by default."],
                     ["MiniDisc Cover (J-Card)", "The three-panel insert for the case: front, spine, back."],
-                    ["MiniDisc Cover (J-Card + Window)", "The same with a cut-out window."],
+                    ["MiniDisc Cover (J-Card + Window)", "The same with a 40 x 40 mm window die-cut "
+                                                         "through the front, so the disc shows through it."],
+                    ["CD Disc Label (Standard Hub)", "A ring for the face of a CD-R: 117 mm across with a "
+                                                     "35 mm hole for the hub."],
+                    ["CD Slim Case Insert (Front)", "A single 120 x 120 mm card -- the front of a slim "
+                                                    "case, with no fold and no track list."],
+                    ["CD Slim Case Insert (Folded, 2 Panels)", "240 x 120 mm creased down the middle: the "
+                                                               "cover on the right panel, the track list "
+                                                               "on the left, read through the clear back "
+                                                               "of the case."],
+                    ["CD Jewel Case Back (Tray Card)", "151 x 117.5 mm: a 138 mm panel with a 6.5 mm "
+                                                       "printed spine either side, for the tray behind "
+                                                       "the disc."],
+                    ["Cassette J-Card", "The 4 x 4 inch inlay card: front, spine and a tuck-in flap."],
+                    ["Cassette Shell Label", "90 x 40.8 mm, cut around the reel opening, with the top "
+                                             "corners taken off at 45 degrees. One per side."],
                 ],
             }},
             {"note": "The **shutter** is the sliding panel on the cartridge that keeps dust off the disc - "
@@ -221,6 +239,10 @@ BOOK = [
                   "printed strip down each side of the case. It is offered when the project is created "
                   "(the **Case back** row, which starts at *(none)*), and can be added or dropped later "
                   "with the **+**/**-** buttons on the toolbar, next to the page selector."},
+            {"p": "**+** asks everything about the new page in one window: which page, which template, "
+                  "and whether to start it empty or fill it in from the album straight away. The list of "
+                  "templates follows the page you choose, and the fill-it-in option is greyed out for a "
+                  "template the automatic layout has no recipe for."},
             {"note": "The disc label and the cover are part of every project and cannot be removed. Only "
                      "the optional pages can, and removing one deletes everything on it -- so it asks "
                      "first, and resets the undo history afterwards."},
@@ -230,10 +252,23 @@ BOOK = [
                   "**Save as Template...** or added in the Template Manager -- switches the page onto it "
                   "right away. Picking a built-in one asks first, and offers a choice: start the page "
                   "**empty**, or build it fresh from the project's metadata with **Generated from "
-                  "Metadata** -- offered only for the one template each page's automatic layout actually "
-                  "knows how to build; for any other, only the empty option is available."},
+                  "Metadata**, which works for every template that ships with the program. It is greyed "
+                  "out in one case only: a built-in template you have renamed, which no longer matches "
+                  "any layout by name."},
             {"warn": "Either way, this **clears the page**: every layer on it is removed and the undo "
                      "history is reset. The other page and the metadata are untouched."},
+            {"h2": "Rebuilding a page"},
+            {"p": "Two buttons on the toolbar rebuild the page you are looking at from the project's "
+                  "metadata without touching its template. **Regenerate** uses the page's own default "
+                  "fonts and styling, which also makes it the way back after you have tried a different "
+                  "face on it. **Regenerate with Font...** opens the font picker instead: choose a face "
+                  "and the page is redrawn with it there and then, so you see the result before you keep "
+                  "it. Only the family is taken from your choice -- sizes and weights still come from the "
+                  "layout, which fits them to each panel."},
+            {"warn": "Both clear the page and reset the undo history, and both ask before they do. On a "
+                     "page using one of your own templates there is nothing to rebuild -- the automatic "
+                     "layout only knows the built-in shapes -- and you are told so rather than left "
+                     "wondering why nothing happened."},
         ],
     },
     # ------------------------------------------------------------------
@@ -290,13 +325,17 @@ BOOK = [
     {
         "title": "Automatic layout",
         "blocks": [
-            {"p": "The **magic wand** in the Tools panel builds both pages from the album's own artwork "
-                  "and track list. It is the fastest route from \"I have a disc\" to \"I have something "
-                  "to print\"."},
+            {"p": "The **magic wand** in the Tools panel fills in every page of the project from the "
+                  "album's own artwork and track list. It is the fastest route from \"I have a disc\" to "
+                  "\"I have something to print\"."},
+            {"p": "It builds each page **onto the template that page already has** -- it does not change "
+                  "your choice of shape. A page using one of your own templates is left alone entirely: "
+                  "the automatic layout only knows the built-in shapes, and a template you saved yourself "
+                  "may already have exactly what you wanted on it."},
             {"p": "Fill in album and artist in **Metadata...** first - that is what it searches by. "
                   "If there is no cover art yet it looks one up before starting."},
-            {"warn": "It **replaces both pages** and resets the undo history, so it asks for confirmation "
-                     "first. The metadata itself is left alone."},
+            {"warn": "It **replaces the contents of every page it builds** and resets the undo history, "
+                     "so it asks for confirmation first. The metadata itself is left alone."},
             {"h2": "What it builds"},
             {"p": "**The disc label**: the full-face template, the cover art stretched across it and then "
                   "cropped to the cut outline, and the MiniDisc logo on the shutter sticker. "
@@ -326,9 +365,9 @@ BOOK = [
                   "-- with the track list on the panel between them, in the cover's own colours."},
             {"fig": ("cd-back", "The tray card: a printed strip down each side of the case, the track "
                                 "list on the panel that sits behind the disc.")},
-            {"note": "Unlike the other two pages, this one keeps whatever template you gave it. It only "
-                     "exists because you added it and chose its shape, and the layout has no business "
-                     "undoing that."},
+            {"note": "This page keeps whatever template you gave it -- as every page now does. It was "
+                     "the first one to work that way, because it only exists at all because you added it "
+                     "and chose its shape, and the layout has no business undoing that."},
             {"h2": "Clip Layers and Bake Layers"},
             {"p": "**Clip Layers** trims everything to the printable area: layers entirely outside it are "
                   "removed, images that hang over the edge are cut back to it. The automatic disc layout "
@@ -640,11 +679,12 @@ BOOK = [
                 "both ends.",
                 "When the album ends it offers to write the titles, taken from the playlist itself.",
                 "Finally the album, artist, year and track list become the project's metadata, cover art "
-                "is looked up, and **both pages lay themselves out**.",
+                "is looked up, and **the project's pages lay themselves out**, each on the template it "
+                "already has.",
             ]},
-            {"warn": "That last step **replaces whatever was on both pages**. After a recording it does "
-                     "not ask - you have just sat through several prompts and watched an album go down in "
-                     "real time, and one more would be noise."},
+            {"warn": "That last step **replaces whatever was on the pages it builds**. After a recording "
+                     "it does not ask - you have just sat through several prompts and watched an album go "
+                     "down in real time, and one more would be noise."},
             {"h2": "Track marks: the important part"},
             {"p": "A CD player tells the deck where the tracks are, in the S/PDIF subcode. **A computer "
                   "does not.** Left to itself the deck falls back on LEVEL-SYNC: it starts a new track "

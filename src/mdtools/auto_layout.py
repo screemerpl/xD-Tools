@@ -55,6 +55,11 @@ STICKER_TOP_BAND_MM = 5.0
 STICKER_BOTTOM_BAND_MM = 12.0
 STICKER_BAND_PADDING_MM = 1.0
 STICKER_MARK_PADDING_MM = 0.5
+# The space between the "▲" and the words beside it. Its own constant, and
+# wider than STICKER_MARK_PADDING_MM (which it used to borrow), because the
+# two read as one mark and the arrow needs air on its right to stop the
+# text looking welded to it -- asked for directly.
+STICKER_MARK_GAP_MM = 1.6
 STICKER_ARTIST_MM = 5.0
 STICKER_RULE_MM = 0.4
 STICKER_FOOTER_MM = 3.6
@@ -196,10 +201,19 @@ def _fit_group_into_band(
 
     `horizontal=False` (the default) stacks top to bottom: each item's
     own width is what has to fit `band`'s width, and the whole stack's
-    combined height (mark) `band`'s height. `horizontal=True` lays them
-    left to right instead -- each item's own height fits `band`'s height,
-    and the row's combined width fits `band`'s width, which is what lets
-    each item use the *whole* band height rather than splitting it.
+    combined height (mark) `band`'s height.
+
+    `horizontal=True` lays them left to right instead, and **scales each
+    item to the band's height on its own rather than by one factor shared
+    across the row.** That is what "each item uses the whole band height"
+    actually takes, and the shared-factor version did not do it: the
+    tallest item decided the size of everything beside it, so the seeded
+    "▲" (20pt, more than twice the label's own height) held the words next
+    to it down to 4.4pt on a 37mm sticker while leaving 9mm of the band
+    empty on the right. The first item keeps its height-derived size and
+    the rest share whatever width is left, so a long label gets narrower
+    instead of shrinking the arrow it belongs to. The finished row is then
+    centred in the band on both axes.
 
     Assumes every item is still at its natural, unscaled size: the factor
     this computes is meant to be handed straight to set_item_scale(), not
@@ -215,16 +229,31 @@ def _fit_group_into_band(
     if horizontal:
         total_width = sum(natural_widths) + gap
         max_height = max(natural_heights)
-        if total_width <= 0 or max_height <= 0:
+        if total_width <= 0 or max_height <= 0 or band.height() <= 0:
             return
-        scale = min(band.width() / total_width, band.height() / max_height)
-        cursor = band.left()
-        for item, width in zip(items, natural_widths):
+        gap_px = mm_to_px(gap_mm)
+        scales = [band.height() / height if height > 0 else 0.0 for height in natural_heights]
+        leader_width = natural_widths[0] * scales[0]
+        remaining = band.width() - leader_width - gap_px * (len(items) - 1)
+        rest_width = sum(natural_widths[1:])
+        if len(items) > 1 and rest_width > 0:
+            if remaining > 0:
+                limit = remaining / rest_width
+                scales = [scales[0]] + [min(scale, limit) for scale in scales[1:]]
+            else:
+                # The leader alone already overflows the band, so there is
+                # no width left to share out -- fall back to the one shared
+                # factor that at least makes the whole row fit.
+                shared = min(band.width() / total_width, band.height() / max_height)
+                scales = [shared] * len(items)
+        row_width = sum(w * s for w, s in zip(natural_widths, scales)) + gap_px * (len(items) - 1)
+        cursor = band.left() + max(0.0, (band.width() - row_width) / 2)
+        for item, width, scale in zip(items, natural_widths, scales):
             set_item_scale(item, scale, scale)
             footprint = item.mapToScene(item.boundingRect()).boundingRect()
             target_y = band.center().y() - footprint.height() / 2
             item.setPos(item.pos() + QPointF(cursor - footprint.left(), target_y - footprint.top()))
-            cursor += width * scale + mm_to_px(gap_mm)
+            cursor += width * scale + gap_px
         return
 
     max_width = max(natural_widths)
@@ -268,7 +297,7 @@ def _fit_seeded_insertion_mark(scene: DesignScene, band: QRectF, colour: str) ->
         item.setDefaultTextColor(qcolour)
     pad = mm_to_px(STICKER_MARK_PADDING_MM)
     inner = QRectF(band.left() + pad, band.top() + pad, band.width() - 2 * pad, band.height() - 2 * pad)
-    _fit_group_into_band(marks, inner, gap_mm=STICKER_MARK_PADDING_MM, horizontal=True)
+    _fit_group_into_band(marks, inner, gap_mm=STICKER_MARK_GAP_MM, horizontal=True)
     return marks
 
 

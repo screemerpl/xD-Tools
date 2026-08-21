@@ -264,7 +264,12 @@ def build_side_label(
     heading = " · ".join(part for part in (metadata.artist.strip(), metadata.album.strip()) if part)
     title = _text(scene, heading, below, ink, wrap=False, bold=True)
     if title is not None:
-        _move_top_left_to(title, below.topLeft())
+        # Centred across the label, not pinned to the band's left edge --
+        # asked for directly. _text() fits this line into the band, so it
+        # is normally narrower than the band is wide, and anchoring it left
+        # left the artist and album sitting off to one side of a sticker
+        # whose other content (the side letter, the titles) reads centred.
+        _centre_in(title, below)
         added.append(title)
     return added
 

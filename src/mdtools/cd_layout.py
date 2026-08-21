@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import io
 import math
+from pathlib import Path
 
 from PIL import Image
 from PySide6.QtCore import QPointF, QRectF
@@ -57,7 +58,7 @@ from mdtools.jcard_layout import (
     place_back,
     place_spine,
 )
-from mdtools.palette import accent_colour, dominant_colour, readable_text_colour
+from mdtools.palette import accent_colour, dominant_colour, readable_text_colour, tint_monochrome_png
 from mdtools.project import ProjectMetadata
 
 # How far the label's artwork is blended towards white. Chosen so a dark
@@ -191,15 +192,23 @@ def _right_align_vcentre_on(item: QGraphicsItem, area: QRectF, disc: QRectF) -> 
     )
 
 
-def place_disc_logo(scene: DesignScene, disc: QRectF, logo_path: str) -> QGraphicsItem | None:
+def place_disc_logo(
+    scene: DesignScene, disc: QRectF, logo_path: str, *, ink: str | None = None
+) -> QGraphicsItem | None:
     """The Digital Audio mark, on the right side of the label, level with
     the hub.
 
     Scaled by the *smaller* ratio, so it stays whole inside the band -- the
     opposite of the cover, which is deliberately overshot and then clipped.
     A mark cropped by the disc's edge would be worse than no mark at all.
+
+    `ink` recolours it, and every caller should pass one: the mark ships as
+    pure black, so on a dark label it was present and invisible -- reported
+    directly, for every place this mark is used. It is a mask, not a
+    picture, so recolouring it is lossless (see
+    palette.tint_monochrome_png).
     """
-    item = scene.add_image(logo_path)
+    item = _mark_item(scene, logo_path, ink)
     if item is None:
         return None
     natural = item.boundingRect()
@@ -245,7 +254,8 @@ def build_disc_label(
     disc = rects[0]
     added: list = []
 
-    cover = place_cover_on_label(scene, background_art if background_art is not None else lighten(metadata.cover_art))
+    art = background_art if background_art is not None else lighten(metadata.cover_art)
+    cover = place_cover_on_label(scene, art)
     if cover is not None:
         added.append(cover)
 
@@ -295,7 +305,20 @@ def build_disc_label(
         _centre_in(album, top_band, cursor)
         added.append(album)
 
-    logo = place_disc_logo(scene, disc, logo_path) if logo_path else None
+    # Scored against the artwork **as placed**, not against the raw cover
+    # the rest of this palette comes from -- and that difference is the
+    # whole point. What the mark is printed on here is the *lightened*
+    # sleeve, which for a mid-toned cover lands around 0.48 relative
+    # luminance while the raw cover sits at 0.12: score it the same way as
+    # the text and a mid-toned album gets a white mark on a pale grey
+    # background. The text can rely on its shadow for that (see this
+    # function's own note on the palette); a bare mark has none, so it has
+    # to be scored against the pixels it actually sits on.
+    logo = (
+        place_disc_logo(scene, disc, logo_path, ink=readable_text_colour(dominant_colour(art)))
+        if logo_path
+        else None
+    )
     if logo is not None:
         added.append(logo)
 
@@ -490,19 +513,59 @@ def build_case_back(scene: DesignScene, metadata: ProjectMetadata, logo_path: st
             track_fill=BACK_TRACK_FILL,
         )
     )
-    mark = place_back_logo(scene, middle, logo_path or "")
+    # Both marks take the ink of whatever they are printed on, so the
+    # Digital Audio mark stops being black-on-dark -- the panel behind it
+    # is the cover's dominant colour, which for most sleeves is dark.
+    added.extend(_place_case_back_marks(scene, middle, (left_spine, right_spine), metadata, background, accent, logo_path))
+    return added
+
+
+def _place_case_back_marks(scene, middle, spines, metadata, background, accent, logo_path):
+    """The tray card's Digital Audio mark and its two spine bands.
+
+    Split out of build_case_back only so the ink each mark takes is stated
+    once per surface: the middle panel is the cover's dominant colour, the
+    spines are the accent, and those are two different backgrounds a black
+    mark can disappear into.
+    """
+    added: list[QGraphicsItem] = []
+    mark = place_back_logo(scene, middle, logo_path or "", ink=readable_text_colour(background))
     if mark is not None:
         added.append(mark)
-    for spine in (left_spine, right_spine):
+    for spine in spines:
         # Both spines get the same caption on purpose: which side of the
         # case is visible depends on how it was shelved, and a card that
         # only names the album on one of them is a card that is often
         # facing the wrong way.
-        added.extend(place_spine(scene, spine, metadata, accent, logo_path or ""))
+        added.extend(
+            place_spine(
+                scene, spine, metadata, accent, logo_path or "", logo_ink=readable_text_colour(accent)
+            )
+        )
     return added
 
 
-def place_back_logo(scene: DesignScene, panel: QRectF, logo_path: str) -> QGraphicsItem | None:
+def _mark_item(scene: DesignScene, logo_path: str, ink: str | None):
+    """The Digital Audio mark as a scene item, tinted to `ink` when given.
+
+    Reads the file rather than going through scene.add_image() so the tint
+    can be applied to the bytes first -- the same thing
+    jcard_layout._logo_item does for the spine's own copy of this mark.
+    """
+    if not logo_path:
+        return None
+    if ink is None:
+        return scene.add_image(logo_path)
+    try:
+        data = Path(logo_path).read_bytes()
+    except OSError:
+        return None
+    return scene.add_image_from_data(tint_monochrome_png(data, ink))
+
+
+def place_back_logo(
+    scene: DesignScene, panel: QRectF, logo_path: str, *, ink: str | None = None
+) -> QGraphicsItem | None:
     """The Digital Audio mark in the tray card's bottom-right corner.
 
     The bottom-*left* of that panel already carries the year and the
@@ -511,7 +574,7 @@ def place_back_logo(scene: DesignScene, panel: QRectF, logo_path: str) -> QGraph
     """
     if not logo_path:
         return None
-    item = scene.add_image(logo_path)
+    item = _mark_item(scene, logo_path, ink)
     if item is None:
         return None
     natural = item.boundingRect()
