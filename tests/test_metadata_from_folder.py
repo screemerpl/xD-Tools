@@ -21,11 +21,28 @@ from mdtools.project import ProjectMetadata
 
 
 def _make_tagged_flac(path: Path, tags: dict[str, str], seconds: float = 0.1) -> None:
+    """soundfile only writes libsndfile's own fixed SF_STR_* tag set
+    (title/artist/album/date/tracknumber/...) -- ALBUMARTIST and
+    DISCNUMBER are silently dropped by a plain `setattr()` (see
+    audio_engine._LIBSNDFILE_STRING_TAGS for how that was found), so
+    anything outside that set goes through a second mutagen pass, the
+    same fix applied to audio_engine.encode_wav_to_flac()."""
+    from mdtools.audio_engine import _LIBSNDFILE_STRING_TAGS
+
     samples = np.zeros((int(44100 * seconds), 2), dtype=np.int16)
+    native = {name: value for name, value in tags.items() if name.lower() in _LIBSNDFILE_STRING_TAGS}
+    extra = {name: value for name, value in tags.items() if name.lower() not in _LIBSNDFILE_STRING_TAGS}
     with sf.SoundFile(str(path), mode="w", samplerate=44100, channels=2, subtype="PCM_16", format="FLAC") as f:
-        for name, value in tags.items():
+        for name, value in native.items():
             setattr(f, name.lower(), value)
         f.write(samples)
+    if extra:
+        import mutagen.flac
+
+        audio = mutagen.flac.FLAC(str(path))
+        for name, value in extra.items():
+            audio[name.lower()] = str(value)
+        audio.save()
 
 
 def _album_folder(tmp_path: Path, *tracks: dict[str, str]) -> Path:

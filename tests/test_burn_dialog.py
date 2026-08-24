@@ -11,18 +11,18 @@ from pathlib import Path
 import pytest
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
-from mdtools import app_settings, cdburn, decode, foobar
+from mdtools import app_settings, cdburn
 from mdtools.app_window import MainWindow
 from mdtools.panels.burn_dialog import COL_ARTIST, COL_STATUS, COL_TITLE, BurnDialog, _BurnWorker
 from mdtools.project import MEDIUM_CD, MEDIUM_MD
 
 
-def _write_wav(path, *, seconds=10.0, rate=44100):
+def _write_wav(path, *, seconds=10.0, rate=44100, channels=2):
     with wave.open(str(path), "wb") as handle:
-        handle.setnchannels(2)
+        handle.setnchannels(channels)
         handle.setsampwidth(2)
         handle.setframerate(rate)
-        handle.writeframes(b"\x00" * int(rate * seconds) * 4)
+        handle.writeframes(b"\x00" * int(rate * seconds) * 2 * channels)
     return path
 
 
@@ -46,20 +46,21 @@ def burnable(monkeypatch):
 # -- what the dialog shows before anything is written --------------------
 
 
-def test_each_track_gets_a_verdict_before_the_button(qt_app, tmp_path, burnable, monkeypatch):
-    """With no resampler around, a hi-res track is a wall; the button has
-    to say so rather than let a disc be spent finding out."""
-    monkeypatch.setattr(decode, "can_convert", lambda: False)
-    sources = _sources(tmp_path, 1) + [(_write_wav(tmp_path / "hi.wav", rate=48000), "Hi-res", "A")]
+def test_each_track_gets_a_verdict_before_the_button(qt_app, tmp_path, burnable):
+    """A surround file is a wall -- audio_engine deliberately doesn't mix
+    channels -- and the button has to say so rather than let a disc be
+    spent finding out."""
+    sources = _sources(tmp_path, 1) + [
+        (_write_wav(tmp_path / "surround.wav", rate=48000, channels=6), "Surround", "A")
+    ]
     dialog = BurnDialog(sources, album="Album", artist="Artist")
 
     assert dialog.table.item(0, COL_STATUS).text() == "OK"
-    assert "44100" in dialog.table.item(1, COL_STATUS).text()
+    assert "48000" in dialog.table.item(1, COL_STATUS).text()
     assert dialog.burn_button.isEnabled() is False, "a disc that cannot be written must not offer to be"
 
 
-def test_a_track_that_will_be_converted_says_so_without_blocking_the_burn(qt_app, tmp_path, burnable, monkeypatch):
-    monkeypatch.setattr(decode, "can_convert", lambda: True)
+def test_a_track_that_will_be_converted_says_so_without_blocking_the_burn(qt_app, tmp_path, burnable):
     sources = _sources(tmp_path, 1) + [(_write_wav(tmp_path / "hi.wav", rate=48000), "Hi-res", "A")]
 
     dialog = BurnDialog(sources, album="Album", artist="Artist")
@@ -329,39 +330,6 @@ def test_an_empty_folder_says_so_rather_than_opening_an_empty_dialog(qt_app, tmp
     MainWindow(show_startup_dialog=False)._burn_cd_from_folder()
 
     assert warned
-
-
-def test_burning_from_foobar_uses_the_playlists_own_paths_and_titles(qt_app, tmp_path, monkeypatch):
-    items = [
-        foobar.PlaylistItem(
-            track_number="1",
-            title="Feel Invincible",
-            album_artist="Skillet",
-            album="Unleashed",
-            date="2016",
-            length_seconds=213,
-            artist="Skillet",
-            path=str(tmp_path / "01.flac"),
-        )
-    ]
-    monkeypatch.setattr(
-        foobar.FoobarClient, "current_playlist", lambda self: foobar.Playlist(id="p1", title="Default", item_count=1, is_current=True)
-    )
-    monkeypatch.setattr(foobar.FoobarClient, "playlist_items", lambda self, playlist_id, limit=500: items)
-
-    captured = {}
-    monkeypatch.setattr(
-        MainWindow,
-        "_run_burn_dialog",
-        lambda self, sources, *, album, artist, year: captured.update(
-            sources=sources, album=album, artist=artist
-        ),
-    )
-
-    MainWindow(show_startup_dialog=False)._burn_cd_from_foobar()
-
-    assert captured["sources"] == [(tmp_path / "01.flac", "Feel Invincible", "Skillet")]
-    assert (captured["album"], captured["artist"]) == ("Unleashed", "Skillet")
 
 
 def test_a_written_disc_offers_its_details_to_an_open_cd_project(qt_app, tmp_path, monkeypatch, burnable):

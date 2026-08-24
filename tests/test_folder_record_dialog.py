@@ -1,13 +1,10 @@
 """Recording > Record Folder to MiniDisc.
 
 The third source of a recording, and the one with the least of its own
-machinery: it puts files into foobar2000's playlist and reads back what
-foobar made of them. So most of what is worth pinning down here is about
-the boundary between "what the files say" and "what the user typed", and
-about not touching foobar before the user has committed to it.
-
-The worker thread is exercised by calling run() directly. Its whole body is
-two client calls and a signal; scheduling a real thread would test Qt.
+machinery: it reads each file's own tags directly (via
+tracks.playlist_items_from_paths, mutagen underneath) and reconciles them
+with what the user typed. So most of what is worth pinning down here is
+about the boundary between "what the files say" and "what the user typed".
 """
 
 from __future__ import annotations
@@ -15,9 +12,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from PySide6.QtWidgets import QDialog, QMessageBox
+from PySide6.QtWidgets import QDialog
 
-from mdtools import app_settings, foobar
+from mdtools import app_settings, tracks
 from mdtools.panels import folder_record_dialog as module
 from mdtools.panels.folder_record_dialog import FolderRecordDialog
 from mdtools.project import ProjectMetadata
@@ -34,22 +31,12 @@ def no_network(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def no_auto_load(monkeypatch):
-    """Choosing a folder now sends it to foobar2000 straight away, so every
-    set_folder() below would otherwise start a worker thread against a real
-    foobar. Yields the real method, for the tests that do want it."""
+    """Choosing a folder now reads its files' tags straight away, which
+    would touch real (garbage, zero-byte) test fixtures via mutagen. Yields
+    the real method, for the tests that do want it."""
     real = FolderRecordDialog._load
     monkeypatch.setattr(FolderRecordDialog, "_load", lambda self: None)
     return real
-
-
-@pytest.fixture(autouse=True)
-def no_message_boxes(monkeypatch):
-    """A real QMessageBox.exec blocks forever under the offscreen
-    platform."""
-    seen: list[str] = []
-    monkeypatch.setattr(QMessageBox, "warning", lambda *a, **k: seen.append(a[2] if len(a) > 2 else ""))
-    return seen
-
 
 
 def _png() -> bytes:
@@ -64,6 +51,7 @@ def _png() -> bytes:
     image.save(buffer, "PNG")
     return bytes(buffer.data())
 
+
 def _album(folder: Path, *names: str) -> Path:
     folder.mkdir(parents=True, exist_ok=True)
     for name in names:
@@ -72,8 +60,15 @@ def _album(folder: Path, *names: str) -> Path:
 
 
 def _item(number="", title="", album_artist="", album="", date="", length="200", artist="", path=""):
-    return foobar.PlaylistItem.from_columns(
-        [number, title, album_artist, album, date, length, artist, path]
+    return tracks.PlaylistItem(
+        track_number=number,
+        title=title,
+        album_artist=album_artist,
+        album=album,
+        date=date,
+        length_seconds=int(length or 0),
+        artist=artist,
+        path=path,
     )
 
 
@@ -128,8 +123,8 @@ def test_a_folder_with_no_audio_cannot_be_recorded(qt_app, tmp_path):
 
 def test_the_album_is_guessed_from_the_folder_name(qt_app, tmp_path):
     """Not authoritative -- it fills editable fields, and the tags win over
-    it as soon as foobar has read them. Without it an untagged folder has
-    no name at all."""
+    it as soon as they have been read. Without it an untagged folder has no
+    name at all."""
     dialog = FolderRecordDialog()
     dialog.set_folder(_album(tmp_path / "Skillet - Unleashed (2016)", "01 A.flac"))
 
@@ -161,47 +156,26 @@ def test_the_picker_comes_back_to_where_the_last_album_was(qt_app, tmp_path):
     assert FolderRecordDialog()._start_directory() == str(tmp_path / "Music")
 
 
-# --- loading ----------------------------------------------------------
+# --- reading the tags ---------------------------------------------------
 
 
-def test_the_worker_replaces_the_playlist_and_reads_it_back(qt_app, monkeypatch):
-    calls: list = []
+def test_a_real_load_reads_tags_directly_with_no_external_player(qt_app, tmp_path, monkeypatch, no_auto_load):
+    """End to end through the real _load(), not _on_loaded() -- proving the
+    swap from foobar2000 to tracks.playlist_items_from_paths actually
+    happened."""
+    monkeypatch.setattr(module, "fetch_into", lambda *a, **k: None)
+    monkeypatch.setattr(module.tracks, "playlist_items_from_paths", lambda paths: _tagged_items())
+    dialog = FolderRecordDialog()
+    dialog.set_folder(_album(tmp_path / "Skillet - Unleashed", "01 A.flac", "02 B.flac"))
 
-    class _Client:
-        def playlist_items(self, playlist_id, limit=500):
-            calls.append(("read", playlist_id))
-            return _tagged_items()
+    no_auto_load(dialog)  # the real _load, which the fixture stubbed out
 
-    def fake_replace(client, exe, paths):
-        calls.append(("replace", exe, [str(p) for p in paths]))
-        return foobar.Playlist(id="p1", title="Default", item_count=len(paths), is_current=True)
-
-    monkeypatch.setattr(module.foobar, "replace_current_playlist", fake_replace)
-
-    loaded: list = []
-    worker = module._LoadWorker(_Client(), "foobar2000.exe", [Path("/m/01.flac")])
-    worker.loaded.connect(loaded.append)
-    worker.run()
-
-    assert calls == [("replace", "foobar2000.exe", [str(Path("/m/01.flac"))]), ("read", "p1")]
-    assert len(loaded[0]) == 2
+    shown = [dialog.tree.topLevelItem(i).text(1) for i in range(dialog.tree.topLevelItemCount())]
+    assert shown == ["Feel Invincible", "Back From The Dead"]
+    assert dialog.record_btn.isEnabled()
 
 
-def test_a_foobar_failure_in_the_worker_is_reported_not_raised(qt_app, monkeypatch):
-    def boom(*args, **kwargs):
-        raise foobar.FoobarError("no playlist open")
-
-    monkeypatch.setattr(module.foobar, "replace_current_playlist", boom)
-
-    failures: list = []
-    worker = module._LoadWorker(object(), "foobar2000.exe", [Path("/m/01.flac")])
-    worker.failed.connect(failures.append)
-    worker.run()
-
-    assert failures == ["no playlist open"]
-
-
-def test_loading_shows_what_foobar_made_of_the_files_without_closing(qt_app, tmp_path, monkeypatch):
+def test_loading_shows_the_files_without_closing(qt_app, tmp_path, monkeypatch):
     """Two presses, not one: what was found has to be on screen before the
     recording window opens over it."""
     monkeypatch.setattr(module, "fetch_into", lambda *a, **k: None)
@@ -213,12 +187,13 @@ def test_loading_shows_what_foobar_made_of_the_files_without_closing(qt_app, tmp
     shown = [dialog.tree.topLevelItem(i).text(1) for i in range(dialog.tree.topLevelItemCount())]
     assert shown == ["Feel Invincible", "Back From The Dead"]
     assert dialog.result() != QDialog.DialogCode.Accepted, "still open to be looked at"
-    assert dialog.record_btn.isEnabled(), "Record only becomes possible once foobar has them"
+    assert dialog.record_btn.isEnabled()
 
     dialog._on_record()
 
     assert dialog.result() == QDialog.DialogCode.Accepted
     assert dialog.result_metadata.album == "Unleashed"
+    assert dialog.result_paths == dialog._paths
 
 
 def test_a_cover_chosen_by_hand_survives_the_hand_over(qt_app, tmp_path, monkeypatch):
@@ -235,30 +210,14 @@ def test_a_cover_chosen_by_hand_survives_the_hand_over(qt_app, tmp_path, monkeyp
     assert dialog.result_metadata.cover_art == _png()
 
 
-def test_a_folder_foobar_could_not_play_does_not_hand_anything_over(qt_app, tmp_path):
+def test_recording_before_anything_is_loaded_does_nothing(qt_app, tmp_path):
     dialog = FolderRecordDialog()
     dialog.set_folder(_album(tmp_path / "album", "01 A.flac"))
 
-    dialog._on_loaded([])
+    dialog._on_record()
 
     assert dialog.result_metadata is None
     assert dialog.result() != QDialog.DialogCode.Accepted
-
-
-def test_without_foobars_program_file_nothing_is_loaded(
-    qt_app, tmp_path, monkeypatch, no_message_boxes, no_auto_load
-):
-    """Beefweb refuses files outside its configured music folders, so the
-    command line is the only way in and its location has to be known."""
-    monkeypatch.setattr(app_settings, "foobar_exe", lambda: "")
-    monkeypatch.setattr(module.foobar, "find_foobar_exe", lambda: None)
-    dialog = FolderRecordDialog()
-    dialog.set_folder(_album(tmp_path / "album", "01 A.flac"))
-
-    no_auto_load(dialog)  # the real _load, which the fixture stubbed out
-
-    assert dialog._worker is None
-    assert no_message_boxes, "the user has to be told why"
 
 
 # --- what the disc gets titled from -----------------------------------
@@ -307,7 +266,7 @@ def test_what_the_user_typed_beats_what_the_tags_say(qt_app, tmp_path, monkeypat
 
 def test_the_folder_name_never_renames_a_properly_tagged_album(qt_app, tmp_path, monkeypatch):
     """The bug the three-way precedence exists to stop. The fields are
-    prefilled from the folder name before foobar has read a single tag, so
+    prefilled from the folder name before a single tag has been read, so
     treating whatever is in them as the user's word let a folder called
     "Disc 1" rename a tagged record to "Disc 1"."""
     monkeypatch.setattr(module, "fetch_into", lambda *a, **k: None)

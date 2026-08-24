@@ -44,7 +44,7 @@ def _menu_titles(window: MainWindow) -> list[str]:
 
 def _entries(window: MainWindow) -> list[str]:
     """Every action text in the Recording menu, separators dropped."""
-    menu = window.record_action.parent()
+    menu = window.record_cd_action.parent()
     return [action.text() for action in menu.actions() if not action.isSeparator()]
 
 
@@ -57,13 +57,11 @@ def test_the_menu_is_called_recording(qt_app):
     assert "&Project" not in titles
 
 
-def test_it_holds_the_three_sources_a_recording_can_come_from(qt_app):
-    """A CD, a folder of files, and whatever foobar2000 already has open.
-    All three end in the same recording."""
+def test_it_holds_the_two_sources_a_recording_can_come_from(qt_app):
+    """A CD, and a folder of files. Both end in the same recording."""
     entries = _entries(_window())
     assert "Record CD to MiniDisc..." in entries
     assert "Record Folder to MiniDisc..." in entries
-    assert "Record to MiniDisc from foobar2000..." in entries
 
 
 def test_the_metadata_editor_is_no_longer_in_it(qt_app):
@@ -196,6 +194,7 @@ def test_the_folders_metadata_is_carried_into_the_recording(qt_app, isolated_set
 
     class _Accepted:
         result_metadata = captured
+        result_paths = ["01.flac"]
 
         def __init__(self, *args, **kwargs):
             pass
@@ -208,7 +207,7 @@ def test_the_folders_metadata_is_carried_into_the_recording(qt_app, isolated_set
     class _FakeRecord:
         result_metadata = None
 
-        def __init__(self, port, url, parent=None, metadata=None):
+        def __init__(self, port, paths, parent=None, metadata=None):
             handed.append(metadata)
 
         def exec(self):
@@ -234,6 +233,7 @@ def test_a_given_initial_folder_is_preseeded_via_set_folder(qt_app, isolated_set
 
     class _FakeFolderDialog:
         result_metadata = None
+        result_paths = ["01.flac"]
 
         def __init__(self, *args, **kwargs):
             pass
@@ -247,7 +247,7 @@ def test_a_given_initial_folder_is_preseeded_via_set_folder(qt_app, isolated_set
     class _FakeRecord:
         result_metadata = None
 
-        def __init__(self, port, url, parent=None, metadata=None):
+        def __init__(self, port, paths, parent=None, metadata=None):
             pass
 
         def exec(self):

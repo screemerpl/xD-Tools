@@ -39,8 +39,6 @@ _MDREM_ENABLED_KEY = "mdrem_enabled"
 _EXPERIMENTAL_FEATURES_ENABLED_KEY = "experimental_features_enabled"
 _MDREM_PORT_KEY = "mdrem_port"
 _MDREM_EXTENDED_REMOTE_KEY = "mdrem_extended_remote"
-_FOOBAR_URL_KEY = "foobar_url"
-_FOOBAR_EXE_KEY = "foobar_exe"
 _CD_RIP_FOLDER_KEY = "cd_rip_folder"
 _CD_DRIVE_KEY = "cd_drive"
 _MUSIC_FOLDER_KEY = "music_folder"
@@ -52,9 +50,6 @@ _TELEGRAM_PHONE_KEY = "telegram_phone"
 _REGENERATE_FONT_FAMILY_KEY = "regenerate_font_family"
 _AUDIO_OUTPUT_DEVICE_KEY = "audio_output_device"
 _RECORDING_GAIN_DB_KEY = "recording_gain_db"
-
-# foo_beefweb's own default listening address.
-DEFAULT_FOOBAR_URL = "http://localhost:8880"
 
 
 def _config_dir() -> Path:
@@ -220,32 +215,6 @@ def recording_gain_db() -> float:
 
 def set_recording_gain_db(value: float) -> None:
     _settings().setValue(_RECORDING_GAIN_DB_KEY, float(value))
-
-
-def foobar_url() -> str:
-    """Base URL of foobar2000's Beefweb Remote Control component, used by
-    Record to MiniDisc. Configurable because Beefweb's port is."""
-    return str(_settings().value(_FOOBAR_URL_KEY, DEFAULT_FOOBAR_URL) or DEFAULT_FOOBAR_URL)
-
-
-def set_foobar_url(value: str) -> None:
-    _settings().setValue(_FOOBAR_URL_KEY, str(value).strip() or DEFAULT_FOOBAR_URL)
-
-
-def foobar_exe() -> str:
-    """foobar2000's own executable, which Record CD needs *in addition to*
-    the Beefweb URL above -- the two do different halves of the same job.
-    Beefweb cannot be given files outside its configured music directories
-    (see foobar.add_files_via_cli), so the ripped tracks go in through the
-    command line instead.
-
-    Empty means "not chosen yet"; callers fall back to
-    foobar.find_foobar_exe()."""
-    return str(_settings().value(_FOOBAR_EXE_KEY, "") or "")
-
-
-def set_foobar_exe(value: str) -> None:
-    _settings().setValue(_FOOBAR_EXE_KEY, str(value).strip())
 
 
 def default_cd_rip_folder() -> str:

@@ -51,16 +51,14 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
-import mutagen
-
 from mdtools.embedded_cover import flac_tags
-from mdtools.foobar import PlaylistItem, metadata_from_playlist
 from mdtools.multidisc import (
     breaks_from_disc_numbers,
     leading_number,
     order_by_disc_and_track,
 )
 from mdtools.project import ProjectMetadata
+from mdtools.tracks import metadata_from_playlist, playlist_items_from_paths
 
 # What foobar2000 plays out of the box, plus the common lossless oddities.
 # A generous list rather than a strict one: a file it turns out not to
@@ -242,15 +240,15 @@ def metadata_from_folder(folder: Path | str) -> ProjectMetadata:
     "Import from Folder..." button, standing in for what used to be "Load
     from foobar2000" there.
 
-    Builds the same `foobar.PlaylistItem` records the live-playlist path
-    builds, then hands them to `foobar.metadata_from_playlist()`
+    Builds the same `tracks.PlaylistItem` records the recording flows
+    build, then hands them to `tracks.metadata_from_playlist()`
     unchanged -- so the album/artist/year majority-vote and
-    compilation-naming logic (`foobar.album_title()`/`album_artist()`/
+    compilation-naming logic (`tracks.album_title()`/`album_artist()`/
     `apply_compilation_naming()`) is exactly the same code either way,
-    fed from files instead of a running player, not a second copy of it
-    that could drift from the original.
+    not a second copy of it that could drift from the original.
 
-    Reads tags with `mutagen`'s "easy" interface rather than
+    Reads tags with `mutagen`'s "easy" interface (via
+    `tracks.playlist_items_from_paths()`) rather than
     `embedded_cover.flac_tags()` (the hand-rolled, FLAC-only parser
     `album_from_folder()` above uses): this button's whole point is
     reading whatever is actually in the tags, and mutagen reads whatever
@@ -258,36 +256,7 @@ def metadata_from_folder(folder: Path | str) -> ProjectMetadata:
     more -- under one common set of field names, where the hand-rolled
     parser only ever understood FLAC."""
     paths = list_audio_files(Path(folder))
-    items = [_playlist_item_from_file(path, number) for number, path in enumerate(paths, start=1)]
-    return metadata_from_playlist(items)
-
-
-def _playlist_item_from_file(path: Path, track_number: int) -> PlaylistItem:
-    """One file read as though foobar2000 had reported it -- the same
-    fields `PlaylistItem.from_columns()` builds from Beefweb's columns,
-    just read directly off the file instead."""
-    try:
-        audio = mutagen.File(str(path), easy=True)
-    except mutagen.MutagenError:
-        audio = None
-    tags = audio.tags if audio is not None and audio.tags is not None else {}
-
-    def tag(name: str) -> str:
-        value = tags.get(name)
-        return value[0].strip() if value else ""
-
-    length = int(audio.info.length) if audio is not None and audio.info is not None else 0
-    return PlaylistItem(
-        track_number=tag("tracknumber") or str(track_number),
-        title=tag("title") or path.stem,
-        album_artist=tag("albumartist"),
-        album=tag("album"),
-        date=tag("date"),
-        length_seconds=length,
-        artist=tag("artist"),
-        path=str(path),
-        disc_number=tag("discnumber"),
-    )
+    return metadata_from_playlist(playlist_items_from_paths(paths))
 
 
 def _commonest(values: list[str]) -> str:

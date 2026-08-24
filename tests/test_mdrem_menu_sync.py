@@ -51,7 +51,7 @@ def _settings_returning(monkeypatch, enabled: bool):
 def test_the_entry_is_hidden_without_the_adapter(qt_app, isolated_settings):
     app_settings.set_mdrem_enabled(False)
 
-    assert _window().record_action.isVisible() is False
+    assert _window().record_folder_action.isVisible() is False
 
 
 def test_the_entry_appears_when_the_adapter_is_switched_on(qt_app, isolated_settings, monkeypatch):
@@ -61,7 +61,7 @@ def test_the_entry_appears_when_the_adapter_is_switched_on(qt_app, isolated_sett
 
     window._show_settings()
 
-    assert window.record_action.isVisible()
+    assert window.record_folder_action.isVisible()
 
 
 def test_the_entry_disappears_when_the_adapter_is_switched_off(qt_app, isolated_settings, monkeypatch):
@@ -69,12 +69,12 @@ def test_the_entry_disappears_when_the_adapter_is_switched_off(qt_app, isolated_
     to split tracks through an adapter that was no longer enabled."""
     app_settings.set_mdrem_enabled(True)
     window = _window()
-    assert window.record_action.isVisible(), "precondition"
+    assert window.record_folder_action.isVisible(), "precondition"
     _settings_returning(monkeypatch, False)
 
     window._show_settings()
 
-    assert window.record_action.isVisible() is False
+    assert window.record_folder_action.isVisible() is False
 
 
 def test_recording_refuses_outright_without_the_adapter(qt_app, isolated_settings, monkeypatch):
@@ -86,7 +86,7 @@ def test_recording_refuses_outright_without_the_adapter(qt_app, isolated_setting
         app_module, "resolve_port", lambda *a, **k: pytest.fail("must not go looking for a port")
     )
 
-    _window()._record_from_foobar()
+    _window()._record_folder()
 
 
 def test_the_real_settings_dialog_keeps_the_menu_in_step(qt_app, isolated_settings, monkeypatch):
@@ -99,7 +99,7 @@ def test_the_real_settings_dialog_keeps_the_menu_in_step(qt_app, isolated_settin
     window._show_settings()
 
     assert app_settings.mdrem_enabled() is True
-    assert window.record_action.isVisible()
+    assert window.record_folder_action.isVisible()
 
 
 # --- and the Remote Control entry alongside it ------------------------------
@@ -224,6 +224,7 @@ def test_a_finished_rip_hands_straight_over_to_the_recording_dialog(qt_app, isol
 
     class _AcceptedRip:
         result_metadata = identified
+        result_paths = ["01.flac"]
 
         def __init__(self, *args, **kwargs):
             pass
@@ -236,8 +237,8 @@ def test_a_finished_rip_hands_straight_over_to_the_recording_dialog(qt_app, isol
     class _FakeRecord:
         result_metadata = None
 
-        def __init__(self, port, url, parent=None, metadata=None):
-            recorded.append((port, metadata))
+        def __init__(self, port, paths, parent=None, metadata=None):
+            recorded.append((port, paths, metadata))
 
         def exec(self):
             return QDialog.DialogCode.Accepted
@@ -248,7 +249,6 @@ def test_a_finished_rip_hands_straight_over_to_the_recording_dialog(qt_app, isol
     _window()._record_cd()
 
     # The rip's own metadata goes with it. Its titles are the ones it wrote
-    # into the files, so they say what the playlist says; what it adds is
-    # the artwork found while identifying the disc, which nothing in a
-    # playlist carries.
-    assert recorded == [("COM7", identified)]
+    # into the files, so they say what the files say; what it adds is the
+    # artwork found while identifying the disc, which a tag does not carry.
+    assert recorded == [("COM7", ["01.flac"], identified)]

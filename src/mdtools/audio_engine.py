@@ -3,13 +3,15 @@ and real-time playback -- replacing flac.exe, SoX and foobar2000's own
 playback role with `soundfile` (libsndfile) + soxr + a verified
 noise-shaped dither + sounddevice, respectively.
 
-This module is the *foundation* only -- decode.py's SoX-backed conversion
-and cdrip.py's flac.exe encode still run as they always have, and every
-recording dialog still drives foobar2000. Nothing here is wired into any
-of those yet; this is the self-contained engine those call sites will be
-switched over to, one at a time, once each swap has its own test coverage
-in place. No Qt here either, matching cdrip.py/decode.py/mdrem.py's own
-"plain module, testable without a QApplication" rule.
+`decode.py`'s FLAC/WAV conversion and `cdrip.py`'s FLAC encode are both
+switched over to this module already (no SoX/flac.exe subprocess left in
+either). Every recording dialog (MiniDisc, cassette, CD rip, folder
+record) is being migrated the same way, from driving foobar2000 over
+Beefweb to using this module's own `AudioPlayer` directly -- see
+`tracks.py` for the metadata half of that same migration (the
+`PlaylistItem`/tag-reading helpers that used to live in `foobar.py`). No
+Qt here either, matching cdrip.py/decode.py/mdrem.py's own "plain module,
+testable without a QApplication" rule.
 
 Several design decisions came out of real measurement, not assumption --
 worth keeping in mind before touching any of this:
@@ -142,15 +144,39 @@ def decode_flac_to_wav(source: Path | str, destination: Path | str) -> None:
         raise AudioEngineError(f"{source.name} could not be decoded -- it may not be a valid FLAC file")
 
 
+# libsndfile's own fixed set of string metadata IDs (the SF_STR_* enum) --
+# not a soundfile-version detail, a genuine limit of the underlying C
+# library's `sf_set_string()` call. **Anything outside this set is silently
+# dropped, not rejected**: `SoundFile.__setattr__` only intercepts these
+# names and calls `sf_set_string()` for them; any other attribute name
+# (confirmed directly -- `ALBUMARTIST`/`DISCNUMBER` specifically, both of
+# which cdrip.py's own multi-disc/compilation tagging writes) just becomes
+# an ordinary Python instance attribute on the `SoundFile` object and never
+# reaches the file at all. `encode_wav_to_flac()` below writes these
+# through `sf_set_string()` directly and everything else through a second,
+# explicit `mutagen` pass -- see its own docstring.
+_LIBSNDFILE_STRING_TAGS = frozenset(
+    {"title", "copyright", "software", "artist", "comment", "date", "album", "license", "tracknumber", "genre"}
+)
+
+
 def encode_wav_to_flac(
     source: Path | str,
     destination: Path | str,
     tags: dict[str, str] | None = None,
 ) -> None:
     """cdrip.py's own `encode_command()` (flac.exe with one
-    `--tag=name=value` per tag), replaced: libsndfile writes the FLAC
-    *and* the tags in one pass -- unlike pyflac, which has no tag support
-    at all and needed a second pass through mutagen for that half.
+    `--tag=name=value` per tag), replaced: libsndfile writes the FLAC and
+    most tags in one pass -- unlike pyflac, which has no tag support at
+    all and needed a second pass through mutagen for every tag.
+
+    **A second, explicit mutagen pass is still needed for tags outside
+    libsndfile's own fixed SF_STR_* set** -- see `_LIBSNDFILE_STRING_TAGS`'s
+    own comment for how this was found (a real, silent tag loss: neither
+    `ALBUMARTIST` nor `DISCNUMBER`, both written by cdrip.py, ever reached
+    a ripped file). Confirmed directly by reading a real encoded file back
+    with mutagen -- not assumed from soundfile's docs, which do not
+    mention the limitation at all.
 
     No `compression_level` parameter: `SoundFile.compression_level` is a
     read-only property in this soundfile version (confirmed directly --
@@ -160,6 +186,9 @@ def encode_wav_to_flac(
     flag was ever passed)."""
     _require_soundfile()
     source, destination = Path(source), Path(destination)
+    tags = tags or {}
+    native = {name: value for name, value in tags.items() if name.lower() in _LIBSNDFILE_STRING_TAGS}
+    extra = {name: value for name, value in tags.items() if name.lower() not in _LIBSNDFILE_STRING_TAGS}
     try:
         data, rate = sf.read(str(source), dtype="int16", always_2d=True)
         with sf.SoundFile(
@@ -170,9 +199,16 @@ def encode_wav_to_flac(
             subtype="PCM_16",
             format="FLAC",
         ) as out:
-            for name, value in (tags or {}).items():
+            for name, value in native.items():
                 setattr(out, name.lower(), str(value))
             out.write(data)
+        if extra:
+            import mutagen.flac
+
+            audio = mutagen.flac.FLAC(str(destination))
+            for name, value in extra.items():
+                audio[name.lower()] = str(value)
+            audio.save()
     except Exception as exc:
         raise AudioEngineError(f"{source.name} could not be encoded: {exc}") from exc
     if not destination.exists() or destination.stat().st_size == 0:
@@ -278,13 +314,14 @@ def resample_and_dither_to_red_book(source: Path | str, destination: Path | str)
     effect for the bit depth. Mono is duplicated to two identical
     channels, matching what SoX's own `-c 2` does to a mono source.
 
-    Deliberately scoped to mono/stereo input only -- decode.py's own
-    dispatcher routes anything with more than two channels (real-world
-    surround audio) to SoX instead, which does genuine channel mixing;
-    naively keeping only the first two channels here would silently drop
-    the rest, exactly the kind of silent-wrong-answer this app avoids
-    elsewhere (see cdrip.py/decode.py's own "never quietly misreport"
-    rules)."""
+    Deliberately scoped to mono/stereo input only -- decode.py refuses
+    anything with more than two channels (real-world surround audio)
+    before this is ever called, since nothing here does genuine channel
+    mixing; naively keeping only the first two channels here would
+    silently drop the rest, exactly the kind of silent-wrong-answer this
+    app avoids elsewhere (see cdrip.py/decode.py's own "never quietly
+    misreport" rules). Enforced here too, not just left to the caller's
+    own dispatch logic."""
     _require_soundfile()
     source, destination = Path(source), Path(destination)
 
@@ -312,6 +349,38 @@ def resample_and_dither_to_red_book(source: Path | str, destination: Path | str)
         sf.write(str(destination), interleaved, RED_BOOK_RATE, subtype="PCM_16")
     except Exception as exc:
         raise AudioEngineError(f"{destination.name} could not be written: {exc}") from exc
+
+
+def load_for_playback(paths: list[Path | str], *, samplerate: int = RED_BOOK_RATE) -> list[np.ndarray]:
+    """One decoded, resampled float32 buffer per path, ready for
+    `AudioPlayer.play()` -- the recording dialogs' replacement for handing
+    files to foobar2000's own playlist.
+
+    No dithering: that exists for the file that actually gets *written* to
+    a CD, not for what is monitored/sent out to a deck over S/PDIF, so this
+    is just decode + resample, at `AudioPlayer`'s own float32 domain
+    throughout (`resample_and_dither_to_red_book()`'s int16 quantising
+    step is deliberately skipped here). Mono is left mono -- `AudioPlayer`
+    already duplicates a mono buffer to every output channel itself
+    (`_as_stereo()`), so doing it twice here would be redundant, not
+    wrong, but redundant."""
+    _require_soundfile()
+    buffers = []
+    for path in paths:
+        path = Path(path)
+        try:
+            samples, rate = sf.read(str(path), dtype="float32", always_2d=True)
+        except Exception as exc:
+            raise AudioEngineError(f"{path.name} could not be read: {exc}") from exc
+        if samples.shape[1] > RED_BOOK_CHANNELS:
+            raise AudioEngineError(
+                f"{path.name} has {samples.shape[1]} channels; only mono and stereo are supported here"
+            )
+        if samples.shape[1] == 1:
+            samples = samples[:, 0]
+        resampled = resample(samples, rate, samplerate).astype(np.float32)
+        buffers.append(resampled)
+    return buffers
 
 
 # --- playback / device selection (sounddevice) -----------------------------
@@ -408,6 +477,26 @@ class AudioPlayer:
         self._position_in_current = 0
         self._on_track_boundary: Callable[[int], None] | None = None
         self._on_finished: Callable[[], None] | None = None
+
+    @property
+    def samplerate(self) -> int:
+        return self._samplerate
+
+    @property
+    def queue_index(self) -> int:
+        """Which buffer is currently playing -- a plain read of state the
+        audio callback thread also writes, so this is a display-only
+        value (a progress bar), never something to make a recording
+        decision from. `on_track_boundary`/`on_finished` are the
+        authoritative, exact signals for that."""
+        return self._queue_index
+
+    @property
+    def position_seconds(self) -> float:
+        """How far into the current buffer playback has reached, for a
+        progress bar's smooth tick between the exact `on_track_boundary`
+        callbacks -- same "display-only" caveat as `queue_index`."""
+        return self._position_in_current / self._samplerate
 
     def play(
         self,

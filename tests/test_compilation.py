@@ -9,7 +9,7 @@ has to be provably untouched.
 
 from __future__ import annotations
 
-from mdtools import foobar
+from mdtools import tracks
 from mdtools.project import (
     MIXTAPE_ALBUM,
     VARIOUS_ARTISTS,
@@ -55,7 +55,7 @@ def test_an_ordinary_album_is_not_a_compilation():
 
 def test_a_guest_feature_does_not_make_an_album_a_compilation():
     """"Falling In Reverse, Jelly Roll" is the same record's own track. This
-    is the exact distinction foobar.album_artist() was already written to
+    is the exact distinction tracks.album_artist() was already written to
     respect, and it must not be undone here."""
     album = _album()
     assert len({track.artist for track in album.tracks}) > 1, "precondition: the credits do differ"
@@ -115,13 +115,13 @@ def test_a_mixtapes_track_lines_name_who_plays_on_each_one():
     assert lines[0] == "1. New Order - Blue Monday (7:14)"
 
 
-# --- through foobar ---------------------------------------------------
+# --- through tracks.py -------------------------------------------------
 
 
-def _items(rows: list[tuple[str, str, str, str]]) -> list[foobar.PlaylistItem]:
+def _items(rows: list[tuple[str, str, str, str]]) -> list[tracks.PlaylistItem]:
     """rows of (title, album artist, album, artist)."""
     return [
-        foobar.PlaylistItem(
+        tracks.PlaylistItem(
             track_number=str(index),
             title=title,
             album_artist=album_artist,
@@ -141,7 +141,7 @@ def test_a_playlist_of_one_album_still_becomes_that_album():
             ("All My Life", "Falling In Reverse", "Popular Monster", "Falling In Reverse, Jelly Roll"),
         ]
     )
-    metadata = foobar.metadata_from_playlist(items)
+    metadata = tracks.metadata_from_playlist(items)
 
     assert metadata.album == "Popular Monster"
     assert metadata.artist == "Falling In Reverse"
@@ -158,7 +158,7 @@ def test_a_playlist_of_unrelated_tracks_becomes_a_mixtape():
             ("Tainted Love", "Soft Cell", "Non-Stop Erotic Cabaret", "Soft Cell"),
         ]
     )
-    metadata = foobar.metadata_from_playlist(items)
+    metadata = tracks.metadata_from_playlist(items)
 
     assert metadata.is_compilation() is True
     assert metadata.artist == VARIOUS_ARTISTS
@@ -176,27 +176,12 @@ def test_a_half_tagged_album_keeps_its_name():
             ("Harvester of Sorrow", "Metallica", "", "Metallica"),
         ]
     )
-    assert foobar.album_title(items) == "...And Justice for All"
+    assert tracks.album_title(items) == "...And Justice for All"
 
 
 def test_an_album_shared_by_nobody_reports_no_album_at_all():
     items = _items([("A", "X", "Album X", "X"), ("B", "Y", "Album Y", "Y")])
-    assert foobar.album_title(items) == ""
-
-
-def test_the_playlist_columns_ask_for_both_artist_fields():
-    """The difference between them is the entire signal. Losing either one
-    would make every compilation look like an album, or every guest feature
-    look like a compilation."""
-    assert "%artist%" in foobar._COLUMNS
-    assert "%album artist%" in foobar._COLUMNS
-
-
-def test_an_item_from_a_short_column_list_still_has_an_artist_field():
-    """Beefweb returning fewer columns than asked for must not raise -- the
-    existing padding behaviour has to cover the new column too."""
-    item = foobar.PlaylistItem.from_columns(["01", "Title"])
-    assert item.artist == ""
+    assert tracks.album_title(items) == ""
 
 
 # --- through the Metadata dialog --------------------------------------

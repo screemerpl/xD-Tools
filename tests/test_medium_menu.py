@@ -9,9 +9,9 @@ which has nothing to do with which label is open -- and that independence
 was itself deliberate once. It loses to a menu that matches the project.
 
 There used to be a separate "Burn Audio CD from ..." action beside the
-folder and foobar2000 record entries; those collapsed into one "Record"
-entry per source that does whatever the open project's medium calls for
-(see app_window._record_folder_dialog/_record_from_foobar).
+folder record entry; that collapsed into one "Record" entry per source
+that does whatever the open project's medium calls for (see
+app_window._record_folder_dialog).
 """
 
 import pytest
@@ -30,7 +30,6 @@ def window(qt_app, monkeypatch):
 
 def _visible(win) -> dict[str, bool]:
     return {
-        "record": win.record_action.isVisible(),
         "record_cd": win.record_cd_action.isVisible(),
         "record_folder": win.record_folder_action.isVisible(),
         "erase": win.erase_disc_action.isVisible(),
@@ -43,22 +42,22 @@ def test_a_minidisc_project_is_not_offered_the_cd_only_entries(window):
     window._sync_mdrem_actions()
 
     state = _visible(window)
-    assert state["record"] and state["record_folder"] and state["erase"] and state["remote"]
+    assert state["record_cd"] and state["record_folder"] and state["erase"] and state["remote"]
 
 
-def test_a_cd_project_is_still_offered_record_folder_and_foobar(window):
-    """These are the entries that now dispatch to burning on a CD
-    project -- they must stay visible, just doing something different."""
+def test_a_cd_project_is_still_offered_record_folder(window):
+    """This is the entry that now dispatches to burning on a CD project --
+    it must stay visible, just doing something different."""
     window.project.medium = MEDIUM_CD
     window._sync_mdrem_actions()
 
     state = _visible(window)
-    assert state["record"] and state["record_folder"]
+    assert state["record_folder"]
     assert not any(state[name] for name in ("record_cd", "erase", "remote"))
 
 
-def test_record_folder_and_foobar_do_not_disappear_with_the_adapter_on_a_cd_project(window, monkeypatch):
-    """They need the drive, not the infrared adapter, once the project is a
+def test_record_folder_does_not_disappear_with_the_adapter_on_a_cd_project(window, monkeypatch):
+    """It needs the drive, not the infrared adapter, once the project is a
     CD one -- the trap that made the Telegram entry worth a note of its
     own."""
     monkeypatch.setattr(app_settings, "mdrem_enabled", lambda: False)
@@ -66,7 +65,6 @@ def test_record_folder_and_foobar_do_not_disappear_with_the_adapter_on_a_cd_proj
     window._sync_mdrem_actions()
 
     assert window.record_folder_action.isVisible()
-    assert window.record_action.isVisible()
 
 
 def test_without_an_adapter_a_minidisc_project_keeps_only_what_works(window, monkeypatch):
@@ -95,7 +93,7 @@ def test_opening_a_project_of_the_other_medium_re_syncs_the_menu(window, tmp_pat
 
     window.project.medium = MEDIUM_MD
     window._sync_mdrem_actions()
-    assert window.record_action.isVisible()
+    assert window.record_folder_action.isVisible()
     assert window.record_cd_action.isVisible()
 
     assert window._open_project_path(str(path)) is True

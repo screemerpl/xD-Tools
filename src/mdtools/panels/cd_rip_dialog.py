@@ -6,20 +6,25 @@ The sequence:
   1. pick a drive and read the disc's table of contents
   2. identify it (MusicBrainz, by the TOC itself -- a CD carries no text)
   3. extract every track to a tagged FLAC in the rip folder
-  4. empty foobar2000's playlist and put those files in it, in disc order
-  5. hand off to RecordDialog, which is unchanged and unaware a CD was
-     ever involved
+  4. hand its file paths, in disc order, off to RecordDialog -- which is
+     unchanged and unaware a CD was ever involved
 
-Step 5 is the point of steps 1-4. Everything that makes recording work --
+Step 4 is the point of steps 1-3. Everything that makes recording work --
 arming the deck, the lead-in, a track mark at every boundary, titling
-afterwards -- already exists and is driven by whatever foobar2000 happens to
-have in its playlist. So this feature's job is not to record anything; it is
-to make the playlist say the right thing, and then get out of the way. Same
-hand-off shape as RecordDialog's own to MDRemUploadDialog.
+afterwards -- already exists and is driven by whichever files RecordDialog
+is handed. So this feature's job is not to record anything; it is to
+produce the right files in the right order, and hand their paths over.
+Same hand-off shape as RecordDialog's own to MDRemUploadDialog.
 
-Why rip at all, rather than let foobar play the CD directly: the disc would
-then be read in real time, during the recording, with nothing to fall back
-on. A drive that stumbles on a scratch at minute 31 would put that stumble
+This used to empty foobar2000's playlist and load the ripped files into it
+instead of handing paths over directly -- see RecordDialog's own module
+docstring for why that step (and the exe/Beefweb-reachability checks that
+came with it) is gone now that RecordDialog decodes and plays files
+itself, through AudioPlayer.
+
+Why rip at all, rather than play the CD directly during the recording: the
+disc would then be read in real time, with nothing to fall back on. A
+drive that stumbles on a scratch at minute 31 would put that stumble
 on the MiniDisc, and MiniDisc recording is not something you can retry a
 few seconds of. Ripping first moves every read error to a point where it
 costs nothing but a re-read -- which is exactly what cdparanoia spends its
@@ -57,7 +62,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mdtools import app_settings, cdrip, foobar, mixtape_cover, musicbrainz
+from mdtools import app_settings, cdrip, mixtape_cover, musicbrainz
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
 from mdtools.project import MEDIUM_MD, medium_name, ProjectMetadata, Track, apply_compilation_naming
 
@@ -89,13 +94,7 @@ def _same_name(left: str, right: str) -> bool:
 
 
 class _RipWorker(QThread):
-    """Extracts, encodes, and finally loads the result into foobar2000.
-
-    The playlist load is in here rather than back on the GUI thread because
-    of what it has to wait for: foobar accepts a command line immediately
-    but adds the files asynchronously, so somebody has to poll until the
-    count settles (foobar.wait_for_item_count), and that somebody must not
-    be the thread painting the window."""
+    """Extracts and encodes every track of the disc, in order."""
 
     track_started = Signal(int)
     progress = Signal(float)
@@ -104,24 +103,10 @@ class _RipWorker(QThread):
     cancelled = Signal()
     succeeded = Signal()
 
-    def __init__(
-        self,
-        device: str,
-        plan: cdrip.RipPlan,
-        client: foobar.FoobarClient,
-        exe: str,
-        parent=None,
-        playlist_paths=None,
-    ):
+    def __init__(self, device: str, plan: cdrip.RipPlan, parent=None):
         super().__init__(parent)
         self._device = device
         self._plan = plan
-        self._client = client
-        self._exe = exe
-        # Normally this disc's own files. When several discs are being
-        # ripped as one album it is every disc's, so the playlist ends up
-        # holding the album rather than whichever disc finished last.
-        self._playlist_paths = list(playlist_paths) if playlist_paths is not None else list(plan.flac_paths)
         self._cancelled = False
         self._total_sectors = max(1, sum(task.sectors for task in plan.tasks))
         self._done_sectors = 0
@@ -153,12 +138,10 @@ class _RipWorker(QThread):
             if self._cancelled:
                 self.cancelled.emit()
                 return
-            self.stage.emit("playlist")
-            foobar.replace_current_playlist(self._client, self._exe, self._playlist_paths)
         except cdrip.CdRipCancelled:
             self.cancelled.emit()
             return
-        except (cdrip.CdRipError, foobar.FoobarError) as exc:
+        except cdrip.CdRipError as exc:
             self.failed.emit(str(exc))
             return
         self.succeeded.emit()
@@ -175,7 +158,7 @@ class _RipWorker(QThread):
 
 
 class CdRipDialog(QDialog):
-    def __init__(self, base_url: str = foobar.DEFAULT_BASE_URL, parent=None, medium: str = MEDIUM_MD):
+    def __init__(self, parent=None, medium: str = MEDIUM_MD):
         """`medium` is only ever wording: the rip itself is the same work
         whichever machine the tracks are recorded onto afterwards, but a
         window headed "Record CD to MiniDisc" in front of a cassette
@@ -186,7 +169,6 @@ class CdRipDialog(QDialog):
         self._target = medium_name(medium)
         self.setWindowTitle(self._window_title())
         self.resize(560, 560)
-        self._client = foobar.FoobarClient(base_url)
         self._toc: cdrip.DiscToc | None = None
         self._releases: list[musicbrainz.DiscRelease] = []
         self._worker: _RipWorker | None = None
@@ -199,15 +181,18 @@ class CdRipDialog(QDialog):
         self._album_folder: Path | None = None
         self._done_tracks: list[Track] = []
         self._done_paths: list[Path] = []
+        self._current_paths: list[Path] = []
         self._advance_when_finished = False
         # Read by MainWindow after exec(): where the tracks were written, so
         # a message can name it.
         self.result_folder: Path | None = None
+        # The ripped files, in disc order -- handed straight to RecordDialog.
+        self.result_paths: list[Path] = []
         # And what the disc turned out to be. The titles in it are the same
-        # ones the playlist carries -- they were written into the files as
-        # tags, so there is no second source of truth to disagree with. What
-        # it adds is the artwork, which a FLAC file's tags do not carry here
-        # and which the user may have corrected by clicking the preview.
+        # ones the files are tagged with -- they were written as tags during
+        # encoding, so there is no second source of truth to disagree with.
+        # What it adds is the artwork, which a FLAC file's tags do not carry
+        # here and which the user may have corrected by clicking the preview.
         self.result_metadata: ProjectMetadata | None = None
 
         layout = QVBoxLayout(self)
@@ -504,8 +489,8 @@ class CdRipDialog(QDialog):
         Handed to RecordDialog so it opens on the album this is, artwork
         included. The titles in it are the same ones the ripped files are
         tagged with, so it is not a second source of truth competing with
-        the playlist -- it is the playlist's own contents plus a cover,
-        which a tag cannot carry to foobar and back."""
+        them -- it is their own contents plus a cover, which a tag does not
+        carry."""
         tracks = list(self._done_tracks)
         for index, track in enumerate(self._toc.tracks if self._toc else []):
             row = self.tree.topLevelItem(index)
@@ -534,16 +519,11 @@ class CdRipDialog(QDialog):
     def _start(self) -> None:
         if self._toc is None:
             return
-        exe = self._resolve_foobar_exe()
-        if exe is None:
-            return
-        if not self._foobar_reachable():
-            return
 
         plan = self.build_plan()
         self.result_metadata = self.build_metadata()
         # Previous rips go now, not at the end of this one: the files stay
-        # in foobar's playlist for as long as the user might replay them.
+        # around for as long as the user might still replay or record them.
         # Only ever before the *first* disc of a set, though -- the second
         # disc's rip would otherwise be tidying away the first disc's files
         # as it went, since they share a folder.
@@ -571,16 +551,11 @@ class CdRipDialog(QDialog):
         self.progress.setVisible(True)
         self.status_label.setText(self.tr("Starting..."))
 
-        self._worker = _RipWorker(
-            self.selected_device(),
-            plan,
-            self._client,
-            exe,
-            self,
-            # Everything ripped so far, so the playlist holds the whole
-            # album rather than only the disc that finished last.
-            playlist_paths=self._done_paths + list(plan.flac_paths),
-        )
+        # Everything ripped so far, so the final result holds the whole
+        # album rather than only the disc that finished last.
+        self._current_paths = self._done_paths + list(plan.flac_paths)
+
+        self._worker = _RipWorker(self.selected_device(), plan, self)
         self._worker.track_started.connect(self._on_track_started)
         self._worker.progress.connect(self._on_progress)
         self._worker.stage.connect(self._on_stage)
@@ -589,40 +564,6 @@ class CdRipDialog(QDialog):
         self._worker.succeeded.connect(self._on_succeeded)
         self._worker.finished.connect(self._on_worker_finished)
         self._worker.start()
-
-    def _resolve_foobar_exe(self) -> str | None:
-        """Checked before the rip, not after: finding out that the files
-        cannot be handed over is worth minutes if it happens first and
-        nothing if it happens last."""
-        exe = app_settings.foobar_exe() or (foobar.find_foobar_exe() or "")
-        if exe and Path(exe).is_file():
-            if not app_settings.foobar_exe():
-                app_settings.set_foobar_exe(exe)
-            return exe
-        QMessageBox.warning(
-            self,
-            self._window_title(),
-            self.tr(
-                "foobar2000 could not be found. The ripped tracks are loaded into it through its own program "
-                "file, so its location has to be set in Window > Settings..."
-            ),
-        )
-        return None
-
-    def _foobar_reachable(self) -> bool:
-        try:
-            self._client.current_playlist()
-        except foobar.FoobarError as exc:
-            QMessageBox.warning(
-                self,
-                self._window_title(),
-                self.tr(
-                    "Could not reach foobar2000: {error}\n\nIt must be running with the Beefweb Remote Control "
-                    "component (foo_beefweb) enabled."
-                ).format(error=exc),
-            )
-            return False
-        return True
 
     def _set_running(self, running: bool) -> None:
         for widget in (
@@ -656,8 +597,6 @@ class CdRipDialog(QDialog):
                     index=getattr(self, "_current_index", 0) + 1, count=len(self._plan.tasks)
                 )
             )
-        elif stage == "playlist":
-            self.status_label.setText(self.tr("Loading the tracks into foobar2000..."))
 
     def _on_progress(self, fraction: float) -> None:
         self.progress.setValue(int(_PROGRESS_SCALE * fraction))
@@ -681,7 +620,7 @@ class CdRipDialog(QDialog):
                 self.tr("Disc {number} is ripped.").format(number=self._disc)
             )
             return
-        self.status_label.setText(self.tr("The disc is ripped and loaded into foobar2000."))
+        self.status_label.setText(self.tr("The disc is ripped."))
         self._succeeded = True
 
     def _on_worker_finished(self) -> None:
@@ -698,6 +637,7 @@ class CdRipDialog(QDialog):
                 return
             self._succeeded = True
         if getattr(self, "_succeeded", False):
+            self.result_paths = list(self._current_paths)
             # Accepting is the hand-off: MainWindow opens RecordDialog next.
             self.accept()
             return

@@ -254,16 +254,13 @@ def _install_burner_stand_ins() -> None:
     drive already are -- otherwise every burn screenshot would show
     "Missing tools" and an empty drive list, which is a picture of a
     machine, not of the feature."""
-    from mdtools import cdburn, decode
+    from mdtools import cdburn
 
     cdburn.cdrecord_path = lambda: "cdrecord"
     cdburn.missing_tools = lambda: []
     cdburn.list_burners = lambda **_kwargs: [
         cdburn.Burner(device="1,0,0", description="HL-DT-ST DVDRAM GP20N 1.02")
     ]
-    # A hi-res album is what a download normally is, and the verdict column
-    # saying so is worth showing.
-    decode.can_convert = lambda: True
 
 
 def _install_cover_stand_in() -> None:

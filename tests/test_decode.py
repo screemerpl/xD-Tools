@@ -116,10 +116,7 @@ def test_a_red_book_wav_is_copied_not_re_encoded(tmp_path):
     source = _write_wav(tmp_path / "a.wav")
     destination = tmp_path / "out.wav"
 
-    def fail_if_run(*args, **kwargs):
-        raise AssertionError("a file that is already Red Book must not be run through anything")
-
-    decode.to_wav(source, destination, run=fail_if_run)
+    decode.to_wav(source, destination)
 
     assert destination.read_bytes() == source.read_bytes()
 
@@ -140,15 +137,10 @@ def test_a_flac_is_decoded_by_the_real_bundled_tool(tmp_path):
 def test_a_file_that_is_not_red_book_goes_through_audio_engine(tmp_path):
     """It used to be refused outright here, then went through SoX. Now a
     mono/stereo WAV/FLAC needing conversion goes through audio_engine
-    instead -- no subprocess `run` call at all, which is what
-    test_without_sox_a_hi_res_wav_still_works_below actually proves
-    (SoX isn't even needed for this case any more)."""
+    instead, with no external tool involved at all."""
     source = _write_wav(tmp_path / "hires.wav", rate=48000, seconds=0.5)
 
-    def fail_if_run(*args, **kwargs):
-        raise AssertionError("a mono/stereo WAV needing conversion must not run a subprocess")
-
-    out = decode.to_wav(source, tmp_path / "out.wav", run=fail_if_run)
+    out = decode.to_wav(source, tmp_path / "out.wav")
 
     properties = decode.analyze(out)
     assert properties.is_red_book is True
@@ -170,19 +162,12 @@ def test_a_genuinely_corrupt_flac_reports_audio_engines_own_message(tmp_path):
         decode.to_wav(flac, tmp_path / "out.wav")
 
 
-# -- resampling with SoX -------------------------------------------------
-
-
-def _sox_or_skip():
-    if decode.sox_path() is None:
-        pytest.skip("SoX is not bundled on this platform")
+# -- resampling and dithering, via audio_engine --------------------------
 
 
 def test_a_hi_res_flac_is_converted_rather_than_refused(tmp_path):
     """The case that started this: a 48 kHz / 24-bit album, which is what
-    a modern download normally is. No `_sox_or_skip()` guard -- FLAC
-    conversion goes through audio_engine regardless of whether SoX is
-    even installed."""
+    a modern download normally is."""
     wav = tmp_path / "hires.wav"
     with wave.open(str(wav), "wb") as handle:
         handle.setnchannels(2)
@@ -201,97 +186,34 @@ def test_a_hi_res_flac_is_converted_rather_than_refused(tmp_path):
     assert properties.duration_seconds == pytest.approx(2.0, abs=0.01)
 
 
-def test_a_file_that_is_already_red_book_is_not_run_through_anything(tmp_path):
+def test_a_file_that_is_already_red_book_is_not_re_encoded(tmp_path):
     source = _write_wav(tmp_path / "ok.wav")
+    destination = tmp_path / "out.wav"
 
-    def fail_if_run(*args, **kwargs):
-        raise AssertionError("nothing to convert")
+    decode.to_wav(source, destination)
 
-    decode.to_wav(source, tmp_path / "out.wav", run=fail_if_run)
-
-
-def test_without_sox_a_hi_res_wav_still_works_via_the_engine(tmp_path, monkeypatch):
-    """The behaviour this module's own docstring now describes: a mono/
-    stereo WAV or FLAC needing conversion no longer depends on SoX being
-    installed at all."""
-    monkeypatch.setattr(decode, "sox_path", lambda: None)
-    source = _write_wav(tmp_path / "hires.wav", rate=48000, seconds=0.3)
-
-    out = decode.to_wav(source, tmp_path / "out.wav")
-
-    assert decode.analyze(out).is_red_book is True
+    assert destination.read_bytes() == source.read_bytes()
 
 
-def test_without_sox_a_surround_file_is_still_refused_and_says_why(tmp_path, monkeypatch):
-    """The refusal this module's docstring describes is still real -- just
-    narrowed to the cases audio_engine deliberately doesn't attempt:
-    more than two channels, here, since a genuine channel mix still needs
-    SoX."""
-    monkeypatch.setattr(decode, "sox_path", lambda: None)
+def test_a_surround_file_is_refused_and_says_why(tmp_path):
+    """More than two channels is the one case audio_engine deliberately
+    doesn't attempt -- see decode.py's own header for why that is a scope
+    decision, not a limitation being routed around."""
     source = _write_wav(tmp_path / "surround.wav", rate=48000, channels=6)
 
     with pytest.raises(decode.DecodeError) as error:
         decode.to_wav(source, tmp_path / "out.wav")
 
-    assert "48000" in str(error.value)
-    assert "SoX" in str(error.value)
+    assert "6" in str(error.value)
 
 
-def test_the_convert_command_resamples_dithers_and_sets_the_depth():
-    command = decode.convert_command("sox", tmp_pathlike("in.flac"), tmp_pathlike("out.wav"))
-
-    assert command[0] == "sox"
-    assert command[command.index("-b") + 1] == "16"
-    assert command[command.index("-c") + 1] == "2"
-    # effects come after the output file -- SoX's own argument order
-    assert command[-4:] == ["rate", "-v", "44100", "dither"]
-
-
-def tmp_pathlike(name):
-    from pathlib import Path
-
-    return Path(name)
-
-
-def test_a_format_sox_reads_but_this_module_cannot_parse_itself(tmp_path):
-    """Ogg Vorbis has no header this project knows how to read, so its
-    length comes from SoX -- and the length is what decides how much of the
-    disc a track takes."""
-    _sox_or_skip()
-    ogg = tmp_path / "tone.ogg"
-    subprocess.run(
-        [decode.sox_path(), "-n", "-r", "44100", "-c", "2", str(ogg), "synth", "3", "sine", "440"],
-        capture_output=True,
-        check=True,
-    )
-
-    properties = decode.analyze(ogg)
-
-    assert properties.sample_rate == 44100
-    assert properties.channels == 2
-    assert properties.duration_seconds == pytest.approx(3.0, abs=0.05)
-
-
-def test_mp3_is_not_offered_because_this_build_of_sox_cannot_read_one():
-    """Its format list says mp3, but decoding needs libmad loaded at
-    runtime and the official package does not ship it -- promising it here
-    would turn a clear "unsupported" into a failure half way through a
-    burn."""
-    assert ".mp3" not in decode.CONVERTIBLE_SUFFIXES
+def test_mp3_is_not_a_supported_format():
     assert decode.is_supported("album.mp3") is False
 
 
-def test_sox_is_kept_apart_from_the_64_bit_tools():
-    """Its DLLs are 32-bit and share names with the ones cd-paranoia and
-    flac need -- unpacking it alongside them overwrote libwinpthread-1.dll
-    once already."""
-    sox = decode.sox_path()
-    if sox is None:
-        pytest.skip("SoX is not bundled on this platform")
-
-    from pathlib import Path
-
-    from mdtools import cdrip
-
-    assert Path(sox).parent == cdrip.tools_dir() / "sox"
-    assert not (cdrip.tools_dir() / "libsox-3.dll").exists()
+def test_an_unsupported_extension_is_not_offered():
+    """Ogg Vorbis, WavPack, AIFF and AU used to go through SoX; nothing
+    reads them any more, and that is a scope decision, not a gap."""
+    assert decode.is_supported("track.ogg") is False
+    assert decode.is_supported("track.wv") is False
+    assert decode.is_supported("track.aiff") is False

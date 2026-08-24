@@ -99,30 +99,14 @@ def test_window_menu_settings_action_opens_the_dialog(qt_app, monkeypatch):
     assert isinstance(opened[0], app_window_module.SettingsDialog)
 
 
-def test_the_foobar_address_setting_is_not_disabled_with_the_ir_adapter(qt_app, monkeypatch):
-    """Recording flows and the Metadata dialog's own foobar-reading path
-    (moved off to a folder-based import elsewhere, but the recording
-    dialogs still use foobar2000 directly) need foobar2000, not the MDRem
-    adapter -- tying the two together disabled a setting still needed."""
-    monkeypatch.setattr(SettingsDialog, "_populate_ports", lambda self, selected: None)
-    app_settings.set_mdrem_enabled(False)
-
-    dialog = SettingsDialog()
-
-    assert dialog.foobar_url_edit.isEnabled()
-    assert not dialog._mdrem_port_widget.isEnabled()
-
-
 # --- Record CD to MiniDisc settings -----------------------------------------
 
 
 def test_cd_rows_seed_from_settings_and_save_on_ok(qt_app, tmp_path):
     app_settings.set_cd_rip_folder(str(tmp_path / "rips"))
-    app_settings.set_foobar_exe(str(tmp_path / "foobar2000.exe"))
 
     dialog = SettingsDialog()
     assert dialog.cd_rip_folder_edit.text() == str(tmp_path / "rips")
-    assert dialog.foobar_exe_edit.text() == str(tmp_path / "foobar2000.exe")
 
     dialog.cd_rip_folder_edit.setText(str(tmp_path / "elsewhere"))
     dialog._on_accept()
@@ -143,17 +127,6 @@ def test_restore_defaults_puts_the_rip_folder_back(qt_app, tmp_path):
     dialog._restore_defaults()
 
     assert dialog.cd_rip_folder_edit.text() == app_settings.default_cd_rip_folder()
-
-
-def test_the_foobar_program_field_is_prefilled_by_detection_when_unset(qt_app, monkeypatch):
-    """A first run should not have to be told where foobar2000 is when the
-    installer already registered it."""
-    from mdtools.panels import settings_dialog as module
-
-    app_settings.set_foobar_exe("")
-    monkeypatch.setattr(module.foobar, "find_foobar_exe", lambda: r"C:\fb2k\foobar2000.exe")
-
-    assert SettingsDialog().foobar_exe_edit.text() == r"C:\fb2k\foobar2000.exe"
 
 
 # --- the CD rip folder ------------------------------------------------

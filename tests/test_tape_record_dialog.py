@@ -1,68 +1,49 @@
 """Recording onto a cassette: the split, the leader silence, and the flip.
 
-foobar2000 is faked throughout. There is no deck to fake -- that is the
-point of this medium: MDTools plays the tracks and tells the user what to
-press, and the only thing it can get wrong is *when*.
+AudioPlayer is faked throughout (see _FakePlayer). There is no deck to
+fake -- that is the point of this medium: xD-Tools plays the tracks and
+tells the user what to press, and the only thing it can get wrong is
+*when*.
 """
 
 import pytest
 from PySide6.QtWidgets import QMessageBox
 
-from mdtools import foobar, tape
+from mdtools import tape, tracks
 from mdtools.panels import tape_record_dialog as tape_module
 from mdtools.panels.tape_record_dialog import TapeRecordDialog
 
 
-class FakeClient:
-    def __init__(self, items=None, error: Exception | None = None):
-        self._items = items if items is not None else []
-        self._error = error
-        self.prepared = False
+class _FakePlayer:
+    def __init__(self, device=None, gain_db=0.0, samplerate=44100, channels=2):
+        self.gain_db = gain_db
+        self.samplerate = samplerate
         self.stopped = False
-        self.volume_set = None
-        self.played: tuple[str, int] | None = None
-        self.stop_after: list[bool] = []
-        self.state = foobar.PlayerState(foobar.STOPPED, "", -1, 0.0, 0.0)
+        self.played_buffers = None
+        self.on_track_boundary = None
+        self.on_finished = None
+        self.position_seconds = 0.0
 
-    def current_playlist(self):
-        if self._error:
-            raise self._error
-        return foobar.Playlist(id="p1", title="Default Playlist", item_count=len(self._items), is_current=True)
-
-    def playlist_items(self, playlist_id, limit=500):
-        if self._error:
-            raise self._error
-        return self._items
-
-    def player_state(self):
-        return self.state
-
-    def prepare_for_recording(self):
-        self.prepared = True
-
-    def set_volume(self, db):
-        self.volume_set = db
-
-    def set_stop_after_current_track(self, stop):
-        self.stop_after.append(stop)
+    def play(self, buffers, on_track_boundary=None, on_finished=None):
+        self.played_buffers = buffers
+        self.on_track_boundary = on_track_boundary
+        self.on_finished = on_finished
 
     def stop(self):
         self.stopped = True
 
-    def play(self, playlist_id, index):
-        self.played = (playlist_id, index)
-        self.state = foobar.PlayerState(foobar.PLAYING, playlist_id, index, 0.0, 200.0)
 
-    def playing(self, index, position=0.0):
-        self.state = foobar.PlayerState(foobar.PLAYING, "p1", index, position, 200.0)
-
-    def ended(self):
-        self.state = foobar.PlayerState(foobar.STOPPED, "p1", -1, 0.0, 0.0)
-
-
-def _items(count: int, seconds: int = 300) -> list[foobar.PlaylistItem]:
+def _items(count: int, seconds: int = 300) -> list[tracks.PlaylistItem]:
     return [
-        foobar.PlaylistItem.from_columns([f"{i:02d}", f"Track {i}", "Artist", "Album", "2024", str(seconds)])
+        tracks.PlaylistItem(
+            track_number=f"{i:02d}",
+            title=f"Track {i}",
+            album_artist="Artist",
+            album="Album",
+            date="2024",
+            length_seconds=seconds,
+            path=f"/music/{i:02d}.flac",
+        )
         for i in range(1, count + 1)
     ]
 
@@ -80,9 +61,19 @@ def no_modal_dialogs(monkeypatch):
     monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a, **k: None))
 
 
-def _dialog(client: FakeClient, monkeypatch, **kwargs) -> TapeRecordDialog:
-    monkeypatch.setattr(tape_module.foobar, "FoobarClient", lambda *a, **k: client)
-    return TapeRecordDialog(**kwargs)
+@pytest.fixture(autouse=True)
+def fake_player(monkeypatch):
+    """Never let a test reach sounddevice or a real file decode."""
+    monkeypatch.setattr(tape_module.audio_engine, "AudioPlayer", _FakePlayer)
+    monkeypatch.setattr(tape_module.audio_engine, "resolve_output_device", lambda name: None)
+    monkeypatch.setattr(
+        tape_module.audio_engine, "load_for_playback", lambda paths, samplerate=None: [None] * len(paths)
+    )
+
+
+def _dialog(items: list[tracks.PlaylistItem], monkeypatch, **kwargs) -> TapeRecordDialog:
+    monkeypatch.setattr(tape_module.tracks, "playlist_items_from_paths", lambda paths: items)
+    return TapeRecordDialog([item.path for item in items] or [], **kwargs)
 
 
 def _run_countdown(dialog: TapeRecordDialog) -> None:
@@ -94,8 +85,8 @@ def _run_countdown(dialog: TapeRecordDialog) -> None:
 # --- preflight -------------------------------------------------------------
 
 
-def test_the_playlist_is_listed_and_split_into_two_sides(qt_app, monkeypatch):
-    dialog = _dialog(FakeClient(_items(6, seconds=300)), monkeypatch)
+def test_the_album_is_listed_and_split_into_two_sides(qt_app, monkeypatch):
+    dialog = _dialog(_items(6, seconds=300), monkeypatch)
 
     assert dialog.tree.topLevelItemCount() == 6
     sides = [dialog.tree.topLevelItem(i).text(0) for i in range(6)]
@@ -103,19 +94,12 @@ def test_the_playlist_is_listed_and_split_into_two_sides(qt_app, monkeypatch):
     assert "Side A" in dialog.fit_label.text()
 
 
-def test_an_empty_playlist_cannot_be_recorded(qt_app, monkeypatch):
-    assert not _dialog(FakeClient([]), monkeypatch).start_btn.isEnabled()
-
-
-def test_an_unreachable_foobar_explains_itself_instead_of_raising(qt_app, monkeypatch):
-    dialog = _dialog(FakeClient(error=foobar.FoobarError("connection refused")), monkeypatch)
-
-    assert not dialog.start_btn.isEnabled()
-    assert "foo_beefweb" in dialog.summary_label.text()
+def test_no_tracks_cannot_be_recorded(qt_app, monkeypatch):
+    assert not _dialog([], monkeypatch).start_btn.isEnabled()
 
 
 def test_a_shorter_tape_moves_the_side_break(qt_app, monkeypatch):
-    dialog = _dialog(FakeClient(_items(8, seconds=300)), monkeypatch)  # 40 minutes
+    dialog = _dialog(_items(8, seconds=300), monkeypatch)  # 40 minutes
 
     dialog._select_length(90)
     long_break = [dialog.tree.topLevelItem(i).text(0) for i in range(8)].count("A")
@@ -127,7 +111,7 @@ def test_a_shorter_tape_moves_the_side_break(qt_app, monkeypatch):
 
 
 def test_an_album_too_long_for_the_chosen_tape_says_so_without_refusing(qt_app, monkeypatch):
-    dialog = _dialog(FakeClient(_items(6, seconds=600)), monkeypatch)  # an hour
+    dialog = _dialog(_items(6, seconds=600), monkeypatch)  # an hour
 
     dialog._select_length(46)
 
@@ -139,49 +123,27 @@ def test_an_album_too_long_for_the_chosen_tape_says_so_without_refusing(qt_app, 
 
 
 def test_nothing_plays_until_the_leader_silence_has_run(qt_app, monkeypatch):
-    client = FakeClient(_items(4))
-    dialog = _dialog(client, monkeypatch)
+    dialog = _dialog(_items(4), monkeypatch)
 
     dialog._on_start_clicked()
 
-    assert client.played is None
+    assert dialog._player.played_buffers is None
     assert str(tape.LEADER_SECONDS) in dialog.status_label.text()
     _run_countdown(dialog)
-    assert client.played == ("p1", 0)
+    assert dialog._player.played_buffers == [None, None]  # side A: tracks 1-2
 
 
-def test_starting_a_side_backs_the_volume_off_and_forces_straight_playback(qt_app, monkeypatch):
-    client = FakeClient(_items(4))
-    dialog = _dialog(client, monkeypatch)
+def test_starting_a_side_builds_the_player_with_the_configured_gain(qt_app, monkeypatch):
+    monkeypatch.setattr(tape_module.app_settings, "recording_gain_db", lambda: -5.0)
+    dialog = _dialog(_items(4), monkeypatch)
 
     dialog._on_start_clicked()
 
-    assert client.prepared is True
-    assert client.volume_set == tape_module.RECORDING_VOLUME_DB
-
-
-def test_foobar_is_told_to_stop_when_the_sides_last_track_starts(qt_app, monkeypatch):
-    """Not caught afterwards: a poll can only notice the next track once it
-    has already been recorded onto the end of the side."""
-    client = FakeClient(_items(4, seconds=300))
-    dialog = _dialog(client, monkeypatch)
-    dialog._on_start_clicked()
-    _run_countdown(dialog)
-
-    client.playing(0)
-    dialog._poll()
-    assert client.stop_after == []
-
-    client.playing(1)  # side A is tracks 0-1, so this is its last
-    dialog._poll()
-    assert client.stop_after == [True]
-
-    dialog._poll()
-    assert client.stop_after == [True], "armed once, not on every poll"
+    assert dialog._player.gain_db == -5.0
 
 
 def test_the_fields_are_frozen_once_the_tape_is_rolling(qt_app, monkeypatch):
-    dialog = _dialog(FakeClient(_items(4)), monkeypatch)
+    dialog = _dialog(_items(4), monkeypatch)
 
     dialog._on_start_clicked()
 
@@ -193,16 +155,11 @@ def test_the_fields_are_frozen_once_the_tape_is_rolling(qt_app, monkeypatch):
 
 
 def test_the_end_of_side_a_asks_for_the_tape_to_be_turned_over(qt_app, monkeypatch):
-    client = FakeClient(_items(4, seconds=300))
-    dialog = _dialog(client, monkeypatch)
+    dialog = _dialog(_items(4, seconds=300), monkeypatch)
     dialog._on_start_clicked()
     _run_countdown(dialog)
-    for index in (0, 1):
-        client.playing(index)
-        dialog._poll()
 
-    client.ended()
-    dialog._poll()
+    dialog._on_side_finished()
 
     assert dialog.result_metadata is None, "half a recording is not a recording"
     assert "turn it over" in dialog.instruction_label.text()
@@ -210,65 +167,71 @@ def test_the_end_of_side_a_asks_for_the_tape_to_be_turned_over(qt_app, monkeypat
 
 
 def test_side_b_starts_at_the_track_the_break_fell_on(qt_app, monkeypatch):
-    client = FakeClient(_items(4, seconds=300))
-    dialog = _dialog(client, monkeypatch)
+    dialog = _dialog(_items(4, seconds=300), monkeypatch)
     dialog._on_start_clicked()
     _run_countdown(dialog)
-    for index in (0, 1):
-        client.playing(index)
-        dialog._poll()
-    client.ended()
-    dialog._poll()
+    dialog._on_side_finished()
 
     dialog._on_start_clicked()
     _run_countdown(dialog)
 
-    assert client.played == ("p1", 2)
+    assert dialog._side_bounds() == (2, 3)
 
 
 def test_both_sides_recorded_reports_the_album_back(qt_app, monkeypatch):
-    client = FakeClient(_items(4, seconds=300))
-    dialog = _dialog(client, monkeypatch)
+    dialog = _dialog(_items(4, seconds=300), monkeypatch)
 
-    for side_indices in ((0, 1), (2, 3)):
+    for _ in range(2):
         dialog._on_start_clicked()
         _run_countdown(dialog)
-        for index in side_indices:
-            client.playing(index)
-            dialog._poll()
-        client.ended()
-        dialog._poll()
+        dialog._on_side_finished()
 
     assert dialog.result_metadata is not None
     assert [t.title for t in dialog.result_metadata.tracks] == [f"Track {i}" for i in range(1, 5)]
     assert "Both sides" in dialog.instruction_label.text()
 
 
-def test_a_side_that_stopped_early_is_not_treated_as_finished(qt_app, monkeypatch):
-    client = FakeClient(_items(6, seconds=300))
-    dialog = _dialog(client, monkeypatch)
+def test_the_bridge_actually_delivers_the_finished_signal(qt_app, monkeypatch):
+    """End-to-end through PlaybackBridge rather than calling
+    _on_side_finished directly, proving the wiring in __init__/
+    _begin_playback is real."""
+    dialog = _dialog(_items(4, seconds=300), monkeypatch)
     dialog._on_start_clicked()
     _run_countdown(dialog)
-    client.playing(0)
-    dialog._poll()
 
-    client.ended()
-    dialog._poll()
+    dialog._player.on_finished()
 
-    assert "incomplete" in dialog.status_label.text()
-    assert dialog._side == 0, "still side A -- nothing has been turned over"
-    assert dialog.result_metadata is None
+    assert not dialog._recording, "the bridge's finished signal reached _on_side_finished"
 
 
-def test_stopping_before_playback_ever_started_is_not_the_end_of_a_side(qt_app, monkeypatch):
-    """The gap between play() returning and foobar actually running."""
-    client = FakeClient(_items(4))
-    dialog = _dialog(client, monkeypatch)
+# --- progress --------------------------------------------------------------
+
+
+def test_progress_follows_the_position_within_the_side(qt_app, monkeypatch):
+    dialog = _dialog(_items(4, seconds=300), monkeypatch)
     dialog._on_start_clicked()
     _run_countdown(dialog)
-    client.ended()
 
-    dialog._poll()
+    dialog._player.position_seconds = 50.0
+    dialog._refresh_progress()
+    early = dialog.progress.value()
 
-    assert dialog._recording is True
-    assert dialog.result_metadata is None
+    dialog._player.on_track_boundary(1)
+    dialog._player.position_seconds = 10.0
+    dialog._refresh_progress()
+
+    assert dialog.progress.value() > early
+    assert "Track 2" in dialog.status_label.text()
+
+
+# --- cancelling --------------------------------------------------------------
+
+
+def test_stopping_mid_recording_stops_playback(qt_app, monkeypatch):
+    dialog = _dialog(_items(4), monkeypatch)
+    dialog._on_start_clicked()
+    _run_countdown(dialog)
+
+    dialog.reject()
+
+    assert dialog._player.stopped

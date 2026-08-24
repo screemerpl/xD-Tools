@@ -101,7 +101,8 @@ src/mdtools/
   palette.py                background/accent/text colours pulled out of a cover image (Pillow, no Qt)
   cover_filters.py          six background treatments (brighten/blur/posterize/halftone/pixelate/none), pure Pillow
   mdrem.py                  MDRem IR adapter: serial protocol, transliteration, upload plan (no Qt UI)
-  foobar.py                 foobar2000 via its Beefweb REST API *and* its command line (no Qt UI)
+  audio_engine.py           FLAC decode/encode, resampling, dithering, realtime playback (soundfile/soxr/sounddevice, no Qt)
+  tracks.py                 track list + album/artist/year from files' own tags -- no external player (no Qt)
   cdrip.py                  audio CD: drives, TOC, disc ids, rip plan, cdparanoia/flac (no Qt UI)
   decode.py                 what an audio file is, and Red Book PCM out of it (no Qt)
   cdburn.py                 audio CD-R: burn plan, *.inf CD-Text, cdrecord (no Qt UI)
@@ -150,9 +151,10 @@ src/mdtools/
     mdrem_port.py               resolve_port(): the saved port, a probe, or a warning -- shared by both entry points
     mdrem_upload_dialog.py      preview-then-write dialog + the worker thread driving an upload
     remote_dialog.py            software Sony MD remote, from the startup screen or the Recording menu
-    record_dialog.py            Recording > Record from foobar2000: arm, play, watch, hand off to titling
-    cd_rip_dialog.py            Recording > Record CD: read TOC, identify, rip, fill playlist, hand off
-    folder_record_dialog.py     Recording > Record Folder: a folder of files into that playlist instead
+    record_dialog.py            Recording > Record to MiniDisc: arm, play (own AudioPlayer), watch, hand off to titling
+    playback_bridge.py          crosses AudioPlayer's realtime callback thread onto the GUI thread (QObject + Signals)
+    cd_rip_dialog.py            Recording > Record CD: read TOC, identify, rip, hand file paths to record_dialog
+    folder_record_dialog.py     Recording > Record Folder: read a folder's own tags directly instead
     tape_record_dialog.py       Recording > Record Cassette: a side at a time, with the user working the deck
     burn_dialog.py              Recording > Burn Audio CD: the plan, the verdicts, and cdrecord behind a worker
     erase_dialog.py             Recording > Erase MiniDisc: a guided, ask-the-user-what-you-see erase
@@ -5250,6 +5252,120 @@ actually being in it, so a hand-edited `$INSTDIR` cannot take a recursive
 delete with it), the shortcuts and the registry keys -- and leaves
 `%LOCALAPPDATA%/MDTools` alone, since the templates, settings and Telegram
 session in there are the user's, not the installer's.
+
+## Retiring SoX and foobar2000 (2026-08-24)
+
+**foobar2000 is no longer a dependency of anything in this app.** Every
+recording flow (MiniDisc, cassette, CD rip, folder record, the Telegram
+hand-off) used to drive a separately-running foobar2000 over its Beefweb
+REST API (`foobar.py`, now deleted) -- foobar played the album over
+S/PDIF/analogue while xD-Tools polled its now-playing index every 250ms to
+decide when a track changed and when the album ended. `audio_engine.py`
+(built earlier, as "the foundation only" -- see its own module docstring)
+already had everything needed to replace that: `AudioPlayer` decodes and
+plays a queue of buffers itself, firing `on_track_boundary`/`on_finished`
+from its own realtime audio callback the instant a boundary is crossed --
+exact, not poll-bounded. `load_for_playback()` (decode + resample, no
+dithering -- that's for the file that gets *written*, not what's
+monitored) turns a list of paths into the buffers `AudioPlayer.play()`
+wants.
+
+**The metadata half moved to a new module, `tracks.py`, not into
+`audio_engine.py`.** `foobar.py` held two unrelated things: the Beefweb/CLI
+transport (deleted, ~250 of its 634 lines existed only because "foobar owns
+the playlist") and a set of pure functions with nothing to do with foobar
+itself -- `PlaylistItem`, `sort_by_disc_and_track`, `disc_breaks`,
+`album_title`/`album_artist`/`album_year`, `metadata_from_playlist`.
+`audio_folder.py` was already building `PlaylistItem`s by reading tags
+directly with `mutagen` for the non-foobar folder/CD-burn paths (its own
+"the recording path never reads a tag" rule was already only true of the
+*recording* path) -- `tracks.playlist_items_from_paths()` generalises that
+one-file-at-a-time reader into the one place every source now gets its
+`PlaylistItem`s from.
+
+**`panels/playback_bridge.py`'s `PlaybackBridge` is the one genuinely new
+piece of Qt-threading code this needed.** `AudioPlayer`'s callbacks run on
+PortAudio's own callback thread, never the GUI thread -- calling into a
+QDialog's slots directly from there (sending an MDRem key, touching a
+QTreeWidget) would be undefined behaviour. A plain `QObject` with `Signal`s
+does the crossing for free: Qt's default `AutoConnection` becomes queued
+the moment the emitting thread differs from the connected slot's own
+thread, so `emit()` from the audio thread is safe and the slot always runs
+later, on the GUI thread's event loop -- no manual
+`QMetaObject.invokeMethod` needed. Must be a real QObject constructed on
+the GUI thread (so its thread affinity *is* the GUI thread) -- a plain
+Python callable handed straight to `AudioPlayer.play()` would run on the
+audio thread with no crossing at all.
+
+**Slicing buffers to exactly one disc/side's tracks retired a whole class
+of poll-era machinery, rather than needing a replacement for it.**
+`RecordDialog`/`TapeRecordDialog` used to call foobar's
+`set_stop_after_current_track()`, armed on the transition into a disc's
+last track (itself a `_poll()`-driven guess), to make a multi-disc/side
+boundary land cleanly. Now `_begin_playback()` decodes and hands
+`AudioPlayer` *only* that disc/side's own paths, so playback simply ends
+where the buffer queue ends -- there is nothing to arm, and no "poll
+arrived a moment late" case left to guard against. Likewise
+`_mark_if_new_track`'s "never mark the first track" special-casing is now
+a structural guarantee of `AudioPlayer` itself (`on_track_boundary` never
+fires for buffer index 0 -- see `test_audio_engine.py`'s
+`test_play_fires_track_boundary_at_the_exact_sample`), not logic
+`record_dialog.py` has to carry.
+
+**`CdRipDialog`/`FolderRecordDialog` stopped pushing files into an
+external playlist and reading it back.** Both used to call
+`foobar.replace_current_playlist()` (empty the playlist, add via foobar's
+own command line since Beefweb 403s outside its configured music folders,
+then verify the order landed -- foobar silently re-sorts an incoming batch
+by filename) so that `RecordDialog` could then read that same playlist
+back. With `RecordDialog(port, paths, ...)` taking an explicit path list
+directly, that whole push-then-reread dance (and the CLI/exe-location
+checks that came with it) disappeared -- `CdRipDialog.result_paths` /
+`FolderRecordDialog.result_paths` are handed straight to
+`app_window._run_record_dialog()`. `FolderRecordDialog` in particular lost
+its worker thread entirely: reading a folder's tags with `mutagen` is
+local file I/O, fast enough to run inline, where waiting on a *separate
+process* to accept and asynchronously ingest files was not.
+
+**Two menu entries were retired outright, not adapted, because their
+entire reason to exist was "foobar2000 already has something queued":**
+"Record to {medium} from foobar2000..." (`_record_from_foobar`) and "Burn
+Audio CD from foobar2000's playlist..." (`_burn_cd_from_foobar`). Neither
+has an in-house equivalent -- there is no "whatever's queued in some other
+app" concept once recording decodes and plays its own files -- and burning
+from a folder already covers the general case. `app_settings.foobar_url()`/
+`foobar_exe()` and their Settings dialog rows are gone with them; the
+"Audio output device" / "Recording gain" rows (already present, built
+ahead of time for exactly this swap) are what `AudioPlayer` reads instead.
+
+**A real, silent tag-loss bug was found and fixed along the way, in
+`audio_engine.encode_wav_to_flac()` -- not part of the foobar removal
+itself, but directly adjacent and caught by writing tests for it.**
+`SoundFile.__setattr__` only intercepts libsndfile's own fixed `SF_STR_*`
+enum (title/copyright/software/artist/comment/date/album/license/
+tracknumber/genre) and calls `sf_set_string()` for those; any other
+attribute name -- confirmed directly -- just becomes an ordinary Python
+instance attribute and never reaches the file. `cdrip.py` writes
+`ALBUMARTIST` and `DISCNUMBER`, neither of which is in that set, so every
+ripped multi-disc/compilation FLAC was silently missing both tags (breaking
+compilation detection and disc-order reconstruction for anything ripped
+this way) with no error anywhere. `encode_wav_to_flac()` now splits `tags`
+into the libsndfile-native set (written via `sf_set_string()` as before)
+and everything else (written via a second `mutagen.flac.FLAC` pass after
+the file is closed) -- see `_LIBSNDFILE_STRING_TAGS`'s own comment. Test
+fixtures that built tagged FLACs via a plain `sf.SoundFile` block (e.g.
+`test_metadata_from_folder.py`'s `_make_tagged_flac`) had the identical
+bug in miniature and needed the same fix.
+
+**Real-hardware caveat, stated plainly.** Several of these flows (a real
+multi-disc MD recording, a real CD burn, a real rip) were previously
+verified end-to-end on physical hardware, per this file's own notes
+higher up. That verification predates this rewrite of the playback/timing
+path -- track-mark and disc/side-boundary timing moved from "poll-bounded"
+(a real, ~250ms worst-case lag) to sample-accurate, which is strictly
+better but is a genuine behavioural change nothing here re-verified
+against a deck. Try a real MiniDisc/cassette recording before trusting
+this the way the old, hardware-proven path was trusted.
 
 ## PySide6/Qt gotchas hit in this codebase
 

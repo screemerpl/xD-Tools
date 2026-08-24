@@ -222,11 +222,14 @@ def build_burn_plan(
             detail = (
                 f"{properties.sample_rate} Hz / {properties.bits_per_sample}-bit / {properties.channels}ch"
             )
-            # With a resampler available this is a step on the way, not a
-            # reason to refuse: the file is converted before it is written.
-            # Without one, nothing here can fix it and the disc would get
-            # audio at the wrong rate.
-            if decode.can_convert():
+            # A mono/stereo WAV or FLAC is always converted before it is
+            # written -- audio_engine handles any rate/bit-depth mismatch
+            # on its own, no external tool required. More than two
+            # channels is the one case nothing here can fix (see decode.py's
+            # own header for why that is a scope decision, not routed
+            # around), and the disc would get audio at the wrong channel
+            # count if it went through anyway.
+            if properties.channels <= decode.RED_BOOK_CHANNELS:
                 plan.notes.append(Problem(RESAMPLED, number, detail))
             else:
                 plan.problems.append(Problem(NOT_RED_BOOK, number, detail))
@@ -329,7 +332,6 @@ def prepare_wavs(
     *,
     on_progress=None,
     should_cancel=None,
-    run=subprocess.run,
 ) -> list[str]:
     """Decodes every track into `directory` as Red Book WAV, in disc order.
 
@@ -341,6 +343,10 @@ def prepare_wavs(
     Cancelling takes effect between tracks, and here that costs nothing --
     no disc has been touched yet, only a scratch folder. (Compare `burn()`,
     where stopping ruins the CD-R.)
+
+    No `run=` injection point any more -- decode.to_wav() no longer spawns
+    a subprocess for anything this app actually supports (WAV/FLAC), now
+    that SoX has been retired entirely; nothing here ever overrode it.
     """
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
@@ -351,7 +357,7 @@ def prepare_wavs(
             raise BurnCancelled()
         name = wav_name_for(number)
         try:
-            decode.to_wav(track.source, directory / name, run=run)
+            decode.to_wav(track.source, directory / name)
         except decode.DecodeError as exc:
             raise BurnError(str(exc)) from exc
         names.append(name)

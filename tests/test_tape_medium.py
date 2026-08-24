@@ -171,16 +171,16 @@ def test_the_pages_a_cassette_lays_out_include_no_disc(qt_app):
 
 
 def test_every_recording_source_is_offered_for_a_cassette_without_an_adapter(qt_app, monkeypatch):
-    """A cassette deck is driven by hand, so none of the three sources
-    needs the infrared adapter -- and a CD rip is a CD rip whichever
-    machine it ends up on."""
+    """A cassette deck is driven by hand, so neither source needs the
+    infrared adapter -- and a CD rip is a CD rip whichever machine it ends
+    up on."""
     from mdtools import app_settings
 
     monkeypatch.setattr(app_settings, "mdrem_enabled", lambda: False)
     window = _tape_window()
     window._sync_mdrem_actions()
 
-    for action in (window.record_cd_action, window.record_folder_action, window.record_action):
+    for action in (window.record_cd_action, window.record_folder_action):
         assert action.isVisible(), action.text()
         assert "Cassette" in action.text()
     assert window.telegram_record_action.isVisible()
@@ -197,7 +197,7 @@ def test_the_same_entries_still_say_minidisc_on_a_minidisc_project(qt_app, monke
     window._sync_mdrem_actions()
 
     assert "MiniDisc" in window.record_cd_action.text()
-    assert "Cassette" not in window.record_action.text()
+    assert "Cassette" not in window.record_folder_action.text()
 
 
 def test_a_cassette_project_records_through_the_cassette_dialog(qt_app, monkeypatch):
@@ -223,7 +223,7 @@ def test_a_cassette_project_records_through_the_cassette_dialog(qt_app, monkeypa
     )
     window = _tape_window()
 
-    window._run_record_dialog("", metadata=_metadata())
+    window._run_record_dialog("", ["a.flac"], metadata=_metadata())
 
     assert opened.get("ran") is True
     assert opened["kwargs"]["metadata"] is not None, "a folder's own corrections have to reach the labels"

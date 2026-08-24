@@ -458,3 +458,59 @@ def test_a_preview_sink_defaults_to_no_gain(fake_sd):
     out = _pull(_FakeOutputStream.instances[-1], 10)
 
     assert np.allclose(out, 0.9, atol=1e-6)
+
+
+def test_queue_index_and_position_track_playback(fake_sd):
+    player = audio_engine.AudioPlayer(device=None, samplerate=44100, channels=2)
+    track_a = np.zeros(10, dtype=np.float32)
+    track_b = np.zeros(10, dtype=np.float32)
+
+    player.play([track_a, track_b])
+    stream = _FakeOutputStream.instances[-1]
+    assert player.queue_index == 0
+    assert player.position_seconds == 0.0
+
+    _pull(stream, 4)
+    assert player.queue_index == 0
+    assert player.position_seconds == pytest.approx(4 / 44100)
+
+    _pull(stream, 10)  # crosses into track_b, 4 frames of it consumed
+    assert player.queue_index == 1
+    assert player.position_seconds == pytest.approx(4 / 44100)
+
+
+# --- load_for_playback: decode + resample, no dithering, for AudioPlayer --
+
+
+def test_load_for_playback_decodes_and_resamples_to_the_target_rate(tmp_path):
+    samples = np.zeros((4800, 2), dtype=np.float32)
+    src = tmp_path / "hires.wav"
+    sf.write(src, samples, 48000, subtype="PCM_16")
+
+    buffers = audio_engine.load_for_playback([src], samplerate=44100)
+
+    assert len(buffers) == 1
+    assert buffers[0].dtype == np.float32
+    # 4800 samples at 48000 Hz is 0.1s, which at 44100 Hz is 4410 samples
+    assert buffers[0].shape[0] == pytest.approx(4410, abs=2)
+
+
+def test_load_for_playback_leaves_mono_mono(tmp_path):
+    """AudioPlayer._as_stereo() already duplicates a mono buffer to every
+    output channel -- doing it again here would be redundant, not wrong."""
+    samples = np.zeros(100, dtype=np.float32)
+    src = tmp_path / "mono.wav"
+    sf.write(src, samples, 44100, subtype="PCM_16")
+
+    buffers = audio_engine.load_for_playback([src])
+
+    assert buffers[0].ndim == 1
+
+
+def test_load_for_playback_refuses_surround(tmp_path):
+    samples = np.zeros((100, 6), dtype=np.float32)
+    src = tmp_path / "surround.wav"
+    sf.write(src, samples, 44100, subtype="PCM_16")
+
+    with pytest.raises(audio_engine.AudioEngineError):
+        audio_engine.load_for_playback([src])

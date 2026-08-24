@@ -50,7 +50,6 @@ from mdtools.panels.cd_rip_dialog import CdRipDialog
 from mdtools.panels.cover_filter_dialog import CoverFilterDialog
 from mdtools.panels.erase_dialog import EraseDiscDialog
 from mdtools.panels.experimental_settings_dialog import ExperimentalSettingsDialog
-from mdtools import foobar
 from mdtools.audio_folder import album_from_folder
 from mdtools.cd_layout import CdLayoutError, build_case_back, build_disc_label, build_front_insert, build_insert
 from mdtools import tape
@@ -148,8 +147,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         # Not "Label Designer" any more, and not MiniDisc-only either:
         # designing labels is one of several
-        # things this does, alongside recording a disc from foobar2000,
-        # titling it over infrared, and standing in for the deck's remote.
+        # things this does, alongside recording a disc, titling it over
+        # infrared, and standing in for the deck's remote.
         # "xD-Tools": the x stands in for M or C, which is the joke and
         # also, now, the truth -- it does MiniDisc and CD alike.
         self.setWindowTitle(self.tr("xD-Tools - Retro Media Studio"))
@@ -438,14 +437,20 @@ class MainWindow(QMainWindow):
         # metadata editor as well, which put the one dialog used while
         # designing a label in the same menu as three that drive a tape
         # deck; the editor is now a Tools panel button, next to the layers
-        # it feeds. The three sources -- a CD, whatever foobar already has,
-        # and a folder of files -- all end in the same recording. There
-        # used to be a separate "Burn Audio CD from ..." action beside the
-        # folder and foobar2000 entries; those collapsed into these two
-        # (see _record_folder_dialog/_record_from_foobar), which dispatch to
+        # it feeds. The two sources -- a CD, and a folder of files -- both
+        # end in the same recording. There used to be a separate "Burn
+        # Audio CD from ..." action beside the folder entry; that collapsed
+        # into this one (see _record_folder_dialog), which dispatches to
         # burning instead of recording on a CD project -- one "Record"
         # entry per source, doing whatever the open project's medium calls
         # for, rather than making the user pick the right one of two.
+        #
+        # A third entry, "Record to MiniDisc from foobar2000...", used to
+        # sit here for whatever was already queued in a separately-running
+        # foobar2000 -- retired along with the rest of the foobar2000
+        # integration (see RecordDialog's own module docstring): there is
+        # no "whatever's queued in some other app" concept once recording
+        # decodes and plays its own files.
         recording_menu = self.menuBar().addMenu(self.tr("&Recording"))
         # Hidden rather than disabled without the adapter (on a MiniDisc/
         # cassette project -- a CD project needs no adapter at all, so
@@ -456,9 +461,6 @@ class MainWindow(QMainWindow):
         )
         self.record_folder_action = recording_menu.addAction(
             self.tr("Record Folder to MiniDisc..."), self._record_folder
-        )
-        self.record_action = recording_menu.addAction(
-            self.tr("Record to MiniDisc from foobar2000..."), self._record_from_foobar
         )
         recording_menu.addSeparator()
         # Erasing is not recording, but it is what you do to a disc you are
@@ -1505,11 +1507,11 @@ class MainWindow(QMainWindow):
         # Ripping a CD needs no adapter, but this entry does not stop at
         # ripping -- it goes straight on to record what it ripped, which
         # does. Splitting a rip-only entry out of it would be inventing a
-        # feature nobody asked for. Same for loading a folder into
-        # foobar2000: on its own it is not a feature anyone asked for.
+        # feature nobody asked for. Same for reading a folder's own tags:
+        # on its own it is not a feature anyone asked for.
         # A cassette deck is driven by the person in front of it, so a
-        # cassette project needs no adapter for any of these -- the three
-        # sources are the same three either way, and only the machine at
+        # cassette project needs no adapter for either of these -- the two
+        # sources are the same two either way, and only the machine at
         # the end of them changes. Which is why they are one set of entries
         # that rename themselves, not two sets where one is always hidden.
         for_tape = medium == MEDIUM_TAPE
@@ -1519,20 +1521,17 @@ class MainWindow(QMainWindow):
             self.tr("Record CD to {medium}...").format(medium=self._recording_target_name())
         )
         self.record_cd_action.setVisible(for_tape or (adapter and for_md))
-        # Record Folder... and Record from foobar2000... dispatch to
-        # burning internally when the open project is a CD one (see
-        # _record_folder_dialog/_record_from_foobar) -- collapsing what
-        # used to be a separate "Burn Audio CD from ..." action beside each
-        # of these into one entry that always says "Record" and does
-        # whatever the medium calls for. Burning needs the drive, not the
-        # adapter, so these stay visible for a CD project even with MDRem
-        # switched off.
-        for action, name in (
-            (self.record_folder_action, self.tr("Record Folder to {medium}...")),
-            (self.record_action, self.tr("Record to {medium} from foobar2000...")),
-        ):
-            action.setText(name.format(medium=self._recording_target_name()))
-            action.setVisible(for_tape or for_cd or (adapter and for_md))
+        # Record Folder... dispatches to burning internally when the open
+        # project is a CD one (see _record_folder_dialog) -- collapsing
+        # what used to be a separate "Burn Audio CD from ..." action beside
+        # it into one entry that always says "Record" and does whatever
+        # the medium calls for. Burning needs the drive, not the adapter,
+        # so this stays visible for a CD project even with MDRem switched
+        # off.
+        self.record_folder_action.setText(
+            self.tr("Record Folder to {medium}...").format(medium=self._recording_target_name())
+        )
+        self.record_folder_action.setVisible(for_tape or for_cd or (adapter and for_md))
         # Erasing and the remote are nothing but adapter keypresses, so
         # without one there is not even a partial operation to offer.
         self.erase_disc_action.setVisible(adapter and for_md)
@@ -2115,30 +2114,10 @@ class MainWindow(QMainWindow):
             return None
         return resolve_port(self)
 
-    def _record_from_foobar(self) -> None:
-        # "Record to {medium} from foobar2000..." -- one entry that does
-        # whatever the open project's medium calls for. A CD project has no
-        # adapter/deck involved at all, so it dispatches straight to the
-        # burn flow instead; only the MiniDisc/cassette path below needs a
-        # port. The whole record flow runs through the adapter -- it is
-        # what arms the deck and what marks the tracks -- so with the
-        # adapter switched off there is nothing here to do for those two
-        # media. Silent rather than a dialog: the menu entry is hidden in
-        # that state, so this is a backstop, not a path anyone is meant to
-        # arrive at. Without the adapter, recording means pressing record on
-        # the deck and letting its LEVEL-SYNC split the tracks.
-        if self._recording_medium() == MEDIUM_CD:
-            self._burn_cd_from_foobar()
-            return
-        port = self._resolve_recording_port()
-        if port is None:
-            return
-        self._run_record_dialog(port)
-
     def _record_cd(self) -> None:
-        """Recording > Record CD to MiniDisc... -- rips the disc into
-        foobar2000's playlist, then records that playlist exactly as the
-        entry above does.
+        """Recording > Record CD to MiniDisc... -- rips the disc to tagged
+        FLAC files, then records those files exactly as the entry below
+        does.
 
         The port is resolved before the rip rather than after it: the rip is
         the expensive half, and discovering there is no adapter to record
@@ -2146,14 +2125,15 @@ class MainWindow(QMainWindow):
         port = self._resolve_recording_port()
         if port is None:
             return
-        rip = CdRipDialog(app_settings.foobar_url(), self, medium=self._recording_medium())
+        rip = CdRipDialog(self, medium=self._recording_medium())
         if rip.exec() != QDialog.DialogCode.Accepted:
             return
         # The rip's own metadata goes forward. Its titles are the ones it
-        # wrote into the files, so they say the same thing the playlist
-        # does -- what it adds is the artwork it found (or the user picked)
-        # while identifying the disc, which nothing in a playlist carries.
-        self._run_record_dialog(port, metadata=rip.result_metadata)
+        # wrote into the files, so they say the same thing the files
+        # themselves do -- what it adds is the artwork it found (or the
+        # user picked) while identifying the disc, which a tag does not
+        # carry.
+        self._run_record_dialog(port, rip.result_paths, metadata=rip.result_metadata)
 
     def _record_folder(self) -> None:
         """Recording > Record Folder to MiniDisc... -- the plain menu entry,
@@ -2166,11 +2146,11 @@ class MainWindow(QMainWindow):
         self._record_folder_dialog()
 
     def _record_folder_dialog(self, initial_folder: Path | None = None) -> None:
-        """Recording > Record Folder to MiniDisc... -- loads an album that
-        is already on disk into foobar2000's playlist, then records it.
+        """Recording > Record Folder to MiniDisc... -- reads the tags of an
+        album that is already on disk, then records those files.
 
         The same shape as _record_cd, and for the same reasons: the port is
-        resolved first (there is no point loading a playlist for a recording
+        resolved first (there is no point reading a folder for a recording
         that cannot happen), and the dialog's own result is the hand-off.
         Unlike the CD, its metadata *is* passed on -- see FolderRecordDialog
         for why files nobody rewrote cannot carry an edit by themselves.
@@ -2193,12 +2173,12 @@ class MainWindow(QMainWindow):
         port = self._resolve_recording_port()
         if port is None:
             return
-        folder = FolderRecordDialog(app_settings.foobar_url(), self, medium=self._recording_medium())
+        folder = FolderRecordDialog(self, medium=self._recording_medium())
         if initial_folder is not None:
             folder.set_folder(initial_folder)
         if folder.exec() != QDialog.DialogCode.Accepted:
             return
-        self._run_record_dialog(port, metadata=folder.result_metadata)
+        self._run_record_dialog(port, folder.result_paths, metadata=folder.result_metadata)
 
     # -- burning a CD-R ---------------------------------------------------
 
@@ -2247,38 +2227,6 @@ class MainWindow(QMainWindow):
             album=album.album,
             artist=album.artist,
             year=album.year,
-        )
-
-    def _burn_cd_from_foobar(self) -> None:
-        """The burning half of "Record to {medium} from foobar2000..." on a
-        CD project (see _record_from_foobar, which this is now reached
-        through rather than through a menu entry of its own).
-
-        Only the playlist's *paths* are wanted here -- the burn reads the
-        files itself -- but the titles come back with them, and they are
-        the ones the user has already curated, so they are used as they
-        are (the same reasoning record_dialog.py gives for titling from the
-        playlist rather than from a lookup).
-        """
-        client = foobar.FoobarClient(app_settings.foobar_url())
-        try:
-            playlist = client.current_playlist()
-            items = client.playlist_items(playlist.id) if playlist else []
-        except foobar.FoobarError as exc:
-            QMessageBox.warning(self, self.tr("Burn Audio CD"), str(exc))
-            return
-
-        sources = [(Path(item.path), item.display_title(), item.artist) for item in items if item.path]
-        if not sources:
-            QMessageBox.warning(
-                self,
-                self.tr("Burn Audio CD"),
-                self.tr("foobar2000's playlist is empty, or its files are not reachable from here."),
-            )
-            return
-        metadata = foobar.metadata_from_playlist(items)
-        self._run_burn_dialog(
-            sources, album=metadata.album, artist=metadata.artist, year=metadata.year
         )
 
     def _run_burn_dialog(self, sources, *, album: str, artist: str, year) -> None:
@@ -2335,44 +2283,44 @@ class MainWindow(QMainWindow):
             return
         RemoteDialog(port, self).exec()
 
-    def _run_record_dialog(self, port: str, metadata: ProjectMetadata | None = None) -> None:
+    def _run_record_dialog(
+        self, port: str, paths: list[Path], metadata: ProjectMetadata | None = None
+    ) -> None:
         """The recording itself, shared by every entry point -- by the time
-        it runs, "what is in foobar's playlist" is the only input, whether
-        a CD put it there, a folder did, the Telegram bot did, or the user
+        it runs, `paths` (which files, in which order) is the only input,
+        whether a CD rip produced them, a folder did, or the Telegram bot
         did.
 
         Which machine it goes to is the project's business, not the
         source's: a rip is a rip whether it ends up on a MiniDisc or on
-        side A of a C90, so the branch belongs here rather than in four
-        callers."""
+        side A of a C90, so the branch belongs here rather than in every
+        caller."""
         if self.project is not None and self.project.medium == MEDIUM_TAPE:
-            self._run_tape_record_dialog(metadata)
+            self._run_tape_record_dialog(paths, metadata)
             return
-        dialog = RecordDialog(port, app_settings.foobar_url(), self, metadata=metadata)
+        dialog = RecordDialog(port, paths, self, metadata=metadata)
         dialog.exec()
         # What was just recorded is also what the label should describe, so
-        # the playlist's metadata (plus whatever cover art was found for it)
-        # is adopted by the project rather than left for the user to retype
+        # its metadata (plus whatever cover art was found for it) is
+        # adopted by the project rather than left for the user to retype
         # into the Tools panel's Metadata dialog by hand.
         if dialog.result_metadata is not None and self.project is not None:
             self.project.metadata = dialog.result_metadata
             self._mark_dirty()
             self._prompt_post_recording_layout()
 
-    def _run_tape_record_dialog(self, metadata: ProjectMetadata | None = None) -> None:
+    def _run_tape_record_dialog(
+        self, paths: list[Path], metadata: ProjectMetadata | None = None
+    ) -> None:
         """The cassette's own recording: two sides, and a user who is told
         what to press rather than a deck that is driven.
 
-        No port and no drive, so nothing was resolved on the way in -- if
-        foobar2000 is not reachable, TapeRecordDialog says so itself rather
-        than being pre-checked.
+        No port and no drive, so nothing was resolved on the way in.
         """
         minutes = (
             self.project.tape_total_minutes if self.project is not None else tape.DEFAULT_LENGTH.total_minutes
         )
-        dialog = TapeRecordDialog(
-            app_settings.foobar_url(), self, metadata=metadata, total_minutes=minutes
-        )
+        dialog = TapeRecordDialog(paths, self, metadata=metadata, total_minutes=minutes)
         dialog.exec()
         if dialog.result_metadata is None or self.project is None:
             return
