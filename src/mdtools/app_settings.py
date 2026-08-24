@@ -51,6 +51,7 @@ _TELEGRAM_DOWNLOAD_FOLDER_KEY = "telegram_download_folder"
 _TELEGRAM_PHONE_KEY = "telegram_phone"
 _REGENERATE_FONT_FAMILY_KEY = "regenerate_font_family"
 _AUDIO_OUTPUT_DEVICE_KEY = "audio_output_device"
+_RECORDING_GAIN_DB_KEY = "recording_gain_db"
 
 # foo_beefweb's own default listening address.
 DEFAULT_FOOBAR_URL = "http://localhost:8880"
@@ -199,6 +200,26 @@ def audio_output_device() -> str:
 
 def set_audio_output_device(value: str) -> None:
     _settings().setValue(_AUDIO_OUTPUT_DEVICE_KEY, str(value).strip())
+
+
+# Headroom against clipping on the digital/analogue transfer -- explicit
+# user request, previously a hardcoded RECORDING_VOLUME_DB constant
+# duplicated in record_dialog.py and tape_record_dialog.py, applied via
+# foobar2000's own set_volume(). Now a real setting this engine's own
+# AudioPlayer reads instead, so it no longer has to live twice.
+DEFAULT_RECORDING_GAIN_DB = -5.0
+
+
+def recording_gain_db() -> float:
+    """How far below full scale a recording's output is played, for
+    headroom on the digital/analogue path into the deck or burner. A
+    QSettings float round-trips as a string, hence the explicit float()
+    the way screen_dpi()/etc. also need it."""
+    return float(_settings().value(_RECORDING_GAIN_DB_KEY, DEFAULT_RECORDING_GAIN_DB))
+
+
+def set_recording_gain_db(value: float) -> None:
+    _settings().setValue(_RECORDING_GAIN_DB_KEY, float(value))
 
 
 def foobar_url() -> str:

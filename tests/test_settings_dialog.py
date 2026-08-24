@@ -262,6 +262,46 @@ def test_a_missing_sounddevice_backend_leaves_only_system_default(qt_app, monkey
     assert dialog.audio_device_combo.itemText(0) == "System default"
 
 
+# --- recording gain -------------------------------------------------------
+
+
+def test_the_gain_spinner_seeds_from_the_saved_setting(qt_app, monkeypatch):
+    _fake_devices(monkeypatch)
+    app_settings.set_recording_gain_db(-8.0)
+
+    dialog = SettingsDialog()
+
+    assert dialog.recording_gain_spin.value() == -8.0
+
+
+def test_the_gain_defaults_to_minus_5_db_for_a_fresh_install(qt_app, monkeypatch):
+    _fake_devices(monkeypatch)
+
+    dialog = SettingsDialog()
+
+    assert dialog.recording_gain_spin.value() == -5.0
+
+
+def test_changing_the_gain_and_accepting_saves_it(qt_app, monkeypatch):
+    _fake_devices(monkeypatch)
+    dialog = SettingsDialog()
+    dialog.recording_gain_spin.setValue(-2.0)
+
+    dialog._on_accept()
+
+    assert app_settings.recording_gain_db() == -2.0
+
+
+def test_restore_defaults_resets_the_gain_too(qt_app, monkeypatch):
+    _fake_devices(monkeypatch)
+    app_settings.set_recording_gain_db(-12.0)
+    dialog = SettingsDialog()
+
+    dialog._restore_defaults()
+
+    assert dialog.recording_gain_spin.value() == app_settings.DEFAULT_RECORDING_GAIN_DB
+
+
 def test_browsing_creates_the_folder_first_so_the_picker_opens_in_it(qt_app, tmp_path, monkeypatch):
     """A picker pointed at a directory that is not there does not politely
     fall back -- it complains."""

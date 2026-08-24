@@ -124,6 +124,17 @@ def test_audio_output_device_round_trips():
     assert app_settings.audio_output_device() == "Speakers (Realtek(R) Audio)"
 
 
+def test_recording_gain_defaults_to_minus_5_db():
+    assert app_settings.recording_gain_db() == -5.0
+    assert app_settings.recording_gain_db() == app_settings.DEFAULT_RECORDING_GAIN_DB
+
+
+def test_recording_gain_round_trips():
+    app_settings.set_recording_gain_db(-3.5)
+
+    assert app_settings.recording_gain_db() == -3.5
+
+
 def test_telegram_bot_username_and_phone_are_empty_by_default():
     assert app_settings.telegram_bot_username() == ""
     assert app_settings.telegram_phone() == ""

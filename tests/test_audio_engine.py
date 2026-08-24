@@ -326,3 +326,40 @@ def test_recording_and_preview_sinks_are_independent_players(fake_sd):
 
     assert _FakeOutputStream.instances[-2].device == 3
     assert _FakeOutputStream.instances[-1].device is None
+
+
+def test_gain_db_attenuates_playback(fake_sd):
+    """app_settings.recording_gain_db() (default -5 dB) reaches actual
+    output samples through this constructor argument -- confirmed against
+    the exact linear factor, not just "quieter than before"."""
+    player = audio_engine.AudioPlayer(device=None, samplerate=44100, channels=2, gain_db=-6.0206)
+    track = np.full(10, 1.0, dtype=np.float32)
+
+    player.play([track])
+    out = _pull(_FakeOutputStream.instances[-1], 10)
+
+    # -6.0206 dB is a factor of ~0.5
+    assert np.allclose(out, 0.5, atol=1e-3)
+
+
+def test_zero_gain_leaves_playback_unchanged(fake_sd):
+    player = audio_engine.AudioPlayer(device=None, samplerate=44100, channels=2, gain_db=0.0)
+    track = np.full(10, 0.7, dtype=np.float32)
+
+    player.play([track])
+    out = _pull(_FakeOutputStream.instances[-1], 10)
+
+    assert np.allclose(out, 0.7, atol=1e-6)
+
+
+def test_a_preview_sink_defaults_to_no_gain(fake_sd):
+    """The recording sink's headroom setting must not leak into a preview
+    player just because both are the same class -- gain_db defaults to 0
+    unless a caller explicitly passes the recording setting in."""
+    preview = audio_engine.AudioPlayer(device=None)
+    track = np.full(10, 0.9, dtype=np.float32)
+
+    preview.play([track])
+    out = _pull(_FakeOutputStream.instances[-1], 10)
+
+    assert np.allclose(out, 0.9, atol=1e-6)

@@ -329,14 +329,30 @@ class AudioPlayer:
     sink" are -- both just `AudioPlayer(device=...)` with a different
     `device` argument, verified to run concurrently with no PortAudio
     contention in the prototype this module is built from.
+
+    `gain_db` is the recording sink's own headroom setting (explicit user
+    request; see app_settings.recording_gain_db(), default -5 dB) --
+    previously a hardcoded `RECORDING_VOLUME_DB` constant duplicated in
+    record_dialog.py/tape_record_dialog.py and applied via foobar2000's
+    own set_volume(). A *preview* sink should stay at the default 0 dB
+    (full digital level, since nothing downstream of it needs headroom --
+    it's just being listened to), so this is a constructor argument, not
+    a module-level constant every player shares.
     """
 
-    def __init__(self, device: int | None, samplerate: int = RED_BOOK_RATE, channels: int = RED_BOOK_CHANNELS):
+    def __init__(
+        self,
+        device: int | None,
+        samplerate: int = RED_BOOK_RATE,
+        channels: int = RED_BOOK_CHANNELS,
+        gain_db: float = 0.0,
+    ):
         if sd is None:
             raise AudioEngineError("sounddevice is not installed")
         self._device = device
         self._samplerate = samplerate
         self._channels = channels
+        self._gain = 10 ** (gain_db / 20)
         self._stream: "sd.OutputStream | None" = None
         self._queue: list[np.ndarray] = []
         self._queue_index = 0
@@ -382,7 +398,13 @@ class AudioPlayer:
         data = np.asarray(data, dtype=np.float32)
         if data.ndim == 1:
             data = np.stack([data] * self._channels, axis=-1)
-        return data
+        # Applied unconditionally (gain 1.0 is a no-op multiply) rather
+        # than guarded by an `if`, which would need a floating-point
+        # equality check to skip -- and applied once here, per buffer,
+        # rather than per-callback: this runs at play()-time, off the
+        # real-time audio thread, so it costs nothing where it would
+        # actually matter.
+        return (data * self._gain).astype(np.float32)
 
     def _callback(self, outdata, frames, time_info, status) -> None:
         written = 0

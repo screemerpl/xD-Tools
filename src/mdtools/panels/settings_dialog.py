@@ -132,6 +132,19 @@ class SettingsDialog(QDialog):
 
         self._populate_audio_devices(app_settings.audio_output_device())
 
+        self.recording_gain_spin = QDoubleSpinBox()
+        self.recording_gain_spin.setRange(-24.0, 0.0)
+        self.recording_gain_spin.setDecimals(1)
+        self.recording_gain_spin.setSuffix(self.tr(" dB"))
+        self.recording_gain_spin.setValue(app_settings.recording_gain_db())
+        self.recording_gain_spin.setToolTip(
+            self.tr(
+                "Headroom below full scale while recording, so a hot digital source has no chance to clip "
+                "on the way in. Does not affect preview playback."
+            )
+        )
+        layout.addRow(self.tr("Recording gain"), self.recording_gain_spin)
+
     def _populate_audio_devices(self, selected: str) -> None:
         """Lists the output devices currently present, but never drops
         `selected` -- same "a saved choice survives even when its device
@@ -333,12 +346,14 @@ class SettingsDialog(QDialog):
         self.bake_dpi_spin.setValue(app_settings.DEFAULT_BAKE_DPI)
         self.cd_rip_folder_edit.setText(app_settings.default_cd_rip_folder())
         self._populate_audio_devices("")
+        self.recording_gain_spin.setValue(app_settings.DEFAULT_RECORDING_GAIN_DB)
 
     def _on_accept(self) -> None:
         app_settings.set_screen_dpi(self.screen_dpi_spin.value())
         app_settings.set_default_export_dpi(self.export_dpi_spin.value())
         app_settings.set_bake_dpi(self.bake_dpi_spin.value())
         app_settings.set_audio_output_device(self._selected_audio_device())
+        app_settings.set_recording_gain_db(self.recording_gain_spin.value())
         app_settings.set_experimental_features_enabled(self.experimental_check.isChecked())
         app_settings.set_mdrem_enabled(self.mdrem_check.isChecked())
         app_settings.set_mdrem_port(self.selected_port())
