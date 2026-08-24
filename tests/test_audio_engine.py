@@ -1,6 +1,7 @@
-"""audio_engine.py -- pyflac/mutagen decode+encode, soxr resampling, the
-verified noise-shaped dither, and playback/device-selection with
-sounddevice faked out (no real audio hardware needed to run this suite).
+"""audio_engine.py -- FLAC decode+encode via soundfile (libsndfile), soxr
+resampling, the verified noise-shaped dither, and playback/device-
+selection with sounddevice faked out (no real audio hardware needed to
+run this suite).
 
 Nothing in this file exercises decode.py's or cdrip.py's own SoX/flac.exe
 paths -- audio_engine is not wired into either yet; this only tests the
@@ -9,14 +10,16 @@ new module in isolation.
 
 from __future__ import annotations
 
+import subprocess
+
 import numpy as np
 import pytest
 import soundfile as sf
 
-from mdtools import audio_engine
+from mdtools import audio_engine, cdrip
 
 
-# --- decode / encode (real pyflac + mutagen, small real files) -----------
+# --- decode / encode (real libsndfile, small real files) ------------------
 
 
 def test_encoding_and_decoding_a_flac_file_round_trips_losslessly(tmp_path):
@@ -39,10 +42,11 @@ def test_encoding_and_decoding_a_flac_file_round_trips_losslessly(tmp_path):
     assert np.array_equal(decoded, samples_i16)
 
 
-def test_encoding_writes_tags_pyflac_itself_cannot(tmp_path):
-    """pyFLAC's own encoder has no tag support at all (confirmed against
-    its docs) -- encode_wav_to_flac() has to reach for mutagen as a
-    second pass, and this is what proves that second pass actually ran."""
+def test_encoding_writes_tags_in_one_pass(tmp_path):
+    """Verified through mutagen -- a library that had no part in writing
+    them -- rather than trusting soundfile's own read-back, the same
+    "don't test with the tool that wrote it" reasoning the rest of this
+    codebase's tag tests already follow."""
     import mutagen.flac
 
     samples_i16 = np.zeros((100, 2), dtype=np.int16)
@@ -57,6 +61,53 @@ def test_encoding_writes_tags_pyflac_itself_cannot(tmp_path):
     tags = mutagen.flac.FLAC(str(flac_path))
     assert tags["title"][0] == "Feel Invincible"
     assert tags["artist"][0] == "Skillet"
+
+
+def test_a_genuine_24_bit_flac_can_be_resampled_and_dithered(tmp_path):
+    """The actual regression guard for the bug that made this module use
+    soundfile instead of pyflac in the first place: pyflac's decoder
+    cannot read a 24-bit FLAC at all (confirmed directly against every
+    one of its decoder classes), which is exactly the common case a
+    "needs conversion" source -- what resample_and_dither_to_red_book()
+    is for -- actually is. The fixture is made by the bundled flac.exe
+    (not soundfile itself), so this proves compatibility with a real
+    24-bit FLAC, not just a round trip through soundfile's own encoder.
+
+    Deliberately does NOT go through decode_flac_to_wav() here: that
+    function reads as int16 by design (correct only for its own "already
+    Red Book, nothing to dither" fast-path use), so calling it on a
+    24-bit source would silently truncate without any dithering at all --
+    exactly the case resample_and_dither_to_red_book() exists to handle
+    properly instead."""
+    tool = cdrip.flac_path()
+    if tool is None:
+        pytest.skip("the bundled flac encoder is not present")
+
+    rng = np.random.default_rng(0)
+    t = np.arange(48000) / 48000
+    sig = 0.3 * np.sin(2 * np.pi * 440 * t)
+    samples_24 = np.stack([sig, sig], axis=-1)
+    src_wav = tmp_path / "src24.wav"
+    sf.write(src_wav, samples_24, 48000, subtype="PCM_24")
+
+    flac_path = tmp_path / "src24.flac"
+    result = subprocess.run(
+        [tool, "-s", "-f", "-o", str(flac_path), str(src_wav)], capture_output=True, text=True
+    )
+    assert result.returncode == 0, result.stderr
+    assert sf.info(str(flac_path)).subtype == "PCM_24"
+
+    out_wav = tmp_path / "out.wav"
+    audio_engine.resample_and_dither_to_red_book(flac_path, out_wav)
+
+    decoded, rate = sf.read(str(out_wav), dtype="float64", always_2d=True)
+    assert rate == 44100
+    assert decoded.shape == (44100, 2)
+    # resampled from 48k -> 44.1k, so lengths differ -- compare the
+    # signals' own correlation instead of a sample-for-sample equality
+    resampled_original = audio_engine.resample(sig, 48000, 44100)
+    correlation = np.corrcoef(decoded[:, 0], resampled_original[: len(decoded)])[0, 1]
+    assert correlation > 0.99
 
 
 def test_encoding_with_no_tags_writes_none_at_all(tmp_path):
@@ -79,6 +130,50 @@ def test_decoding_something_that_is_not_flac_reports_rather_than_crashing(tmp_pa
 
     with pytest.raises(audio_engine.AudioEngineError):
         audio_engine.decode_flac_to_wav(not_flac, tmp_path / "out.wav")
+
+
+# --- resample_and_dither_to_red_book (the "needs conversion" path) --------
+
+
+def test_a_wav_is_resampled_and_bit_reduced_to_red_book(tmp_path):
+    samples = np.zeros((48000 * 2, 2), dtype=np.float64)
+    src = tmp_path / "src.wav"
+    sf.write(src, samples, 48000, subtype="PCM_24")
+
+    out = tmp_path / "out.wav"
+    audio_engine.resample_and_dither_to_red_book(src, out)
+
+    info = sf.info(str(out))
+    assert info.samplerate == 44100
+    assert info.channels == 2
+    assert info.subtype == "PCM_16"
+
+
+def test_a_mono_source_is_duplicated_to_stereo(tmp_path):
+    """Duplicated *before* dithering, not after -- each channel then gets
+    its own independent dither noise (the correct behaviour: correlated
+    noise between channels would colour the stereo image), so the two
+    channels end up nearly but not bit-exactly identical, differing only
+    by up to a couple of LSBs of independent dither."""
+    samples = np.full((44100,), 0.5, dtype=np.float64)
+    src = tmp_path / "mono.wav"
+    sf.write(src, samples, 48000, subtype="PCM_24")
+
+    out = tmp_path / "out.wav"
+    audio_engine.resample_and_dither_to_red_book(src, out)
+
+    data, _ = sf.read(str(out), dtype="int16")
+    assert data.ndim == 2 and data.shape[1] == 2
+    assert np.max(np.abs(data[:, 0].astype(int) - data[:, 1].astype(int))) <= 4
+
+
+def test_a_surround_source_is_refused_rather_than_silently_folded(tmp_path):
+    samples = np.zeros((44100, 6), dtype=np.float64)
+    src = tmp_path / "surround.wav"
+    sf.write(src, samples, 48000, subtype="PCM_24")
+
+    with pytest.raises(audio_engine.AudioEngineError, match="6 channels"):
+        audio_engine.resample_and_dither_to_red_book(src, tmp_path / "out.wav")
 
 
 # --- resampling ------------------------------------------------------------

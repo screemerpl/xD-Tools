@@ -461,17 +461,21 @@ def _flac_vorbis_comments(path: Path) -> list[str]:
 
 def test_the_encoder_writes_non_ascii_tags_without_mangling_them(tmp_path):
     """Verified against a hand-written Vorbis-comment parser
-    (_flac_vorbis_comments), not mutagen itself, since mutagen is what
-    wrote them.
+    (_flac_vorbis_comments), not soundfile/mutagen, since those are what
+    wrote/could read them back.
 
-    Encoding now goes through audio_engine.encode_wav_to_flac() (pyflac +
-    mutagen), not flac.exe -- tags reach mutagen as plain Python strings,
-    not command-line arguments, so surviving a Polish or Japanese title is
-    no longer an assumption about a tool's own argv handling the way it
-    was when this ran flac.exe directly. Still worth proving directly:
-    mutagen writes Vorbis comments as UTF-8, and this is what confirms
-    that actually happened rather than assuming it from the library's own
-    docs."""
+    Encoding now goes through audio_engine.encode_wav_to_flac()
+    (soundfile/libsndfile), not flac.exe -- tags reach libsndfile as plain
+    Python strings, not command-line arguments, so surviving a Polish or
+    Japanese title is no longer an assumption about a tool's own argv
+    handling the way it was when this ran flac.exe directly. Still worth
+    proving directly rather than assuming it from the library's own docs.
+
+    Comments are compared lowercase: libsndfile always writes the field
+    *name* (not the value) lowercase regardless of the case given here --
+    a real, confirmed difference from flac.exe's own behaviour (which
+    preserved whatever case was passed), but not a mangling one, since
+    Vorbis comment field names are case-insensitive by spec."""
     task = cdrip.RipTask(
         number=1,
         title="Zażółć gęślą jaźń",
@@ -485,9 +489,9 @@ def test_the_encoder_writes_non_ascii_tags_without_mangling_them(tmp_path):
     cdrip.encode_track(task)
 
     assert task.flac_path.is_file()
-    comments = _flac_vorbis_comments(task.flac_path)
-    assert "TITLE=Zażółć gęślą jaźń" in comments
-    assert "ARTIST=サカナクション" in comments
+    comments = [c.lower() for c in _flac_vorbis_comments(task.flac_path)]
+    assert "title=zażółć gęślą jaźń" in comments
+    assert "artist=サカナクション" in comments
 
 
 def test_encoding_removes_the_wav_it_replaced(tmp_path):

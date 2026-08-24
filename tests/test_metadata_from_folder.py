@@ -10,9 +10,7 @@ foobar2000 involved at all -- explicit user request, replacing the old
 
 from pathlib import Path
 
-import mutagen.flac
 import numpy as np
-import pyflac
 import pytest
 import soundfile as sf
 
@@ -24,15 +22,10 @@ from mdtools.project import ProjectMetadata
 
 def _make_tagged_flac(path: Path, tags: dict[str, str], seconds: float = 0.1) -> None:
     samples = np.zeros((int(44100 * seconds), 2), dtype=np.int16)
-    wav = path.with_suffix(".wav")
-    sf.write(wav, samples, 44100, subtype="PCM_16")
-    encoder = pyflac.FileEncoder(input_file=str(wav), output_file=str(path))
-    encoder.process()
-    audio = mutagen.flac.FLAC(str(path))
-    for name, value in tags.items():
-        audio[name] = value
-    audio.save()
-    wav.unlink()
+    with sf.SoundFile(str(path), mode="w", samplerate=44100, channels=2, subtype="PCM_16", format="FLAC") as f:
+        for name, value in tags.items():
+            setattr(f, name.lower(), value)
+        f.write(samples)
 
 
 def _album_folder(tmp_path: Path, *tracks: dict[str, str]) -> Path:

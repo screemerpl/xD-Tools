@@ -14,10 +14,13 @@ than by talking to the drive ourselves -- see `bin/win64/ATTRIBUTION.md`:
   would be a worse version of it.
 
 Encoding what came off the disc, previously the bundled `flac.exe`, is now
-`audio_engine.encode_wav_to_flac()` -- pyflac plus mutagen for the tags, no
-subprocess involved. `flac_path()` (and the bundled `flac.exe` binary
-itself) stay for now because decode.py's own FLAC *decoding* still uses it;
-see that module for where that stands.
+`audio_engine.encode_wav_to_flac()` -- `soundfile` (libsndfile), which
+writes the FLAC and its tags in one pass, no subprocess involved.
+decode.py's own FLAC *decoding* went the same way, so the bundled
+`flac.exe` binary is not actually required by anything in this codebase
+any more -- `flac_path()` is kept as a small, harmless locator function
+(nothing currently calls it), and the binary itself is left bundled rather
+than pulled out in the same change that stopped needing it.
 
 cd-paranoia is located through `tools_dir()`, which mirrors
 `gallery.gallery_dir()` / `icons.icons_dir()` exactly: `bin/<platform>`
@@ -140,13 +143,15 @@ def flac_path() -> str | None:
 
 
 def missing_tools() -> list[str]:
-    """Which of the two are unavailable, for a preflight message that names
-    them rather than failing halfway through a rip."""
+    """Which of the tools a rip needs are unavailable, for a preflight
+    message that names them rather than failing halfway through a rip.
+
+    Just cd-paranoia now: encoding the ripped WAV to FLAC goes through
+    audio_engine.encode_wav_to_flac() (soundfile/libsndfile), not the
+    bundled flac.exe, so a rip no longer needs it at all."""
     missing = []
     if cdparanoia_path() is None:
         missing.append("cd-paranoia")
-    if flac_path() is None:
-        missing.append("flac")
     return missing
 
 
@@ -633,15 +638,15 @@ def encode_track(task: RipTask, *, keep_wav: bool = False) -> None:
     """WAV to FLAC, then the WAV goes -- it is twice the size of what
     replaces it and has served its purpose.
 
-    Encoded through audio_engine.encode_wav_to_flac() (pyflac + mutagen),
-    not the bundled flac.exe -- no subprocess, so no timeout/argv-encoding
-    concerns either: tags reach mutagen as plain Python strings rather
-    than command-line arguments, which is what made
-    test_the_bundled_encoder_writes_non_ascii_tags_without_mangling_them
-    (see test_cdrip.py) a real question before -- flac.exe's own argv
-    handling of a Polish or Japanese title was an assumption about the
-    tool, not something this code could guarantee. mutagen writing UTF-8
-    Vorbis comments directly needs no such assumption.
+    Encoded through audio_engine.encode_wav_to_flac() (soundfile/
+    libsndfile), not the bundled flac.exe -- no subprocess, so no
+    timeout/argv-encoding concerns either: tags reach libsndfile as plain
+    Python strings rather than command-line arguments, which is what made
+    test_the_encoder_writes_non_ascii_tags_without_mangling_them (see
+    test_cdrip.py) a real question before -- flac.exe's own argv handling
+    of a Polish or Japanese title was an assumption about the tool, not
+    something this code could guarantee. Writing UTF-8 Vorbis comments
+    directly needs no such assumption.
 
     audio_engine is imported here, not at module level: audio_engine.py
     itself imports decode.py for the RED_BOOK_* constants, and decode.py

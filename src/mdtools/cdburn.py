@@ -386,14 +386,15 @@ def cdrecord_path() -> str | None:
 
 def missing_tools() -> list[str]:
     """Which of the tools burning needs are not there -- named, so the
-    dialog can say what to install rather than only that something failed."""
+    dialog can say what to install rather than only that something failed.
+
+    Just cdrecord now: a FLAC source used to need the bundled flac.exe to
+    decode (via decode.py's own dispatcher) before burning, and that path
+    goes through audio_engine (soundfile/libsndfile) instead these days,
+    needing no external tool of its own for a mono/stereo source."""
     missing = []
     if cdrecord_path() is None:
         missing.append("cdrecord")
-    from mdtools.cdrip import flac_path
-
-    if flac_path() is None:
-        missing.append("flac")
     return missing
 
 

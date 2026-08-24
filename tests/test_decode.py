@@ -137,49 +137,37 @@ def test_a_flac_is_decoded_by_the_real_bundled_tool(tmp_path):
         assert out.readframes(out.getnframes()) == original.readframes(original.getnframes())
 
 
-def test_a_file_that_is_not_red_book_goes_through_the_resampler(tmp_path):
-    """It used to be refused outright here. That was right while nothing
-    could resample; with SoX bundled, refusing an ordinary 48 kHz download
-    would be refusing the common case."""
-    launched = []
-    source = _write_wav(tmp_path / "hires.wav", rate=48000)
+def test_a_file_that_is_not_red_book_goes_through_audio_engine(tmp_path):
+    """It used to be refused outright here, then went through SoX. Now a
+    mono/stereo WAV/FLAC needing conversion goes through audio_engine
+    instead -- no subprocess `run` call at all, which is what
+    test_without_sox_a_hi_res_wav_still_works_below actually proves
+    (SoX isn't even needed for this case any more)."""
+    source = _write_wav(tmp_path / "hires.wav", rate=48000, seconds=0.5)
 
-    def record(command, **kwargs):
-        launched.append(command)
+    def fail_if_run(*args, **kwargs):
+        raise AssertionError("a mono/stereo WAV needing conversion must not run a subprocess")
 
-        class Result:
-            returncode = 0
-            stdout = stderr = ""
+    out = decode.to_wav(source, tmp_path / "out.wav", run=fail_if_run)
 
-        (tmp_path / "out.wav").write_bytes(b"")
-        return Result()
-
-    decode.to_wav(source, tmp_path / "out.wav", run=record)
-
-    assert launched and "rate" in launched[0]
+    properties = decode.analyze(out)
+    assert properties.is_red_book is True
+    assert properties.duration_seconds == pytest.approx(0.5, abs=0.01)
 
 
-def test_a_failed_decode_reports_the_tools_own_first_line(tmp_path):
+def test_a_genuinely_corrupt_flac_reports_audio_engines_own_message(tmp_path):
+    """STREAMINFO alone (what analyze() reads) can look perfectly valid
+    while the actual audio frames after it are garbage -- this is what
+    that looks like, and it has to surface as DecodeError, not an
+    unhandled exception from soundfile."""
     wav = _write_wav(tmp_path / "a.wav", seconds=0.2)
     flac = _encode_flac(wav, tmp_path / "a.flac")
+    # truncate well past STREAMINFO, into the actual audio frames
+    data = flac.read_bytes()
+    flac.write_bytes(data[: len(data) // 2])
 
-    class Result:
-        returncode = 1
-        stdout = ""
-        stderr = "\n\nERROR: not a valid stream\n"
-
-    with pytest.raises(decode.DecodeError) as error:
-        decode.to_wav(flac, tmp_path / "out.wav", run=lambda *a, **k: Result())
-
-    assert "not a valid stream" in str(error.value)
-
-
-def test_the_decode_command_overwrites_quietly(tmp_path):
-    command = decode.decode_command("flac", tmp_path / "in.flac", tmp_path / "out.wav")
-
-    assert command[:4] == ["flac", "-d", "-f", "-s"]
-    assert str(tmp_path / "out.wav") in command
-    assert str(tmp_path / "in.flac") == command[-1]
+    with pytest.raises(decode.DecodeError):
+        decode.to_wav(flac, tmp_path / "out.wav")
 
 
 # -- resampling with SoX -------------------------------------------------
@@ -192,8 +180,9 @@ def _sox_or_skip():
 
 def test_a_hi_res_flac_is_converted_rather_than_refused(tmp_path):
     """The case that started this: a 48 kHz / 24-bit album, which is what
-    a modern download normally is."""
-    _sox_or_skip()
+    a modern download normally is. No `_sox_or_skip()` guard -- FLAC
+    conversion goes through audio_engine regardless of whether SoX is
+    even installed."""
     wav = tmp_path / "hires.wav"
     with wave.open(str(wav), "wb") as handle:
         handle.setnchannels(2)
@@ -212,8 +201,7 @@ def test_a_hi_res_flac_is_converted_rather_than_refused(tmp_path):
     assert properties.duration_seconds == pytest.approx(2.0, abs=0.01)
 
 
-def test_a_file_that_is_already_red_book_is_not_run_through_the_resampler(tmp_path):
-    _sox_or_skip()
+def test_a_file_that_is_already_red_book_is_not_run_through_anything(tmp_path):
     source = _write_wav(tmp_path / "ok.wav")
 
     def fail_if_run(*args, **kwargs):
@@ -222,9 +210,25 @@ def test_a_file_that_is_already_red_book_is_not_run_through_the_resampler(tmp_pa
     decode.to_wav(source, tmp_path / "out.wav", run=fail_if_run)
 
 
-def test_without_sox_a_hi_res_file_is_refused_and_says_why(tmp_path, monkeypatch):
+def test_without_sox_a_hi_res_wav_still_works_via_the_engine(tmp_path, monkeypatch):
+    """The behaviour this module's own docstring now describes: a mono/
+    stereo WAV or FLAC needing conversion no longer depends on SoX being
+    installed at all."""
     monkeypatch.setattr(decode, "sox_path", lambda: None)
-    source = _write_wav(tmp_path / "hires.wav", rate=48000)
+    source = _write_wav(tmp_path / "hires.wav", rate=48000, seconds=0.3)
+
+    out = decode.to_wav(source, tmp_path / "out.wav")
+
+    assert decode.analyze(out).is_red_book is True
+
+
+def test_without_sox_a_surround_file_is_still_refused_and_says_why(tmp_path, monkeypatch):
+    """The refusal this module's docstring describes is still real -- just
+    narrowed to the cases audio_engine deliberately doesn't attempt:
+    more than two channels, here, since a genuine channel mix still needs
+    SoX."""
+    monkeypatch.setattr(decode, "sox_path", lambda: None)
+    source = _write_wav(tmp_path / "surround.wav", rate=48000, channels=6)
 
     with pytest.raises(decode.DecodeError) as error:
         decode.to_wav(source, tmp_path / "out.wav")

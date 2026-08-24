@@ -1,7 +1,7 @@
 """xD-Tools' own audio engine: FLAC decode/encode, resampling, dithering
 and real-time playback -- replacing flac.exe, SoX and foobar2000's own
-playback role with pyflac + mutagen + soxr + a verified noise-shaped
-dither + sounddevice, respectively.
+playback role with `soundfile` (libsndfile) + soxr + a verified
+noise-shaped dither + sounddevice, respectively.
 
 This module is the *foundation* only -- decode.py's SoX-backed conversion
 and cdrip.py's flac.exe encode still run as they always have, and every
@@ -11,22 +11,38 @@ switched over to, one at a time, once each swap has its own test coverage
 in place. No Qt here either, matching cdrip.py/decode.py/mdrem.py's own
 "plain module, testable without a QApplication" rule.
 
-Three design decisions came out of real measurement, not assumption --
+Several design decisions came out of real measurement, not assumption --
 worth keeping in mind before touching any of this:
 
-**FLAC only, for now.** pyFLAC covers FLAC encode/decode; WAV needs
-nothing beyond `soundfile` (already a dependency of pyflac's own file
-I/O). Anything else (MP3 especially) is deliberately out of scope --
-mirrors decode.py's own "SoX cannot read MP3, and that's fine" stance,
-just drawn one format earlier. A file this can't handle should be
-reported, never silently misread.
+**`soundfile` (libsndfile), not `pyflac`, for FLAC encode/decode -- and
+that was a correction partway through, not the original plan.** pyFLAC
+looked like the obvious choice at first (a dedicated FLAC binding), but
+its decoder turns out to have a hard limitation, confirmed directly: every
+one of its decoder classes shares one low-level C write-callback that
+raises `ValueError('Only int16/int32 data type is supported')` the moment
+a FLAC frame's bits-per-sample is anything but 16 or 32 -- 24-bit is
+neither, and a 24-bit download is the common real-world case this whole
+conversion path exists for. `soundfile.read()` on the same file decodes
+it bit-exactly regardless of depth (libsndfile has its own complete FLAC
+codec with no such restriction), and `soundfile` also encodes FLAC
+directly -- writing the same Vorbis-comment tags in one pass, verified via
+an independent read-back through `mutagen`, and producing byte-identical
+output to pyFLAC's own encoder for the same audio (both wrap the same
+libFLAC underneath). It covers everything pyFLAC was doing here, with
+none of its limitations, so pyFLAC and mutagen's own FLAC-writing support
+are no longer dependencies of this module at all.
 
-**pyFLAC has no tag support at all** ("FLAC metadata handling is not
-implemented", per its own docs) -- confirmed directly, not assumed.
-`encode_wav_to_flac()` therefore always writes tags as a second pass
-through `mutagen`, exactly the way cdrip.py's own `encode_command()`
-passes `--tag=` arguments to flac.exe today; this is what makes the swap
-a drop-in for that call site later.
+**FLAC and WAV only, for now, even though this build of libsndfile can
+read and write MP3 and OGG Vorbis too (confirmed directly: a real
+encode-then-decode round trip through both formats came back with
+correlation 1.0 against the source).** Widening format support is a
+deliberate, separate decision -- this project has documented MP3 as
+unsupported everywhere for a long time (SoX's bundled build lacks
+`libmad-0.dll`), and lifting that changes burn-dialog verdicts and
+several docstrings that explain *why* it was unsupported, not just this
+module. It also needs re-confirming against the actual frozen-build
+wheel, not just a dev venv -- libsndfile's MP3/OGG support depends on
+which codecs that specific wheel was compiled with.
 
 **The noise-shaped dither's inner loop is JIT-compiled with numba, not
 plain Python, and not a "vectorise the recursion away" trick either --
@@ -59,17 +75,12 @@ from typing import Callable
 import numpy as np
 import soxr
 
-from mdtools.decode import DecodeError, RED_BOOK_CHANNELS, RED_BOOK_RATE
+from mdtools.decode import RED_BOOK_CHANNELS, RED_BOOK_RATE
 
 try:
-    import pyflac
-except ImportError:  # pragma: no cover -- exercised only if the dependency is genuinely missing
-    pyflac = None
-
-try:
-    import mutagen.flac
-except ImportError:  # pragma: no cover
-    mutagen = None
+    import soundfile as sf
+except ImportError:  # pragma: no cover -- wraps libsndfile via cffi, same class of risk as sounddevice below
+    sf = None
 
 try:
     import sounddevice as sd
@@ -85,48 +96,46 @@ class AudioEngineError(Exception):
     device. Deliberately a separate class from decode.DecodeError (which
     stays what SoX-backed conversion raises until that call site is
     actually switched over): merging them now would make a caller unable
-    to tell "SoX is missing" from "pyflac is missing" during the period
-    where both paths still exist side by side."""
+    to tell "SoX is missing" from "this engine can't read that file"
+    during the period where both paths still exist side by side."""
 
 
-# --- decoding / encoding (pyflac + mutagen) -------------------------------
+def _require_soundfile() -> None:
+    if sf is None:
+        raise AudioEngineError("soundfile is not installed")
+
+
+# --- decoding / encoding (libsndfile via soundfile) -----------------------
+
+# Both directions go through `soundfile` (libsndfile), not `pyflac`, and
+# that was a real correction, not the original design: pyflac's decoder
+# cannot read a 24-bit FLAC at all (confirmed directly -- every one of
+# its decoder classes shares one low-level C write-callback that raises
+# `ValueError('Only int16/int32 data type is supported')` the moment a
+# frame's bits-per-sample is anything but 16 or 32, and 24-bit is
+# neither), which is exactly the common case a real-world download is.
+# `soundfile.read()` on the same file decodes it bit-exactly regardless
+# of depth -- libsndfile has its own complete FLAC codec with no such
+# restriction, confirmed directly against a real 24-bit FLAC made by the
+# bundled flac.exe. It also encodes FLAC directly, writes the same
+# Vorbis-comment tags (confirmed via an independent read-back through
+# mutagen), and produces byte-identical output to pyflac's own encoder
+# for the same audio (both wrap the same libFLAC underneath) -- so it
+# covers everything pyflac was doing here, with none of its limitations,
+# and mutagen's own FLAC support is no longer needed for tags either.
 
 
 def decode_flac_to_wav(source: Path | str, destination: Path | str) -> None:
-    """pyflac's own equivalent of flac.exe's `-d -f -s -o dest src` decode
-    (see decode.py's `flac_decode_command()`) -- writes a WAV file rather
-    than returning an array, deliberately: every decode path in this app
-    already reads its PCM by reading a file afterwards, and matching that
-    shape is what keeps this a drop-in for decode.py's own dispatcher
-    later, rather than a parallel decode path with different semantics.
-
-    **`decoder.process()` does not raise on a garbage/non-FLAC input, and
-    `decoder.state` cannot tell success from failure either** -- confirmed
-    directly, not assumed: it silently returns, having logged an error
-    through its own callback, and `.state` lands on `UNINITIALIZED`
-    either way, since `.process()` calls `finish()` internally regardless
-    of outcome. The only reliable signal is whether the destination file
-    actually landed on disk -- the same "a clean-looking return is not
-    evidence, only the actual output is" lesson cdrip.py already learned
-    from cdparanoia's own exit code.
-
-    **Failure can also come out of `FileDecoder()`'s own constructor, not
-    just `.process()`** -- confirmed directly: a missing source file
-    raises `pyflac.DecoderInitException` right there, before `.process()`
-    is ever reached. A broad `except Exception` around both the
-    construction and the process() call is deliberate, not laziness --
-    this function's whole contract is "always AudioEngineError, never a
-    third-party exception leaking past it," and pyflac alone already has
-    four differently-named exception classes across init/process for
-    encode/decode, with `soundfile.LibsndfileError` (a *different*
-    library's exception, since pyflac's own file I/O goes through it)
-    on top of those."""
-    if pyflac is None:
-        raise AudioEngineError("pyflac is not installed")
+    """A lossless FLAC -> WAV unpack, at the FLAC's own bit depth -- for
+    decode.py's "already Red Book, nothing to resample or dither, just
+    unwrap the container" fast path. Reading as int16 is exact rather
+    than lossy for that case specifically: Red Book is 16-bit by
+    definition, so there is no precision to lose."""
+    _require_soundfile()
     source, destination = Path(source), Path(destination)
     try:
-        decoder = pyflac.FileDecoder(input_file=str(source), output_file=str(destination))
-        decoder.process()
+        data, rate = sf.read(str(source), dtype="int16", always_2d=True)
+        sf.write(str(destination), data, rate, subtype="PCM_16")
     except Exception as exc:
         raise AudioEngineError(f"{source.name} could not be decoded: {exc}") from exc
     if not destination.exists() or destination.stat().st_size == 0:
@@ -137,44 +146,37 @@ def encode_wav_to_flac(
     source: Path | str,
     destination: Path | str,
     tags: dict[str, str] | None = None,
-    *,
-    compression_level: int = 5,
 ) -> None:
-    """pyflac + mutagen's equivalent of cdrip.py's `encode_command()`
-    (flac.exe with one `--tag=name=value` per tag). Two separate steps
-    because pyflac's encoder cannot write tags at all -- see this module's
-    own docstring.
+    """cdrip.py's own `encode_command()` (flac.exe with one
+    `--tag=name=value` per tag), replaced: libsndfile writes the FLAC
+    *and* the tags in one pass -- unlike pyflac, which has no tag support
+    at all and needed a second pass through mutagen for that half.
 
-    Checks the destination file actually landed, same reasoning as
-    decode_flac_to_wav()'s own note above -- `.process()`/`.state` cannot
-    be trusted alone, and neither can catching only pyflac's own
-    exception classes: `FileEncoder()`'s constructor calls `soundfile.info()`
-    on the source to read its format, so a missing/unreadable source
-    raises a raw `soundfile.LibsndfileError` right there, before
-    `.process()` is ever reached -- confirmed directly, not assumed (see
-    decode_flac_to_wav()'s matching note)."""
-    if pyflac is None:
-        raise AudioEngineError("pyflac is not installed")
+    No `compression_level` parameter: `SoundFile.compression_level` is a
+    read-only property in this soundfile version (confirmed directly --
+    assigning it raises `AttributeError`), so there is nothing here to
+    set it through; libFLAC's own default (level 5) applies, the same
+    default flac.exe's own command line used (no `--compression-level`
+    flag was ever passed)."""
+    _require_soundfile()
     source, destination = Path(source), Path(destination)
     try:
-        encoder = pyflac.FileEncoder(
-            input_file=str(source),
-            output_file=str(destination),
-            compression_level=compression_level,
-        )
-        encoder.process()
+        data, rate = sf.read(str(source), dtype="int16", always_2d=True)
+        with sf.SoundFile(
+            str(destination),
+            mode="w",
+            samplerate=rate,
+            channels=data.shape[1],
+            subtype="PCM_16",
+            format="FLAC",
+        ) as out:
+            for name, value in (tags or {}).items():
+                setattr(out, name.lower(), str(value))
+            out.write(data)
     except Exception as exc:
         raise AudioEngineError(f"{source.name} could not be encoded: {exc}") from exc
     if not destination.exists() or destination.stat().st_size == 0:
         raise AudioEngineError(f"{source.name} could not be encoded -- it may not be a valid WAV file")
-
-    if tags:
-        if mutagen is None:
-            raise AudioEngineError("mutagen is not installed")
-        audio = mutagen.flac.FLAC(str(destination))
-        for name, value in tags.items():
-            audio[name] = str(value)
-        audio.save()
 
 
 # --- resampling -----------------------------------------------------------
@@ -263,6 +265,53 @@ def dither_to_16bit(
     coeffs = _noise_shaping_coefficients(order)
     y = _dither_loop(scaled + tpdf, coeffs, order)
     return np.clip(y, -32768, 32767).astype(np.int16)
+
+
+def resample_and_dither_to_red_book(source: Path | str, destination: Path | str) -> None:
+    """A FLAC or WAV source, at any sample rate/bit depth, mono or
+    stereo, to a Red Book (44.1kHz/16-bit/stereo) PCM WAV -- decode.py's
+    own SoX-backed conversion for this case, replaced in full: `sf.read()`
+    decodes either format directly (including a 24-bit FLAC -- see
+    decode_flac_to_wav()'s own note on why that needs libsndfile rather
+    than a dedicated FLAC decoder), `resample()` (soxr) handles the
+    sample rate, and `dither_to_16bit()` replaces SoX's own `dither`
+    effect for the bit depth. Mono is duplicated to two identical
+    channels, matching what SoX's own `-c 2` does to a mono source.
+
+    Deliberately scoped to mono/stereo input only -- decode.py's own
+    dispatcher routes anything with more than two channels (real-world
+    surround audio) to SoX instead, which does genuine channel mixing;
+    naively keeping only the first two channels here would silently drop
+    the rest, exactly the kind of silent-wrong-answer this app avoids
+    elsewhere (see cdrip.py/decode.py's own "never quietly misreport"
+    rules)."""
+    _require_soundfile()
+    source, destination = Path(source), Path(destination)
+
+    try:
+        samples, rate = sf.read(str(source), dtype="float64", always_2d=True)
+    except Exception as exc:
+        raise AudioEngineError(f"{source.name} could not be read: {exc}") from exc
+    if samples.shape[1] > RED_BOOK_CHANNELS:
+        # Enforced here too, not just left to the caller's own dispatch
+        # logic -- a >2-channel source silently proceeding would produce
+        # a WAV with the wrong channel count instead of a clear error.
+        raise AudioEngineError(
+            f"{source.name} has {samples.shape[1]} channels; only mono and stereo are supported here"
+        )
+
+    resampled = resample(samples, rate, RED_BOOK_RATE)
+    if resampled.shape[1] == 1:
+        resampled = np.repeat(resampled, RED_BOOK_CHANNELS, axis=1)
+
+    rng = np.random.default_rng()
+    channels_16 = [dither_to_16bit(resampled[:, c], rng=rng) for c in range(resampled.shape[1])]
+    interleaved = np.stack(channels_16, axis=-1)
+
+    try:
+        sf.write(str(destination), interleaved, RED_BOOK_RATE, subtype="PCM_16")
+    except Exception as exc:
+        raise AudioEngineError(f"{destination.name} could not be written: {exc}") from exc
 
 
 # --- playback / device selection (sounddevice) -----------------------------

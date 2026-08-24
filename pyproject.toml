@@ -7,7 +7,6 @@ dependencies = [
     "PySide6>=6.7",
     "Pillow>=10.0",
     "telethon>=1.34",
-    "pyflac>=3.0",
     "mutagen>=1.47",
     "soxr>=0.5",
     "sounddevice>=0.4",
