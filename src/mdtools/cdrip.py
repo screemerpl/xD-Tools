@@ -2,8 +2,8 @@
 extracting it to tagged FLAC files that foobar2000 can then play into the
 deck.
 
-The actual work is done by two bundled command line programs rather than
-by talking to the drive ourselves -- see `bin/win64/ATTRIBUTION.md`:
+Reading the disc itself is done by a bundled command line program rather
+than by talking to the drive ourselves -- see `bin/win64/ATTRIBUTION.md`:
 
 - **cd-paranoia** (libcdio's maintained port of Xiph's cdparanoia), which
   is what makes this worth doing at all. Windows will happily hand you a
@@ -12,13 +12,19 @@ by talking to the drive ourselves -- see `bin/win64/ATTRIBUTION.md`:
   jitter correction and re-reads on scratches. That is the entire subject
   cdparanoia exists for, and reimplementing it over `IOCTL_CDROM_RAW_READ`
   would be a worse version of it.
-- **flac**, to encode what came off the disc.
 
-Both are located through `tools_dir()`, which mirrors `gallery.gallery_dir()`
-/ `icons.icons_dir()` exactly: `bin/<platform>` beside the source checkout in
-dev mode, or inside a PyInstaller bundle's `sys._MEIPASS` in a frozen build.
-Nothing is bundled for Linux -- there `find_tool()` falls through to PATH,
-where a distro's own `cdparanoia`/`flac` packages live.
+Encoding what came off the disc, previously the bundled `flac.exe`, is now
+`audio_engine.encode_wav_to_flac()` -- pyflac plus mutagen for the tags, no
+subprocess involved. `flac_path()` (and the bundled `flac.exe` binary
+itself) stay for now because decode.py's own FLAC *decoding* still uses it;
+see that module for where that stands.
+
+cd-paranoia is located through `tools_dir()`, which mirrors
+`gallery.gallery_dir()` / `icons.icons_dir()` exactly: `bin/<platform>`
+beside the source checkout in dev mode, or inside a PyInstaller bundle's
+`sys._MEIPASS` in a frozen build. Nothing is bundled for Linux -- there
+`find_tool()` falls through to PATH, where a distro's own `cdparanoia`
+package lives.
 
 No Qt anywhere in here, matching mdrem.py and foobar.py: the panels import
 this, never the other way round, and everything except the two functions
@@ -56,7 +62,6 @@ PREGAP_SECTORS = 150
 # Nothing here is quick, and a drive that is spinning up, retrying a
 # scratch, or simply absent must not wedge the app forever.
 TOC_TIMEOUT_S = 60.0
-ENCODE_TIMEOUT_S = 300.0
 
 # How often a running rip is checked on. Also the worst case delay before
 # Stop takes effect, which is what keeps this well under a second.
@@ -533,16 +538,6 @@ def rip_command(tool: str, device: str, number: int, wav_path: Path) -> list[str
     return [tool, "-d", device, "-e", "-w", str(number), str(wav_path)]
 
 
-def encode_command(tool: str, task: RipTask) -> list[str]:
-    """-f overwrites a leftover from an interrupted run rather than
-    stopping to ask; -s keeps the encoder from competing with our own
-    progress reporting."""
-    command = [tool, "-f", "-s"]
-    command += [f"--tag={name}={value}" for name, value in task.tags.items()]
-    command += ["-o", str(task.flac_path), str(task.wav_path)]
-    return command
-
-
 def rip_track(
     device: str,
     task: RipTask,
@@ -634,27 +629,32 @@ def _wav_fraction(task: RipTask) -> float:
     return min(1.0, size / max(1, task.expected_wav_bytes))
 
 
-def encode_track(task: RipTask, *, run=subprocess.run, keep_wav: bool = False) -> None:
+def encode_track(task: RipTask, *, keep_wav: bool = False) -> None:
     """WAV to FLAC, then the WAV goes -- it is twice the size of what
-    replaces it and has served its purpose."""
-    tool = flac_path()
-    if tool is None:
-        raise CdRipError("flac was not found")
+    replaces it and has served its purpose.
+
+    Encoded through audio_engine.encode_wav_to_flac() (pyflac + mutagen),
+    not the bundled flac.exe -- no subprocess, so no timeout/argv-encoding
+    concerns either: tags reach mutagen as plain Python strings rather
+    than command-line arguments, which is what made
+    test_the_bundled_encoder_writes_non_ascii_tags_without_mangling_them
+    (see test_cdrip.py) a real question before -- flac.exe's own argv
+    handling of a Polish or Japanese title was an assumption about the
+    tool, not something this code could guarantee. mutagen writing UTF-8
+    Vorbis comments directly needs no such assumption.
+
+    audio_engine is imported here, not at module level: audio_engine.py
+    itself imports decode.py for the RED_BOOK_* constants, and decode.py
+    imports cdrip.py (this module) for find_tool()/flac_path() -- a
+    module-level import here would be a straight import cycle. Deferred
+    to call time, by which every module involved has already finished
+    loading, it isn't one."""
+    from mdtools import audio_engine
+
     try:
-        completed = run(
-            encode_command(tool, task),
-            capture_output=True,
-            text=True,
-            errors="replace",
-            timeout=ENCODE_TIMEOUT_S,
-            creationflags=NO_WINDOW,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise CdRipError(f"encoding track {task.number} timed out") from exc
-    except OSError as exc:
-        raise CdRipError(f"could not run flac: {exc}") from exc
-    if completed.returncode != 0:
-        raise CdRipError(_first_useful_line(completed.stderr or "") or f"flac failed on track {task.number}")
+        audio_engine.encode_wav_to_flac(task.wav_path, task.flac_path, tags=task.tags)
+    except audio_engine.AudioEngineError as exc:
+        raise CdRipError(f"encoding track {task.number} failed: {exc}") from exc
     if not keep_wav:
         task.wav_path.unlink(missing_ok=True)
 

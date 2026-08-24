@@ -459,16 +459,19 @@ def _flac_vorbis_comments(path: Path) -> list[str]:
     return []
 
 
-@pytest.mark.skipif(cdrip.flac_path() is None, reason="the bundled flac encoder is not present")
-def test_the_bundled_encoder_writes_non_ascii_tags_without_mangling_them(tmp_path):
-    """Runs the real flac.exe from bin/.
+def test_the_encoder_writes_non_ascii_tags_without_mangling_them(tmp_path):
+    """Verified against a hand-written Vorbis-comment parser
+    (_flac_vorbis_comments), not mutagen itself, since mutagen is what
+    wrote them.
 
-    Not a formality: tags reach the encoder as command line arguments, and a
-    Polish or Japanese album title surviving that trip on Windows is an
-    assumption about how the tool handles its own argv, not something the
-    code here can guarantee. If it ever stops being true, every title on
-    every ripped disc is silently wrong -- and would then be written onto
-    the MiniDisc that way."""
+    Encoding now goes through audio_engine.encode_wav_to_flac() (pyflac +
+    mutagen), not flac.exe -- tags reach mutagen as plain Python strings,
+    not command-line arguments, so surviving a Polish or Japanese title is
+    no longer an assumption about a tool's own argv handling the way it
+    was when this ran flac.exe directly. Still worth proving directly:
+    mutagen writes Vorbis comments as UTF-8, and this is what confirms
+    that actually happened rather than assuming it from the library's own
+    docs."""
     task = cdrip.RipTask(
         number=1,
         title="Zażółć gęślą jaźń",
@@ -487,7 +490,6 @@ def test_the_bundled_encoder_writes_non_ascii_tags_without_mangling_them(tmp_pat
     assert "ARTIST=サカナクション" in comments
 
 
-@pytest.mark.skipif(cdrip.flac_path() is None, reason="the bundled flac encoder is not present")
 def test_encoding_removes_the_wav_it_replaced(tmp_path):
     task = cdrip.RipTask(1, "A", 1, tmp_path / "in.wav", tmp_path / "out.flac", {"TITLE": "A"})
     _write_silent_wav(task.wav_path)
@@ -496,15 +498,23 @@ def test_encoding_removes_the_wav_it_replaced(tmp_path):
     assert task.flac_path.is_file()
 
 
-def test_encode_failure_is_reported_with_the_encoders_own_message(monkeypatch, tmp_path):
-    monkeypatch.setattr(cdrip, "flac_path", lambda: "flac")
+def test_encoding_can_keep_the_wav_when_asked(tmp_path):
+    task = cdrip.RipTask(1, "A", 1, tmp_path / "in.wav", tmp_path / "out.flac", {"TITLE": "A"})
+    _write_silent_wav(task.wav_path)
+    cdrip.encode_track(task, keep_wav=True)
+    assert task.wav_path.exists()
+    assert task.flac_path.is_file()
+
+
+def test_encode_failure_is_reported_as_a_cdriperror(tmp_path):
+    """No WAV was ever written at source -- audio_engine.encode_wav_to_flac()
+    has nothing to encode, which is exactly the "clean-looking return is
+    not evidence, check the actual output" case its own docstring
+    describes."""
     task = _one_task(tmp_path)
 
-    def fake_run(command, **kwargs):
-        return _FakeCompleted(stderr="in.wav: ERROR: file is not a valid WAVE file", returncode=1)
-
-    with pytest.raises(cdrip.CdRipError, match="not a valid WAVE"):
-        cdrip.encode_track(task, run=fake_run)
+    with pytest.raises(cdrip.CdRipError):
+        cdrip.encode_track(task)
 
 
 # --- bundled tools ----------------------------------------------------

@@ -108,14 +108,26 @@ def decode_flac_to_wav(source: Path | str, destination: Path | str) -> None:
     of outcome. The only reliable signal is whether the destination file
     actually landed on disk -- the same "a clean-looking return is not
     evidence, only the actual output is" lesson cdrip.py already learned
-    from cdparanoia's own exit code."""
+    from cdparanoia's own exit code.
+
+    **Failure can also come out of `FileDecoder()`'s own constructor, not
+    just `.process()`** -- confirmed directly: a missing source file
+    raises `pyflac.DecoderInitException` right there, before `.process()`
+    is ever reached. A broad `except Exception` around both the
+    construction and the process() call is deliberate, not laziness --
+    this function's whole contract is "always AudioEngineError, never a
+    third-party exception leaking past it," and pyflac alone already has
+    four differently-named exception classes across init/process for
+    encode/decode, with `soundfile.LibsndfileError` (a *different*
+    library's exception, since pyflac's own file I/O goes through it)
+    on top of those."""
     if pyflac is None:
         raise AudioEngineError("pyflac is not installed")
     source, destination = Path(source), Path(destination)
-    decoder = pyflac.FileDecoder(input_file=str(source), output_file=str(destination))
     try:
+        decoder = pyflac.FileDecoder(input_file=str(source), output_file=str(destination))
         decoder.process()
-    except pyflac.DecoderProcessException as exc:
+    except Exception as exc:
         raise AudioEngineError(f"{source.name} could not be decoded: {exc}") from exc
     if not destination.exists() or destination.stat().st_size == 0:
         raise AudioEngineError(f"{source.name} could not be decoded -- it may not be a valid FLAC file")
@@ -135,18 +147,23 @@ def encode_wav_to_flac(
 
     Checks the destination file actually landed, same reasoning as
     decode_flac_to_wav()'s own note above -- `.process()`/`.state` cannot
-    be trusted alone."""
+    be trusted alone, and neither can catching only pyflac's own
+    exception classes: `FileEncoder()`'s constructor calls `soundfile.info()`
+    on the source to read its format, so a missing/unreadable source
+    raises a raw `soundfile.LibsndfileError` right there, before
+    `.process()` is ever reached -- confirmed directly, not assumed (see
+    decode_flac_to_wav()'s matching note)."""
     if pyflac is None:
         raise AudioEngineError("pyflac is not installed")
     source, destination = Path(source), Path(destination)
-    encoder = pyflac.FileEncoder(
-        input_file=str(source),
-        output_file=str(destination),
-        compression_level=compression_level,
-    )
     try:
+        encoder = pyflac.FileEncoder(
+            input_file=str(source),
+            output_file=str(destination),
+            compression_level=compression_level,
+        )
         encoder.process()
-    except pyflac.EncoderProcessException as exc:
+    except Exception as exc:
         raise AudioEngineError(f"{source.name} could not be encoded: {exc}") from exc
     if not destination.exists() or destination.stat().st_size == 0:
         raise AudioEngineError(f"{source.name} could not be encoded -- it may not be a valid WAV file")
