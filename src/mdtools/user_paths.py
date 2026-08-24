@@ -9,7 +9,7 @@ executable and exports scattered wherever the last dialog had wandered to.
 The rule here is the one the operating system already sets: documents go in
 Documents, pictures come from Pictures. Only the project folder gets a name
 of its own, because a project is several files' worth of one thing and
-"MiniDiscProjects" is a folder a user can recognise a year later.
+"XDProjects" is a folder a user can recognise a year later.
 
 Deliberately derived rather than configurable. The CD rip folder is a
 setting because it holds hundreds of megabytes of disposable audio and
@@ -35,7 +35,7 @@ from PySide6.QtCore import QStandardPaths
 # Not translated, on purpose: a folder name is part of the filesystem, and
 # switching the interface language should not strand a user's projects in a
 # directory under a name they no longer recognise.
-PROJECTS_FOLDER_NAME = "MiniDiscProjects"
+PROJECTS_FOLDER_NAME = "XDProjects"
 
 
 def _standard(location: QStandardPaths.StandardLocation, fallback: str) -> Path:
@@ -59,7 +59,7 @@ def music_dir() -> Path:
 
 
 def projects_dir() -> Path:
-    """Documents/MiniDiscProjects, created if it is not there yet.
+    """Documents/XDProjects, created if it is not there yet.
 
     Created on demand rather than at startup: a folder that appears in
     somebody's Documents before they have saved anything is clutter, and
@@ -76,6 +76,41 @@ def projects_dir() -> Path:
         # working directory.
         return documents_dir()
     return folder
+
+
+def printing_dir() -> Path:
+    """XDProjects/printing, created if it is not there yet.
+
+    Where a cut/print export is offered a save location -- always this one
+    folder, not wherever the currently open project happens to live, so
+    every SVG/PNG a session produces lands somewhere predictable and
+    findable rather than scattered beside whichever .mdproj was open when
+    it was exported."""
+    folder = projects_dir() / "printing"
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return projects_dir()
+    return folder
+
+
+def audio_dir() -> Path:
+    """XDProjects/Audio -- shared by CD ripping and Telegram bot downloads,
+    both of which produce audio files destined for the same recording flow.
+    Keeping them under the projects folder rather than a system temp
+    directory means they survive a reboot and are where a user would look
+    for them.
+
+    Deliberately *not* created here, unlike projects_dir()/printing_dir():
+    this is read every time app_settings computes the default CD rip/
+    Telegram download folder, including just from opening a settings
+    dialog, and creating a folder on disk as a side effect of merely asking
+    what its default location would be is a step too eager. The actual
+    ripping/downloading code (cdrip.ensure_folder(),
+    ExperimentalSettingsDialog._create_download_folder()) creates it at the
+    point it is genuinely about to be used, the same "created on demand"
+    rule as everywhere else in this app."""
+    return documents_dir() / PROJECTS_FOLDER_NAME / "Audio"
 
 
 _INVALID_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
@@ -117,14 +152,13 @@ def project_start_path(current_path: str | None, suggested_name: str = "") -> st
 
 
 def export_start_path(current_path: str | None, filename: str = "") -> str:
-    """Where an export dialog should start: beside the project it came from
-    if that project has been saved, otherwise the projects folder.
+    """Where an export dialog should start: always XDProjects/printing.
 
-    Next to the project rather than in a downloads or desktop folder,
-    because an export belongs to one design -- the SVG that cuts it and the
-    PNG that prints it are the same job as the .mdproj, and keeping them
-    together is what makes the set findable when it is time to cut."""
-    base = Path(current_path).parent if current_path else projects_dir()
+    `current_path` (the open project's own file, if saved) is accepted for
+    backward compatibility but no longer used to decide the folder --
+    every export now lands in one predictable place instead of scattering
+    beside whichever project happened to be open at the time."""
+    base = printing_dir()
     return str(base / filename) if filename else str(base)
 
 

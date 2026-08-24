@@ -1,11 +1,17 @@
 """The Recording menu shows what applies to the project in front of you.
 
-A MiniDisc project has no use for "Burn Audio CD", and a CD project none
-for the deck's remote or for erasing an MD. This is a deliberate change of
-principle rather than tidying: erasing, the remote and the record entries
-all act on whatever disc is physically in the deck, which has nothing to do
-with which label is open -- and that independence was itself deliberate
-once. It loses to a menu that matches the project.
+A MiniDisc project has no use for "Erase MiniDisc"/"Remote Control" or the
+deck at all -- and a CD project needs no MDRem adapter for its recording
+entries, since those dispatch straight to burning instead. This is a
+deliberate change of principle rather than tidying: erasing, the remote and
+the record entries all act on whatever disc is physically in the deck,
+which has nothing to do with which label is open -- and that independence
+was itself deliberate once. It loses to a menu that matches the project.
+
+There used to be a separate "Burn Audio CD from ..." action beside the
+folder and foobar2000 record entries; those collapsed into one "Record"
+entry per source that does whatever the open project's medium calls for
+(see app_window._record_folder_dialog/_record_from_foobar).
 """
 
 import pytest
@@ -29,38 +35,38 @@ def _visible(win) -> dict[str, bool]:
         "record_folder": win.record_folder_action.isVisible(),
         "erase": win.erase_disc_action.isVisible(),
         "remote": win.remote_action.isVisible(),
-        "burn_folder": win.burn_folder_action.isVisible(),
-        "burn_foobar": win.burn_foobar_action.isVisible(),
     }
 
 
-def test_a_minidisc_project_is_not_offered_cd_burning(window):
+def test_a_minidisc_project_is_not_offered_the_cd_only_entries(window):
     window.project.medium = MEDIUM_MD
     window._sync_mdrem_actions()
 
     state = _visible(window)
-    assert state["record"] and state["erase"] and state["remote"]
-    assert not state["burn_folder"] and not state["burn_foobar"]
+    assert state["record"] and state["record_folder"] and state["erase"] and state["remote"]
 
 
-def test_a_cd_project_is_not_offered_the_deck(window):
+def test_a_cd_project_is_still_offered_record_folder_and_foobar(window):
+    """These are the entries that now dispatch to burning on a CD
+    project -- they must stay visible, just doing something different."""
     window.project.medium = MEDIUM_CD
     window._sync_mdrem_actions()
 
     state = _visible(window)
-    assert state["burn_folder"] and state["burn_foobar"]
-    assert not any(state[name] for name in ("record", "record_cd", "record_folder", "erase", "remote"))
+    assert state["record"] and state["record_folder"]
+    assert not any(state[name] for name in ("record_cd", "erase", "remote"))
 
 
-def test_burning_does_not_disappear_with_the_adapter(window, monkeypatch):
-    """It needs the drive, not the infrared adapter -- the trap that made
-    the Telegram entry worth a note of its own."""
+def test_record_folder_and_foobar_do_not_disappear_with_the_adapter_on_a_cd_project(window, monkeypatch):
+    """They need the drive, not the infrared adapter, once the project is a
+    CD one -- the trap that made the Telegram entry worth a note of its
+    own."""
     monkeypatch.setattr(app_settings, "mdrem_enabled", lambda: False)
     window.project.medium = MEDIUM_CD
     window._sync_mdrem_actions()
 
-    assert window.burn_folder_action.isVisible()
-    assert window.burn_foobar_action.isVisible()
+    assert window.record_folder_action.isVisible()
+    assert window.record_action.isVisible()
 
 
 def test_without_an_adapter_a_minidisc_project_keeps_only_what_works(window, monkeypatch):
@@ -90,11 +96,12 @@ def test_opening_a_project_of_the_other_medium_re_syncs_the_menu(window, tmp_pat
     window.project.medium = MEDIUM_MD
     window._sync_mdrem_actions()
     assert window.record_action.isVisible()
+    assert window.record_cd_action.isVisible()
 
     assert window._open_project_path(str(path)) is True
 
-    assert window.burn_folder_action.isVisible()
-    assert not window.record_action.isVisible()
+    assert window.record_folder_action.isVisible()
+    assert not window.record_cd_action.isVisible()
 
 
 # --- the page switcher ---------------------------------------------------
@@ -118,26 +125,24 @@ def test_the_second_page_is_not_called_a_j_card_on_a_cd_project(window):
 # --- the Experimental menu ----------------------------------------------
 
 
-def test_the_telegram_hand_offs_follow_the_medium_as_well(window, monkeypatch):
-    """They are the same two operations as the Recording menu's, reached
-    from somewhere else -- reported as not changing with the medium."""
+def test_the_telegram_hand_off_follows_the_medium_too(window, monkeypatch):
+    """The same one entry as the Recording menu's, reached from somewhere
+    else -- reported as not changing with the medium."""
     window.project.medium = MEDIUM_MD
     window._sync_mdrem_actions()
     assert window.telegram_record_action.isVisible()
-    assert not window.telegram_burn_action.isVisible()
 
     window.project.medium = MEDIUM_CD
     window._sync_mdrem_actions()
-    assert not window.telegram_record_action.isVisible()
-    assert window.telegram_burn_action.isVisible()
+    assert window.telegram_record_action.isVisible()
 
 
-def test_burning_telegram_downloads_survives_the_adapter_being_off(window, monkeypatch):
+def test_the_telegram_hand_off_survives_the_adapter_being_off_on_a_cd_project(window, monkeypatch):
     monkeypatch.setattr(app_settings, "mdrem_enabled", lambda: False)
     window.project.medium = MEDIUM_CD
     window._sync_mdrem_actions()
 
-    assert window.telegram_burn_action.isVisible()
+    assert window.telegram_record_action.isVisible()
 
 
 # --- dialogs that belong to one medium ----------------------------------

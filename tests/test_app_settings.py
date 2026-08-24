@@ -141,10 +141,10 @@ def test_telegram_settings_round_trip():
     assert app_settings.telegram_phone() == "+1 555 0100"
 
 
-def test_the_download_folder_falls_back_to_a_temp_subfolder():
+def test_the_download_folder_falls_back_to_the_shared_audio_folder():
     app_settings.set_telegram_download_folder("")
     assert app_settings.telegram_download_folder() == app_settings.default_telegram_download_folder()
-    assert "MDTools Telegram Downloads" in app_settings.telegram_download_folder()
+    assert "Audio" in app_settings.telegram_download_folder()
 
 
 def test_the_download_folder_setting_round_trips(tmp_path):

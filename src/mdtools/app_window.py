@@ -73,7 +73,7 @@ from mdtools.panels.properties_panel import PropertiesPanel
 from mdtools.panels.remote_dialog import RemoteDialog
 from mdtools.panels.settings_dialog import SettingsDialog
 from mdtools.panels.startup_dialog import StartupDialog
-from mdtools.panels.telegram_chat_dialog import BURN, TelegramChatDialog, pick_album_folder
+from mdtools.panels.telegram_chat_dialog import TelegramChatDialog, pick_album_folder
 from mdtools.panels.tool_panel import ToolPanel
 from mdtools.project import (
     MEDIUM_CD,
@@ -439,10 +439,18 @@ class MainWindow(QMainWindow):
         # designing a label in the same menu as three that drive a tape
         # deck; the editor is now a Tools panel button, next to the layers
         # it feeds. The three sources -- a CD, whatever foobar already has,
-        # and a folder of files -- all end in the same recording.
+        # and a folder of files -- all end in the same recording. There
+        # used to be a separate "Burn Audio CD from ..." action beside the
+        # folder and foobar2000 entries; those collapsed into these two
+        # (see _record_folder_dialog/_record_from_foobar), which dispatch to
+        # burning instead of recording on a CD project -- one "Record"
+        # entry per source, doing whatever the open project's medium calls
+        # for, rather than making the user pick the right one of two.
         recording_menu = self.menuBar().addMenu(self.tr("&Recording"))
-        # Hidden rather than disabled without the adapter: like the other
-        # MDRem entry points, there is nothing it could usefully do.
+        # Hidden rather than disabled without the adapter (on a MiniDisc/
+        # cassette project -- a CD project needs no adapter at all, so
+        # these stay visible for it regardless): like the other MDRem entry
+        # points, there is nothing it could usefully do.
         self.record_cd_action = recording_menu.addAction(
             self.tr("Record CD to MiniDisc..."), self._record_cd
         )
@@ -451,16 +459,6 @@ class MainWindow(QMainWindow):
         )
         self.record_action = recording_menu.addAction(
             self.tr("Record to MiniDisc from foobar2000..."), self._record_from_foobar
-        )
-        recording_menu.addSeparator()
-        # Burning needs no infrared adapter -- it is the drive's own job --
-        # so unlike everything above, these two are never hidden by
-        # _sync_mdrem_actions().
-        self.burn_folder_action = recording_menu.addAction(
-            self.tr("Burn Audio CD from Folder..."), self._burn_cd_from_folder
-        )
-        self.burn_foobar_action = recording_menu.addAction(
-            self.tr("Burn Audio CD from foobar2000..."), self._burn_cd_from_foobar
         )
         recording_menu.addSeparator()
         # Erasing is not recording, but it is what you do to a disc you are
@@ -523,13 +521,12 @@ class MainWindow(QMainWindow):
         self.experimental_menu.addAction(
             self.tr("Sort Telegram Downloads into Album Folders..."), self._sort_telegram_downloads
         )
+        # Recording and burning collapsed into this one entry -- it
+        # dispatches to whichever the open project's medium calls for (see
+        # _record_from_telegram_downloads -> _record_folder_dialog), the
+        # same "just Record" shape the Recording menu's own entries follow.
         self.telegram_record_action = self.experimental_menu.addAction(
             self.tr("Record from Telegram Downloads..."), self._record_from_telegram_downloads
-        )
-        # Deliberately not gated on the MDRem setting, unlike the recording
-        # entry above it: burning needs the drive, not the adapter.
-        self.telegram_burn_action = self.experimental_menu.addAction(
-            self.tr("Burn Telegram Downloads to Audio CD..."), self._burn_from_telegram_downloads
         )
         self._sync_experimental_menu()
         # Both menus exist now, so the adapter/medium gating can run.
@@ -1359,28 +1356,46 @@ class MainWindow(QMainWindow):
         return True
 
     def _export_svg(self) -> None:
-        scene = self._current_scene()
-        if scene is None:
+        if self.project is None:
             return
         path, _ = QFileDialog.getSaveFileName(
             self, self.tr("Export Cut SVG"), self._export_start_path(), self.tr("SVG (*.svg)")
         )
         if not path:
             return
-        export_svg(scene, path)
+        for page in self.project.ordered_pages():
+            export_svg(self.project.pages[page], self._paged_export_path(path, page))
         self.statusBar().showMessage(self.tr("Exported cut outline to {path}").format(path=path), 5000)
 
     def _export_png(self) -> None:
-        scene = self._current_scene()
-        if scene is None:
+        if self.project is None:
             return
         path, _ = QFileDialog.getSaveFileName(
             self, self.tr("Export Print PNG"), self._export_start_path(), self.tr("PNG (*.png)")
         )
         if not path:
             return
-        export_png(scene, path, grayscale=False)
+        for page in self.project.ordered_pages():
+            export_png(self.project.pages[page], self._paged_export_path(path, page), grayscale=False)
         self.statusBar().showMessage(self.tr("Exported print artwork to {path}").format(path=path), 5000)
+
+    # Every page of the project (disc, cover, and whatever else the medium
+    # adds) is exported in one go, since a cut-and-print set is only useful
+    # as a whole -- exporting just whichever page happened to be on screen
+    # silently left the rest of the set behind. Each page gets its own file,
+    # named after the page it is so the set can't be shuffled once saved.
+    _EXPORT_PAGE_SUFFIXES = {
+        PAGE_DISC: "disc",
+        PAGE_COVER: "cover",
+        PAGE_BACK: "case-back",
+        PAGE_SIDE_A: "label-a",
+        PAGE_SIDE_B: "label-b",
+    }
+
+    def _paged_export_path(self, path: str, page: str) -> str:
+        base = Path(path)
+        suffix = self._EXPORT_PAGE_SUFFIXES.get(page, page)
+        return str(base.with_name(f"{base.stem}-{suffix}{base.suffix}"))
 
     def _export_png_grayscale(self) -> None:
         """Unlike the plain color export above, grayscale export first
@@ -1407,7 +1422,14 @@ class MainWindow(QMainWindow):
         )
         if not path:
             return
-        export_png(scene, path, grayscale=True, brightness=adjustment.brightness, contrast=adjustment.contrast)
+        for page in self.project.ordered_pages():
+            export_png(
+                self.project.pages[page],
+                self._paged_export_path(path, page),
+                grayscale=True,
+                brightness=adjustment.brightness,
+                contrast=adjustment.contrast,
+            )
         self.statusBar().showMessage(self.tr("Exported print artwork to {path}").format(path=path), 5000)
 
     def _print_project(self) -> None:
@@ -1491,35 +1513,42 @@ class MainWindow(QMainWindow):
         # the end of them changes. Which is why they are one set of entries
         # that rename themselves, not two sets where one is always hidden.
         for_tape = medium == MEDIUM_TAPE
+        # "Record CD to..." has no burning twin (there is no "burn a CD
+        # from a CD rip" flow), so it keeps the adapter-only rule.
+        self.record_cd_action.setText(
+            self.tr("Record CD to {medium}...").format(medium=self._recording_target_name())
+        )
+        self.record_cd_action.setVisible(for_tape or (adapter and for_md))
+        # Record Folder... and Record from foobar2000... dispatch to
+        # burning internally when the open project is a CD one (see
+        # _record_folder_dialog/_record_from_foobar) -- collapsing what
+        # used to be a separate "Burn Audio CD from ..." action beside each
+        # of these into one entry that always says "Record" and does
+        # whatever the medium calls for. Burning needs the drive, not the
+        # adapter, so these stay visible for a CD project even with MDRem
+        # switched off.
         for action, name in (
-            (self.record_cd_action, self.tr("Record CD to {medium}...")),
             (self.record_folder_action, self.tr("Record Folder to {medium}...")),
             (self.record_action, self.tr("Record to {medium} from foobar2000...")),
         ):
             action.setText(name.format(medium=self._recording_target_name()))
-            action.setVisible(for_tape or (adapter and for_md))
+            action.setVisible(for_tape or for_cd or (adapter and for_md))
         # Erasing and the remote are nothing but adapter keypresses, so
         # without one there is not even a partial operation to offer.
         self.erase_disc_action.setVisible(adapter and for_md)
         self.remote_action.setVisible(adapter and for_md)
-        # Burning needs the drive, not the adapter -- so these two follow
-        # the medium alone, and stay put when MDRem is switched off.
-        self.burn_folder_action.setVisible(for_cd)
-        self.burn_foobar_action.setVisible(for_cd)
 
-        # The Experimental menu's two hand-offs are the same pair of
-        # operations reached from a different place, so they follow exactly
-        # the same rules -- reported as not changing with the medium.
-        # "Download Album from Telegram Bot..." and "Sort Telegram
-        # Downloads..." are untouched: downloading and tidying files belong
-        # to neither medium.
+        # The Experimental menu's hand-off is the same operation reached
+        # from a different place, so it follows exactly the same rule --
+        # reported as not changing with the medium. "Download Album from
+        # Telegram Bot..." and "Sort Telegram Downloads..." are untouched:
+        # downloading and tidying files belong to neither medium.
         self.telegram_record_action.setText(
             self.tr("Record from Telegram Downloads to {medium}...").format(
                 medium=self._recording_target_name()
             )
         )
-        self.telegram_record_action.setVisible(for_tape or (adapter and for_md))
-        self.telegram_burn_action.setVisible(for_cd)
+        self.telegram_record_action.setVisible(for_tape or for_cd or (adapter and for_md))
 
     def _recording_target_name(self) -> str:
         """What a recording lands on, for a menu entry to name.
@@ -1896,11 +1925,10 @@ class MainWindow(QMainWindow):
         )
         dialog.start_connecting()
         if dialog.exec() == QDialog.DialogCode.Accepted and dialog.downloaded_folder is not None:
-            folder = Path(dialog.downloaded_folder)
-            if dialog.downloaded_action == BURN:
-                self._burn_folder(folder)
-            else:
-                self._record_folder_dialog(folder)
+            # One "Record Downloaded Albums..." button now, whatever the
+            # project's medium: _record_folder_dialog dispatches to burning
+            # itself on a CD project, the same as every other entry point.
+            self._record_folder_dialog(Path(dialog.downloaded_folder))
 
     def _sort_telegram_downloads(self) -> None:
         """Experimental > Sort Telegram Downloads into Album Folders... --
@@ -1953,19 +1981,6 @@ class MainWindow(QMainWindow):
         folder = self._pick_telegram_album()
         if folder is not None:
             self._record_folder_dialog(folder)
-
-    def _burn_from_telegram_downloads(self) -> None:
-        """Experimental > Burn Telegram Downloads to Audio CD...
-
-        The burning twin of _record_from_telegram_downloads. **Not gated on
-        the MDRem setting**, unlike that one: a burn needs the drive, not
-        the infrared adapter, and copying the recording entry's gate
-        wholesale would have hidden this from exactly the person most
-        likely to want it.
-        """
-        folder = self._pick_telegram_album()
-        if folder is not None:
-            self._burn_folder(folder)
 
     def _pick_telegram_album(self) -> Path | None:
         """Which downloaded album to act on, sorted first.
@@ -2101,13 +2116,20 @@ class MainWindow(QMainWindow):
         return resolve_port(self)
 
     def _record_from_foobar(self) -> None:
-        # The whole flow runs through the adapter -- it is what arms the deck
-        # and what marks the tracks -- so with the adapter switched off there
-        # is nothing here to do. Silent rather than a dialog: the menu entry
-        # is hidden in that state, so this is a backstop, not a path anyone
-        # is meant to arrive at. Without the adapter, recording means
-        # pressing record on the deck and letting its LEVEL-SYNC split the
-        # tracks.
+        # "Record to {medium} from foobar2000..." -- one entry that does
+        # whatever the open project's medium calls for. A CD project has no
+        # adapter/deck involved at all, so it dispatches straight to the
+        # burn flow instead; only the MiniDisc/cassette path below needs a
+        # port. The whole record flow runs through the adapter -- it is
+        # what arms the deck and what marks the tracks -- so with the
+        # adapter switched off there is nothing here to do for those two
+        # media. Silent rather than a dialog: the menu entry is hidden in
+        # that state, so this is a backstop, not a path anyone is meant to
+        # arrive at. Without the adapter, recording means pressing record on
+        # the deck and letting its LEVEL-SYNC split the tracks.
+        if self._recording_medium() == MEDIUM_CD:
+            self._burn_cd_from_foobar()
+            return
         port = self._resolve_recording_port()
         if port is None:
             return
@@ -2159,7 +2181,15 @@ class MainWindow(QMainWindow):
         where the folder is already known rather than something to ask the
         user to pick. The plain menu entry (initial_folder=None) is
         unaffected -- FolderRecordDialog behaves exactly as before, browse
-        step included."""
+        step included.
+
+        On a CD project this dispatches straight to burning instead --
+        "Record Folder to {medium}..." is one entry now, collapsed from a
+        separate "Record" and "Burn" pair, and does whatever the medium
+        calls for rather than making the user pick the right one."""
+        if self._recording_medium() == MEDIUM_CD:
+            self._burn_cd_from_folder(initial_folder)
+            return
         port = self._resolve_recording_port()
         if port is None:
             return
@@ -2172,14 +2202,22 @@ class MainWindow(QMainWindow):
 
     # -- burning a CD-R ---------------------------------------------------
 
-    def _burn_cd_from_folder(self) -> None:
-        """Recording > Burn Audio CD from Folder...
+    def _burn_cd_from_folder(self, initial_folder: Path | None = None) -> None:
+        """The burning half of "Record Folder to {medium}..." on a CD
+        project (see _record_folder_dialog, which this is now reached
+        through rather than through a menu entry of its own).
 
         No adapter, no foobar2000, no playlist: a burn hands the files
         straight to cdrdao, so a folder is all this needs -- which is why
         audio_folder.album_from_folder() reads the FLAC tags itself instead
         of routing through a player the way the recording flows do.
-        """
+
+        `initial_folder`, when given (the Telegram hand-off), skips the
+        browse step exactly like _record_folder_dialog's own parameter of
+        the same name."""
+        if initial_folder is not None:
+            self._burn_folder(initial_folder)
+            return
         # Same starting point as Record Folder to MiniDisc...: back where
         # the last album came from, since the next one is very likely a
         # sibling of it.
@@ -2194,10 +2232,7 @@ class MainWindow(QMainWindow):
         """Burns a folder that is already known, with no browse step.
 
         Split out of _burn_cd_from_folder for the Telegram hand-off, the
-        same way _record_folder_dialog was. Note _burn_cd_from_folder stays
-        a zero-argument method: connecting a menu action straight to
-        something that takes a parameter hands it QAction.triggered's
-        `checked` bool (see the PySide gotchas in CLAUDE.md).
+        same way _record_folder_dialog was.
         """
         album = album_from_folder(folder)
         if not album.tracks:
@@ -2215,7 +2250,9 @@ class MainWindow(QMainWindow):
         )
 
     def _burn_cd_from_foobar(self) -> None:
-        """Recording > Burn Audio CD from foobar2000...
+        """The burning half of "Record to {medium} from foobar2000..." on a
+        CD project (see _record_from_foobar, which this is now reached
+        through rather than through a menu entry of its own).
 
         Only the playlist's *paths* are wanted here -- the burn reads the
         files itself -- but the titles come back with them, and they are
@@ -2320,7 +2357,7 @@ class MainWindow(QMainWindow):
         if dialog.result_metadata is not None and self.project is not None:
             self.project.metadata = dialog.result_metadata
             self._mark_dirty()
-            self._auto_layout_project(dialog.result_metadata)
+            self._prompt_post_recording_layout()
 
     def _run_tape_record_dialog(self, metadata: ProjectMetadata | None = None) -> None:
         """The cassette's own recording: two sides, and a user who is told
@@ -2344,7 +2381,26 @@ class MainWindow(QMainWindow):
         # the recording did rather than where a default would have.
         self.project.tape_total_minutes = dialog.total_minutes
         self._mark_dirty()
-        self._auto_layout_project(dialog.result_metadata)
+        self._prompt_post_recording_layout()
+
+    def _prompt_post_recording_layout(self) -> None:
+        """After a recording, the project's metadata has already been
+        adopted from what was just played -- but the label itself is no
+        longer built automatically (explicit user request: this used to
+        silently regenerate the disc/cover layout right after recording,
+        which could clobber a layout already being worked on). Point at
+        the Tools panel's Metadata... editor and the magic wand button
+        instead, so building the label from that metadata stays a
+        deliberate click rather than something that just happens."""
+        QMessageBox.information(
+            self,
+            self.tr("Recording Finished"),
+            self.tr(
+                "The album's metadata has been filled in from the recording. Review it in "
+                "the Tools panel's Metadata... dialog, then click the magic wand button "
+                "there to lay out the label."
+            ),
+        )
 
     def _auto_layout_from_metadata(self) -> None:
         """Tools panel: build the disc label from the project's metadata,

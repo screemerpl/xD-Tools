@@ -228,12 +228,12 @@ def set_foobar_exe(value: str) -> None:
 
 
 def default_cd_rip_folder() -> str:
-    """Under the system temp folder by default: a rip is the raw material
-    for a recording, not a music collection, and one album is a few hundred
-    megabytes that most users will never want again once the disc is
-    written. Changeable in Window > Settings for anyone who does."""
-    base = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.TempLocation)
-    return str(Path(base) / "MDTools CD Rip")
+    """XDProjects/Audio by default -- shared with Telegram bot downloads,
+    since both are audio destined for the same recording flow. Previously
+    the system temp folder, which did not survive a reboot and was not
+    where a user would think to look for it. Changeable in Window >
+    Settings for anyone who wants it somewhere else."""
+    return str(user_paths.audio_dir())
 
 
 def cd_rip_folder() -> str:
@@ -370,11 +370,10 @@ def set_telegram_bot_username(value: str) -> None:
 
 
 def default_telegram_download_folder() -> str:
-    """Under the system temp folder by default, same reasoning as
-    default_cd_rip_folder(): a downloaded album is raw material for a
-    recording, not a permanent library."""
-    base = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.TempLocation)
-    return str(Path(base) / "MDTools Telegram Downloads")
+    """XDProjects/Audio by default -- the same shared folder
+    default_cd_rip_folder() points at, since a downloaded album and a CD
+    rip are both audio on their way into the same recording flow."""
+    return str(user_paths.audio_dir())
 
 
 def telegram_download_folder() -> str:

@@ -116,10 +116,10 @@ def test_cd_rows_seed_from_settings_and_save_on_ok(qt_app, tmp_path):
     assert app_settings.cd_rip_folder() == str(tmp_path / "elsewhere")
 
 
-def test_the_rip_folder_falls_back_to_a_temp_subfolder(qt_app):
+def test_the_rip_folder_falls_back_to_the_shared_audio_folder(qt_app):
     app_settings.set_cd_rip_folder("")
     assert app_settings.cd_rip_folder() == app_settings.default_cd_rip_folder()
-    assert "MDTools CD Rip" in app_settings.cd_rip_folder()
+    assert "Audio" in app_settings.cd_rip_folder()
 
 
 def test_restore_defaults_puts_the_rip_folder_back(qt_app, tmp_path):
