@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from mdtools import app_settings, foobar, user_paths
+from mdtools import app_settings, audio_folder, user_paths
 from mdtools.gallery import downloaded_covers_dir, save_downloaded_cover
 from mdtools.metadata_lookup import (
     AlbumCandidate,
@@ -84,18 +84,17 @@ class MetadataDialog(QDialog):
         self.lookup_btn.clicked.connect(self._lookup_tracks)
         form.addRow(self.lookup_btn)
 
-        # A second source for the same fields. Deliberately not gated behind
-        # the MDRem setting: reading a playlist needs foobar2000, not the
-        # infrared adapter.
-        self.foobar_btn = QPushButton(self.tr("Load from foobar2000"))
-        self.foobar_btn.setToolTip(
+        # A second source for the same fields, reading a folder's own tags
+        # directly -- no foobar2000 involved, so filling in the editor
+        # does not need it running with the album already loaded first.
+        self.folder_btn = QPushButton(self.tr("Import from Folder..."))
+        self.folder_btn.setToolTip(
             self.tr(
-                "Fills these fields from whatever is loaded in foobar2000's current playlist, then looks up "
-                "its cover art. Needs the Beefweb Remote Control component (foo_beefweb)."
+                "Fills these fields from an album folder's own tags, then looks up its cover art."
             )
         )
-        self.foobar_btn.clicked.connect(self._load_from_foobar)
-        form.addRow(self.foobar_btn)
+        self.folder_btn.clicked.connect(self._load_from_folder)
+        form.addRow(self.folder_btn)
 
         self.year_spin = QSpinBox()
         self.year_spin.setRange(0, 2100)
@@ -221,34 +220,33 @@ class MetadataDialog(QDialog):
         if chosen.artwork_url:
             self._fetch_and_save_cover(chosen)
 
-    def _load_from_foobar(self) -> None:
-        """Takes album, artist, year and the whole track list from
-        foobar2000's current playlist.
+    def _load_from_folder(self) -> None:
+        """Takes album, artist, year and the whole track list from an
+        album folder's own tags -- no foobar2000 involved, replacing what
+        used to be "Load from foobar2000" here (explicit user request).
 
-        Useful on its own, not only after recording: what is queued up to
-        play is usually exactly what the label is being made for, and it is
-        more trustworthy than a search -- these are the actual files, with
-        their actual tags, in their actual order."""
-        client = foobar.FoobarClient(app_settings.foobar_url())
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            playlist = client.current_playlist()
-            items = client.playlist_items(playlist.id) if playlist is not None else []
-        except foobar.FoobarError as exc:
-            QMessageBox.warning(self, self.tr("Load from foobar2000"), str(exc))
+        Useful on its own, not only after recording: these are the actual
+        files, with their actual tags, in their actual order, and it is
+        more trustworthy than a search for exactly that reason -- the
+        same case "Load from foobar2000" made, just without needing
+        foobar2000 running with the album already loaded first."""
+        remembered = app_settings.music_folder()
+        start = remembered if remembered and Path(remembered).is_dir() else user_paths.music_start_path()
+        chosen = QFileDialog.getExistingDirectory(self, self.tr("Import from Folder"), start)
+        if not chosen:
             return
-        finally:
-            QApplication.restoreOverrideCursor()
+        folder = Path(chosen)
+        app_settings.set_music_folder(str(folder.parent if folder.parent != folder else folder))
 
-        if not items:
+        metadata = audio_folder.metadata_from_folder(folder)
+        if not metadata.tracks:
             QMessageBox.information(
                 self,
-                self.tr("Load from foobar2000"),
-                self.tr("foobar2000's current playlist is empty."),
+                self.tr("Import from Folder"),
+                self.tr("No audio files were found in that folder."),
             )
             return
 
-        metadata = foobar.metadata_from_playlist(items)
         self.album_edit.setText(metadata.album)
         self.artist_edit.setText(metadata.artist)
         self.year_spin.setValue(metadata.year or 0)

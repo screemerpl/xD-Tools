@@ -99,6 +99,20 @@ def test_window_menu_settings_action_opens_the_dialog(qt_app, monkeypatch):
     assert isinstance(opened[0], app_window_module.SettingsDialog)
 
 
+def test_the_foobar_address_setting_is_not_disabled_with_the_ir_adapter(qt_app, monkeypatch):
+    """Recording flows and the Metadata dialog's own foobar-reading path
+    (moved off to a folder-based import elsewhere, but the recording
+    dialogs still use foobar2000 directly) need foobar2000, not the MDRem
+    adapter -- tying the two together disabled a setting still needed."""
+    monkeypatch.setattr(SettingsDialog, "_populate_ports", lambda self, selected: None)
+    app_settings.set_mdrem_enabled(False)
+
+    dialog = SettingsDialog()
+
+    assert dialog.foobar_url_edit.isEnabled()
+    assert not dialog._mdrem_port_widget.isEnabled()
+
+
 # --- Record CD to MiniDisc settings -----------------------------------------
 
 
