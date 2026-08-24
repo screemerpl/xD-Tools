@@ -351,7 +351,12 @@ def resample_and_dither_to_red_book(source: Path | str, destination: Path | str)
         raise AudioEngineError(f"{destination.name} could not be written: {exc}") from exc
 
 
-def load_for_playback(paths: list[Path | str], *, samplerate: int = RED_BOOK_RATE) -> list[np.ndarray]:
+def load_for_playback(
+    paths: list[Path | str],
+    *,
+    samplerate: int = RED_BOOK_RATE,
+    on_progress: Callable[[int, int, Path], None] | None = None,
+) -> list[np.ndarray]:
     """One decoded, resampled float32 buffer per path, ready for
     `AudioPlayer.play()` -- the recording dialogs' replacement for handing
     files to foobar2000's own playlist.
@@ -363,11 +368,23 @@ def load_for_playback(paths: list[Path | str], *, samplerate: int = RED_BOOK_RAT
     step is deliberately skipped here). Mono is left mono -- `AudioPlayer`
     already duplicates a mono buffer to every output channel itself
     (`_as_stereo()`), so doing it twice here would be redundant, not
-    wrong, but redundant."""
+    wrong, but redundant.
+
+    `on_progress`, if given, is called as `(index, total, path)` right
+    before each file is decoded (`index` is 1-based) -- decoding a whole
+    disc/side up front (see the recording dialogs' own docstrings for why
+    it now happens before the deck's pause is released / the leader
+    countdown starts) can take a few real seconds, and a caller with a
+    status label wants something better to show than a wait. Plain
+    callback, not a Qt signal -- this module stays Qt-free; the caller is
+    what turns it into a repaint."""
     _require_soundfile()
     buffers = []
-    for path in paths:
+    total = len(paths)
+    for index, path in enumerate(paths, start=1):
         path = Path(path)
+        if on_progress is not None:
+            on_progress(index, total, path)
         try:
             samples, rate = sf.read(str(path), dtype="float32", always_2d=True)
         except Exception as exc:

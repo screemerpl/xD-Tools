@@ -6,6 +6,8 @@ tells the user what to press, and the only thing it can get wrong is
 *when*.
 """
 
+from pathlib import Path
+
 import pytest
 from PySide6.QtWidgets import QMessageBox
 
@@ -67,7 +69,7 @@ def fake_player(monkeypatch):
     monkeypatch.setattr(tape_module.audio_engine, "AudioPlayer", _FakePlayer)
     monkeypatch.setattr(tape_module.audio_engine, "resolve_output_device", lambda name: None)
     monkeypatch.setattr(
-        tape_module.audio_engine, "load_for_playback", lambda paths, samplerate=None: [None] * len(paths)
+        tape_module.audio_engine, "load_for_playback", lambda paths, **kwargs: [None] * len(paths)
     )
 
 
@@ -131,6 +133,19 @@ def test_nothing_plays_until_the_leader_silence_has_run(qt_app, monkeypatch):
     assert str(tape.LEADER_SECONDS) in dialog.status_label.text()
     _run_countdown(dialog)
     assert dialog._player.played_buffers == [None, None]  # side A: tracks 1-2
+
+
+def test_decode_progress_updates_the_status_label(qt_app, monkeypatch):
+    """Decoding a side up front (see _on_start_clicked) can take a few real
+    seconds -- without this, that gap reads as the dialog having hung."""
+    dialog = _dialog(_items(4), monkeypatch)
+
+    dialog._report_decode_progress(1, 2, Path("some/dir/01 Track.flac"))
+
+    text = dialog.status_label.text()
+    assert "1" in text
+    assert "2" in text
+    assert "01 Track" in text
 
 
 def test_starting_a_side_builds_the_player_with_the_configured_gain(qt_app, monkeypatch):

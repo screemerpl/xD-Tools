@@ -470,6 +470,7 @@ def test_each_disc_is_titled_with_its_own_tracks_numbered_from_one(qt_app, monke
 
 def test_a_finished_disc_is_followed_by_a_prompt_and_then_the_next_one(qt_app, monkeypatch, no_hardware):
     dialog = _double_album(monkeypatch)
+    dialog._player = record_module.audio_engine.AudioPlayer(device=None)
     _uploads(monkeypatch, succeeded=True)
     monkeypatch.setattr(record_module, "QTimer", _NoTimer)
     monkeypatch.setattr(record_module.QMessageBox, "question", _answer_affirmatively)
@@ -545,25 +546,58 @@ def test_what_the_project_adopts_is_the_whole_album_not_one_disc(qt_app, monkeyp
 # Arming foobar2000 to stop at the last track of a disc, and detecting a
 # poll that arrived just past it, both disappeared along with foobar2000
 # itself: AudioPlayer is only ever handed *this disc's own* buffers (see
-# _begin_playback), so there is no "played past the end of the disc" case
-# left to guard against -- it is a structural guarantee now, not a race
-# between a flag and a poll.
+# _begin_disc, which decodes them before playback starts), so there is no
+# "played past the end of the disc" case left to guard against -- it is a
+# structural guarantee now, not a race between a flag and a poll.
 
 
-def test_begin_playback_only_loads_this_discs_own_tracks(qt_app, monkeypatch, no_hardware, fake_player):
+def test_begin_disc_only_loads_this_discs_own_tracks(qt_app, monkeypatch, no_hardware, fake_player):
     dialog = _double_album(monkeypatch, with_paths=True)
-    dialog._recording = True
     dialog._player = record_module.audio_engine.AudioPlayer(device=None)
+    monkeypatch.setattr(record_module, "QTimer", _NoTimer)
+    monkeypatch.setattr(record_module.QMessageBox, "question", _answer_affirmatively)
     monkeypatch.setattr(
         record_module.audio_engine,
         "load_for_playback",
-        lambda paths, samplerate=None: [f"buffer-for-{p}" for p in paths],
+        lambda paths, **kwargs: [f"buffer-for-{p}" for p in paths],
     )
 
-    dialog._begin_playback()
+    dialog._begin_disc()
+
+    # Decoded up front and handed to the lead-in timer's callback -- not
+    # played yet, and not still waiting on SEND PAUSE.
+    assert len(_NoTimer.scheduled) == 1
+    ms, callback = _NoTimer.scheduled[0]
+    assert ms == record_module.LEAD_IN_MS
+    assert dialog._player.played_buffers is None
+    assert "SEND PAUSE" in no_hardware
+
+    callback()
 
     from pathlib import Path
 
     assert dialog._player.played_buffers == [
         f"buffer-for-{Path(f'C:/music/{n:02d}.flac')}" for n in range(1, 16)
     ]
+
+
+def test_the_pause_is_not_released_until_decoding_finishes(qt_app, monkeypatch, no_hardware, fake_player):
+    """The deck used to start running while xD-Tools was still busy
+    decoding/resampling the whole disc -- recording several extra seconds
+    of silence onto the disc beyond the deliberate LEAD_IN_MS. Decoding now
+    happens before SEND PAUSE goes out at all, so the only gap left between
+    the deck actually recording and audio arriving is that fixed lead-in."""
+    dialog = _double_album(monkeypatch, with_paths=True)
+    dialog._player = record_module.audio_engine.AudioPlayer(device=None)
+    monkeypatch.setattr(record_module, "QTimer", _NoTimer)
+    monkeypatch.setattr(record_module.QMessageBox, "question", _answer_affirmatively)
+
+    def _fake_load(paths, **kwargs):
+        no_hardware.append("DECODE")
+        return [f"buffer-for-{p}" for p in paths]
+
+    monkeypatch.setattr(record_module.audio_engine, "load_for_playback", _fake_load)
+
+    dialog._begin_disc()
+
+    assert no_hardware.index("DECODE") < no_hardware.index("SEND PAUSE")

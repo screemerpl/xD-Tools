@@ -58,7 +58,7 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import QCoreApplication, QTimer, Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -657,14 +657,32 @@ class RecordDialog(QDialog):
         self._recording = True
         self._current_local_index = 0
         self.progress.setValue(0)
+        # Decoded and resampled *before* the pause is released -- otherwise
+        # the deck sits running into silence for however long that takes
+        # (several seconds, for a whole disc's worth of tracks) instead of
+        # just the deliberate LEAD_IN_MS below. _report_decode_progress
+        # keeps the status label moving meanwhile, so this doesn't read as
+        # the dialog having hung.
+        first, last = self._disc_bounds()
+        paths = [Path(item.path) for item in self._items[first : last + 1]]
+        try:
+            buffers = audio_engine.load_for_playback(
+                paths, samplerate=self._player.samplerate, on_progress=self._report_decode_progress
+            )
+        except audio_engine.AudioEngineError as exc:
+            self._fail(self.tr("Could not decode the album for playback: {error}").format(error=exc))
+            return
+        if not self._send_key("SEND PAUSE"):  # releases record-pause
+            return
         self.status_label.setText(
             self.tr("Recording disc {number} -- waiting for the first track...").format(number=self._disc + 1)
             if self._multi()
             else self.tr("Recording started -- waiting for the first track...")
         )
         # Pause released first, playback a moment later: the deck is then
-        # already running when audio arrives.
-        QTimer.singleShot(LEAD_IN_MS, self._begin_playback)
+        # already running when audio arrives. The buffers are already
+        # decoded, so nothing but this deliberate gap delays it now.
+        QTimer.singleShot(LEAD_IN_MS, lambda: self._begin_playback(buffers))
 
     def _confirm_overwrite(self) -> bool:
         if self._multi() and self._plan is not None:
@@ -720,17 +738,8 @@ class RecordDialog(QDialog):
         self._fail(self.tr("Cancelled -- the deck was not recording."))
         return False
 
-    def _begin_playback(self) -> None:
+    def _begin_playback(self, buffers: list) -> None:
         if not self._recording or self._player is None:
-            return
-        if not self._send_key("SEND PAUSE"):  # releases record-pause
-            return
-        first, last = self._disc_bounds()
-        paths = [Path(item.path) for item in self._items[first : last + 1]]
-        try:
-            buffers = audio_engine.load_for_playback(paths, samplerate=self._player.samplerate)
-        except audio_engine.AudioEngineError as exc:
-            self._fail(self.tr("Could not decode the album for playback: {error}").format(error=exc))
             return
         self._player.play(
             buffers,
@@ -738,6 +747,19 @@ class RecordDialog(QDialog):
             on_finished=self._bridge.finished.emit,
         )
         self._timer.start()
+
+    def _report_decode_progress(self, index: int, total: int, path: Path) -> None:
+        """`load_for_playback`'s own callback, called synchronously from
+        inside its decode loop -- decoding a whole disc up front (see
+        _begin_disc) can take a few real seconds, and processEvents() is
+        what actually lets the label repaint mid-loop, since nothing else
+        returns to the event loop until decoding finishes."""
+        self.status_label.setText(
+            self.tr("Preparing track {index} of {total}: {name}...").format(
+                index=index, total=total, name=path.stem
+            )
+        )
+        QCoreApplication.processEvents()
 
     def _disc_bounds(self) -> tuple[int, int]:
         """The item indices the disc being recorded covers, as [first, last].

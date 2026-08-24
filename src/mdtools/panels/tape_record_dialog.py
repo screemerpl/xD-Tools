@@ -45,7 +45,7 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import QCoreApplication, QTimer, Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -98,6 +98,7 @@ class TapeRecordDialog(QDialog):
         self._current_local_index = 0
         self._remaining = 0  # seconds of leader silence still to go
         self._player: audio_engine.AudioPlayer | None = None
+        self._pending_buffers: list | None = None
         self._bridge = PlaybackBridge(self)
         self._bridge.track_boundary.connect(self._on_track_boundary)
         self._bridge.finished.connect(self._on_side_finished)
@@ -352,6 +353,23 @@ class TapeRecordDialog(QDialog):
                 gain_db=app_settings.recording_gain_db(),
             )
 
+        self.status_label.setVisible(True)
+        # Decoded and resampled *before* the leader countdown starts --
+        # otherwise the deck keeps rolling onto (already-magnetic) tape for
+        # however long that takes, on top of the deliberate LEADER_SECONDS
+        # of silence the countdown itself accounts for.
+        # _report_decode_progress keeps the status label moving meanwhile,
+        # so this doesn't read as the dialog having hung.
+        first, last = self._side_bounds()
+        paths = [Path(item.path) for item in self._items[first : last + 1]]
+        try:
+            buffers = audio_engine.load_for_playback(
+                paths, samplerate=self._player.samplerate, on_progress=self._report_decode_progress
+            )
+        except audio_engine.AudioEngineError as exc:
+            self._fail(self.tr("Could not decode this side for playback: {error}").format(error=exc))
+            return
+
         self._recording = True
         self._current_local_index = 0
         self._set_fields_editable(False)
@@ -359,7 +377,7 @@ class TapeRecordDialog(QDialog):
         self.close_btn.setText(self.tr("Stop"))
         self.progress.setVisible(True)
         self.progress.setValue(0)
-        self.status_label.setVisible(True)
+        self._pending_buffers = buffers
         self._remaining = tape.LEADER_SECONDS
         self._tick_display()
         self._countdown.start()
@@ -378,6 +396,18 @@ class TapeRecordDialog(QDialog):
         )
         return answer == QMessageBox.StandardButton.Ok
 
+    def _report_decode_progress(self, index: int, total: int, path: Path) -> None:
+        """`load_for_playback`'s own callback, called synchronously from
+        inside its decode loop -- see _on_start_clicked for why decoding
+        now happens before the leader countdown, and record_dialog.py's
+        own copy of this method for why processEvents() is needed here."""
+        self.status_label.setText(
+            self.tr("Preparing track {index} of {total}: {name}...").format(
+                index=index, total=total, name=path.stem
+            )
+        )
+        QCoreApplication.processEvents()
+
     def _tick_display(self) -> None:
         self.status_label.setText(
             self.tr("Recording silence over the leader -- {seconds}s").format(seconds=self._remaining)
@@ -394,12 +424,9 @@ class TapeRecordDialog(QDialog):
     def _begin_playback(self) -> None:
         if not self._recording or self._player is None:
             return
-        first, last = self._side_bounds()
-        paths = [Path(item.path) for item in self._items[first : last + 1]]
-        try:
-            buffers = audio_engine.load_for_playback(paths, samplerate=self._player.samplerate)
-        except audio_engine.AudioEngineError as exc:
-            self._fail(self.tr("Could not decode this side for playback: {error}").format(error=exc))
+        buffers = self._pending_buffers
+        self._pending_buffers = None
+        if buffers is None:
             return
         self._player.play(
             buffers,

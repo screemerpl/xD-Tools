@@ -2063,6 +2063,12 @@ class MainWindow(QMainWindow):
         box.addButton(self.tr("Later"), QMessageBox.ButtonRole.RejectRole)
         box.exec()
         if box.clickedButton() is restart_btn:
+            # _restart_app() quits this instance via QApplication.quit(),
+            # which never runs closeEvent()/its own unsaved-changes guard --
+            # without this check, restarting silently discarded whatever
+            # hadn't been saved yet.
+            if not self._may_discard_changes():
+                return
             self._restart_app()
 
     @staticmethod

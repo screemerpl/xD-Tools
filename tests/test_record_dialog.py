@@ -10,6 +10,8 @@ tested on its own in test_tracks.py) via the `_dialog()` helper below,
 which stubs `record_module.tracks.playlist_items_from_paths`.
 """
 
+from pathlib import Path
+
 import pytest
 
 from mdtools import tracks
@@ -459,12 +461,30 @@ def test_the_track_list_is_frozen_once_recording_starts(qt_app, monkeypatch, no_
     monkeypatch.setattr(
         record_module.QMessageBox, "question", lambda *a, **k: record_module.QMessageBox.StandardButton.Yes
     )
+    # Decoding now happens synchronously inside _start() (see _begin_disc),
+    # before the deliberate lead-in -- these items carry no real paths, so
+    # without this the decode itself would fail and _fail() would undo the
+    # very freeze this test is checking.
+    monkeypatch.setattr(record_module.audio_engine, "load_for_playback", lambda paths, **kwargs: [])
 
     dialog._start()
 
     assert not dialog.tree.isEnabled()
     assert not dialog.album_edit.isEnabled()
     assert not dialog.cover_label.isEnabled()
+
+
+def test_decode_progress_updates_the_status_label(qt_app, monkeypatch, no_hardware, no_lookup, fake_player):
+    """Decoding a whole disc up front (see _begin_disc) can take a few real
+    seconds -- without this, that gap reads as the dialog having hung."""
+    dialog = _dialog(_items(3), monkeypatch)
+
+    dialog._report_decode_progress(2, 5, Path("some/dir/03 Track.flac"))
+
+    text = dialog.status_label.text()
+    assert "2" in text
+    assert "5" in text
+    assert "03 Track" in text
 
 
 def test_the_dialog_opens_on_what_the_disc_will_be_called(qt_app, monkeypatch, no_hardware, no_lookup):

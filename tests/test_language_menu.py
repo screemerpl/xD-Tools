@@ -102,6 +102,33 @@ def test_clicking_restart_now_calls_restart_app(qt_app, isolated_settings, monke
     assert restarted == [1]
 
 
+def test_restart_now_does_not_discard_unsaved_changes(qt_app, isolated_settings, monkeypatch):
+    """_restart_app() quits via QApplication.quit(), which bypasses
+    closeEvent()'s own unsaved-changes guard entirely -- restarting for a
+    new language must not silently throw away unsaved project changes."""
+    from mdtools import app_window as app_window_module
+
+    def fake_exec(self):
+        self._clicked = self.buttons()[0]  # "Restart Now"
+        return 0
+
+    def fake_clicked_button(self):
+        return self._clicked
+
+    monkeypatch.setattr(app_window_module.QMessageBox, "exec", fake_exec)
+    monkeypatch.setattr(app_window_module.QMessageBox, "clickedButton", fake_clicked_button)
+
+    restarted = []
+    monkeypatch.setattr(app_window_module.MainWindow, "_restart_app", staticmethod(lambda: restarted.append(1)))
+
+    win = MainWindow(show_startup_dialog=False)
+    monkeypatch.setattr(win, "_may_discard_changes", lambda: False)  # simulates Cancel on the save prompt
+
+    win._on_language_selected("pl")
+
+    assert restarted == [], "restart must not proceed once the user declined to discard changes"
+
+
 def test_restart_app_relaunches_the_process_and_quits(qt_app, monkeypatch):
     """Only QProcess.startDetached and QApplication.quit are faked here --
     QApplication.instance() is left alone (it must keep returning the
