@@ -112,6 +112,18 @@ def test_the_credentials_are_not_hardcoded_anywhere_in_the_source_tree():
     assert offenders == [], f"an api_hash-shaped literal is committed in: {offenders}"
 
 
+def test_audio_output_device_is_empty_by_default():
+    """Empty means "the OS default", both for a fresh install and for
+    audio_engine.resolve_output_device()'s own fallback."""
+    assert app_settings.audio_output_device() == ""
+
+
+def test_audio_output_device_round_trips():
+    app_settings.set_audio_output_device("Speakers (Realtek(R) Audio)")
+
+    assert app_settings.audio_output_device() == "Speakers (Realtek(R) Audio)"
+
+
 def test_telegram_bot_username_and_phone_are_empty_by_default():
     assert app_settings.telegram_bot_username() == ""
     assert app_settings.telegram_phone() == ""

@@ -18,6 +18,8 @@ from pathlib import Path
 
 from PySide6.QtCore import QSettings, QStandardPaths
 
+from mdtools import user_paths
+
 # Fallback defaults -- what every DPI value used to be as a fixed constant
 # before it became user-configurable. Used until the user opens Window >
 # Settings... and changes something, and as the reset target there.
@@ -48,6 +50,7 @@ _TELEGRAM_BOT_USERNAME_KEY = "telegram_bot_username"
 _TELEGRAM_DOWNLOAD_FOLDER_KEY = "telegram_download_folder"
 _TELEGRAM_PHONE_KEY = "telegram_phone"
 _REGENERATE_FONT_FAMILY_KEY = "regenerate_font_family"
+_AUDIO_OUTPUT_DEVICE_KEY = "audio_output_device"
 
 # foo_beefweb's own default listening address.
 DEFAULT_FOOBAR_URL = "http://localhost:8880"
@@ -178,6 +181,24 @@ def last_regenerate_font_family() -> str | None:
 
 def set_last_regenerate_font_family(family: str) -> None:
     _settings().setValue(_REGENERATE_FONT_FAMILY_KEY, str(family))
+
+
+def audio_output_device() -> str:
+    """The output device xD-Tools' own audio engine plays a recording's
+    source material through -- e.g. an interface's S/PDIF or line output
+    feeding a MiniDisc deck or a CD burner's monitor path. Saved as a
+    device *name* (PortAudio's own index is not stable across a reboot or
+    a USB replug), same "a saved value is never silently replaced by
+    whatever else happens to be plugged in" rule mdrem_port() follows.
+
+    Empty means "not chosen yet" -- callers (audio_engine.resolve_device())
+    fall back to the OS default output device, exactly like a preview
+    playback always does regardless of this setting."""
+    return str(_settings().value(_AUDIO_OUTPUT_DEVICE_KEY, "") or "")
+
+
+def set_audio_output_device(value: str) -> None:
+    _settings().setValue(_AUDIO_OUTPUT_DEVICE_KEY, str(value).strip())
 
 
 def foobar_url() -> str:

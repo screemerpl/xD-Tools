@@ -1,4 +1,4 @@
-from mdtools import app_settings
+from mdtools import app_settings, audio_engine
 from mdtools.app_window import MainWindow
 from mdtools.panels.settings_dialog import SettingsDialog
 
@@ -176,6 +176,90 @@ def test_a_folder_that_cannot_be_created_warns_but_keeps_the_setting(qt_app, tmp
 
     assert warned
     assert app_settings.cd_rip_folder() == str(blocked / "underneath")
+
+
+# --- audio output device -----------------------------------------------
+
+
+def _fake_devices(monkeypatch, *names):
+    devices = [
+        audio_engine.OutputDevice(index=i, name=name, max_output_channels=2, default_samplerate=44100.0)
+        for i, name in enumerate(names)
+    ]
+    monkeypatch.setattr(audio_engine, "list_output_devices", lambda: devices)
+
+
+def test_the_device_combo_always_offers_system_default_first(qt_app, monkeypatch):
+    _fake_devices(monkeypatch, "Speakers (Realtek)")
+
+    dialog = SettingsDialog()
+
+    assert dialog.audio_device_combo.itemText(0) == "System default"
+    assert dialog.audio_device_combo.itemData(0) == ""
+
+
+def test_choosing_a_device_and_accepting_saves_its_name(qt_app, monkeypatch):
+    _fake_devices(monkeypatch, "Speakers (Realtek)", "Headset Earphone (Jabra)")
+    app_settings.set_audio_output_device("")
+
+    dialog = SettingsDialog()
+    index = dialog.audio_device_combo.findData("Headset Earphone (Jabra)")
+    dialog.audio_device_combo.setCurrentIndex(index)
+    dialog._on_accept()
+
+    assert app_settings.audio_output_device() == "Headset Earphone (Jabra)"
+
+
+def test_a_saved_device_that_is_no_longer_plugged_in_still_shows_up(qt_app, monkeypatch):
+    """Same rule the MDRem port combo already follows: a saved choice must
+    survive opening this dialog even when its device isn't there right
+    now -- silently falling back to whatever else is plugged in would be
+    worse than showing it as disconnected."""
+    _fake_devices(monkeypatch, "Speakers (Realtek)")
+    app_settings.set_audio_output_device("Some USB DAC")
+
+    dialog = SettingsDialog()
+
+    assert dialog._selected_audio_device() == "Some USB DAC"
+    assert "not connected" in dialog.audio_device_combo.currentText()
+
+
+def test_restore_defaults_resets_the_device_to_system_default(qt_app, monkeypatch):
+    _fake_devices(monkeypatch, "Speakers (Realtek)")
+    app_settings.set_audio_output_device("Speakers (Realtek)")
+    dialog = SettingsDialog()
+
+    dialog._restore_defaults()
+
+    assert dialog._selected_audio_device() == ""
+
+
+def test_refresh_button_re_lists_devices_without_losing_the_saved_choice(qt_app, monkeypatch):
+    _fake_devices(monkeypatch, "Speakers (Realtek)")
+    app_settings.set_audio_output_device("Speakers (Realtek)")
+    dialog = SettingsDialog()
+
+    _fake_devices(monkeypatch, "Speakers (Realtek)", "New USB Interface")
+    dialog._populate_audio_devices(dialog._selected_audio_device())
+
+    assert dialog.audio_device_combo.findData("New USB Interface") >= 0
+    assert dialog._selected_audio_device() == "Speakers (Realtek)"
+
+
+def test_a_missing_sounddevice_backend_leaves_only_system_default(qt_app, monkeypatch):
+    """audio_engine.list_output_devices() raises when sounddevice/PortAudio
+    isn't available at all -- this dialog must degrade to just the default
+    option rather than failing to open."""
+    monkeypatch.setattr(
+        audio_engine,
+        "list_output_devices",
+        lambda: (_ for _ in ()).throw(audio_engine.AudioEngineError("no backend")),
+    )
+
+    dialog = SettingsDialog()
+
+    assert dialog.audio_device_combo.count() == 1
+    assert dialog.audio_device_combo.itemText(0) == "System default"
 
 
 def test_browsing_creates_the_folder_first_so_the_picker_opens_in_it(qt_app, tmp_path, monkeypatch):

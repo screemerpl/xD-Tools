@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 
 from PySide6.QtCore import Qt
 
-from mdtools import app_settings, cdrip, foobar, mdrem
+from mdtools import app_settings, audio_engine, cdrip, foobar, mdrem
 
 DPI_RANGE = (20.0, 4800.0)
 
@@ -91,6 +91,7 @@ class SettingsDialog(QDialog):
         )
         layout.addRow(self.tr("Bake DPI"), self.bake_dpi_spin)
 
+        self._build_audio_output_row(layout)
         self._build_experimental_row(layout)
         self._build_mdrem_rows(layout)
 
@@ -102,6 +103,61 @@ class SettingsDialog(QDialog):
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addRow(buttons)
+
+    def _build_audio_output_row(self, layout: QFormLayout) -> None:
+        """Which device xD-Tools' own audio engine plays recording source
+        material through -- e.g. an interface's line/S/PDIF output feeding
+        a MiniDisc deck or a CD burner's monitor path. Unrelated to the
+        MDRem checkbox below (this has nothing to do with the infrared
+        adapter) and unrelated to foobar2000's own output device setting,
+        which this is intended to eventually replace -- see
+        audio_engine.py's own module docstring for where that stands."""
+        self.audio_device_combo = QComboBox()
+        self.audio_device_combo.setToolTip(
+            self.tr(
+                "The output device audio is played through while recording. Leave as \"System default\" "
+                "to use whatever the operating system currently considers the default output."
+            )
+        )
+        refresh_btn = QPushButton(self.tr("Refresh"))
+        refresh_btn.setToolTip(self.tr("Re-lists the currently available output devices."))
+        refresh_btn.clicked.connect(lambda: self._populate_audio_devices(self._selected_audio_device()))
+
+        device_widget = QWidget()
+        device_row = QHBoxLayout(device_widget)
+        device_row.setContentsMargins(0, 0, 0, 0)
+        device_row.addWidget(self.audio_device_combo, 1)
+        device_row.addWidget(refresh_btn)
+        layout.addRow(self.tr("Audio output device"), device_widget)
+
+        self._populate_audio_devices(app_settings.audio_output_device())
+
+    def _populate_audio_devices(self, selected: str) -> None:
+        """Lists the output devices currently present, but never drops
+        `selected` -- same "a saved choice survives even when its device
+        happens to be unplugged right now" rule _populate_ports() follows
+        for the MDRem port, just for a sound card/interface instead of a
+        serial adapter."""
+        self.audio_device_combo.clear()
+        self.audio_device_combo.addItem(self.tr("System default"), "")
+        names = []
+        try:
+            devices = audio_engine.list_output_devices()
+        except audio_engine.AudioEngineError:
+            devices = []
+        for device in devices:
+            self.audio_device_combo.addItem(device.name, device.name)
+            names.append(device.name)
+        if selected and selected not in names:
+            self.audio_device_combo.addItem(
+                self.tr("{device} (not connected)").format(device=selected), selected
+            )
+        index = self.audio_device_combo.findData(selected)
+        if index >= 0:
+            self.audio_device_combo.setCurrentIndex(index)
+
+    def _selected_audio_device(self) -> str:
+        return str(self.audio_device_combo.currentData() or "")
 
     def _build_experimental_row(self, layout: QFormLayout) -> None:
         """Gates work-in-progress features that aren't ready for everyone --
@@ -276,11 +332,13 @@ class SettingsDialog(QDialog):
         self.export_dpi_spin.setValue(app_settings.DEFAULT_EXPORT_DPI)
         self.bake_dpi_spin.setValue(app_settings.DEFAULT_BAKE_DPI)
         self.cd_rip_folder_edit.setText(app_settings.default_cd_rip_folder())
+        self._populate_audio_devices("")
 
     def _on_accept(self) -> None:
         app_settings.set_screen_dpi(self.screen_dpi_spin.value())
         app_settings.set_default_export_dpi(self.export_dpi_spin.value())
         app_settings.set_bake_dpi(self.bake_dpi_spin.value())
+        app_settings.set_audio_output_device(self._selected_audio_device())
         app_settings.set_experimental_features_enabled(self.experimental_check.isChecked())
         app_settings.set_mdrem_enabled(self.mdrem_check.isChecked())
         app_settings.set_mdrem_port(self.selected_port())
