@@ -4,6 +4,7 @@ import copy
 
 from PySide6.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel
 
+from mdtools import app_settings
 from mdtools.project import (
     MEDIUM_CD,
     MEDIUM_MD,
@@ -31,6 +32,18 @@ class NewDesignDialog(QDialog):
     The rows are built from that declaration rather than written out here,
     which is what let compact cassette arrive as data: a medium, three
     pages, two templates.
+
+    Opens on whatever medium and templates were chosen last time
+    (app_settings.last_new_project_medium()/last_new_project_template()) --
+    creating one project after another is normally the same medium and the
+    same house style each time, so re-picking all of it on every single New
+    Project would be pure repetition. Matched by template *name*, not
+    identity or index: the registry is reloaded fresh on every open, so a
+    remembered name has to be looked up among whatever's on offer for the
+    now-current medium/page rather than trusted as still being at the same
+    position -- and a name that no longer exists (template deleted/renamed
+    since) simply falls back to this row's own ordinary default, same as
+    if nothing had ever been remembered.
     """
 
     def __init__(self, parent=None):
@@ -77,6 +90,17 @@ class NewDesignDialog(QDialog):
         self.buttons.rejected.connect(self.reject)
         self._layout.addRow(self.buttons)
 
+        # Opens on the medium remembered from the last New Project, if it
+        # still exists as a choice -- setCurrentIndex() only actually fires
+        # _on_medium_changed (via the signal connected above) when this
+        # differs from the combo's own default, so the explicit call below
+        # covers every other case (including this one, harmlessly a second
+        # time when it did fire).
+        last_medium = app_settings.last_new_project_medium()
+        if last_medium:
+            index = self.medium_combo.findData(last_medium)
+            if index >= 0:
+                self.medium_combo.setCurrentIndex(index)
         self._on_medium_changed()
 
     # -- what this medium has ---------------------------------------------
@@ -122,6 +146,14 @@ class NewDesignDialog(QDialog):
             if not templates and not entry.optional:
                 usable = False
 
+            remembered = app_settings.last_new_project_template(medium, page)
+            if remembered:
+                for index in range(combo.count()):
+                    data = combo.itemData(index)
+                    if data is not None and data.name == remembered:
+                        combo.setCurrentIndex(index)
+                        break
+
         self.empty_label.setVisible(not usable)
         self.buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(usable)
 
@@ -129,10 +161,12 @@ class NewDesignDialog(QDialog):
         medium = self.current_medium()
         self.selected_medium = medium
         self.selected_templates = {}
+        app_settings.set_last_new_project_medium(medium)
         for entry in medium_pages(medium):
             template = self._rows[entry.page][1].currentData()
             if template is not None:
                 self.selected_templates[entry.page] = copy.deepcopy(template)
+            app_settings.set_last_new_project_template(medium, entry.page, template.name if template else "")
         self.accept()
 
     # -- named rows --------------------------------------------------------

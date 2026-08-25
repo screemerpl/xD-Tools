@@ -50,6 +50,8 @@ _REGENERATE_FONT_FAMILY_KEY = "regenerate_font_family"
 _AUDIO_OUTPUT_DEVICE_KEY = "audio_output_device"
 _TAPE_AUDIO_OUTPUT_DEVICE_KEY = "tape_audio_output_device"
 _RECORDING_GAIN_DB_KEY = "recording_gain_db"
+_LAST_NEW_PROJECT_MEDIUM_KEY = "new_project/last_medium"
+_LAST_NEW_PROJECT_TEMPLATE_KEY_PREFIX = "new_project/last_template"
 
 
 def _config_dir() -> Path:
@@ -177,6 +179,31 @@ def last_regenerate_font_family() -> str | None:
 
 def set_last_regenerate_font_family(family: str) -> None:
     _settings().setValue(_REGENERATE_FONT_FAMILY_KEY, str(family))
+
+
+def last_new_project_medium() -> str:
+    """The medium last chosen in File > New, or "" if none has ever been
+    chosen -- creating one project after another normally means the same
+    medium each time, so the dialog opens on it instead of always
+    defaulting back to MiniDisc."""
+    return str(_settings().value(_LAST_NEW_PROJECT_MEDIUM_KEY, ""))
+
+
+def set_last_new_project_medium(medium: str) -> None:
+    _settings().setValue(_LAST_NEW_PROJECT_MEDIUM_KEY, str(medium))
+
+
+def last_new_project_template(medium: str, page: str) -> str:
+    """The *name* of the template last chosen for one page of one medium in
+    File > New, or "" if never recorded. "" also covers an optional page
+    deliberately left on "(none)" -- that already is that page's own
+    default, so there's nothing more useful to distinguish it from "never
+    chosen" for."""
+    return str(_settings().value(f"{_LAST_NEW_PROJECT_TEMPLATE_KEY_PREFIX}/{medium}/{page}", ""))
+
+
+def set_last_new_project_template(medium: str, page: str, template_name: str) -> None:
+    _settings().setValue(f"{_LAST_NEW_PROJECT_TEMPLATE_KEY_PREFIX}/{medium}/{page}", str(template_name))
 
 
 def audio_output_device() -> str:
