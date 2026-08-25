@@ -10,6 +10,7 @@ accidental send would arm a deck for recording, which is destructive.
 """
 
 import pytest
+from PySide6.QtCore import QObject, Signal
 
 from mdtools import tracks as tracks_module
 from mdtools.panels import record_dialog as record_module
@@ -152,8 +153,12 @@ def _uploads(monkeypatch, succeeded: bool = True) -> list:
     write onto which disc."""
     made: list = []
 
-    class _FakeUpload:
+    class _FakeUpload(QObject):
+        overall_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
         def __init__(self, metadata, port, parent=None, clear_default=True, unattended=False):
+            super().__init__()
             made.append((metadata, unattended, clear_default))
             self.succeeded = succeeded
 

@@ -288,6 +288,43 @@ def test_progress_follows_the_position_within_the_side(qt_app, monkeypatch):
     assert "Track 2" in dialog.status_label.text()
 
 
+def test_progress_is_mirrored_out_for_the_main_windows_own_bar(qt_app, monkeypatch):
+    """#27, and the same rule RecordDialog follows: what the dialog draws
+    for itself is exactly what goes out to MainWindow's bottom bar."""
+    dialog = _dialog(_items(4, seconds=300), monkeypatch)
+    overall: list = []
+    per_track: list = []
+    dialog.overall_progress_changed.connect(lambda f, t: overall.append((f, t)))
+    dialog.track_progress_changed.connect(lambda f, t: per_track.append((f, t)))
+
+    dialog._on_start_clicked()
+    _run_countdown(dialog)
+    dialog._player.position_seconds = 75.0
+    dialog._refresh_progress()
+
+    assert overall and per_track
+    assert overall[-1][1] == dialog.status_label.text()
+    # A quarter into a 300-second track, whatever the side adds up to.
+    assert per_track[-1][0] == pytest.approx(0.25)
+    assert "Track 1" in per_track[-1][1]
+
+
+def test_running_changed_reports_each_side_starting_and_ending(qt_app, monkeypatch):
+    """Unlike RecordDialog's disc-to-disc titling, nothing happens
+    between sides on its own -- the user has to turn the tape over and
+    press Start again, so the bar goes away in between."""
+    dialog = _dialog(_items(4, seconds=300), monkeypatch)
+    seen: list[bool] = []
+    dialog.running_changed.connect(seen.append)
+
+    dialog._on_start_clicked()
+    _run_countdown(dialog)
+    assert seen == [True]
+
+    dialog._on_side_finished()
+    assert seen == [True, False]
+
+
 # --- cancelling --------------------------------------------------------------
 
 

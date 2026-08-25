@@ -45,7 +45,7 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import QCoreApplication, QTimer, Qt
+from PySide6.QtCore import QCoreApplication, QTimer, Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -65,20 +65,30 @@ from PySide6.QtWidgets import (
 
 from mdtools import app_settings, audio_engine, embedded_cover, mixtape_cover, tape, tracks
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
+from mdtools.panels.hideable_dialog import hide_for_background
 from mdtools.panels.playback_bridge import PlaybackBridge
 from mdtools.panels.preview_player import PreviewPlayerBar
+from mdtools.panels.progress_format import mmss as _mmss
 from mdtools.project import ProjectMetadata, Track
 
 POLL_MS = 250
 COUNTDOWN_MS = 1000
 
 
-def _mmss(seconds: float) -> str:
-    seconds = max(0, int(seconds))
-    return f"{seconds // 60}:{seconds % 60:02d}"
-
-
 class TapeRecordDialog(QDialog):
+    # Mirrored by MainWindow's own bottom-of-window progress bar (#27) --
+    # see app_window.py's _drive_recording_bar()/_release_recording_bar().
+    # running_changed goes False between sides (the user has to flip the
+    # tape and press Start again -- nothing is happening in the background
+    # the way RecordDialog's automatic disc-to-disc titling is).
+    running_changed = Signal(bool)
+    overall_progress_changed = Signal(float, str)
+    track_progress_changed = Signal(float, str)
+    visibility_changed = Signal(bool)
+    # Asked for by the progress bar's "Show recording window" button --
+    # see panels/hideable_dialog.py, which is what actually re-shows this.
+    show_requested = Signal()
+
     def __init__(
         self,
         paths: list[Path | str],
@@ -100,6 +110,10 @@ class TapeRecordDialog(QDialog):
         self._remaining = 0  # seconds of leader silence still to go
         self._player: audio_engine.AudioPlayer | None = None
         self._pending_buffers: list | None = None
+        # Set by the Hide button, read by exec_hideable() -- see
+        # panels/hideable_dialog.py for why a hide has to be told apart
+        # from a cancel at all.
+        self.hidden_for_background = False
         self._bridge = PlaybackBridge(self)
         self._bridge.track_boundary.connect(self._on_track_boundary)
         self._bridge.finished.connect(self._on_side_finished)
@@ -189,6 +203,13 @@ class TapeRecordDialog(QDialog):
         self.close_btn = QPushButton(self.tr("Cancel"))
         self.close_btn.clicked.connect(self.reject)
         self.buttons.addButton(self.close_btn, QDialogButtonBox.ButtonRole.RejectRole)
+        self.hide_btn = QPushButton(self.tr("Hide"))
+        self.hide_btn.setToolTip(
+            self.tr("Hide this window and keep recording in the background -- use \"Show recording "
+                    "window\" in the bar at the bottom of the main window to bring it back.")
+        )
+        self.hide_btn.clicked.connect(self._on_hide_clicked)
+        self.buttons.addButton(self.hide_btn, QDialogButtonBox.ButtonRole.ActionRole)
         layout.addWidget(self.buttons)
 
         self._timer = QTimer(self)
@@ -394,6 +415,7 @@ class TapeRecordDialog(QDialog):
             return
 
         self._recording = True
+        self.running_changed.emit(True)
         self._current_local_index = 0
         self._set_fields_editable(False)
         self.start_btn.setEnabled(False)
@@ -485,17 +507,26 @@ class TapeRecordDialog(QDialog):
         done = sum(item.length_seconds for item in self._items[first:current])
         elapsed = done + self._player.position_seconds
         total = max(1, int(side.music_seconds))
-        self.progress.setValue(int(1000 * min(1.0, elapsed / total)))
+        overall_fraction = min(1.0, elapsed / total)
+        self.progress.setValue(int(1000 * overall_fraction))
         title = self._items[current].display_title() if 0 <= current < len(self._items) else ""
-        self.status_label.setText(
-            self.tr("Side {side}, track {index} of {count}: {title} -- {elapsed} of {total}").format(
-                side=side.label,
-                index=current - first + 1,
-                count=len(side.tracks),
-                title=title,
-                elapsed=_mmss(elapsed),
-                total=_mmss(total),
-            )
+        track_seconds = self._items[current].length_seconds if 0 <= current < len(self._items) else 0
+        track_fraction = min(1.0, self._player.position_seconds / max(1, track_seconds))
+        text = self.tr("Side {side}, track {index} of {count}: {title} -- {elapsed} of {total}").format(
+            side=side.label,
+            index=current - first + 1,
+            count=len(side.tracks),
+            title=title,
+            elapsed=_mmss(elapsed),
+            total=_mmss(total),
+        )
+        self.status_label.setText(text)
+        self.overall_progress_changed.emit(overall_fraction, text)
+        self.track_progress_changed.emit(
+            track_fraction,
+            self.tr("{title} -- {elapsed} of {total}").format(
+                title=title, elapsed=_mmss(self._player.position_seconds), total=_mmss(track_seconds)
+            ),
         )
 
     def _on_side_finished(self) -> None:
@@ -504,6 +535,7 @@ class TapeRecordDialog(QDialog):
         partway" state to detect here any more."""
         self._timer.stop()
         self._recording = False
+        self.running_changed.emit(False)
         self.progress.setValue(1000)
 
         if self._side == 0 and self._plan is not None and self._plan.sides[1].tracks:
@@ -603,6 +635,18 @@ class TapeRecordDialog(QDialog):
         self.close_btn.setText(self.tr("Close"))
         self.start_btn.setEnabled(True)
         self._set_fields_editable(True)
+        self.running_changed.emit(False)
+
+    def request_stop(self) -> None:
+        """What MainWindow's own Stop button calls."""
+        self.reject()
+
+    def request_show(self) -> None:
+        """What the progress bar's "Show recording window" button calls."""
+        self.show_requested.emit()
+
+    def _on_hide_clicked(self) -> None:
+        hide_for_background(self)
 
     def reject(self) -> None:
         """Stops playback, and says what the user has to stop themselves.
@@ -617,6 +661,7 @@ class TapeRecordDialog(QDialog):
             self._recording = False
             if self._player is not None:
                 self._player.stop()
+            self.running_changed.emit(False)
             QMessageBox.information(
                 self,
                 self.tr("Record to Cassette"),

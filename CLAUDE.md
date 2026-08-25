@@ -627,6 +627,31 @@ plan-then-execute, never repacking the running order, and balanced (not
 "fill the first one to the brim"). Manual disc/side breaks are sticky and
 start from whatever's already placed, not reset to none.
 
+**Recording progress is mirrored into the main window** (#27,
+`panels/recording_progress_bar.py` + `panels/hideable_dialog.py`): a bar
+below the design view, above the status bar, showing overall *and*
+per-track progress plus Stop and "Show recording window". Each operation
+dialog (`RecordDialog`, `TapeRecordDialog`, `BurnDialog`, `CdRipDialog`,
+`MDRemUploadDialog`, and `MetadataDialog` proxying its titling) keeps its
+own bar and additionally emits `running_changed`/
+`overall_progress_changed`/`track_progress_changed`/`visibility_changed`,
+plus `request_stop()`/`request_show()` — one shape, asserted in
+`tests/test_operation_dialog_contract.py`, so `_drive_recording_bar()`
+never needs to know which dialog it holds. **No per-track progress for
+burning** (cdrecord writes a disc as one continuous DAO stream) or
+titling — those three deliberately do not define
+`track_progress_changed`, and a test guards that.
+
+**Hide keeps an operation running; two things exist only because of
+that.** `exec_hideable()` is what survives a Hide at all (see the gotcha
+below — a bare `hide()` ends `exec()`), and because the main window is
+then usable mid-operation, `_guard_no_concurrent_operation()` refuses
+both a second operation *and* closing the main window while one runs —
+quitting out from under a live worker thread is the silent
+`QThread`-destroyed process abort. **Only one recording/rip/burn/upload
+may ever be in flight**; `MainWindow._active_recording_dialog` is set for
+a dialog's whole modal lifetime and is what both guards read.
+
 ## PySide6/Qt gotchas hit in this codebase
 
 - **Never construct a Qt GUI type** (`QColor`/`QPen`/`QBrush`/`QFont`/
@@ -695,6 +720,24 @@ start from whatever's already placed, not reset to none.
   regardless, forcing an extra round-trip on a non-premultiplied target).
   `render_scene_to_image()` paints onto the premultiplied format; `.save()`
   still writes an ordinary PNG regardless.
+- **`QDialog.hide()` called from inside that dialog's own `exec()` makes
+  `exec()` return** — `QDialog::setVisible(false)` exits the modal event
+  loop. It does *not* call `done()`, so no result is set and no
+  `finished` is emitted: the call site just gets `Rejected` back and
+  reads it as a cancel. Shipped once (#27's Hide button): hiding a CD rip
+  took the rip window *and* the main window's progress bar with it while
+  cd-paranoia carried on in a worker nobody could reach. Anything that
+  needs to hide a dialog and keep it running goes through
+  `panels/hideable_dialog.py`'s `exec_hideable()`, never a bare `exec()`.
+- **A widget added to a `QToolBar` via `addWidget()` is wrapped in a
+  `QWidgetAction`, and one added while hidden stays *disabled* even after
+  it is shown again** — leaving buttons visible but dead, since
+  `QAbstractButton.click()` does nothing on a disabled button. Separately,
+  under `QT_QPA_PLATFORM=offscreen` such a widget never hides again once
+  shown, through either its own `setVisible()` or its action's. Both bit
+  the same feature (#27) in a row. Put a composite bar in an **ordinary
+  layout**, not a toolbar, whenever its children's visibility or enabled
+  state has to change at runtime.
 
 **Test pattern for this app:** `QT_QPA_PLATFORM=offscreen
 .venv/Scripts/python.exe -c "..."` for quick smoke scripts; a session-

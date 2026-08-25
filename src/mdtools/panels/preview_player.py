@@ -38,14 +38,10 @@ from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QWidget
 
 from mdtools import audio_engine
 from mdtools.panels.playback_bridge import PlaybackBridge
+from mdtools.panels.progress_format import mmss as _mmss
 
 POLL_MS = 200
 SLIDER_RANGE = 1000
-
-
-def _mmss(seconds: float) -> str:
-    seconds = max(0, int(seconds))
-    return f"{seconds // 60}:{seconds % 60:02d}"
 
 
 class PreviewPlayerBar(QWidget):

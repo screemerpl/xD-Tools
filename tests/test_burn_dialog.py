@@ -264,6 +264,40 @@ def test_the_worker_decodes_then_writes_then_reports_success(qt_app, tmp_path, m
     assert succeeded == [True]
 
 
+def test_progress_and_stage_are_mirrored_out_for_the_main_windows_own_bar(qt_app, tmp_path):
+    """#27. A stage change carries the *last known* fraction with it:
+    decode->burn rewrites the status text without necessarily arriving
+    with a fresh progress tick, and a bar that snapped back to 0 there
+    would read as the burn having restarted."""
+    dialog = BurnDialog(_sources(tmp_path, 2), album="Album", artist="Artist")
+    seen: list = []
+    dialog.overall_progress_changed.connect(lambda f, t: seen.append((f, t)))
+
+    dialog._on_stage("decode")
+    dialog._on_progress(0.4)
+    dialog._on_stage("burn")
+
+    assert seen[0] == (0.0, dialog.tr("Preparing audio..."))
+    assert seen[1][0] == pytest.approx(0.4)
+    # The stage change kept the fraction it already had.
+    assert seen[2][0] == pytest.approx(0.4)
+    assert seen[2][1] == dialog.stage_label.text()
+
+
+def test_running_changed_follows_the_single_place_a_burn_starts_and_stops(qt_app, tmp_path):
+    """_set_running() is the one choke point both _burn_current_disc()
+    and _on_worker_finished() already go through, so a multi-disc burn
+    gets the bar back between discs for free."""
+    dialog = BurnDialog(_sources(tmp_path, 2), album="Album", artist="Artist")
+    seen: list[bool] = []
+    dialog.running_changed.connect(seen.append)
+
+    dialog._set_running(True)
+    dialog._set_running(False)
+
+    assert seen == [True, False]
+
+
 def test_the_worker_reports_a_failure_rather_than_raising(qt_app, tmp_path, monkeypatch):
     monkeypatch.setattr(cdburn, "prepare_wavs", lambda *a, **k: ["01.wav"])
     monkeypatch.setattr(cdburn, "write_inf_files", lambda *a, **k: ["01.inf"])

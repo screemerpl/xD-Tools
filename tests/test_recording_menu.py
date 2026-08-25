@@ -14,6 +14,7 @@ collected, which is a known-flaky pattern in this codebase.
 from __future__ import annotations
 
 import pytest
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QDialog
 
 from mdtools import app_settings
@@ -105,11 +106,16 @@ def test_the_button_opens_the_metadata_dialog(qt_app, monkeypatch):
     connected would still pass the test above."""
     opened: list = []
 
-    class _FakeDialog:
+    class _FakeDialog(QObject):
         DialogCode = QDialog.DialogCode
         result_metadata = None
 
-        def __init__(self, metadata, parent=None, medium="md"):
+        running_changed = Signal(bool)
+        overall_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
+        def __init__(self, metadata, parent=None, medium="md", is_recording_busy=None):
+            super().__init__()
             opened.append(metadata)
 
         def exec(self):
@@ -214,10 +220,16 @@ def test_the_folders_metadata_is_carried_into_the_recording(qt_app, isolated_set
 
     handed: list = []
 
-    class _FakeRecord:
+    class _FakeRecord(QObject):
         result_metadata = None
 
+        running_changed = Signal(bool)
+        overall_progress_changed = Signal(float, str)
+        track_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
         def __init__(self, port, paths, parent=None, metadata=None):
+            super().__init__()
             handed.append(metadata)
 
         def exec(self):
@@ -254,11 +266,16 @@ def test_a_given_initial_folder_is_preseeded_via_set_folder(qt_app, isolated_set
         def exec(self):
             return QDialog.DialogCode.Accepted
 
-    class _FakeRecord:
+    class _FakeRecord(QObject):
         result_metadata = None
 
+        running_changed = Signal(bool)
+        overall_progress_changed = Signal(float, str)
+        track_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
         def __init__(self, port, paths, parent=None, metadata=None):
-            pass
+            super().__init__()
 
         def exec(self):
             return QDialog.DialogCode.Accepted

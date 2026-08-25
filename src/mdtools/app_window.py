@@ -22,6 +22,8 @@ from PySide6.QtWidgets import (
     QSlider,
     QToolBar,
     QToolButton,
+    QVBoxLayout,
+    QWidget,
 )
 
 from mdtools import (
@@ -69,11 +71,13 @@ from mdtools.panels.burn_dialog import BurnDialog
 from mdtools.panels.folder_record_dialog import FolderRecordDialog
 from mdtools.panels import icons
 from mdtools.panels.grayscale_export_dialog import GrayscaleExportDialog
+from mdtools.panels.hideable_dialog import exec_hideable
 from mdtools.panels.layers_panel import LayersPanel
 from mdtools.mdrem import disc_title
 from mdtools.panels.mdrem_port import resolve_port
 from mdtools.panels.metadata_dialog import MetadataDialog
 from mdtools.panels.record_dialog import RecordDialog
+from mdtools.panels.recording_progress_bar import RecordingProgressBar
 from mdtools.panels.regenerate_font_dialog import RegenerateFontDialog
 from mdtools.panels.tape_record_dialog import TapeRecordDialog
 from mdtools.panels.new_design_dialog import NewDesignDialog
@@ -204,7 +208,7 @@ class MainWindow(QMainWindow):
         self.undo_stack: QUndoStack | None = None
 
         self.view = DesignView()
-        self.setCentralWidget(self.view)
+        self._build_recording_bar()
 
         self._build_page_toolbar()
         self._build_docks()
@@ -562,6 +566,115 @@ class MainWindow(QMainWindow):
         self._build_language_menu(help_menu)
         help_menu.addAction(self.tr("About xD-Tools..."), self._show_about)
 
+    def _build_recording_bar(self) -> None:
+        """A persistent bar at the bottom of the window, directly above
+        the status bar, mirroring whichever of RecordDialog/
+        TapeRecordDialog/BurnDialog/CdRipDialog/MetadataDialog is
+        currently modal -- see _drive_recording_bar()/
+        _release_recording_bar() (#27).
+
+        The central widget becomes a plain QWidget stacking the design
+        view above this bar, rather than the view itself. A bottom
+        QToolBar was tried first (it would span the full window width,
+        past the left/right docks) and is a trap: QToolBar.addWidget()
+        wraps what it is given in a QWidgetAction, and a widget added
+        while hidden stays *disabled* even after it is shown again --
+        which left the bar visible but its Stop and Show buttons
+        silently dead, since QAbstractButton.click() does nothing on a
+        disabled button. Caught by this feature's own MainWindow tests
+        rather than in the app, and the second time a QToolBar had eaten
+        this bar's child-visibility handling (see
+        recording_progress_bar.py's own module docstring for the first).
+        An ordinary layout has neither problem.
+
+        Not registered in the View menu: only QDockWidgets get a toggle
+        there, and this bar's visibility is operation-driven anyway."""
+        self.recording_bar = RecordingProgressBar()
+        self.recording_bar.stop_requested.connect(self._on_recording_bar_stop_requested)
+        self.recording_bar.show_dialog_requested.connect(self._on_show_recording_dialog_requested)
+
+        central = QWidget()
+        layout = QVBoxLayout(central)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(self.view)
+        layout.addWidget(self.recording_bar)
+        self.setCentralWidget(central)
+        self._active_recording_dialog = None
+
+    def _warn_recording_in_progress(self) -> None:
+        QMessageBox.information(
+            self,
+            self.tr("Busy"),
+            self.tr(
+                "A recording, ripping, burning or title-writing operation is still running. "
+                "Finish or stop it first -- use “Show recording window” in the bar at the "
+                "bottom if you hid it."
+            ),
+        )
+
+    def _guard_no_concurrent_operation(self) -> bool:
+        """Only one recording/rip/burn/upload may run at a time -- Hide
+        (see each dialog's own request_stop()/_on_hide_clicked()) lets
+        MainWindow stay interactive while one keeps running in the
+        background, which would otherwise let a second one be started to
+        fight the first over the same MDRem port/audio device/optical
+        drive. self._active_recording_dialog is set for a dialog's whole
+        modal lifetime -- see _drive_recording_bar() -- so it already
+        doubles as "is anything like this currently open at all",
+        independent of whether that dialog happens to be hidden right
+        now. Returns True when it is safe to proceed."""
+        if self._active_recording_dialog is None:
+            return True
+        self._warn_recording_in_progress()
+        return False
+
+    def _drive_recording_bar(self, dialog, *, track_progress: bool) -> None:
+        """Connects one of the six operation dialogs to the bottom bar --
+        called right before its exec(), paired with _release_recording_bar()
+        right after. Safe to call while dialog.exec() is itself still
+        running: exec()'s own nested event loop keeps delivering queued
+        signals app-wide, so a MainWindow-owned bar updates live even
+        while its driving dialog is modal."""
+        self._active_recording_dialog = dialog
+        dialog.running_changed.connect(
+            lambda running: self.recording_bar.start(track_progress=track_progress)
+            if running
+            else self.recording_bar.stop()
+        )
+        dialog.overall_progress_changed.connect(self.recording_bar.set_overall)
+        if track_progress:
+            dialog.track_progress_changed.connect(self.recording_bar.set_track)
+        dialog.visibility_changed.connect(self.recording_bar.set_dialog_hidden)
+
+    def _release_recording_bar(self, dialog) -> None:
+        signals = [dialog.running_changed, dialog.overall_progress_changed, dialog.visibility_changed]
+        if hasattr(dialog, "track_progress_changed"):
+            signals.append(dialog.track_progress_changed)
+        for signal in signals:
+            try:
+                signal.disconnect()
+            except (TypeError, RuntimeError):
+                pass  # nothing was connected, or the dialog's C++ object is already gone
+        if self._active_recording_dialog is dialog:
+            self._active_recording_dialog = None
+        self.recording_bar.stop()
+
+    def _on_recording_bar_stop_requested(self) -> None:
+        if self._active_recording_dialog is not None:
+            self._active_recording_dialog.request_stop()
+
+    def _on_show_recording_dialog_requested(self) -> None:
+        """Asks the dialog to come back, rather than show()ing it here --
+        it is exec_hideable() (panels/hideable_dialog.py) that owns the
+        exec()/hidden/exec() cycle, and only it can put the dialog back
+        into a modal loop rather than leaving it visible but loop-less."""
+        dialog = self._active_recording_dialog
+        if dialog is None:
+            return
+        dialog.request_show()
+        self.recording_bar.set_dialog_hidden(False)
+
     def _reset_undo_stack(self) -> None:
         """A fresh, empty undo history for the just-created/opened project.
         Old items' undo history isn't meaningful once they belong to a
@@ -634,6 +747,18 @@ class MainWindow(QMainWindow):
         window to open a different project and the whole app went with it.
         File > Exit still leaves for good, and so does cancelling the
         startup screen, which is where "I actually want out" now lives."""
+        # Asked before the unsaved-changes prompt: there is no point
+        # asking what to do with the project if this close is going to be
+        # refused anyway. Only reachable at all because Hide (#27) leaves
+        # this window usable while an operation runs on in the
+        # background -- and quitting out from under a worker thread that
+        # is still driving a deck, a drive or a burner is exactly the
+        # "QThread destroyed while still running" process abort CLAUDE.md
+        # already warns about.
+        if self._active_recording_dialog is not None:
+            self._warn_recording_in_progress()
+            event.ignore()
+            return
         if not self._may_discard_changes():
             event.ignore()
             return
@@ -1291,8 +1416,15 @@ class MainWindow(QMainWindow):
         # sees what they're accepting" shape as every other MetadataDialog
         # entry point -- an import someone changes their mind about should
         # be as cancellable as a hand edit is.
-        dialog = MetadataDialog(other.metadata, self, medium=self.project.medium)
-        if dialog.exec() != MetadataDialog.DialogCode.Accepted or dialog.result_metadata is None:
+        dialog = MetadataDialog(
+            other.metadata, self, medium=self.project.medium, is_recording_busy=self._guard_no_concurrent_operation
+        )
+        self._drive_recording_bar(dialog, track_progress=False)
+        try:
+            accepted = exec_hideable(dialog) == MetadataDialog.DialogCode.Accepted
+        finally:
+            self._release_recording_bar(dialog)
+        if not accepted or dialog.result_metadata is None:
             return
         self.project.metadata = dialog.result_metadata
         self._mark_dirty()
@@ -2206,8 +2338,15 @@ class MainWindow(QMainWindow):
         metadata landing in the project, for whoever wants the label right
         without recording right now (no adapter at hand, or no disc to
         record onto yet)."""
+        if not self._guard_no_concurrent_operation():
+            return
         rip = CdRipDialog(self, medium=self._recording_medium())
-        if rip.exec() != QDialog.DialogCode.Accepted:
+        self._drive_recording_bar(rip, track_progress=True)
+        try:
+            accepted = exec_hideable(rip) == QDialog.DialogCode.Accepted
+        finally:
+            self._release_recording_bar(rip)
+        if not accepted:
             return
         if not self._offer_recording_the_rip(rip.result_metadata):
             return
@@ -2361,8 +2500,15 @@ class MainWindow(QMainWindow):
         this can be reached with any project open, including one that has
         nothing to do with the disc just burned.
         """
+        if not self._guard_no_concurrent_operation():
+            return
         dialog = BurnDialog(sources, album=album, artist=artist, year=year, parent=self)
-        if dialog.exec() != BurnDialog.DialogCode.Accepted or dialog.result_metadata is None:
+        self._drive_recording_bar(dialog, track_progress=False)
+        try:
+            accepted = exec_hideable(dialog) == BurnDialog.DialogCode.Accepted
+        finally:
+            self._release_recording_bar(dialog)
+        if not accepted or dialog.result_metadata is None:
             return
         if self.project is None or self.project.medium != MEDIUM_CD:
             return
@@ -2405,12 +2551,20 @@ class MainWindow(QMainWindow):
         Which machine it goes to is the project's business, not the
         source's: a rip is a rip whether it ends up on a MiniDisc or on
         side A of a C90, so the branch belongs here rather than in every
-        caller."""
+        caller. The concurrency guard is checked once, here, before either
+        branch -- _run_tape_record_dialog() is only ever reached from this
+        method, never a separate entry point of its own."""
+        if not self._guard_no_concurrent_operation():
+            return
         if self.project is not None and self.project.medium == MEDIUM_TAPE:
             self._run_tape_record_dialog(paths, metadata)
             return
         dialog = RecordDialog(port, paths, self, metadata=metadata)
-        dialog.exec()
+        self._drive_recording_bar(dialog, track_progress=True)
+        try:
+            exec_hideable(dialog)
+        finally:
+            self._release_recording_bar(dialog)
         # What was just recorded is also what the label should describe, so
         # its metadata (plus whatever cover art was found for it) is
         # adopted by the project rather than left for the user to retype
@@ -2426,13 +2580,18 @@ class MainWindow(QMainWindow):
         """The cassette's own recording: two sides, and a user who is told
         what to press rather than a deck that is driven.
 
-        No port and no drive, so nothing was resolved on the way in.
-        """
+        No port and no drive, so nothing was resolved on the way in. The
+        concurrency guard is _run_record_dialog()'s job, not this one's --
+        see its own docstring."""
         minutes = (
             self.project.tape_total_minutes if self.project is not None else tape.DEFAULT_LENGTH.total_minutes
         )
         dialog = TapeRecordDialog(paths, self, metadata=metadata, total_minutes=minutes)
-        dialog.exec()
+        self._drive_recording_bar(dialog, track_progress=True)
+        try:
+            exec_hideable(dialog)
+        finally:
+            self._release_recording_bar(dialog)
         if dialog.result_metadata is None or self.project is None:
             return
         self.project.metadata = dialog.result_metadata
@@ -3388,7 +3547,14 @@ class MainWindow(QMainWindow):
     def _edit_metadata(self) -> None:
         if self.project is None:
             return
-        dialog = MetadataDialog(self.project.metadata, self, medium=self.project.medium)
-        if dialog.exec() == MetadataDialog.DialogCode.Accepted and dialog.result_metadata is not None:
+        dialog = MetadataDialog(
+            self.project.metadata, self, medium=self.project.medium, is_recording_busy=self._guard_no_concurrent_operation
+        )
+        self._drive_recording_bar(dialog, track_progress=False)
+        try:
+            accepted = exec_hideable(dialog) == MetadataDialog.DialogCode.Accepted
+        finally:
+            self._release_recording_bar(dialog)
+        if accepted and dialog.result_metadata is not None:
             self.project.metadata = dialog.result_metadata
             self._mark_dirty()

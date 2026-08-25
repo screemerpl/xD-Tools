@@ -43,15 +43,12 @@ from PySide6.QtWidgets import (
 )
 
 from mdtools import mdrem
+from mdtools.panels.hideable_dialog import hide_for_background
+from mdtools.panels.progress_format import mmss as _mmss
 from mdtools.project import ProjectMetadata
 
 _PROGRESS_SCALE = 1000  # progress bar steps; time-driven, so finer than one per title
 _TICK_MS = 250
-
-
-def _mmss(seconds: float) -> str:
-    seconds = max(0, int(seconds))
-    return f"{seconds // 60}:{seconds % 60:02d}"
 
 
 class _UploadWorker(QThread):
@@ -104,6 +101,18 @@ class MDRemUploadDialog(QDialog):
     nothing reaches the disc before the user has seen exactly what would --
     especially the transliterated form of any non-ASCII title."""
 
+    # Mirrored by MainWindow's own bottom-of-window progress bar (#27) --
+    # see app_window.py's _drive_recording_bar()/_release_recording_bar().
+    # No track_progress_changed: the deck reports no per-title progress
+    # any more than it reports overall progress, and this dialog's own
+    # elapsed-estimate math already only ever produces one number.
+    running_changed = Signal(bool)
+    overall_progress_changed = Signal(float, str)
+    visibility_changed = Signal(bool)
+    # Asked for by the progress bar's "Show recording window" button --
+    # see panels/hideable_dialog.py, which is what actually re-shows this.
+    show_requested = Signal()
+
     def __init__(
         self,
         metadata: ProjectMetadata,
@@ -135,6 +144,10 @@ class MDRemUploadDialog(QDialog):
         self._worker: _UploadWorker | None = None
         self._closing = False
         self._unattended = unattended
+        # Set by the Hide button, read by exec_hideable() -- see
+        # panels/hideable_dialog.py for why a hide has to be told apart
+        # from a cancel at all.
+        self.hidden_for_background = False
         # Read by the caller after exec(): whether every title actually went
         # out. A failed upload must not let a multi-disc run carry on to the
         # next disc as though this one were finished.
@@ -200,6 +213,13 @@ class MDRemUploadDialog(QDialog):
         self.close_btn = QPushButton(self.tr("Cancel"))
         self.close_btn.clicked.connect(self.reject)
         self.buttons.addButton(self.close_btn, QDialogButtonBox.ButtonRole.RejectRole)
+        self.hide_btn = QPushButton(self.tr("Hide"))
+        self.hide_btn.setToolTip(
+            self.tr("Hide this window and keep writing titles in the background -- use \"Show recording "
+                    "window\" in the bar at the bottom of the main window to bring it back.")
+        )
+        self.hide_btn.clicked.connect(self._on_hide_clicked)
+        self.buttons.addButton(self.hide_btn, QDialogButtonBox.ButtonRole.ActionRole)
         layout.addWidget(self.buttons)
 
         self._ticker = QTimer(self)
@@ -277,6 +297,7 @@ class MDRemUploadDialog(QDialog):
         self._worker.finished.connect(self._on_worker_finished)
         self._worker.start()
         self._ticker.start()
+        self.running_changed.emit(True)
 
     def _on_step_started(self, index: int, label: str) -> None:
         """Snaps the time-driven bar back to reality at every real step
@@ -296,14 +317,14 @@ class MDRemUploadDialog(QDialog):
         done = self._completed_estimate + in_step
         self.progress.setValue(int(_PROGRESS_SCALE * min(1.0, done / self._total_estimate)))
         remaining = max(0.0, self._total_estimate - done)
-        self.status_label.setText(
-            self.tr("Writing {index} of {total}: {what} -- about {remaining} left").format(
-                index=getattr(self, "_current_index", 0) + 1,
-                total=len(self._plan.steps),
-                what=getattr(self, "_current_label", ""),
-                remaining=_mmss(remaining),
-            )
+        text = self.tr("Writing {index} of {total}: {what} -- about {remaining} left").format(
+            index=getattr(self, "_current_index", 0) + 1,
+            total=len(self._plan.steps),
+            what=getattr(self, "_current_label", ""),
+            remaining=_mmss(remaining),
         )
+        self.status_label.setText(text)
+        self.overall_progress_changed.emit(min(1.0, done / self._total_estimate), text)
 
     def _on_failed(self, message: str) -> None:
         self._ticker.stop()
@@ -325,6 +346,7 @@ class MDRemUploadDialog(QDialog):
         """The single place the run actually ends, whatever ended it --
         success, failure, or Stop. Closing here (rather than from reject())
         is what keeps a cancel from blocking the GUI thread on wait()."""
+        self.running_changed.emit(False)
         self._ticker.stop()
         self._worker = None
         self.start_btn.setEnabled(True)
@@ -366,6 +388,23 @@ class MDRemUploadDialog(QDialog):
             QMessageBox.warning(self, self.tr("Save to Disc"), self.tr("Could not eject: {error}").format(error=exc))
 
     # --- shutdown -----------------------------------------------------
+
+    def _on_hide_clicked(self) -> None:
+        """Keeps writing in the background -- the worker thread does not
+        care whether this dialog is visible. See
+        panels/hideable_dialog.py for what has to happen around exec()
+        for that to actually be true."""
+        hide_for_background(self)
+
+    def request_show(self) -> None:
+        """What the progress bar's "Show recording window" button calls."""
+        self.show_requested.emit()
+
+    def request_stop(self) -> None:
+        """What MainWindow's own Stop button calls -- same as Cancel/the
+        window's close button, named generically so a caller never needs
+        to know which dialog subclass it is talking to."""
+        self.reject()
 
     def reject(self) -> None:
         """Stopping mid-upload cannot be instant -- the worker is inside a

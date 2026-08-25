@@ -13,6 +13,7 @@ which stubs `record_module.tracks.playlist_items_from_paths`.
 from pathlib import Path
 
 import pytest
+from PySide6.QtCore import QObject, Signal
 
 from mdtools import tracks
 from mdtools.metadata_lookup import AlbumCandidate
@@ -250,6 +251,49 @@ def test_progress_follows_the_position_within_the_whole_album(qt_app, monkeypatc
     assert "Track 3" in dialog.status_label.text()
 
 
+def test_progress_is_mirrored_out_for_the_main_windows_own_bar(qt_app, monkeypatch, no_hardware):
+    """#27: the same numbers the dialog draws for itself go out as
+    signals, so MainWindow's bottom bar cannot show something different
+    from the dialog it is mirroring."""
+    dialog = _dialog(_items(4, seconds=100), monkeypatch)
+    dialog._recording = True
+    dialog._player = _FakePlayer()
+    overall: list = []
+    per_track: list = []
+    dialog.overall_progress_changed.connect(lambda f, t: overall.append((f, t)))
+    dialog.track_progress_changed.connect(lambda f, t: per_track.append((f, t)))
+
+    dialog._current_local_index = 1
+    dialog._player.position_seconds = 25.0
+    dialog._refresh_progress()
+
+    assert overall and per_track
+    fraction, text = overall[-1]
+    # One whole track done plus a quarter of this one, out of four.
+    assert fraction == pytest.approx(125 / 400)
+    assert text == dialog.status_label.text()
+    # Per-track is this track's own position, not the album's.
+    assert per_track[-1][0] == pytest.approx(0.25)
+    assert "Track 2" in per_track[-1][1]
+
+
+def test_the_per_track_row_is_switched_off_while_titling(qt_app, monkeypatch, no_hardware):
+    """Titling has no per-track fraction to report, so RecordDialog sends
+    the negative sentinel RecordingProgressBar reads as "hide that row"
+    -- otherwise it would sit frozen at whatever the last track left."""
+    dialog = _dialog(_items(3), monkeypatch)
+    seen: list = []
+    dialog.track_progress_changed.connect(lambda f, t: seen.append(f))
+
+    class _FakeUpload(QObject):
+        overall_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
+    dialog._begin_nested_titling(_FakeUpload())
+
+    assert seen == [-1.0]
+
+
 # --- end of the disc -------------------------------------------------------
 
 
@@ -287,8 +331,12 @@ def test_titling_after_a_single_disc_writes_and_ejects_unattended_with_no_questi
     titles going out would leave the deck holding an untitled disc."""
     made: list = []
 
-    class _FakeUpload:
+    class _FakeUpload(QObject):
+        overall_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
         def __init__(self, metadata, port, parent=None, clear_default=True, unattended=False):
+            super().__init__()
             made.append((metadata, clear_default, unattended))
             self.succeeded = True
 
@@ -322,8 +370,12 @@ def test_titling_after_a_single_disc_writes_and_ejects_unattended_with_no_questi
 def test_a_failed_single_disc_titling_says_so_without_pretending_it_worked(
     qt_app, monkeypatch, no_hardware, no_lookup
 ):
-    class _FakeUpload:
+    class _FakeUpload(QObject):
+        overall_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
         def __init__(self, metadata, port, parent=None, clear_default=True, unattended=False):
+            super().__init__()
             self.succeeded = False
 
         def exec(self):
@@ -508,8 +560,12 @@ def test_the_titles_written_onto_the_disc_are_the_ones_on_screen(qt_app, monkeyp
     over again, which would have thrown away every edit made here."""
     uploaded: list = []
 
-    class _FakeUpload:
+    class _FakeUpload(QObject):
+        overall_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
         def __init__(self, metadata, port, parent=None, clear_default=True, unattended=False):
+            super().__init__()
             uploaded.append(metadata)
             self.succeeded = True
 
