@@ -257,9 +257,21 @@ def test_the_album_ending_stops_the_deck(qt_app, monkeypatch, no_hardware):
     dialog = _dialog(_items(3), monkeypatch)
     dialog._recording = True
 
-    # Titling is deferred to a real QTimer.singleShot (see
-    # _title_single_disc), which never fires within this synchronous test
-    # -- exactly what lets this test check the deck-stopping half alone.
+    # Titling is deferred to QTimer.singleShot (see _title_single_disc) --
+    # faked here (rather than left real) so nothing is actually scheduled
+    # on the shared QApplication's event loop. A *real* singleShot here
+    # never fires within this synchronous test either, but it does leave a
+    # live 2-second timer referencing this dialog behind once the test
+    # function returns -- which then fires for real, unpredictably, deep
+    # into some *later* test's own run (once enough wall-clock time has
+    # passed across the whole suite), recursively opening a real,
+    # un-faked MDRemUploadDialog from a stale dialog nobody still holds a
+    # reference to. Reported as the full test suite grinding to a near
+    # standstill at ~0% CPU partway through -- py-spy's dump of the
+    # genuinely stuck process showed exactly this: _title_single_disc
+    # nested eight levels deep, one per test in this file that made this
+    # same mistake (see _finish_recording() below for the other seven).
+    monkeypatch.setattr(record_module, "QTimer", _NoTimer)
     dialog._on_disc_finished()
 
     assert not dialog._recording
@@ -343,8 +355,12 @@ def no_lookup(no_cover_lookup):
 
 def _finish_recording(dialog, monkeypatch) -> None:
     """Only exercises the metadata-capturing half of _on_disc_finished --
-    titling itself is deferred to a real QTimer.singleShot (see
-    _title_single_disc), which never fires within this synchronous call."""
+    titling itself is deferred to QTimer.singleShot (see
+    _title_single_disc), faked here so nothing real is left scheduled on
+    the shared QApplication's event loop after this test function returns
+    -- see test_the_album_ending_stops_the_deck's own comment on this file
+    for what a real, unfaked one does instead."""
+    monkeypatch.setattr(record_module, "QTimer", _NoTimer)
     dialog._recording = True
     dialog._current_local_index = len(dialog._items) - 1
     dialog._on_disc_finished()
