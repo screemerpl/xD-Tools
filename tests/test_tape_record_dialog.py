@@ -124,6 +124,39 @@ def test_an_album_too_long_for_the_chosen_tape_says_so_without_refusing(qt_app, 
 # --- side A ----------------------------------------------------------------
 
 
+def test_the_initial_instruction_says_to_press_record_and_pause(qt_app, monkeypatch):
+    """Reported directly: nothing told the user to arm the deck into
+    record-*pause* specifically (only "put it into record"), so it wasn't
+    clear the deck should be armed but not yet moving at this point."""
+    dialog = _dialog(_items(4, seconds=300), monkeypatch)
+
+    assert "PAUSE" in dialog.instruction_label.text()
+    assert "record-pause" in dialog.instruction_label.text()
+
+
+def test_finishing_decode_tells_the_user_to_release_pause(qt_app, monkeypatch):
+    """Reported directly: after the files finished decoding to WAV, nothing
+    told the user this was the moment to take the deck off pause -- the
+    instruction label was left showing the stale "arm it" text from before
+    Start was even clicked."""
+    dialog = _dialog(_items(4, seconds=300), monkeypatch)
+
+    dialog._on_start_clicked()
+
+    assert "Release Pause" in dialog.instruction_label.text()
+
+
+def test_side_bs_own_instruction_also_says_to_press_record_and_pause(qt_app, monkeypatch):
+    dialog = _dialog(_items(4, seconds=300), monkeypatch)
+    dialog._on_start_clicked()
+    _run_countdown(dialog)
+
+    dialog._on_side_finished()
+
+    assert "PAUSE" in dialog.instruction_label.text()
+    assert "record-pause" in dialog.instruction_label.text()
+
+
 def test_nothing_plays_until_the_leader_silence_has_run(qt_app, monkeypatch):
     dialog = _dialog(_items(4), monkeypatch)
 

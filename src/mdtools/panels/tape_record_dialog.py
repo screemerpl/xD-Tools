@@ -330,9 +330,10 @@ class TapeRecordDialog(QDialog):
         self.instruction_label.setText(
             f"<b>{heading}</b><br>"
             + self.tr(
-                "Put the deck into record on side {side}, set its input to the line it is fed from, then "
-                "press the button below. The first {seconds} seconds are recorded silent, so the music "
-                "clears the leader tape."
+                "Press RECORD and PAUSE together on side {side} (record-pause -- armed, but not yet "
+                "moving), set its input to the line it is fed from, then press the button below. Once "
+                "the tracks are ready you will be told to release Pause; the first {seconds} seconds "
+                "after that are recorded silent, so the music clears the leader tape."
             ).format(side=side.label, seconds=tape.LEADER_SECONDS)
         )
         self.start_btn.setText(self.tr("Recording -- Start Side {side}").format(side=side.label))
@@ -379,6 +380,13 @@ class TapeRecordDialog(QDialog):
         self.progress.setValue(0)
         self._pending_buffers = buffers
         self._remaining = tape.LEADER_SECONDS
+        # Decoding is done, so this is the exact moment the deck should
+        # actually start moving -- reported directly as missing: nothing
+        # here told the user when to release Pause, only that they should
+        # arm it beforehand.
+        self.instruction_label.setText(
+            "<b>" + self.tr("Release Pause now") + "</b><br>" + self.tr("The deck should start rolling.")
+        )
         self._tick_display()
         self._countdown.start()
 
@@ -479,8 +487,9 @@ class TapeRecordDialog(QDialog):
             self.instruction_label.setText(
                 f"<b>{heading}</b><br>"
                 + self.tr(
-                    "Stop the deck, take the cassette out and turn it over, then put the deck into record "
-                    "again for side {side} and press the button below."
+                    "Stop the deck, take the cassette out and turn it over, then press RECORD and PAUSE "
+                    "together (record-pause) for side {side} and press the button below. You will be "
+                    "told when to release Pause."
                 ).format(side=next_side.label)
             )
             self.start_btn.setText(self.tr("Recording -- Start Side {side}").format(side=next_side.label))
