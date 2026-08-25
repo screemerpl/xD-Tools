@@ -1,4 +1,13 @@
-"""A modern, flat dark theme for the whole application.
+"""A modern, flat dark theme for the whole application -- a Discord-style
+palette, and the only one: there is no switcher, no Settings toggle, and
+no second palette anywhere in this module. Explicit user request ("no
+changes of themes - just create one and use as default") after the
+original KDE-Breeze-blue palette had been the only one this app ever
+shipped with; replacing its colours in place, rather than adding a
+selectable second theme, is what keeps this a one-file, no-new-concept
+change -- the exact same "reach for the smaller change" reasoning the
+rest of this module already documents below for Fusion/QSS over a theme
+package.
 
 Qt's own "Fusion" cross-platform style (already inside PySide6, no new
 dependency) plus a hand-written QSS stylesheet, rather than a theme
@@ -47,22 +56,34 @@ from __future__ import annotations
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication
 
-# KDE Breeze's own accent blue -- well-tested for legibility against a dark
-# background. Used for links, selection/highlight, checked/focused controls,
-# and the QSS accent below, so every "this is interactive" signal in the UI
-# reads consistently.
-_ACCENT = "#2a82da"
-_ACCENT_HOVER = "#3f93e6"
-_ACCENT_PRESSED = "#1f6cb8"
+# Discord's own "Blurple" brand colour -- used for links, selection/
+# highlight, checked/focused controls, and the QSS accent below, so every
+# "this is interactive" signal in the UI reads consistently. Discord's own
+# buttons darken on hover/press rather than lighten (confirmed against
+# Discord's own published design tokens), which is why these two go the
+# opposite direction from what a lighter accent would suggest.
+_ACCENT = "#5865f2"
+_ACCENT_HOVER = "#4752c4"
+_ACCENT_PRESSED = "#3c45a5"
 
-_WINDOW = "#353535"
-_BASE = "#232323"
-_ALT_BASE = "#3a3a3a"
-_BORDER = "#4a4a4a"
-_BORDER_LIGHT = "#5c5c5c"
-_TEXT = "#ffffff"
-_DISABLED_TEXT = "#7f7f7f"
-_DISABLED_BG = "#3d3d3d"
+# Discord's own three background layers, reused here as this app's
+# window/base/alt-base -- "window" is the general chrome (buttons, menus,
+# toolbars, tab bars), "base" the deepest layer (text inputs, lists,
+# trees), "alt base" a step up from window for hover states and dock
+# titles.
+_WINDOW = "#2f3136"
+_BASE = "#202225"
+_ALT_BASE = "#393c43"
+_BORDER = "#26282c"
+_BORDER_LIGHT = "#4f545c"
+# Discord's own primary text colour -- deliberately off-white, not pure
+# #ffffff, which is easier to read against a dark background for long
+# stretches.
+_TEXT = "#dcddde"
+_DISABLED_TEXT = "#72767d"
+_DISABLED_BG = "#26282c"
+# Discord's own danger red, for QPalette's BrightText role.
+_DANGER = "#ed4245"
 
 _RADIUS = "4px"
 
@@ -78,10 +99,15 @@ def _build_palette() -> QPalette:
     palette.setColor(QPalette.ColorRole.Text, QColor(_TEXT))
     palette.setColor(QPalette.ColorRole.Button, QColor(_WINDOW))
     palette.setColor(QPalette.ColorRole.ButtonText, QColor(_TEXT))
-    palette.setColor(QPalette.ColorRole.BrightText, QColor("red"))
+    palette.setColor(QPalette.ColorRole.BrightText, QColor(_DANGER))
     palette.setColor(QPalette.ColorRole.Link, QColor(_ACCENT))
     palette.setColor(QPalette.ColorRole.Highlight, QColor(_ACCENT))
-    palette.setColor(QPalette.ColorRole.HighlightedText, QColor("black"))
+    # White, not black -- _ACCENT is now a deep indigo-blue (Discord's own
+    # Blurple), dark enough that white reads far better on it than black
+    # does (Discord's own buttons use white text on Blurple for the same
+    # reason). The old KDE-Breeze blue was light enough for black text;
+    # this one is not.
+    palette.setColor(QPalette.ColorRole.HighlightedText, QColor("white"))
 
     # Disabled controls need to actually look disabled against a dark
     # background -- Fusion's own default disabled-state colours are tuned
@@ -133,7 +159,7 @@ def _build_stylesheet() -> str:
             border-radius: {_RADIUS};
             padding: 3px 6px;
             selection-background-color: {_ACCENT};
-            selection-color: black;
+            selection-color: white;
         }}
         QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus,
         QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {{
@@ -152,7 +178,7 @@ def _build_stylesheet() -> str:
             background-color: {_BASE};
             border: 1px solid {_BORDER};
             selection-background-color: {_ACCENT};
-            selection-color: black;
+            selection-color: white;
         }}
 
         QCheckBox::indicator, QRadioButton::indicator {{
@@ -216,7 +242,7 @@ def _build_stylesheet() -> str:
         }}
         QMenu::item:selected {{
             background-color: {_ACCENT};
-            color: black;
+            color: white;
         }}
         QMenu::separator {{
             height: 1px;
@@ -297,7 +323,7 @@ def _build_stylesheet() -> str:
             alternate-background-color: {_WINDOW};
             border: 1px solid {_BORDER};
             selection-background-color: {_ACCENT};
-            selection-color: black;
+            selection-color: white;
         }}
 
         QSlider::groove:horizontal {{

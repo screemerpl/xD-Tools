@@ -1833,6 +1833,45 @@ by parsing every selector line out of `_build_stylesheet()`'s own output
 and asserting none of them starts with one of those three names, rather
 than trusting every future edit to remember the rule by convention alone.
 
+**The palette was recoloured to a Discord-style theme on 2026-08-25 --
+explicit user request, "no changes of themes - just create one and use
+as default".** That instruction is the whole shape of the change: there
+is still exactly one theme, no Settings toggle, no second palette
+anywhere -- every colour constant in `theme.py` was simply replaced in
+place with Discord's own published dark-mode tokens (three background
+layers -- `_WINDOW`/`_BASE`/`_ALT_BASE` -- Blurple `_ACCENT`
+(`#5865f2`), Discord's own off-white `_TEXT` rather than pure white, and
+its own danger red for `BrightText`). `_RADIUS` (4px) was deliberately
+left untouched -- Discord's own button corners are close to that already,
+and widening it project-wide risked visual regressions in narrow
+controls (checkbox/radio indicators, which already compute their own
+radius from their own size) that the request never asked for.
+**Discord's own buttons darken on hover/press, not lighten** -- confirmed
+against Discord's published design tokens -- so `_ACCENT_HOVER`/
+`_ACCENT_PRESSED` go the opposite direction from the old KDE-Breeze
+palette's own lighter hover. **Every `selection-color`/`color` paired
+with `_ACCENT` had to flip from black to white**: the old KDE-Breeze
+blue (`#2a82da`) was light enough for black selected-text to read
+clearly on it, but Blurple is a deep indigo -- black text on it would be
+low-contrast in exactly the way `QPalette.ColorRole.HighlightedText` and
+the QSS's own `QMenu::item:selected`/`selection-color` rules exist to
+avoid. `test_highlighted_text_contrasts_with_the_now_darker_accent`
+guards this the same way the existing dark-window test does (checked as
+"light", not an exact colour, so a later shade tweak within the family
+doesn't break it).
+
+`scripts/make_app_icon.py`'s own `ACCENT` constant is a **second,
+independent copy** of `theme._ACCENT` (its own comment says so: "the
+app's own accent, from theme.py") -- the icon generator has no import
+relationship with `theme.py` at all, so this recolour had to update and
+re-run it by hand (`assets/img/xdtools.png`/`.ico`, real platform
+plugin, not offscreen -- see that script's own docstring for why) or the
+taskbar/window/`.exe` icon would have kept the old blue flag indefinitely
+while every other pixel of the app moved to Blurple. Grep for `2a82da`
+before assuming a future accent change is done -- it is exactly this
+kind of second, undocumented copy that a purely `theme.py`-scoped edit
+would miss.
+
 **`scripts/manual/make_screenshots.py` needed the exact same
 `theme.apply_theme(app)` call `main.py` makes, or the manual's screenshots
 would silently keep showing Qt's old default light theme forever.** It
