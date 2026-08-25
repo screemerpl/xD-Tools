@@ -13,7 +13,7 @@ from __future__ import annotations
 from PySide6.QtCore import QTimer, Signal
 from PySide6.QtWidgets import QDialog
 
-from mdtools.panels.hideable_dialog import exec_hideable, hide_for_background
+from mdtools.panels.hideable_dialog import exec_hideable, hide_for_background, surface
 
 
 class _Dialog(QDialog):
@@ -94,6 +94,68 @@ def test_the_dialog_can_be_asked_back_and_then_finish_normally(qt_app):
 
     assert seen == ["hidden", "shown"]
     assert result == QDialog.DialogCode.Accepted
+
+
+def test_coming_back_is_announced_so_the_bar_can_follow(qt_app):
+    """MainWindow puts its "Show recording window" button away (and
+    clears its own hidden flag) off this, rather than at whichever button
+    asked -- so every route back, including surface() bringing a dialog
+    up to ask the user something, keeps them in step."""
+    dialog = _Dialog()
+    seen: list[bool] = []
+    dialog.visibility_changed.connect(seen.append)
+
+    def hide_it():
+        hide_for_background(dialog)
+        QTimer.singleShot(0, show_it)
+
+    def show_it():
+        dialog.request_show()
+        QTimer.singleShot(0, dialog.accept)
+
+    QTimer.singleShot(0, hide_it)
+    exec_hideable(dialog)
+
+    assert seen == [True, False]
+
+
+def test_surface_puts_a_hidden_dialog_up_before_it_asks_anything(qt_app):
+    """A QMessageBox is its own window and shows whether or not its
+    parent does -- so a hidden recording could otherwise ask "put the
+    next disc in" with nothing behind it. surface() has to make the
+    dialog visible *there and then*, not merely request it: the request
+    only lands once control is back in exec_hideable's wait loop, which
+    is after the caller's message box has already opened."""
+    dialog = _Dialog()
+    seen: list[bool] = []
+    dialog.visibility_changed.connect(seen.append)
+
+    def hide_then_ask():
+        hide_for_background(dialog)
+        assert dialog.isHidden()
+        # Standing in for "about to open a QMessageBox".
+        surface(dialog)
+        assert not dialog.isHidden(), "surface() left the dialog hidden"
+        QTimer.singleShot(0, dialog.accept)
+
+    QTimer.singleShot(0, hide_then_ask)
+    exec_hideable(dialog)
+
+    assert seen[0] is True and seen[1] is False
+
+
+def test_surface_leaves_a_visible_dialog_alone(qt_app):
+    dialog = _Dialog()
+    seen: list = []
+    dialog.visibility_changed.connect(seen.append)
+
+    def check():
+        surface(dialog)
+        assert seen == []
+        dialog.accept()
+
+    QTimer.singleShot(0, check)
+    exec_hideable(dialog)
 
 
 def test_an_ordinary_close_is_unchanged(qt_app):

@@ -64,7 +64,7 @@ from PySide6.QtWidgets import (
 
 from mdtools import app_settings, cdrip, mixtape_cover, musicbrainz
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
-from mdtools.panels.hideable_dialog import hide_for_background
+from mdtools.panels.hideable_dialog import hide_for_background, surface
 from mdtools.panels.progress_format import mmss as _mmss
 from mdtools.project import MEDIUM_MD, medium_name, ProjectMetadata, Track, apply_compilation_naming
 
@@ -682,6 +682,7 @@ class CdRipDialog(QDialog):
         self._done_paths += list(self._plan.flac_paths)
 
     def _ask_for_next_disc(self) -> bool:
+        surface(self)
         return (
             QMessageBox.question(
                 self,

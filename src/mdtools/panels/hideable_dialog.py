@@ -51,6 +51,31 @@ def hide_for_background(dialog) -> None:
     dialog.visibility_changed.emit(True)
 
 
+def surface(dialog) -> None:
+    """Bring a dialog back if it is hidden, *before* it asks the user
+    something.
+
+    A QMessageBox is its own top-level window, so it appears whether or
+    not the dialog that parented it is visible -- which means a hidden
+    recording could otherwise pop up "put the next disc in" with no
+    window behind it to explain where it came from. Anything a hidden
+    operation can prompt with mid-run calls this first.
+
+    The window is put up here and now, not merely requested: asking
+    exec_hideable() to re-enter exec() only takes effect once control
+    returns to its wait loop, which is *after* the message box the caller
+    is about to open. request_show() still follows, so that when control
+    does return, the dialog goes back to being properly modal rather than
+    left visible with no loop of its own."""
+    if not dialog.isHidden():
+        return
+    dialog.show()
+    dialog.raise_()
+    dialog.activateWindow()
+    dialog.visibility_changed.emit(False)
+    dialog.request_show()
+
+
 def exec_hideable(dialog) -> int:
     """`dialog.exec()`, but surviving its Hide button -- see the module
     docstring. Returns the dialog's real result code, only once the
@@ -90,5 +115,10 @@ def exec_hideable(dialog) -> int:
             # that result is the real one, and there is nothing left to
             # re-show.
             return outcome[0]
-        # Otherwise the user asked for it back: round again into exec(),
-        # which shows it modally once more.
+        # Otherwise it was asked for back: say so before rounding again
+        # into exec(), which shows it modally once more. Announcing it
+        # here rather than at whichever button asked means every route
+        # back -- the progress bar's own button, and surface() bringing a
+        # dialog up to ask the user something -- keeps MainWindow and its
+        # bar in step for free.
+        dialog.visibility_changed.emit(False)

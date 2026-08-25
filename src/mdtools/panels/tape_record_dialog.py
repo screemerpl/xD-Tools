@@ -65,7 +65,7 @@ from PySide6.QtWidgets import (
 
 from mdtools import app_settings, audio_engine, embedded_cover, mixtape_cover, tape, tracks
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
-from mdtools.panels.hideable_dialog import hide_for_background
+from mdtools.panels.hideable_dialog import hide_for_background, surface
 from mdtools.panels.playback_bridge import PlaybackBridge
 from mdtools.panels.preview_player import PreviewPlayerBar
 from mdtools.panels.progress_format import mmss as _mmss
@@ -654,6 +654,7 @@ class TapeRecordDialog(QDialog):
         There is no second end to stop from here -- the deck will happily go
         on recording silence onto the rest of the side, and only the person
         in front of it can prevent that."""
+        surface(self)
         self.preview_bar.stop()
         if self._recording:
             self._timer.stop()

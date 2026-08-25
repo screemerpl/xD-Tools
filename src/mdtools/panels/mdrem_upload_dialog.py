@@ -43,7 +43,7 @@ from PySide6.QtWidgets import (
 )
 
 from mdtools import mdrem
-from mdtools.panels.hideable_dialog import hide_for_background
+from mdtools.panels.hideable_dialog import hide_for_background, surface
 from mdtools.panels.progress_format import mmss as _mmss
 from mdtools.project import ProjectMetadata
 
@@ -370,6 +370,7 @@ class MDRemUploadDialog(QDialog):
         because the tray opening is exactly the signal the multi-disc flow
         needs to ask for the next disc."""
         if ask:
+            surface(self)
             answer = QMessageBox.question(
                 self,
                 self.tr("Save to Disc"),

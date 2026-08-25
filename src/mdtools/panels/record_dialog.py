@@ -84,7 +84,7 @@ from PySide6.QtWidgets import (
 from mdtools import app_settings, audio_engine, embedded_cover, mdrem, mixtape_cover, multidisc, tracks
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
 from mdtools.panels.erase_dialog import EraseDiscDialog
-from mdtools.panels.hideable_dialog import exec_hideable, hide_for_background
+from mdtools.panels.hideable_dialog import exec_hideable, hide_for_background, surface
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
 from mdtools.panels.playback_bridge import PlaybackBridge
 from mdtools.panels.preview_player import PreviewPlayerBar
@@ -135,6 +135,7 @@ class RecordDialog(QDialog):
     # Asked for by the progress bar's "Show recording window" button --
     # see panels/hideable_dialog.py, which is what actually re-shows this.
     show_requested = Signal()
+
     def __init__(
         self,
         port: str,
@@ -770,7 +771,12 @@ class RecordDialog(QDialog):
         """RECORD puts the deck into record-pause, then the user confirms it
         actually did. There is no feedback channel, so without asking, a
         RECORD that never arrived would mean playing a whole album into a
-        deck that isn't recording -- and only finding out 40 minutes later."""
+        deck that isn't recording -- and only finding out 40 minutes later.
+
+        Reached again for every disc of a multi-disc run, by which point
+        the user may well have hidden this window -- so it comes back
+        before asking."""
+        surface(self)
         try:
             self._deck = mdrem.MDRemClient(self._port)
             self._deck.open()
@@ -1011,6 +1017,7 @@ class RecordDialog(QDialog):
         self._begin_disc()
 
     def _ask_for_next_disc(self) -> bool:
+        surface(self)
         answer = QMessageBox.question(
             self,
             self.tr("Record to MiniDisc"),

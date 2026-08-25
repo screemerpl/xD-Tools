@@ -41,6 +41,11 @@ class _FakeOperationDialog(QDialog):
 
     def request_show(self) -> None:
         self.show_calls += 1
+        # What exec_hideable() does for a real dialog once it re-enters
+        # exec(): says it is back, which is what puts MainWindow's own
+        # hidden flag and the bar's button away again. Without it this
+        # fake would look permanently hidden and get asked back twice.
+        self.visibility_changed.emit(False)
 
     def exec(self) -> int:
         self.running_changed.emit(True)
@@ -145,7 +150,11 @@ def test_show_dispatches_to_the_running_dialog(qt_app, monkeypatch):
         dialog.visibility_changed.emit(True)
         assert not window.recording_bar.show_dialog_btn.isHidden()
         window.recording_bar.show_dialog_btn.click()
-        assert window.recording_bar.show_dialog_btn.isHidden()
+        # Putting the button away again is exec_hideable()'s job, off its
+        # own visibility_changed(False) as it re-enters exec() -- one
+        # place for every route back, so this fake (which never goes
+        # through it) deliberately does not see that happen here. See
+        # test_hideable_dialog.py.
 
     window = _window()
 
@@ -213,3 +222,40 @@ def test_closing_is_allowed_again_once_the_operation_ends(qt_app, monkeypatch):
     _run_with(window, monkeypatch, _FakeOperationDialog)
 
     assert window._active_recording_dialog is None
+
+
+def test_an_operation_finishing_while_hidden_asks_for_its_window_back(qt_app, monkeypatch):
+    """Reported: recorded a disc with the window hidden, the bar went
+    away when the recording finished, and then the main window refused to
+    close because "something is still running".
+
+    It was: RecordDialog does not close itself when a recording ends (it
+    waits for Close), so it was still open, still hidden, and still
+    holding the guard -- while the bar that carried the only way back to
+    it had just hidden itself along with the progress. The way out is to
+    bring the window back, which is what anyone hiding a job they are
+    waiting on expects anyway."""
+    dialogs: list[_FakeOperationDialog] = []
+
+    def capture(dialog):
+        # The user hides it mid-operation...
+        dialog.hide()
+        dialog.visibility_changed.emit(True)
+        assert not window.recording_bar.show_dialog_btn.isHidden()
+        # ...and it stays open (no accept/reject) once the work is done,
+        # which is exactly what RecordDialog does after titling.
+
+    window = _window()
+
+    def factory(*args, **kwargs):
+        dialog = _FakeOperationDialog()
+        dialog.during_exec = capture
+        dialogs.append(dialog)
+        return dialog
+
+    _run_with(window, monkeypatch, factory)
+
+    # running_changed(False) fires at the end of the fake's exec(), while
+    # the dialog is hidden: it must have been asked back rather than left
+    # unreachable behind a bar that is about to disappear.
+    assert dialogs[0].show_calls == 1

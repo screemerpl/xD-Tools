@@ -169,6 +169,27 @@ def _uploads(monkeypatch, succeeded: bool = True) -> list:
     return made
 
 
+def test_a_hidden_recording_comes_back_before_asking_for_the_next_disc(qt_app, monkeypatch, no_hardware):
+    """A QMessageBox is its own window and appears whether or not the
+    dialog that parented it does -- so "put a blank disc in" could
+    otherwise arrive with nothing behind it, from a window the user hid
+    forty minutes ago."""
+    dialog = _double_album(monkeypatch)
+    seen: list = []
+    dialog.show_requested.connect(lambda: seen.append("asked back"))
+    monkeypatch.setattr(
+        record_module.QMessageBox,
+        "question",
+        lambda *a, **k: seen.append("asked the user") or record_module.QMessageBox.StandardButton.Ok,
+    )
+    dialog.hide()
+
+    dialog._ask_for_next_disc()
+
+    assert seen[0] == "asked back", f"the window was not brought back first: {seen}"
+    assert "asked the user" in seen
+
+
 def _answer_affirmatively(*args, **kwargs):
     """Yes to "is the deck armed?", OK to "put the next disc in"."""
     buttons = args[3] if len(args) > 3 else None

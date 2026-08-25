@@ -63,7 +63,7 @@ from mdtools import (
     multidisc,
 )
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
-from mdtools.panels.hideable_dialog import hide_for_background
+from mdtools.panels.hideable_dialog import hide_for_background, surface
 from mdtools.panels.preview_player import PreviewPlayerBar
 from mdtools.project import ProjectMetadata, Track
 
@@ -903,12 +903,14 @@ class BurnDialog(QDialog):
         self.overall_progress_changed.emit(fraction, self.stage_label.text())
 
     def _on_failed(self, message: str) -> None:
+        surface(self)
         QMessageBox.critical(self, self.tr("Burn Audio CD"), message)
 
     def _on_cancelled(self) -> None:
         self.stage_label.setText(self.tr("Stopped."))
 
     def _on_succeeded(self) -> None:
+        surface(self)
         self.result_metadata = self.metadata()
         if self._disc + 1 < len(self._plans):
             # Asked for from _on_worker_finished, not here: this thread is
@@ -954,6 +956,7 @@ class BurnDialog(QDialog):
         self._burn_current_disc()
 
     def _ask_for_next_disc(self) -> bool:
+        surface(self)
         return (
             QMessageBox.question(
                 self,

@@ -601,6 +601,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.recording_bar)
         self.setCentralWidget(central)
         self._active_recording_dialog = None
+        self._recording_dialog_hidden = False
 
     def _warn_recording_in_progress(self) -> None:
         QMessageBox.information(
@@ -638,14 +639,38 @@ class MainWindow(QMainWindow):
         while its driving dialog is modal."""
         self._active_recording_dialog = dialog
         dialog.running_changed.connect(
-            lambda running: self.recording_bar.start(track_progress=track_progress)
-            if running
-            else self.recording_bar.stop()
+            lambda running, d=dialog: self._on_recording_running_changed(d, running, track_progress)
         )
         dialog.overall_progress_changed.connect(self.recording_bar.set_overall)
         if track_progress:
             dialog.track_progress_changed.connect(self.recording_bar.set_track)
-        dialog.visibility_changed.connect(self.recording_bar.set_dialog_hidden)
+        dialog.visibility_changed.connect(self._on_recording_dialog_visibility_changed)
+
+    def _on_recording_dialog_visibility_changed(self, hidden: bool) -> None:
+        """Tracked here as well as on the bar: whether the dialog is
+        hidden decides more than which button to draw (see
+        _on_recording_running_changed), and reading it back off a widget
+        is not the same question -- a dialog that has simply not been
+        shown yet is "hidden" to Qt too."""
+        self._recording_dialog_hidden = hidden
+        self.recording_bar.set_dialog_hidden(hidden)
+
+    def _on_recording_running_changed(self, dialog, running: bool, track_progress: bool) -> None:
+        if running:
+            self.recording_bar.start(track_progress=track_progress)
+            return
+        # The work is over, so the bar goes -- but several of these
+        # dialogs do not close themselves when it does (RecordDialog
+        # waits for Close even after titling), and the bar carries the
+        # only way back to one the user has hidden. Hiding it on top of a
+        # still-open hidden dialog stranded the operation: no window, no
+        # bar, and a main window that refused to close because the guard
+        # could still see the dialog. Reported exactly that way. Asking
+        # for it back is also simply what somebody who hid a job they
+        # were waiting on expects to happen when it finishes.
+        if self._recording_dialog_hidden:
+            dialog.request_show()
+        self.recording_bar.stop()
 
     def _release_recording_bar(self, dialog) -> None:
         signals = [dialog.running_changed, dialog.overall_progress_changed, dialog.visibility_changed]
@@ -658,6 +683,7 @@ class MainWindow(QMainWindow):
                 pass  # nothing was connected, or the dialog's C++ object is already gone
         if self._active_recording_dialog is dialog:
             self._active_recording_dialog = None
+        self._recording_dialog_hidden = False
         self.recording_bar.stop()
 
     def _on_recording_bar_stop_requested(self) -> None:
@@ -673,7 +699,10 @@ class MainWindow(QMainWindow):
         if dialog is None:
             return
         dialog.request_show()
-        self.recording_bar.set_dialog_hidden(False)
+        # The bar and this window's own flag are put back by
+        # exec_hideable()'s own visibility_changed(False) as it re-enters
+        # exec(), so that every route back -- this button, and surface()
+        # bringing a dialog up to ask something -- goes through one place.
 
     def _reset_undo_stack(self) -> None:
         """A fresh, empty undo history for the just-created/opened project.
