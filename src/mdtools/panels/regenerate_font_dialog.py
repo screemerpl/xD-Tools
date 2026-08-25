@@ -1,13 +1,22 @@
 """Toolbar > "Regenerate with Font...": pick a font family, then preview it
 against the current page before committing to anything.
 
-The face is picked through Qt's own font dialog (`QFontDialog.getFont()`)
-rather than a combo box typed into -- only the *family* it returns is ever
+The face is picked through Qt's own font dialog -- an actual `QFontDialog`
+instance, not the static `QFontDialog.getFont()` convenience function --
+rather than a combo box typed into. Only the *family* it ever reports is
 read (`.family()`); size and style are discarded. That is deliberately the
 only thing that matters here: auto-generated text already carries its own
 size (fitted to its panel) and weight (bold where the layout wants bold),
 and this feature substitutes the *face* those choices are made in, not any
 one of them individually.
+
+An instance, rather than `getFont()`, is what makes the preview live: the
+static function runs its own dialog internally and only ever returns once
+the user closes it, with no way to observe what they're looking at along
+the way. `QFontDialog.currentFontChanged` fires as the user browses --
+clicking a different family in the list, not only pressing OK -- so every
+change is fed straight into the same preview_requested signal Preview
+itself uses, live, while the picker is still open on screen.
 
 This dialog does no layout work itself -- Preview and the final regenerate
 both run through MainWindow, over the exact same auto-layout code every
@@ -69,23 +78,38 @@ class RegenerateFontDialog(QDialog):
         return self._family
 
     def _pick_font(self) -> None:
-        # PySide6's QFontDialog.getFont returns (ok, font) here, not
-        # (font, ok) as older-Qt docs/intuition suggest -- see the
-        # properties_panel.py Font... button, which hit this the hard way.
-        ok, font = QFontDialog.getFont(QFont(self._family), self)
-        if not ok:
+        previous_family = self._family
+        font_dialog = QFontDialog(QFont(self._family), self)
+        # Live, as the user browses the family list -- not only once OK is
+        # pressed. This is what makes the picker itself a live preview
+        # rather than a pick-then-Preview guessing loop.
+        font_dialog.currentFontChanged.connect(self._apply_live_choice)
+        accepted = font_dialog.exec() == QDialog.DialogCode.Accepted
+        if not accepted:
+            # Browsing may already have previewed other faces live -- back
+            # out to whatever was in effect before the picker was opened,
+            # rather than leaving the page showing the last face merely
+            # glanced at. But only if browsing actually changed anything:
+            # opening the picker and cancelling straight away without
+            # touching it must still preview nothing at all.
+            if self._family != previous_family:
+                self._apply_live_choice(QFont(previous_family))
             return
+        # Remembered only once actually chosen, not only once the whole
+        # regenerate is accepted -- "last selected" is what was asked for,
+        # and a cancelled *regenerate* (this dialog's own Cancel) shouldn't
+        # lose it. A cancelled *font picker* is a different thing: nothing
+        # was actually selected, so there's nothing to remember.
+        app_settings.set_last_regenerate_font_family(self._family)
+
+    def _apply_live_choice(self, font: QFont) -> None:
         self._family = font.family()
         self.font_label.setText(self._family)
-        # Remembered as soon as it's picked, not only once the whole
-        # regenerate is accepted -- "last selected" is what was asked for,
-        # and a cancelled regenerate shouldn't lose the choice either.
-        app_settings.set_last_regenerate_font_family(self._family)
-        # And previewed straight away, without waiting for a second click on
+        # Previewed straight away, without waiting for a second click on
         # Preview -- asked for directly. Picking a face *is* the decision
         # this dialog exists for, so showing what it does to the page is
         # what the user wanted to see next in every case; the Preview button
-        # stays for re-running it after a cancelled pick or an undo.
+        # stays for re-running it after an undo or after this picker closes.
         self.preview_requested.emit(self._family)
 
     def _on_preview_clicked(self) -> None:
