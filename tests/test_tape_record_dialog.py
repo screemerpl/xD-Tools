@@ -146,6 +146,22 @@ def test_finishing_decode_tells_the_user_to_release_pause(qt_app, monkeypatch):
     assert "Release Pause" in dialog.instruction_label.text()
 
 
+def test_finishing_decode_pops_up_a_dialog_to_release_pause(qt_app, monkeypatch):
+    """Reported directly a second time: the label-only version above was
+    too easy to miss ("no popup, it just goes straight into the
+    countdown") -- this now also blocks with a real QMessageBox, which the
+    no_modal_dialogs fixture stubs out; this test replaces that stub with
+    a spy to prove the call actually happens."""
+    calls = []
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a, **k: calls.append(a)))
+    dialog = _dialog(_items(4, seconds=300), monkeypatch)
+
+    dialog._on_start_clicked()
+
+    assert len(calls) == 1
+    assert "Release Pause" in calls[0][-1]
+
+
 def test_side_bs_own_instruction_also_says_to_press_record_and_pause(qt_app, monkeypatch):
     dialog = _dialog(_items(4, seconds=300), monkeypatch)
     dialog._on_start_clicked()

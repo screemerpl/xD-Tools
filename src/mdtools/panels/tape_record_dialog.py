@@ -381,11 +381,19 @@ class TapeRecordDialog(QDialog):
         self._pending_buffers = buffers
         self._remaining = tape.LEADER_SECONDS
         # Decoding is done, so this is the exact moment the deck should
-        # actually start moving -- reported directly as missing: nothing
-        # here told the user when to release Pause, only that they should
-        # arm it beforehand.
+        # actually start moving. A passive label change was tried first and
+        # reported as too easy to miss ("no popup, it just goes straight
+        # into the countdown") -- a blocking dialog forces the user to
+        # actually see this, and doubles as the sync point: the leader
+        # countdown only starts once they have dismissed it, which is the
+        # same moment they should be releasing Pause.
         self.instruction_label.setText(
             "<b>" + self.tr("Release Pause now") + "</b><br>" + self.tr("The deck should start rolling.")
+        )
+        QMessageBox.information(
+            self,
+            self.tr("Record to Cassette"),
+            self.tr("Release Pause now -- the deck should start rolling."),
         )
         self._tick_display()
         self._countdown.start()
