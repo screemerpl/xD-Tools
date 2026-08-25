@@ -13,6 +13,7 @@ import pytest
 from PIL import Image
 
 from mdtools.app_window import TAPE_JCARD_TEMPLATE, TAPE_LABEL_TEMPLATE, MainWindow
+from mdtools.io.project_io import load_project, save_project
 from mdtools.panels.new_design_dialog import NewDesignDialog
 from mdtools.project import (
     MEDIUM_MD,
@@ -124,6 +125,25 @@ def test_the_suggested_filename_says_which_machine_it_is_for(qt_app):
     window.project.metadata = _metadata()
 
     assert window._suggested_project_name().endswith("-MC")
+
+
+# -- saving and loading it ------------------------------------------------
+
+
+def test_a_saved_cassette_project_loads_back_without_a_disc_page(qt_app, tmp_path):
+    """Reported directly: a saved cassette project refused to reopen,
+    complaining about a missing 'disc' page -- load_project() used to
+    require one unconditionally, but a cassette project never has one (see
+    test_a_cassette_has_a_j_card_and_a_label_per_side_and_no_disc above)."""
+    window = _tape_window()
+    window.project.metadata = _metadata()
+    path = tmp_path / "cassette.mdproj"
+
+    save_project(window.project, path)
+    reloaded = load_project(path)
+
+    assert reloaded.medium == MEDIUM_TAPE
+    assert set(reloaded.pages) == {PAGE_COVER, PAGE_SIDE_A, PAGE_SIDE_B}
 
 
 # -- laying it out -------------------------------------------------------

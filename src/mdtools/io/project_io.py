@@ -35,12 +35,12 @@ from mdtools.canvas.items import (
 from mdtools.canvas.scene import DesignScene
 from mdtools.project import (
     MEDIUM_MD,
-    PAGE_DISC,
     GrayscaleAdjustment,
     Project,
     ProjectMetadata,
     TextStyle,
     Track,
+    medium_pages,
 )
 from mdtools.templates.models import CoverTemplate, DiscTemplate
 
@@ -293,12 +293,20 @@ def load_project(path: str | Path) -> Project:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     metadata = _metadata_from_dict(data.get("metadata", {}))
     pages = {key: scene_from_dict(page_data) for key, page_data in data["pages"].items()}
+    # A project file written before CD-R support existed has no medium in
+    # it and is a MiniDisc project -- read before the required-pages check
+    # below, since which pages are required depends on it (a cassette has
+    # no disc page at all; requiring one unconditionally rejected every
+    # saved cassette project).
+    medium = data.get("medium", MEDIUM_MD)
     # Whatever pages the file holds, in the order it holds them -- not a
-    # fixed pair. A file *without* a disc page is still a broken file, but
-    # one with a third page is a project from a later version, not an
-    # error, and the app can show what it does understand.
-    if PAGE_DISC not in pages:
-        raise ValueError(f"Project file is missing its '{PAGE_DISC}' page")
+    # fixed pair. A file missing one of its own medium's required pages is
+    # still a broken file, but one with a third, unrecognised page is a
+    # project from a later version, not an error, and the app can show
+    # what it does understand.
+    missing = [mp.page for mp in medium_pages(medium) if not mp.optional and mp.page not in pages]
+    if missing:
+        raise ValueError(f"Project file is missing its {missing!r} page(s)")
     default_text_style = _text_style_from_dict(data.get("default_text_style", {}))
     grayscale_adjustment = _grayscale_adjustment_from_dict(data.get("grayscale_adjustment", {}))
     return Project(
@@ -306,9 +314,7 @@ def load_project(path: str | Path) -> Project:
         pages=pages,
         default_text_style=default_text_style,
         grayscale_adjustment=grayscale_adjustment,
-        # A project file written before CD-R support existed has no medium
-        # in it and is a MiniDisc project.
-        medium=data.get("medium", MEDIUM_MD),
+        medium=medium,
         # A project saved before cassettes existed is not a cassette, so
         # what this says about it does not matter -- the default keeps it
         # a number rather than a None every reader has to guard against.
