@@ -1,3 +1,6 @@
+from PySide6.QtGui import QColor
+
+from mdtools import theme
 from mdtools.panels import icons
 
 TOOL_PANEL_ICON_FNS = [
@@ -68,6 +71,25 @@ def test_icons_are_colorful_not_a_single_flat_tint(qt_app):
             if image.pixelColor(x, y).alpha() > 10
         }
         assert len(colors) >= 2, f"{fn.__name__} rendered with only {len(colors)} distinct opaque color(s)"
+
+
+def test_zoom_in_out_icons_contrast_with_the_toolbar_background(qt_app):
+    """Reported directly: the bundled Twemoji "heavy plus/minus sign"
+    glyphs are a single near-black fill (#31373D), which used to be
+    legible against the old theme's mid-grey toolbar but nearly
+    disappeared once theme.py's own background became Discord's
+    similarly dark #2f3136 -- zoom_in_icon()/zoom_out_icon() now tint
+    that glyph to theme._TEXT instead of the bundled file's own colour.
+    This checks the actual, current gap in lightness rather than pinning
+    an exact colour, so a later shade tweak within the theme doesn't
+    break it -- only a regression back to a near-invisible icon should."""
+    background = QColor(theme._WINDOW)
+    for fn in (icons.zoom_in_icon, icons.zoom_out_icon):
+        image = fn().pixmap(icons.SIZE, icons.SIZE).toImage()
+        center = image.pixelColor(icons.SIZE // 2, icons.SIZE // 2)
+        assert center.alpha() > 200, f"{fn.__name__}'s own glyph should be opaque at its centre"
+        gap = abs(center.lightness() - background.lightness())
+        assert gap > 60, f"{fn.__name__} is only {gap} lightness points from the toolbar background"
 
 
 def test_icons_dir_points_at_the_bundled_assets_folder(qt_app):
