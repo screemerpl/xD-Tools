@@ -2,6 +2,10 @@
 name = "mdtools"
 version = "0.3.2"
 description = "Desktop workbench for MiniDisc, CD-R and compact cassette: design disc labels, J-cards, case inserts and shell labels for Cricut cutting and printing, record albums from a CD or a folder of files, burn audio CD-Rs with CD-Text, record cassettes side by side, and title MiniDiscs over infrared"
+license = { text = "GPL-3.0-or-later" }
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+]
 requires-python = ">=3.11"
 dependencies = [
     "PySide6>=6.7",
