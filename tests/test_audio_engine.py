@@ -273,18 +273,29 @@ def test_dither_is_numerically_stable_at_realistic_album_length():
 
 
 class _FakeSoundDevice:
-    def __init__(self, devices):
+    """`hostapis` defaults to a single "Windows WDM-KS" entry at index 0,
+    and every device fixture below is already tagged `hostapi: 0` -- so by
+    default the new host-API filter in list_output_devices() is a no-op
+    against these older fixtures, matching every physical device the way
+    it always did. The filtering itself is tested separately below, with
+    fixtures that deliberately set up more than one host API."""
+
+    def __init__(self, devices, hostapis=None):
         self._devices = devices
+        self._hostapis = hostapis if hostapis is not None else [{"name": "Windows WDM-KS"}]
 
     def query_devices(self):
         return self._devices
+
+    def query_hostapis(self):
+        return self._hostapis
 
 
 def test_list_output_devices_only_returns_ones_with_output_channels(monkeypatch):
     fake = _FakeSoundDevice(
         [
-            {"name": "Microphone", "max_output_channels": 0, "default_samplerate": 44100.0},
-            {"name": "Speakers (Realtek)", "max_output_channels": 2, "default_samplerate": 44100.0},
+            {"name": "Microphone", "max_output_channels": 0, "default_samplerate": 44100.0, "hostapi": 0},
+            {"name": "Speakers (Realtek)", "max_output_channels": 2, "default_samplerate": 44100.0, "hostapi": 0},
         ]
     )
     monkeypatch.setattr(audio_engine, "sd", fake)
@@ -301,7 +312,14 @@ def test_resolving_an_empty_saved_name_means_the_os_default(monkeypatch):
 
 def test_resolving_a_saved_name_finds_it_by_substring(monkeypatch):
     fake = _FakeSoundDevice(
-        [{"name": "Speakers (Realtek(R) Audio)", "max_output_channels": 2, "default_samplerate": 44100.0}]
+        [
+            {
+                "name": "Speakers (Realtek(R) Audio)",
+                "max_output_channels": 2,
+                "default_samplerate": 44100.0,
+                "hostapi": 0,
+            }
+        ]
     )
     monkeypatch.setattr(audio_engine, "sd", fake)
 
@@ -312,10 +330,93 @@ def test_resolving_a_saved_name_that_no_longer_matches_falls_back_to_default(mon
     """Same "never silently replaced, but never refuse to play either"
     rule mdrem's saved port already follows -- a device that isn't
     plugged in right now degrades to the OS default rather than raising."""
-    fake = _FakeSoundDevice([{"name": "Speakers", "max_output_channels": 2, "default_samplerate": 44100.0}])
+    fake = _FakeSoundDevice(
+        [{"name": "Speakers", "max_output_channels": 2, "default_samplerate": 44100.0, "hostapi": 0}]
+    )
     monkeypatch.setattr(audio_engine, "sd", fake)
 
     assert audio_engine.resolve_output_device("some usb dac that is unplugged") is None
+
+
+# --- device listing: restricted to one host API (#28) ----------------------
+
+
+def test_list_output_devices_keeps_only_the_wdm_ks_host_api(monkeypatch):
+    """PortAudio enumerates the same physical device once per Windows host
+    API it can reach it through -- MME, DirectSound, WASAPI and WDM-KS each
+    listing every output device again, which is what made this list
+    implausibly long. Filtering to one host API is meant to collapse that
+    back down to one entry per real device."""
+    fake = _FakeSoundDevice(
+        [
+            {"name": "Speakers (MME)", "max_output_channels": 2, "default_samplerate": 44100.0, "hostapi": 0},
+            {
+                "name": "Speakers (DirectSound)",
+                "max_output_channels": 2,
+                "default_samplerate": 44100.0,
+                "hostapi": 1,
+            },
+            {"name": "Speakers (WASAPI)", "max_output_channels": 2, "default_samplerate": 44100.0, "hostapi": 2},
+            {"name": "Speakers (WDM-KS)", "max_output_channels": 2, "default_samplerate": 44100.0, "hostapi": 3},
+        ],
+        hostapis=[
+            {"name": "MME"},
+            {"name": "Windows DirectSound"},
+            {"name": "Windows WASAPI"},
+            {"name": "Windows WDM-KS"},
+        ],
+    )
+    monkeypatch.setattr(audio_engine, "sd", fake)
+
+    devices = audio_engine.list_output_devices()
+
+    assert [d.name for d in devices] == ["Speakers (WDM-KS)"]
+
+
+def test_list_output_devices_falls_back_to_everything_when_wdm_ks_is_absent(monkeypatch):
+    """Not every platform/build reports a "Windows WDM-KS" host API (this is
+    a Windows-only kernel streaming layer) -- when it's missing, filtering
+    must not silently return an empty list. Fall back to every output
+    device PortAudio reports, exactly like before this filter existed."""
+    fake = _FakeSoundDevice(
+        [
+            {"name": "Built-in Output", "max_output_channels": 2, "default_samplerate": 44100.0, "hostapi": 0},
+        ],
+        hostapis=[{"name": "Core Audio"}],
+    )
+    monkeypatch.setattr(audio_engine, "sd", fake)
+
+    devices = audio_engine.list_output_devices()
+
+    assert [d.name for d in devices] == ["Built-in Output"]
+
+
+def test_resolving_a_saved_device_only_matches_within_the_preferred_host_api(monkeypatch):
+    """A saved device name that exists only under a filtered-out host API
+    (e.g. the WASAPI-only spelling of a device whose WDM-KS name differs)
+    must not resolve -- it should degrade to the OS default exactly like an
+    unplugged device does, not silently pick the wrong API's index."""
+    fake = _FakeSoundDevice(
+        [
+            {
+                "name": "Realtek Digital Output (Realtek High Definition Audio)",
+                "max_output_channels": 2,
+                "default_samplerate": 44100.0,
+                "hostapi": 2,
+            },
+            {
+                "name": "SPDIF Out (Realtek HDA SPDIF Out)",
+                "max_output_channels": 2,
+                "default_samplerate": 44100.0,
+                "hostapi": 3,
+            },
+        ],
+        hostapis=[{"name": "MME"}, {"name": "Windows DirectSound"}, {"name": "Windows WASAPI"}, {"name": "Windows WDM-KS"}],
+    )
+    monkeypatch.setattr(audio_engine, "sd", fake)
+
+    assert audio_engine.resolve_output_device("realtek digital output") is None
+    assert audio_engine.resolve_output_device("spdif out") == 1
 
 
 # --- AudioPlayer: track-boundary firing, no hardware needed ---------------

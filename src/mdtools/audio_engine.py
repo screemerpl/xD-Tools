@@ -415,20 +415,53 @@ class OutputDevice:
     default_samplerate: float
 
 
+# PortAudio enumerates the *same* physical device once per Windows host
+# API it can reach it through -- confirmed directly on a real machine:
+# MME, DirectSound, WASAPI and WDM-KS each listed every output device
+# again, so a single Realtek interface showed up four times over, which is
+# what made the list in Settings look implausibly long. Restricting to one
+# API is what a caller actually wants (a recording source needs exactly
+# one real path to the deck, not four aliases for it), and WDM-KS -- not
+# WASAPI -- is the one picked: also confirmed directly, on this same
+# machine, that a real S/PDIF passthrough output ("SPDIF Out (Realtek HDA
+# SPDIF Out)") is only exposed through WDM-KS here, not through WASAPI at
+# all (WASAPI's own Realtek entry is a differently-named "Realtek Digital
+# Output"). WDM-KS (kernel streaming) is also the more direct of the two
+# to begin with -- it talks closer to the driver than WASAPI's own service
+# layer does, which is the actual "bypass the mixer" property being asked
+# for here, not just "fewer duplicates".
+_PREFERRED_HOST_API_NAME = "Windows WDM-KS"
+
+
+def _preferred_host_api_index() -> int | None:
+    """The index of _PREFERRED_HOST_API_NAME in sd.query_hostapis(), or
+    None if this build/platform doesn't have it (e.g. not Windows) -- in
+    which case list_output_devices() falls back to every device PortAudio
+    reports, exactly like before this filtering existed."""
+    for index, api in enumerate(sd.query_hostapis()):
+        if api["name"] == _PREFERRED_HOST_API_NAME:
+            return index
+    return None
+
+
 def list_output_devices() -> list[OutputDevice]:
     if sd is None:
         raise AudioEngineError("sounddevice is not installed")
+    host_api = _preferred_host_api_index()
     devices = []
     for index, info in enumerate(sd.query_devices()):
-        if info["max_output_channels"] > 0:
-            devices.append(
-                OutputDevice(
-                    index=index,
-                    name=info["name"],
-                    max_output_channels=info["max_output_channels"],
-                    default_samplerate=info["default_samplerate"],
-                )
+        if info["max_output_channels"] <= 0:
+            continue
+        if host_api is not None and info["hostapi"] != host_api:
+            continue
+        devices.append(
+            OutputDevice(
+                index=index,
+                name=info["name"],
+                max_output_channels=info["max_output_channels"],
+                default_samplerate=info["default_samplerate"],
             )
+        )
     return devices
 
 
@@ -441,7 +474,12 @@ def resolve_output_device(name: str) -> int | None:
     but never refuse to play either" balance app_settings.audio_output_device()
     documents: a saved index would be meaningless after a reboot or a USB
     replug, so this is resolved by name every time playback actually
-    starts, not cached."""
+    starts, not cached. Only ever matches within list_output_devices()'s
+    own host-API-restricted list (see _PREFERRED_HOST_API_NAME) -- a name
+    that only exists under a filtered-out host API (e.g. WASAPI's own,
+    differently-spelled entry for a device WDM-KS exposes under another
+    name) is exactly as unresolvable as a device that isn't plugged in at
+    all, and degrades to the OS default the same way."""
     if not name:
         return None
     needle = name.lower()
