@@ -48,6 +48,7 @@ _TELEGRAM_BOT_USERNAME_KEY = "telegram_bot_username"
 _TELEGRAM_PHONE_KEY = "telegram_phone"
 _REGENERATE_FONT_FAMILY_KEY = "regenerate_font_family"
 _AUDIO_OUTPUT_DEVICE_KEY = "audio_output_device"
+_TAPE_AUDIO_OUTPUT_DEVICE_KEY = "tape_audio_output_device"
 _RECORDING_GAIN_DB_KEY = "recording_gain_db"
 
 
@@ -179,12 +180,17 @@ def set_last_regenerate_font_family(family: str) -> None:
 
 
 def audio_output_device() -> str:
-    """The output device xD-Tools' own audio engine plays a recording's
-    source material through -- e.g. an interface's S/PDIF or line output
-    feeding a MiniDisc deck or a CD burner's monitor path. Saved as a
-    device *name* (PortAudio's own index is not stable across a reboot or
-    a USB replug), same "a saved value is never silently replaced by
+    """The output device a MiniDisc recording's source material plays
+    through -- typically an interface's S/PDIF feeding the deck. Saved as
+    a device *name* (PortAudio's own index is not stable across a reboot
+    or a USB replug), same "a saved value is never silently replaced by
     whatever else happens to be plugged in" rule mdrem_port() follows.
+
+    A cassette recording uses its own separate setting
+    (tape_audio_output_device()) -- explicit request, since a MiniDisc
+    deck typically wants a digital (S/PDIF) output and a cassette deck an
+    analogue line output, which are routinely two different physical
+    interfaces (or two different outputs on the same one).
 
     Empty means "not chosen yet" -- callers (audio_engine.resolve_device())
     fall back to the OS default output device, exactly like a preview
@@ -194,6 +200,17 @@ def audio_output_device() -> str:
 
 def set_audio_output_device(value: str) -> None:
     _settings().setValue(_AUDIO_OUTPUT_DEVICE_KEY, str(value).strip())
+
+
+def tape_audio_output_device() -> str:
+    """The cassette recording's own output device -- see
+    audio_output_device()'s own docstring for why this is a second,
+    independent setting rather than the same one MiniDisc recording uses."""
+    return str(_settings().value(_TAPE_AUDIO_OUTPUT_DEVICE_KEY, "") or "")
+
+
+def set_tape_audio_output_device(value: str) -> None:
+    _settings().setValue(_TAPE_AUDIO_OUTPUT_DEVICE_KEY, str(value).strip())
 
 
 # Headroom against clipping on the digital/analogue transfer -- explicit

@@ -349,7 +349,7 @@ class TapeRecordDialog(QDialog):
 
         if self._player is None:
             self._player = audio_engine.AudioPlayer(
-                device=audio_engine.resolve_output_device(app_settings.audio_output_device()),
+                device=audio_engine.resolve_output_device(app_settings.tape_audio_output_device()),
                 gain_db=app_settings.recording_gain_db(),
             )
 

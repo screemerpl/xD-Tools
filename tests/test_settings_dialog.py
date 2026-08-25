@@ -207,7 +207,7 @@ def test_a_saved_device_that_is_no_longer_plugged_in_still_shows_up(qt_app, monk
 
     dialog = SettingsDialog()
 
-    assert dialog._selected_audio_device() == "Some USB DAC"
+    assert dialog._selected_audio_device(dialog.audio_device_combo) == "Some USB DAC"
     assert "not connected" in dialog.audio_device_combo.currentText()
 
 
@@ -218,7 +218,7 @@ def test_restore_defaults_resets_the_device_to_system_default(qt_app, monkeypatc
 
     dialog._restore_defaults()
 
-    assert dialog._selected_audio_device() == ""
+    assert dialog._selected_audio_device(dialog.audio_device_combo) == ""
 
 
 def test_refresh_button_re_lists_devices_without_losing_the_saved_choice(qt_app, monkeypatch):
@@ -227,10 +227,53 @@ def test_refresh_button_re_lists_devices_without_losing_the_saved_choice(qt_app,
     dialog = SettingsDialog()
 
     _fake_devices(monkeypatch, "Speakers (Realtek)", "New USB Interface")
-    dialog._populate_audio_devices(dialog._selected_audio_device())
+    dialog._populate_audio_devices(dialog.audio_device_combo, dialog._selected_audio_device(dialog.audio_device_combo))
 
     assert dialog.audio_device_combo.findData("New USB Interface") >= 0
-    assert dialog._selected_audio_device() == "Speakers (Realtek)"
+    assert dialog._selected_audio_device(dialog.audio_device_combo) == "Speakers (Realtek)"
+
+
+# --- the cassette gets its own, independent device setting ----------------
+
+
+def test_the_cassette_device_combo_is_independent_of_the_minidisc_one(qt_app, monkeypatch):
+    """Explicit request: a MiniDisc deck typically wants a digital
+    (S/PDIF) output and a cassette deck an analogue line output, which are
+    routinely two different physical interfaces."""
+    _fake_devices(monkeypatch, "SPDIF Out (Realtek)", "Line Out (Realtek)")
+    app_settings.set_audio_output_device("SPDIF Out (Realtek)")
+    app_settings.set_tape_audio_output_device("Line Out (Realtek)")
+
+    dialog = SettingsDialog()
+
+    assert dialog._selected_audio_device(dialog.audio_device_combo) == "SPDIF Out (Realtek)"
+    assert dialog._selected_audio_device(dialog.tape_audio_device_combo) == "Line Out (Realtek)"
+
+
+def test_accepting_saves_both_devices_separately(qt_app, monkeypatch):
+    _fake_devices(monkeypatch, "SPDIF Out (Realtek)", "Line Out (Realtek)")
+    dialog = SettingsDialog()
+    dialog.audio_device_combo.setCurrentIndex(dialog.audio_device_combo.findData("SPDIF Out (Realtek)"))
+    dialog.tape_audio_device_combo.setCurrentIndex(
+        dialog.tape_audio_device_combo.findData("Line Out (Realtek)")
+    )
+
+    dialog._on_accept()
+
+    assert app_settings.audio_output_device() == "SPDIF Out (Realtek)"
+    assert app_settings.tape_audio_output_device() == "Line Out (Realtek)"
+
+
+def test_restore_defaults_resets_both_devices(qt_app, monkeypatch):
+    _fake_devices(monkeypatch, "SPDIF Out (Realtek)", "Line Out (Realtek)")
+    app_settings.set_audio_output_device("SPDIF Out (Realtek)")
+    app_settings.set_tape_audio_output_device("Line Out (Realtek)")
+    dialog = SettingsDialog()
+
+    dialog._restore_defaults()
+
+    assert dialog._selected_audio_device(dialog.audio_device_combo) == ""
+    assert dialog._selected_audio_device(dialog.tape_audio_device_combo) == ""
 
 
 def test_a_missing_sounddevice_backend_leaves_only_system_default(qt_app, monkeypatch):

@@ -124,6 +124,20 @@ def test_audio_output_device_round_trips():
     assert app_settings.audio_output_device() == "Speakers (Realtek(R) Audio)"
 
 
+def test_tape_audio_output_device_is_empty_by_default():
+    assert app_settings.tape_audio_output_device() == ""
+
+
+def test_tape_audio_output_device_round_trips_independently_of_the_md_one():
+    """A MiniDisc deck typically wants a digital output and a cassette
+    deck an analogue one -- two different settings, not one shared."""
+    app_settings.set_audio_output_device("SPDIF Out (Realtek)")
+    app_settings.set_tape_audio_output_device("Line Out (Realtek)")
+
+    assert app_settings.audio_output_device() == "SPDIF Out (Realtek)"
+    assert app_settings.tape_audio_output_device() == "Line Out (Realtek)"
+
+
 def test_recording_gain_defaults_to_minus_5_db():
     assert app_settings.recording_gain_db() == -5.0
     assert app_settings.recording_gain_db() == app_settings.DEFAULT_RECORDING_GAIN_DB

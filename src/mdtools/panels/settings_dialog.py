@@ -111,26 +111,33 @@ class SettingsDialog(QDialog):
         MDRem checkbox below: this has nothing to do with the infrared
         adapter. This is what replaced foobar2000's own output device
         setting once recording stopped driving foobar2000 at all -- see
-        audio_engine.py's own module docstring."""
-        self.audio_device_combo = QComboBox()
-        self.audio_device_combo.setToolTip(
+        audio_engine.py's own module docstring.
+
+        Two independent rows, not one -- explicit request: a MiniDisc deck
+        typically wants a digital (S/PDIF) output and a cassette deck an
+        analogue line output, which are routinely two different physical
+        interfaces (or two different outputs on the same one). See
+        app_settings.audio_output_device()/tape_audio_output_device()."""
+        self.audio_device_combo = self._build_device_combo_row(
+            layout,
+            self.tr("MiniDisc audio output device"),
+            app_settings.audio_output_device(),
             self.tr(
-                "The output device audio is played through while recording. Leave as \"System default\" "
-                "to use whatever the operating system currently considers the default output."
-            )
+                "The output device audio is played through while recording to MiniDisc -- typically a "
+                "digital (S/PDIF) output feeding the deck. Leave as \"System default\" to use whatever "
+                "the operating system currently considers the default output."
+            ),
         )
-        refresh_btn = QPushButton(self.tr("Refresh"))
-        refresh_btn.setToolTip(self.tr("Re-lists the currently available output devices."))
-        refresh_btn.clicked.connect(lambda: self._populate_audio_devices(self._selected_audio_device()))
-
-        device_widget = QWidget()
-        device_row = QHBoxLayout(device_widget)
-        device_row.setContentsMargins(0, 0, 0, 0)
-        device_row.addWidget(self.audio_device_combo, 1)
-        device_row.addWidget(refresh_btn)
-        layout.addRow(self.tr("Audio output device"), device_widget)
-
-        self._populate_audio_devices(app_settings.audio_output_device())
+        self.tape_audio_device_combo = self._build_device_combo_row(
+            layout,
+            self.tr("Cassette audio output device"),
+            app_settings.tape_audio_output_device(),
+            self.tr(
+                "The output device audio is played through while recording to cassette -- typically an "
+                "analogue line output feeding the deck. Leave as \"System default\" to use whatever the "
+                "operating system currently considers the default output."
+            ),
+        )
 
         self.recording_gain_spin = QDoubleSpinBox()
         self.recording_gain_spin.setRange(-24.0, 0.0)
@@ -145,32 +152,52 @@ class SettingsDialog(QDialog):
         )
         layout.addRow(self.tr("Recording gain"), self.recording_gain_spin)
 
-    def _populate_audio_devices(self, selected: str) -> None:
+    def _build_device_combo_row(
+        self, layout: QFormLayout, label: str, selected: str, tooltip: str
+    ) -> QComboBox:
+        """One "device combo + Refresh button" row -- factored out so the
+        MiniDisc and Cassette rows (see _build_audio_output_row) are built
+        identically rather than as two hand-copied blocks."""
+        combo = QComboBox()
+        combo.setToolTip(tooltip)
+        refresh_btn = QPushButton(self.tr("Refresh"))
+        refresh_btn.setToolTip(self.tr("Re-lists the currently available output devices."))
+        refresh_btn.clicked.connect(lambda: self._populate_audio_devices(combo, self._selected_audio_device(combo)))
+
+        device_widget = QWidget()
+        device_row = QHBoxLayout(device_widget)
+        device_row.setContentsMargins(0, 0, 0, 0)
+        device_row.addWidget(combo, 1)
+        device_row.addWidget(refresh_btn)
+        layout.addRow(label, device_widget)
+
+        self._populate_audio_devices(combo, selected)
+        return combo
+
+    def _populate_audio_devices(self, combo: QComboBox, selected: str) -> None:
         """Lists the output devices currently present, but never drops
         `selected` -- same "a saved choice survives even when its device
         happens to be unplugged right now" rule _populate_ports() follows
         for the MDRem port, just for a sound card/interface instead of a
         serial adapter."""
-        self.audio_device_combo.clear()
-        self.audio_device_combo.addItem(self.tr("System default"), "")
+        combo.clear()
+        combo.addItem(self.tr("System default"), "")
         names = []
         try:
             devices = audio_engine.list_output_devices()
         except audio_engine.AudioEngineError:
             devices = []
         for device in devices:
-            self.audio_device_combo.addItem(device.name, device.name)
+            combo.addItem(device.name, device.name)
             names.append(device.name)
         if selected and selected not in names:
-            self.audio_device_combo.addItem(
-                self.tr("{device} (not connected)").format(device=selected), selected
-            )
-        index = self.audio_device_combo.findData(selected)
+            combo.addItem(self.tr("{device} (not connected)").format(device=selected), selected)
+        index = combo.findData(selected)
         if index >= 0:
-            self.audio_device_combo.setCurrentIndex(index)
+            combo.setCurrentIndex(index)
 
-    def _selected_audio_device(self) -> str:
-        return str(self.audio_device_combo.currentData() or "")
+    def _selected_audio_device(self, combo: QComboBox) -> str:
+        return str(combo.currentData() or "")
 
     def _build_experimental_row(self, layout: QFormLayout) -> None:
         """Gates work-in-progress features that aren't ready for everyone --
@@ -313,14 +340,16 @@ class SettingsDialog(QDialog):
         self.export_dpi_spin.setValue(app_settings.DEFAULT_EXPORT_DPI)
         self.bake_dpi_spin.setValue(app_settings.DEFAULT_BAKE_DPI)
         self.cd_rip_folder_edit.setText(app_settings.default_cd_rip_folder())
-        self._populate_audio_devices("")
+        self._populate_audio_devices(self.audio_device_combo, "")
+        self._populate_audio_devices(self.tape_audio_device_combo, "")
         self.recording_gain_spin.setValue(app_settings.DEFAULT_RECORDING_GAIN_DB)
 
     def _on_accept(self) -> None:
         app_settings.set_screen_dpi(self.screen_dpi_spin.value())
         app_settings.set_default_export_dpi(self.export_dpi_spin.value())
         app_settings.set_bake_dpi(self.bake_dpi_spin.value())
-        app_settings.set_audio_output_device(self._selected_audio_device())
+        app_settings.set_audio_output_device(self._selected_audio_device(self.audio_device_combo))
+        app_settings.set_tape_audio_output_device(self._selected_audio_device(self.tape_audio_device_combo))
         app_settings.set_recording_gain_db(self.recording_gain_spin.value())
         app_settings.set_experimental_features_enabled(self.experimental_check.isChecked())
         app_settings.set_mdrem_enabled(self.mdrem_check.isChecked())
