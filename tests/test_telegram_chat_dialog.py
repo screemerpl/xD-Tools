@@ -495,6 +495,92 @@ def test_a_bad_image_cannot_be_saved_since_nothing_was_ever_kept(qt_app, monkeyp
         _shutdown(dialog)
 
 
+# --- the download queue's aggregate summary (#7) ----------------------------
+
+
+def test_queue_summary_is_hidden_with_no_files(qt_app, tmp_path):
+    dialog = TelegramChatDialog("123456", "hash", "@my_bot", tmp_path)
+
+    assert dialog.queue_summary_label.isVisible() is False
+
+
+def test_queue_summary_reports_counts_and_overall_progress(qt_app, tmp_path):
+    """Built directly against the dialog's own handlers rather than through
+    the full async worker + _deliver() pipeline: this suite's fake download
+    reports progress in one single (size, size) callback, which makes
+    landing on an in-between "still downloading" moment through the real
+    pipeline just as unreliable to time as the equivalent photo-preview
+    race noted above -- calling the signal handlers directly gives full
+    control over which state each of several files is in at once."""
+    dialog = TelegramChatDialog("123456", "hash", "@my_bot", tmp_path)
+    dialog.show()  # isVisible() reflects the whole ancestor chain, not just its own flag
+
+    def _msg(message_id: int, size: int) -> module.telegram_bot.ChatMessage:
+        return module.telegram_bot.ChatMessage(
+            id=message_id, outgoing=False, text="", file_name=f"{message_id}.flac", file_size=size
+        )
+
+    finished_msg = _msg(1, 100)
+    active_msg = _msg(2, 200)
+    queued_msg = _msg(3, 300)
+    failed_msg = _msg(4, 400)
+    for msg in (finished_msg, active_msg, queued_msg, failed_msg):
+        dialog._on_file_message(msg, is_new=True)
+
+    dialog._on_download_started(finished_msg.id)
+    dialog._on_download_finished(finished_msg.id, str(tmp_path / "1.flac"))
+    dialog._on_download_started(active_msg.id)
+    dialog._on_download_progress(active_msg.id, 100, 200)  # half-way
+    dialog._on_download_started(failed_msg.id)
+    dialog._on_download_failed(failed_msg.id, "network gone")
+    # queued_msg is left untouched -- still just sitting in the queue.
+
+    assert dialog.queue_summary_label.isVisible() is True
+    text = dialog.queue_summary_label.text()
+    assert "1/4 done" in text
+    assert "1 queued" in text
+    assert "1 downloading" in text
+    assert "1 failed" in text
+    # known totals: 100 (finished) + 200 (active) + 300 (queued, seeded at
+    # 0/size the moment it was queued) + 400 (failed, seeded then never
+    # progressed) = 1000; current: 100 + 100 + 0 + 0 = 200 -> 20%.
+    assert "20% overall" in text
+
+
+def test_a_retry_resets_that_files_own_progress_and_clears_its_failed_state(qt_app, tmp_path):
+    dialog = TelegramChatDialog("123456", "hash", "@my_bot", tmp_path)
+    msg = module.telegram_bot.ChatMessage(id=1, outgoing=False, text="", file_name="a.flac", file_size=100)
+    dialog._on_file_message(msg, is_new=True)
+
+    dialog._on_download_started(msg.id)
+    dialog._on_download_progress(msg.id, 80, 100)
+    dialog._on_download_failed(msg.id, "network gone")
+    assert "1 failed" in dialog.queue_summary_label.text()
+
+    dialog._on_download_started(msg.id)  # the retry
+
+    assert "1 failed" not in dialog.queue_summary_label.text()
+    assert "1 downloading" in dialog.queue_summary_label.text()
+    assert dialog._download_progress[msg.id] == (0, 100)
+
+
+def test_end_to_end_downloading_updates_the_queue_summary(qt_app, monkeypatch, tmp_path):
+    fake = FakeTelethonClient(authorized=True)
+    dialog = _dialog(monkeypatch, tmp_path, fake)
+    try:
+        _pump_until(lambda: dialog._session_folder is not None)
+
+        raw = FakeMessage(text="here", file=FakeFile("Unleashed.flac", 100))
+        _deliver(dialog, fake, raw)
+        _pump_until(lambda: raw.id in dialog._downloaded_files)
+
+        assert dialog.queue_summary_label.isVisible() is True
+        assert "1/1 done" in dialog.queue_summary_label.text()
+        assert "100% overall" in dialog.queue_summary_label.text()
+    finally:
+        _shutdown(dialog)
+
+
 def test_end_to_end_an_incoming_message_gets_translated(qt_app, monkeypatch, tmp_path):
     fake = FakeTelethonClient(authorized=True)
     dialog = _dialog(monkeypatch, tmp_path, fake)

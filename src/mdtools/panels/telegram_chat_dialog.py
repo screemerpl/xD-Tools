@@ -497,6 +497,11 @@ class _DownloadQueueItem(QWidget):
     def __init__(self, message: telegram_bot.ChatMessage, parent=None):
         super().__init__(parent)
         self.message_id = message.id
+        # Read by TelegramChatDialog's own aggregate summary -- kept here
+        # rather than re-derived, since this is the one place that already
+        # has the original message to read it from.
+        self.file_size = message.file_size
+        self.last_speed_bps: float | None = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
@@ -553,15 +558,18 @@ class _DownloadQueueItem(QWidget):
         speed = (current - self._last_bytes) / elapsed
         self._last_update_time = now
         self._last_bytes = current
+        self.last_speed_bps = speed
         self.status_label.setText(self.tr("Downloading... ({speed}/s)").format(speed=_human_size(int(speed))))
 
     def set_downloaded(self) -> None:
         self.progress.setValue(100)
         self.status_label.setText(self.tr("Saved"))
+        self.last_speed_bps = None
 
     def set_download_failed(self, error: str) -> None:
         self.status_label.setText(self.tr("Failed: {error}").format(error=error))
         self.retry_btn.setVisible(True)
+        self.last_speed_bps = None
 
 
 class TelegramChatDialog(QDialog):
@@ -602,6 +610,14 @@ class TelegramChatDialog(QDialog):
         # _update_continue_button() below, which both refuse to run while
         # this is non-empty.
         self._active_downloads: set[int] = set()
+        # message ids whose most recent attempt ended in download_failed --
+        # discarded again the moment a retry restarts them. Both this and
+        # _download_progress below exist purely to feed _update_queue_summary().
+        self._failed_downloads: set[int] = set()
+        # message id -> (bytes so far, total bytes) for every queued file
+        # with a known size -- an aggregate progress needs each item's own
+        # current position, not just whichever one last emitted a signal.
+        self._download_progress: dict[int, tuple[int, int]] = {}
         # Read by app_window.py after exec() == Accepted, and handed to
         # _record_folder_dialog() exactly like a folder picked by hand --
         # that dispatches to burning itself on a CD project, so this dialog
@@ -647,6 +663,14 @@ class TelegramChatDialog(QDialog):
         queue_title = self.tr("Downloads")
         queue_header = QLabel(f"<b>{queue_title}</b>")
         queue_pane_layout.addWidget(queue_header)
+        # An aggregate line -- queued/active/done counts, overall progress,
+        # summed speed -- fed by the same download_started/progress/
+        # finished/failed signals every per-row _DownloadQueueItem already
+        # reacts to (#7). Hidden until there's anything to report at all.
+        self.queue_summary_label = QLabel()
+        self.queue_summary_label.setWordWrap(True)
+        self.queue_summary_label.setVisible(False)
+        queue_pane_layout.addWidget(self.queue_summary_label)
         self.queue_scroll_area = QScrollArea()
         self.queue_scroll_area.setWidgetResizable(True)
         self._queue = QWidget()
@@ -857,6 +881,13 @@ class TelegramChatDialog(QDialog):
         item.retry_requested.connect(self._on_download_requested)
         self._queue_items[message.id] = item
         self._queue_layout.insertWidget(self._queue_layout.count() - 1, item)
+        # Seeded at 0/file_size (not just once downloading actually starts)
+        # so a still-queued file already contributes its own full size to
+        # the aggregate's denominator -- "overall progress" means across
+        # the whole batch shown in this panel, not only whichever files
+        # happen to be active right now.
+        self._download_progress[message.id] = (0, message.file_size or 0)
+        self._update_queue_summary()
 
     def _scroll_to_bottom(self, minimum: int = 0, maximum: int = 0) -> None:
         """Connected directly to QScrollBar.rangeChanged(min, max), hence
@@ -922,30 +953,88 @@ class TelegramChatDialog(QDialog):
         if item is not None:
             item.set_downloading()
         self._active_downloads.add(message_id)
+        # A retry restarting a previously-failed download -- no longer
+        # failed, and its progress (if any survived from the failed
+        # attempt) starts over from zero.
+        self._failed_downloads.discard(message_id)
+        self._download_progress[message_id] = (0, item.file_size if item is not None and item.file_size else 0)
         self._update_sort_button()
         self._update_continue_button()
+        self._update_queue_summary()
 
     def _on_download_progress(self, message_id: int, current: int, total: int) -> None:
         item = self._queue_items.get(message_id)
         if item is not None:
             item.set_progress(current, total)
+        self._download_progress[message_id] = (current, total)
+        self._update_queue_summary()
 
     def _on_download_finished(self, message_id: int, path: str) -> None:
         item = self._queue_items.get(message_id)
         if item is not None:
             item.set_downloaded()
+            if item.file_size:
+                self._download_progress[message_id] = (item.file_size, item.file_size)
         self._downloaded_files[message_id] = Path(path)
         self._active_downloads.discard(message_id)
         self._update_sort_button()
         self._update_continue_button()
+        self._update_queue_summary()
 
     def _on_download_failed(self, message_id: int, error: str) -> None:
         item = self._queue_items.get(message_id)
         if item is not None:
             item.set_download_failed(error)
         self._active_downloads.discard(message_id)
+        self._failed_downloads.add(message_id)
         self._update_sort_button()
         self._update_continue_button()
+        self._update_queue_summary()
+
+    def _update_queue_summary(self) -> None:
+        """The aggregate line above the download queue (#7) -- counts plus
+        an overall progress and a summed speed, all derived from state the
+        four handlers above already keep (nothing new is asked of
+        _ChatWorker for this)."""
+        total = len(self._queue_items)
+        if total == 0:
+            self.queue_summary_label.setVisible(False)
+            return
+
+        active = len(self._active_downloads)
+        failed = len(self._failed_downloads)
+        finished = len(self._downloaded_files)
+        queued = max(0, total - active - failed - finished)
+
+        current_bytes = 0
+        known_total_bytes = 0
+        for message_id in self._queue_items:
+            current, item_total = self._download_progress.get(message_id, (0, 0))
+            if item_total:
+                current_bytes += current
+                known_total_bytes += item_total
+
+        speed_bps = sum(
+            item.last_speed_bps or 0.0
+            for message_id, item in self._queue_items.items()
+            if message_id in self._active_downloads
+        )
+
+        parts = [self.tr("{finished}/{total} done").format(finished=finished, total=total)]
+        if queued:
+            parts.append(self.tr("{count} queued").format(count=queued))
+        if active:
+            parts.append(self.tr("{count} downloading").format(count=active))
+        if failed:
+            parts.append(self.tr("{count} failed").format(count=failed))
+        if known_total_bytes:
+            percent = int(current_bytes * 100 / known_total_bytes)
+            parts.append(self.tr("{percent}% overall").format(percent=percent))
+        if speed_bps > 0:
+            parts.append(self.tr("{speed}/s").format(speed=_human_size(int(speed_bps))))
+
+        self.queue_summary_label.setText(" · ".join(parts))
+        self.queue_summary_label.setVisible(True)
 
     # --- folder-level actions -------------------------------------------------
 
