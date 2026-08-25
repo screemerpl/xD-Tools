@@ -122,7 +122,7 @@ BOOK = [
             {"p": "To leave xD-Tools altogether, use **File > Exit**, or cancel the startup screen when it "
                   "reappears."},
             {"h2": "Where your projects are saved"},
-            {"p": "The first time you save, xD-Tools proposes **Documents\\MiniDiscProjects** and a file "
+            {"p": "The first time you save, xD-Tools proposes **Documents\\XDProjects** and a file "
                   "name built from the album itself - `Skillet - Unleashed (2016).mdproj`. That is the "
                   "same line the deck is told to display, so the file on your computer and the title on "
                   "the disc agree with each other."},
