@@ -21,15 +21,27 @@ def test_lookup_button_appears_above_the_year_field(qt_app):
     assert positions["artist"] < positions["lookup"] < positions["year"]
 
 
-def test_lookup_without_album_or_artist_shows_a_message_and_does_nothing(qt_app, monkeypatch):
+def test_lookup_without_an_artist_shows_a_message_and_does_nothing(qt_app, monkeypatch):
     monkeypatch.setattr(metadata_dialog_module.QMessageBox, "information", lambda *a, **k: None)
     called = []
     monkeypatch.setattr(metadata_dialog_module, "search_albums", lambda *a, **k: called.append(1))
 
-    dialog = MetadataDialog(ProjectMetadata(album="", artist="Someone"))
+    dialog = MetadataDialog(ProjectMetadata(album="Some Album", artist=""))
     dialog._lookup_tracks()
 
     assert called == []
+
+
+def test_lookup_works_with_only_an_artist_typed_in(qt_app, monkeypatch):
+    """Some albums genuinely have no name -- the search shouldn't wait on
+    one when the artist alone is already enough to narrow it down."""
+    called = []
+    monkeypatch.setattr(metadata_dialog_module, "search_albums", lambda artist, album="": called.append((artist, album)))
+
+    dialog = MetadataDialog(ProjectMetadata(album="", artist="Someone"))
+    dialog._lookup_tracks()
+
+    assert called == [("Someone", "")]
 
 
 def test_no_matching_album_shows_a_warning(qt_app, monkeypatch):
@@ -44,6 +56,21 @@ def test_no_matching_album_shows_a_warning(qt_app, monkeypatch):
 
     assert len(warnings) == 1
     assert "Nothing" in warnings[0] and "Nobody" in warnings[0]
+
+
+def test_no_matching_album_by_artist_alone_says_so_without_an_empty_album_name(qt_app, monkeypatch):
+    warnings = []
+    monkeypatch.setattr(
+        metadata_dialog_module.QMessageBox, "warning", lambda self, title, text: warnings.append(text)
+    )
+    monkeypatch.setattr(metadata_dialog_module, "search_albums", lambda artist, album="": [])
+
+    dialog = MetadataDialog(ProjectMetadata(album="", artist="Nobody"))
+    dialog._lookup_tracks()
+
+    assert len(warnings) == 1
+    assert "Nobody" in warnings[0]
+    assert '""' not in warnings[0]
 
 
 def test_a_single_candidate_is_used_without_prompting(qt_app, monkeypatch):
@@ -110,8 +137,12 @@ def test_multiple_candidates_prompts_and_uses_the_chosen_one(qt_app, monkeypatch
     monkeypatch.setattr(metadata_dialog_module, "fetch_tracks", fake_fetch_tracks)
 
     def fake_get_item(self, title, label, items, current=0, editable=True):
-        # simulate the user picking the second (real album) entry
-        return items[1], True
+        # Pick the real album by what its label *says*, not by its index:
+        # the list is sorted alphabetically now (see
+        # test_the_album_picker_is_sorted_alphabetically), so an index here
+        # would be asserting the display order by accident.
+        chosen = next(entry for entry in items if "(Single)" not in entry)
+        return chosen, True
 
     monkeypatch.setattr(metadata_dialog_module.QInputDialog, "getItem", staticmethod(fake_get_item))
 
@@ -327,3 +358,49 @@ def test_reopening_with_a_saved_cover_and_accepting_without_a_new_lookup_keeps_i
     dialog._on_accept()
 
     assert dialog.result_metadata.cover_art == cover_bytes
+
+
+def test_the_album_picker_is_sorted_alphabetically(qt_app, monkeypatch):
+    """Asked for directly. search_albums() ranks by match score, which is
+    right for picking one automatically and poor for reading -- a dozen
+    pressings of one album give the eye nothing to scan by.
+
+    The ranking is not thrown away, it just stops deciding the display
+    order: the best match is still what the list opens on, so pressing
+    Enter picks exactly what it picked before this changed.
+    """
+    # Deliberately handed back worst-alphabetical-first, and with the
+    # best-scoring one in the middle, so neither "unchanged" nor "reversed"
+    # could pass this by accident.
+    candidates = [
+        AlbumCandidate(collection_id=1, artist_name="Artist", collection_name="Zebra", year=2001, track_count=9),
+        AlbumCandidate(collection_id=2, artist_name="Artist", collection_name="Album", year=1998, track_count=12),
+        AlbumCandidate(collection_id=3, artist_name="Artist", collection_name="Middle", year=2003, track_count=7),
+    ]
+    monkeypatch.setattr(metadata_dialog_module, "search_albums", lambda artist, album: candidates)
+    monkeypatch.setattr(
+        metadata_dialog_module,
+        "fetch_tracks",
+        lambda collection_id, fallback_year=None: LookupResult(
+            year=1998, tracks=[LookupTrack(title="T", time_seconds=100)]
+        ),
+    )
+
+    captured = {}
+
+    def fake_get_item(self, title, label, items, current=0, editable=True):
+        captured["items"] = list(items)
+        captured["current"] = current
+        return items[current], True
+
+    monkeypatch.setattr(metadata_dialog_module.QInputDialog, "getItem", staticmethod(fake_get_item))
+
+    dialog = MetadataDialog(ProjectMetadata(album="Album", artist="Artist"))
+    dialog._lookup_tracks()
+
+    shown = captured["items"]
+    assert shown == sorted(shown, key=str.casefold)
+    # And the entry it opens on is still search_albums()'s own top pick,
+    # wherever the alphabet happened to put it.
+    assert "Zebra" in shown[captured["current"]]
+

@@ -22,5 +22,9 @@ other contributors, licensed under
 | grayscale.svg  | First Quarter Moon    | 1f313     |
 | autolayout.svg | Magic Wand            | 1fa84     |
 | edit_metadata.svg | Memo               | 1f4dd     |
+| regenerate.svg | Recycling Symbol      | 267b      |
 
 No modifications were made to the source SVGs beyond renaming the files.
+regenerate_font_icon() (panels/icons.py) composes regenerate.svg with a
+small text.svg badge at render time -- both files are used unmodified;
+nothing new was added to this folder for it.

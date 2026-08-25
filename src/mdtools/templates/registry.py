@@ -39,9 +39,13 @@ def _ensure_user_file() -> Path:
 # with the cassette: a shell sticker is the same rectangle a cover is, so
 # it shares CoverTemplate -- but it is not interchangeable with one, and
 # keeping them one family let File > New offer a J-card for a page that
-# wants a sticker.
-KINDS = ("disc", "cover", "label")
-_MODELS = {"disc": DiscTemplate, "cover": CoverTemplate, "label": CoverTemplate}
+# wants a sticker. "case_back" is the same story for a CD's jewel case
+# tray card: it was filed under "cover" alongside the slim-case insert
+# (same CoverTemplate dataclass, a plain folded rectangle either way), which
+# meant the insert could be picked as a case back and the case back as an
+# insert -- reported directly, found in the Template Manager.
+KINDS = ("disc", "cover", "label", "case_back")
+_MODELS = {"disc": DiscTemplate, "cover": CoverTemplate, "label": CoverTemplate, "case_back": CoverTemplate}
 
 
 def _parse(data: dict) -> dict[str, list]:
@@ -100,19 +104,24 @@ def _rehome_moved_builtins(current: dict[str, list], bundled: dict[str, list]) -
     """Moves a built-in that has since changed family, keeping the user's
     own edits to it.
 
-    Only ever needed when a template family is split, which happened once:
-    the cassette shell label started life as a "cover" and became a
-    "label", and a copy left behind in the old family is exactly the bug
-    that split fixes -- it would go on being offered where a J-card
-    belongs.
+    Needed whenever a template family is split -- twice so far. The
+    cassette shell label started life as a "cover" and became a "label",
+    and a copy left behind in the old family is exactly the bug that split
+    fixes -- it would go on being offered where a J-card belongs. The CD
+    jewel case tray card started as a "cover" too (alongside the slim-case
+    insert it has nothing in common with except its dataclass) and became
+    its own "case_back", for the identical reason: a copy left behind would
+    still let the insert be offered where the case back belongs.
 
     The bundled version replaces the old entry rather than the old entry
-    being carried across, and that is deliberate: a built-in that has
-    changed family has changed *shape* -- this one grew the two holes a
-    cassette's reel hubs come up through -- so its old dimensions no
-    longer describe anything. This is the one case where sync overwrites
-    instead of appending, and it is why it is kept to built-ins whose
-    family actually moved.
+    being carried across. For the shell label that was also a shape change
+    (it grew the two holes a cassette's reel hubs come up through, so its
+    old dimensions no longer described anything); the tray card's own
+    dimensions did not change, only which list it lives in, but the same
+    "just take the bundled one" rule applies uniformly rather than needing
+    a special case for "moved but unchanged". This is the one case where
+    sync overwrites instead of appending, and it is why it is kept to
+    built-ins whose family actually moved.
     """
     home = {t.name: (kind, t) for kind in KINDS for t in bundled[kind] if t.builtin}
     changed = False

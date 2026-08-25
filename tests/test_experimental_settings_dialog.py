@@ -17,23 +17,19 @@ def test_no_api_credential_fields_are_shown_at_all(qt_app):
 
 def test_dialog_seeds_fields_from_current_settings(qt_app):
     app_settings.set_telegram_bot_username("@my_bot")
-    app_settings.set_telegram_download_folder(r"C:\downloads")
 
     dialog = ExperimentalSettingsDialog()
 
     assert dialog.bot_username_edit.text() == "@my_bot"
-    assert dialog.download_folder_edit.text() == r"C:\downloads"
 
 
 def test_accepting_saves_the_edited_values(qt_app, tmp_path):
     dialog = ExperimentalSettingsDialog()
     dialog.bot_username_edit.setText("@another_bot")
-    dialog.download_folder_edit.setText(str(tmp_path / "dl"))
 
     dialog._on_accept()
 
     assert app_settings.telegram_bot_username() == "@another_bot"
-    assert app_settings.telegram_download_folder() == str(tmp_path / "dl")
 
 
 def test_accepting_leaves_the_api_credentials_untouched(qt_app, tmp_path):
@@ -42,7 +38,6 @@ def test_accepting_leaves_the_api_credentials_untouched(qt_app, tmp_path):
     app_settings.set_telegram_api_id("my-own-id")
     app_settings.set_telegram_api_hash("my-own-hash")
     dialog = ExperimentalSettingsDialog()
-    dialog.download_folder_edit.setText(str(tmp_path / "dl"))
 
     dialog._on_accept()
 
@@ -60,22 +55,20 @@ def test_cancelling_does_not_save_anything(qt_app):
     assert app_settings.telegram_bot_username() == "@original"
 
 
-def test_accepting_creates_the_download_folder(qt_app, tmp_path):
-    target = tmp_path / "downloads" / "here"
+def test_no_download_folder_row_is_shown_any_more(qt_app):
+    """Merged into the CD rip folder (Window > Settings) -- see
+    app_settings.cd_rip_folder()."""
     dialog = ExperimentalSettingsDialog()
-    dialog.download_folder_edit.setText(str(target))
-
-    dialog._on_accept()
-
-    assert target.is_dir()
+    assert not hasattr(dialog, "download_folder_edit")
 
 
-# --- status label -------------------------------------------------------------
+# --- status label / sign-out ---------------------------------------------------
 
 
 def test_status_reports_not_signed_in_when_no_session_file_exists(qt_app):
     dialog = ExperimentalSettingsDialog()
     assert dialog.status_label.text() == "Not signed in yet."
+    assert dialog.sign_out_btn.isEnabled() is False
 
 
 def test_status_reports_a_saved_sign_in_when_the_session_file_exists(qt_app):
@@ -86,6 +79,28 @@ def test_status_reports_a_saved_sign_in_when_the_session_file_exists(qt_app):
     dialog = ExperimentalSettingsDialog()
 
     assert dialog.status_label.text() == "A saved sign-in exists locally."
+    assert dialog.sign_out_btn.isEnabled() is True
+
+
+def test_signing_out_deletes_the_session_file_and_updates_the_status(qt_app):
+    session_path = app_settings.telegram_session_path()
+    session_path.parent.mkdir(parents=True, exist_ok=True)
+    session_path.write_bytes(b"fake session data")
+    dialog = ExperimentalSettingsDialog()
+
+    dialog._sign_out()
+
+    assert not session_path.exists()
+    assert dialog.status_label.text() == "Not signed in yet."
+    assert dialog.sign_out_btn.isEnabled() is False
+
+
+def test_signing_out_with_no_session_file_does_not_raise(qt_app):
+    dialog = ExperimentalSettingsDialog()
+
+    dialog._sign_out()  # must not raise
+
+    assert dialog.status_label.text() == "Not signed in yet."
 
 
 # --- sign-in button -------------------------------------------------------------

@@ -63,6 +63,7 @@ from mdtools import (
     multidisc,
 )
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
+from mdtools.panels.preview_player import PreviewPlayerBar
 from mdtools.project import ProjectMetadata, Track
 
 # The track table's columns. Named because a Disc column was put in front
@@ -214,6 +215,10 @@ class BurnDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.addWidget(self._build_album_row(album, artist, year, cover_art))
         layout.addWidget(self._build_table_row())
+        self.preview_bar = PreviewPlayerBar()
+        self.preview_bar.prev_requested.connect(lambda: self._step_preview(-1))
+        self.preview_bar.next_requested.connect(lambda: self._step_preview(1))
+        layout.addWidget(self.preview_bar)
         layout.addWidget(self._build_disc_box())
 
         # Two labels, not one: a missing cdrecord must not hide what the plan
@@ -337,12 +342,23 @@ class BurnDialog(QDialog):
         row_layout.addLayout(side)
 
         self.table.currentCellChanged.connect(lambda *_: self._refresh_split_button())
+        self.table.currentCellChanged.connect(lambda *_: self._refresh_preview())
         return row
 
     # -- the order, and where the discs end --------------------------------
 
     def _selected_row(self) -> int:
         return self.table.currentRow()
+
+    def _refresh_preview(self) -> None:
+        row = self._selected_row()
+        path = self._sources[row][0] if 0 <= row < len(self._sources) else None
+        self.preview_bar.set_current(path, has_prev=row > 0, has_next=0 <= row < len(self._sources) - 1)
+
+    def _step_preview(self, delta: int) -> None:
+        row = self._selected_row() + delta
+        if 0 <= row < self.table.rowCount():
+            self.table.setCurrentCell(row, 0)
 
     def _current_breaks(self) -> list[int]:
         if self._manual_breaks is not None:
@@ -771,6 +787,7 @@ class BurnDialog(QDialog):
         ):
             return
 
+        self.preview_bar.stop()
         self._disc = 0
         self._burn_current_disc()
 
@@ -782,7 +799,7 @@ class BurnDialog(QDialog):
         # A folder per disc: track numbering restarts on each, so one shared
         # folder would leave a longer previous disc's scratch WAVs sitting
         # beside a shorter one's.
-        work_dir = Path(app_settings.cd_rip_folder()) / "burn"
+        work_dir = Path(app_settings.cd_rip_folder()) / cdrip.BURN_SCRATCH_DIRNAME
         if several:
             work_dir = work_dir / f"disc{self._disc + 1}"
         try:
@@ -927,6 +944,7 @@ class BurnDialog(QDialog):
         Never waits on the worker here -- that is what froze the MDRem
         upload dialog once already; _on_worker_finished is the single place
         anything is torn down."""
+        self.preview_bar.stop()
         worker = self._worker
         if worker is None:
             super().reject()

@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QVBoxLayout
 
 APP_NAME = "xD-Tools"
-APP_VERSION = "0.3.1"
+APP_VERSION = "0.3.2"
 APP_AUTHOR = 'Artur "Screemer" Jakubowicz'
 
 
@@ -30,14 +30,14 @@ class AboutDialog(QDialog):
                 "label and case inserts, or a cassette's inlay card and a sticker for each side "
                 "-- and export them as cut-ready SVG and print-ready PNG, for a Cricut cutting "
                 "machine plus a regular printer.\n\n"
-                "Burn an audio CD-R from a folder or from foobar2000's playlist, with CD-Text "
-                "titles, resampling anything that is not already 44.1 kHz / 16-bit on the way.\n\n"
-                "Record a cassette from foobar2000, side by side: it works out where to turn "
-                "the tape over, records ten seconds of silence past the leader, plays each "
-                "side and says when to flip it.\n\n"
+                "Burn an audio CD-R from a folder of files, with CD-Text titles, resampling "
+                "anything that is not already 44.1 kHz / 16-bit on the way.\n\n"
+                "Record a cassette from a CD or a folder of files, side by side: it works out "
+                "where to turn the tape over, records ten seconds of silence past the leader, "
+                "plays each side and says when to flip it.\n\n"
                 "With an MDRem infrared adapter it also drives a MiniDisc deck: record an album "
-                "straight from foobar2000 with a track mark at every song, write the disc and "
-                "track titles onto the MiniDisc, and stand in for the remote."
+                "from a CD or a folder of files with a track mark at every song, write the disc "
+                "and track titles onto the MiniDisc, and stand in for the remote."
             )
         )
         description.setWordWrap(True)

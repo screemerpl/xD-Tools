@@ -1,0 +1,792 @@
+"""The toolbar's Template dropdown (between the page selector and
+"Regenerate with Font...") -- lets a page's template be swapped without
+going through Templates > "Change Template for This Page..." first.
+
+Three behaviours, matching the feature request directly:
+- the list is filtered to the current page's own kind and the project's
+  medium, and follows the page selector;
+- picking a *custom* (non-builtin) template replaces the page with it
+  outright, no questions asked -- it is already the user's own choice;
+- picking a *built-in* template asks Empty / Generated from Metadata /
+  Cancel, with "Generated" disabled unless a known auto-layout algorithm
+  actually targets that exact template (see
+  app_window._can_auto_generate_page).
+"""
+
+from __future__ import annotations
+
+import io
+
+import pytest
+from PIL import Image
+from PySide6.QtWidgets import QMessageBox
+
+from mdtools import app_window as app_module
+from mdtools.app_window import (
+    CD_INSERT_FRONT_TEMPLATE,
+    CD_INSERT_TEMPLATE,
+    CD_LABEL_TEMPLATE,
+    FULL_LABEL_NO_SLIDER_TEMPLATE,
+    FULL_LABEL_TEMPLATE,
+    JCARD_TEMPLATE,
+    JCARD_WINDOW_TEMPLATE,
+    STICKER_NO_SLIDER_TEMPLATE,
+    STICKER_TEMPLATE,
+    MainWindow,
+)
+from mdtools.project import MEDIUM_CD, PAGE_BACK, PAGE_COVER, PAGE_DISC, ProjectMetadata, Track
+from mdtools.templates import registry
+from mdtools.templates.models import CoverTemplate, DiscTemplate
+
+
+def _full_label(name=FULL_LABEL_TEMPLATE, builtin=True, items=None) -> DiscTemplate:
+    return DiscTemplate(
+        name=name,
+        width_mm=69.4,
+        height_mm=66.4,
+        shape="full_label",
+        corner_radius_mm=4.0,
+        slider_notch_width_mm=27.5,
+        slider_notch_height_mm=17.5,
+        slider_notch_corner_radius_mm=2.5,
+        slider_notch_top_mm=24.3,
+        slider_notch_buffer_mm=0.8,
+        slider_travel_mm=19.4,
+        slider_width_mm=27.5,
+        slider_height_mm=17.5,
+        slider_corner_radius_mm=2.5,
+        builtin=builtin,
+        items=items or [],
+    )
+
+
+def _full_label_no_slider(name=FULL_LABEL_NO_SLIDER_TEMPLATE, builtin=True) -> DiscTemplate:
+    return DiscTemplate(
+        name=name,
+        width_mm=69.4,
+        height_mm=66.4,
+        shape="full_label",
+        corner_radius_mm=4.0,
+        slider_notch_width_mm=27.5,
+        slider_notch_height_mm=17.5,
+        slider_notch_corner_radius_mm=2.5,
+        slider_notch_top_mm=24.3,
+        slider_notch_buffer_mm=0.8,
+        slider_travel_mm=19.4,
+        builtin=builtin,
+    )
+
+
+def _sticker(name="sticker", builtin=True) -> DiscTemplate:
+    return DiscTemplate(name=name, width_mm=37.0, height_mm=52.0, builtin=builtin)
+
+
+def _sticker_with_slider(name=STICKER_TEMPLATE, builtin=True) -> DiscTemplate:
+    return DiscTemplate(
+        name=name,
+        width_mm=37.0,
+        height_mm=52.0,
+        slider_width_mm=27.5,
+        slider_height_mm=17.5,
+        slider_corner_radius_mm=2.5,
+        builtin=builtin,
+    )
+
+
+def _sticker_no_slider(name=STICKER_NO_SLIDER_TEMPLATE, builtin=True) -> DiscTemplate:
+    return DiscTemplate(name=name, width_mm=37.0, height_mm=52.0, builtin=builtin)
+
+
+def _jcard(name=JCARD_TEMPLATE, builtin=True, items=None) -> CoverTemplate:
+    return CoverTemplate(
+        name=name, width_mm=126.0, height_mm=73.0, fold_offsets_mm=[58.85, 67.15], builtin=builtin, items=items or []
+    )
+
+
+def _jcard_window(name=JCARD_WINDOW_TEMPLATE, builtin=True) -> CoverTemplate:
+    """The plain card plus the 40x40mm die-cut window, right of the last
+    fold line -- the real defaults.json geometry."""
+    return CoverTemplate(
+        name=name,
+        width_mm=126.0,
+        height_mm=73.0,
+        corner_radius_mm=2.0,
+        fold_offsets_mm=[58.85, 67.15],
+        cutout_width_mm=40.0,
+        cutout_height_mm=40.0,
+        cutout_radius_mm=1.0,
+        cutout_from_fold_mm=10.3,
+        cutout_from_bottom_mm=3.45,
+        cutout_side="right",
+        builtin=builtin,
+    )
+
+
+def _cd_label(name=CD_LABEL_TEMPLATE, builtin=True) -> DiscTemplate:
+    return DiscTemplate(
+        name=name, width_mm=117.0, height_mm=117.0, shape="cd_label",
+        outer_diameter_mm=117.0, hole_diameter_mm=35.0, medium=MEDIUM_CD, builtin=builtin,
+    )
+
+
+def _tray_card(name="Tray Card", builtin=True) -> CoverTemplate:
+    return CoverTemplate(
+        name=name, width_mm=151.0, height_mm=117.5, fold_offsets_mm=[6.5, 144.5],
+        kind="case_back", medium=MEDIUM_CD, builtin=builtin,
+    )
+
+
+def _cd_insert_folded(name=CD_INSERT_TEMPLATE, builtin=True) -> CoverTemplate:
+    return CoverTemplate(
+        name=name, width_mm=240.0, height_mm=120.0, fold_offsets_mm=[120.0], medium=MEDIUM_CD, builtin=builtin,
+    )
+
+
+def _cd_insert_front(name=CD_INSERT_FRONT_TEMPLATE, builtin=True) -> CoverTemplate:
+    return CoverTemplate(name=name, width_mm=120.0, height_mm=120.0, medium=MEDIUM_CD, builtin=builtin)
+
+
+def _templates(**kinds) -> dict:
+    base = {"disc": [], "cover": [], "label": [], "case_back": []}
+    base.update(kinds)
+    return base
+
+
+@pytest.fixture
+def _md_registry(monkeypatch):
+    templates = _templates(disc=[_full_label(), _sticker()], cover=[_jcard()])
+    monkeypatch.setattr(registry, "load_templates", lambda: templates)
+    return templates
+
+
+def _cover(colour=(10, 20, 40), size=(240, 240)) -> bytes:
+    out = io.BytesIO()
+    Image.new("RGB", size, colour).save(out, format="PNG")
+    return out.getvalue()
+
+
+def _metadata(**overrides) -> ProjectMetadata:
+    fields = dict(
+        album="Album",
+        artist="Artist",
+        year=2020,
+        tracks=[Track(title=f"Track {i}", time_seconds=200) for i in range(1, 9)],
+        cover_art=_cover(),
+    )
+    fields.update(overrides)
+    return ProjectMetadata(**fields)
+
+
+def _window(monkeypatch) -> MainWindow:
+    return MainWindow(show_startup_dialog=False)
+
+
+def _select(window: MainWindow, name: str) -> None:
+    """Drives the toolbar Template combo the way a user click would."""
+    window.template_combo.setCurrentIndex(window.template_combo.findData(name))
+
+
+# -- populating the dropdown --------------------------------------------------
+
+
+def test_the_combo_lists_only_the_current_pages_kind_and_medium(qt_app, monkeypatch, _md_registry):
+    window = _window(monkeypatch)
+    window.current_page = PAGE_DISC
+    window._refresh_template_combo()
+
+    names = {window.template_combo.itemData(i) for i in range(window.template_combo.count())}
+    assert names == {FULL_LABEL_TEMPLATE, "sticker"}
+
+
+def test_the_combo_starts_on_the_pages_own_template(qt_app, monkeypatch, _md_registry):
+    window = _window(monkeypatch)
+
+    assert window.template_combo.currentData() == window.project.pages[PAGE_DISC].template.name
+
+
+def test_switching_pages_updates_the_combo(qt_app, monkeypatch, _md_registry):
+    window = _window(monkeypatch)
+
+    window.page_combo.setCurrentIndex(window.page_combo.findData(PAGE_COVER))
+
+    assert window.template_combo.currentData() == JCARD_TEMPLATE
+
+
+def test_a_template_no_longer_in_the_registry_still_shows_as_the_current_choice(qt_app, monkeypatch, _md_registry):
+    window = _window(monkeypatch)
+    # The registry lost this template after it was already on the page --
+    # e.g. deleted from templates.json by hand.
+    monkeypatch.setattr(registry, "load_templates", lambda: _templates(disc=[_sticker()], cover=[_jcard()]))
+
+    window._refresh_template_combo()
+
+    assert window.template_combo.currentData() == FULL_LABEL_TEMPLATE
+
+
+# -- custom templates apply outright ------------------------------------------
+
+
+def test_selecting_a_custom_template_applies_it_with_no_dialog(qt_app, monkeypatch):
+    custom = _sticker(name="my sticker", builtin=False)
+    monkeypatch.setattr(registry, "load_templates", lambda: _templates(disc=[_full_label(), custom], cover=[_jcard()]))
+    window = _window(monkeypatch)
+    window.current_page = PAGE_DISC
+    window._refresh_template_combo()
+    shown = []
+    monkeypatch.setattr(app_module.QMessageBox, "exec", lambda self: shown.append(1))
+
+    _select(window, "my sticker")
+
+    assert not shown
+    assert window.project.pages[PAGE_DISC].template.name == "my sticker"
+
+
+def test_a_custom_templates_own_saved_layers_are_used(qt_app, monkeypatch):
+    from mdtools.canvas.scene import DesignScene
+    from mdtools.io.project_io import item_to_dict
+
+    scratch = DesignScene(_sticker())
+    saved_item = item_to_dict(scratch.add_text("From the custom template"))
+    custom = _sticker(name="my sticker", builtin=False)
+    custom.items = [saved_item]
+    monkeypatch.setattr(registry, "load_templates", lambda: _templates(disc=[_full_label(), custom], cover=[_jcard()]))
+    window = _window(monkeypatch)
+    window.current_page = PAGE_DISC
+    window._refresh_template_combo()
+
+    _select(window, "my sticker")
+
+    texts = [i.toPlainText() for i in window.project.pages[PAGE_DISC].print_items() if hasattr(i, "toPlainText")]
+    assert "From the custom template" in texts
+
+
+# -- built-in templates ask first ---------------------------------------------
+
+
+def _fake_message_box(monkeypatch, clicked_index: int):
+    """Stubs QMessageBox.exec/clickedButton so _offer_template_replacement's
+    three-button dialog resolves to whichever button was added at
+    `clicked_index` (0 = Empty, 1 = Generated, 2 = Cancel), without a real
+    modal loop."""
+
+    def fake_exec(self):
+        self._clicked = self.buttons()[clicked_index]
+        return 0
+
+    def fake_clicked_button(self):
+        return self._clicked
+
+    monkeypatch.setattr(app_module.QMessageBox, "exec", fake_exec)
+    monkeypatch.setattr(app_module.QMessageBox, "clickedButton", fake_clicked_button)
+
+
+def test_selecting_a_builtin_template_asks_first(qt_app, monkeypatch, _md_registry):
+    window = _window(monkeypatch)
+    window.current_page = PAGE_DISC
+    window._refresh_template_combo()
+    asked = []
+    monkeypatch.setattr(app_module.QMessageBox, "exec", lambda self: asked.append(1) or 0)
+    monkeypatch.setattr(app_module.QMessageBox, "clickedButton", lambda self: self.buttons()[-1])  # Cancel
+
+    _select(window, "sticker")
+
+    assert asked
+
+
+def test_cancel_leaves_the_page_and_the_combo_untouched(qt_app, monkeypatch, _md_registry):
+    window = _window(monkeypatch)
+    window.current_page = PAGE_DISC
+    original = window.project.pages[PAGE_DISC]
+    _fake_message_box(monkeypatch, clicked_index=2)  # Cancel
+
+    _select(window, "sticker")
+
+    assert window.project.pages[PAGE_DISC] is original
+    assert window.template_combo.currentData() == FULL_LABEL_TEMPLATE
+
+
+def test_choosing_empty_template_clears_the_page(qt_app, monkeypatch, _md_registry):
+    window = _window(monkeypatch)
+    window.current_page = PAGE_DISC
+    window.project.pages[PAGE_DISC].add_text("something the user drew")
+    _fake_message_box(monkeypatch, clicked_index=0)  # Empty Template
+
+    _select(window, "sticker")
+
+    assert window.project.pages[PAGE_DISC].template.name == "sticker"
+    texts = [i.toPlainText() for i in window.project.pages[PAGE_DISC].print_items() if hasattr(i, "toPlainText")]
+    assert "something the user drew" not in texts
+
+
+def test_generated_is_disabled_when_no_algorithm_targets_this_template(qt_app, monkeypatch, _md_registry):
+    """"sticker" isn't FULL_LABEL_TEMPLATE, so nothing here knows how to
+    auto-generate content for it -- the button must be disabled, not just
+    silently ignored on click."""
+    window = _window(monkeypatch)
+    window.current_page = PAGE_DISC
+    window._refresh_template_combo()
+    captured = {}
+
+    def fake_exec(self):
+        captured["enabled"] = self.buttons()[1].isEnabled()
+        self._clicked = self.buttons()[2]  # Cancel
+        return 0
+
+    monkeypatch.setattr(app_module.QMessageBox, "exec", fake_exec)
+    monkeypatch.setattr(app_module.QMessageBox, "clickedButton", lambda self: self._clicked)
+
+    _select(window, "sticker")
+
+    assert captured["enabled"] is False
+
+
+def test_generated_is_enabled_for_the_templates_own_target(qt_app, monkeypatch):
+    """Switching *away* from the full-label template and back to it: the
+    dropdown offers "Full disc label (with Slider)" itself as a choice
+    (e.g. after picking "sticker" first), and that one *does* have a known
+    generator."""
+    monkeypatch.setattr(registry, "load_templates", lambda: _templates(disc=[_full_label(), _sticker()], cover=[_jcard()]))
+    window = _window(monkeypatch)
+    window.current_page = PAGE_DISC
+    window.apply_template(PAGE_DISC, _sticker())
+    window._refresh_template_combo()
+    captured = {}
+
+    def fake_exec(self):
+        captured["enabled"] = self.buttons()[1].isEnabled()
+        self._clicked = self.buttons()[2]  # Cancel
+        return 0
+
+    monkeypatch.setattr(app_module.QMessageBox, "exec", fake_exec)
+    monkeypatch.setattr(app_module.QMessageBox, "clickedButton", lambda self: self._clicked)
+
+    _select(window, FULL_LABEL_TEMPLATE)
+
+    assert captured["enabled"] is True
+
+
+def test_generated_builds_the_page_from_metadata(qt_app, monkeypatch, _md_registry):
+    window = _window(monkeypatch)
+    window.current_page = PAGE_DISC
+    window.project.metadata = _metadata()
+    window.apply_template(PAGE_DISC, _sticker())
+    window._refresh_template_combo()
+    monkeypatch.setattr(app_module.CoverFilterDialog, "exec", lambda self: (setattr(self, "result_filter_id", "none"), 1)[1])
+    _fake_message_box(monkeypatch, clicked_index=1)  # Generated from Metadata
+
+    _select(window, FULL_LABEL_TEMPLATE)
+
+    scene = window.project.pages[PAGE_DISC]
+    assert scene.template.name == FULL_LABEL_TEMPLATE
+    assert len(scene.print_items()) > 0
+
+
+def test_generated_is_also_enabled_for_the_no_slider_full_label(qt_app, monkeypatch):
+    """"Full disc label" builds the exact same way as "...(with Slider)",
+    just without a slider shape for the logo -- so it gets a generator of
+    its own too, not just the with-slider variant."""
+    monkeypatch.setattr(
+        registry,
+        "load_templates",
+        lambda: _templates(disc=[_full_label(), _full_label_no_slider(), _sticker()], cover=[_jcard()]),
+    )
+    window = _window(monkeypatch)
+    window.current_page = PAGE_DISC
+    window.apply_template(PAGE_DISC, _sticker())
+    window._refresh_template_combo()
+    captured = {}
+
+    def fake_exec(self):
+        captured["enabled"] = self.buttons()[1].isEnabled()
+        self._clicked = self.buttons()[2]  # Cancel
+        return 0
+
+    monkeypatch.setattr(app_module.QMessageBox, "exec", fake_exec)
+    monkeypatch.setattr(app_module.QMessageBox, "clickedButton", lambda self: self._clicked)
+
+    _select(window, FULL_LABEL_NO_SLIDER_TEMPLATE)
+
+    assert captured["enabled"] is True
+
+
+def test_generated_builds_the_no_slider_page_with_no_orphan_logo(qt_app, monkeypatch):
+    monkeypatch.setattr(
+        registry,
+        "load_templates",
+        lambda: _templates(disc=[_full_label(), _full_label_no_slider(), _sticker()], cover=[_jcard()]),
+    )
+    window = _window(monkeypatch)
+    window.current_page = PAGE_DISC
+    window.project.metadata = _metadata()
+    window.apply_template(PAGE_DISC, _sticker())
+    window._refresh_template_combo()
+    monkeypatch.setattr(
+        app_module.CoverFilterDialog, "exec", lambda self: (setattr(self, "result_filter_id", "none"), 1)[1]
+    )
+    _fake_message_box(monkeypatch, clicked_index=1)  # Generated from Metadata
+
+    _select(window, FULL_LABEL_NO_SLIDER_TEMPLATE)
+
+    scene = window.project.pages[PAGE_DISC]
+    assert scene.template.name == FULL_LABEL_NO_SLIDER_TEMPLATE
+    items = scene.print_items()
+    pixmaps = [item for item in items if not hasattr(item, "toPlainText")]
+    assert len(pixmaps) == 1, "only the cover -- no logo item with nowhere to go"
+
+
+# -- the CD front-only insert is generatable the same way -------------------
+
+
+def _cd_registry_with_front_insert(monkeypatch):
+    monkeypatch.setattr(
+        registry,
+        "load_templates",
+        lambda: _templates(
+            disc=[_full_label(), _cd_label()],
+            cover=[_jcard(), _cd_insert_folded(), _cd_insert_front()],
+        ),
+    )
+
+
+def _cd_window_on_folded_insert(monkeypatch) -> MainWindow:
+    _cd_registry_with_front_insert(monkeypatch)
+    window = _window(monkeypatch)
+    window.project.medium = MEDIUM_CD
+    window.apply_template(PAGE_DISC, _cd_label())
+    window.apply_template(PAGE_COVER, _cd_insert_folded())
+    window.current_page = PAGE_COVER
+    window._refresh_page_combo()
+    window._refresh_template_combo()
+    return window
+
+
+def test_generated_is_also_enabled_for_the_cd_front_only_insert(qt_app, monkeypatch):
+    """"CD Slim Case Insert (Front)" builds the exact same cover placement
+    as the folded insert's own right panel, just across the whole card --
+    so it gets a generator of its own too, not just the folded variant."""
+    window = _cd_window_on_folded_insert(monkeypatch)
+    captured = {}
+
+    def fake_exec(self):
+        captured["enabled"] = self.buttons()[1].isEnabled()
+        self._clicked = self.buttons()[2]  # Cancel
+        return 0
+
+    monkeypatch.setattr(app_module.QMessageBox, "exec", fake_exec)
+    monkeypatch.setattr(app_module.QMessageBox, "clickedButton", lambda self: self._clicked)
+
+    _select(window, CD_INSERT_FRONT_TEMPLATE)
+
+    assert captured["enabled"] is True
+
+
+def test_generated_builds_the_cd_front_only_page_with_just_the_cover(qt_app, monkeypatch):
+    window = _cd_window_on_folded_insert(monkeypatch)
+    window.project.metadata = _metadata()
+    _fake_message_box(monkeypatch, clicked_index=1)  # Generated from Metadata
+
+    _select(window, CD_INSERT_FRONT_TEMPLATE)
+
+    scene = window.project.pages[PAGE_COVER]
+    assert scene.template.name == CD_INSERT_FRONT_TEMPLATE
+    items = scene.print_items()
+    assert len(items) == 1, "just the cover -- no fold means no left panel to fill"
+
+
+# -- the small MiniDisc sticker label is generatable the same way -----------
+
+
+def test_generated_is_also_enabled_for_the_md_sticker_label(qt_app, monkeypatch):
+    """The small chamfered sticker (its own layout, not the full-face
+    one -- see auto_layout.build_sticker_label) gets a generator of its
+    own too."""
+    monkeypatch.setattr(
+        registry,
+        "load_templates",
+        lambda: _templates(disc=[_full_label(), _sticker_with_slider(), _sticker_no_slider()], cover=[_jcard()]),
+    )
+    window = _window(monkeypatch)
+    window.current_page = PAGE_DISC
+    window.apply_template(PAGE_DISC, _full_label())
+    window._refresh_template_combo()
+    captured = {}
+
+    def fake_exec(self):
+        captured["enabled"] = self.buttons()[1].isEnabled()
+        self._clicked = self.buttons()[2]  # Cancel
+        return 0
+
+    monkeypatch.setattr(app_module.QMessageBox, "exec", fake_exec)
+    monkeypatch.setattr(app_module.QMessageBox, "clickedButton", lambda self: self._clicked)
+
+    _select(window, STICKER_TEMPLATE)
+
+    assert captured["enabled"] is True
+
+
+def test_generated_builds_the_sticker_page_with_bands_and_slider_content(qt_app, monkeypatch):
+    from PySide6.QtWidgets import QGraphicsPixmapItem
+
+    monkeypatch.setattr(
+        registry,
+        "load_templates",
+        lambda: _templates(disc=[_full_label(), _sticker_with_slider(), _sticker_no_slider()], cover=[_jcard()]),
+    )
+    window = _window(monkeypatch)
+    window.current_page = PAGE_DISC
+    window.project.metadata = _metadata()
+    window.apply_template(PAGE_DISC, _full_label())
+    window._refresh_template_combo()
+    monkeypatch.setattr(
+        app_module.CoverFilterDialog, "exec", lambda self: (setattr(self, "result_filter_id", "none"), 1)[1]
+    )
+    _fake_message_box(monkeypatch, clicked_index=1)  # Generated from Metadata
+
+    _select(window, STICKER_TEMPLATE)
+
+    scene = window.project.pages[PAGE_DISC]
+    assert scene.template.name == STICKER_TEMPLATE
+    # Not an exact image count: Clip Layers (run at the end of
+    # _auto_layout_sticker_label) rasterizes a rect band into its own
+    # pixmap item wherever it overhangs the sticker's chamfered/filleted
+    # corners, so how many pixmap items end up on the page is a Clip
+    # Layers implementation detail, not this test's business.
+    images = [i for i in scene.print_items() if isinstance(i, QGraphicsPixmapItem)]
+    assert images
+    texts = [i.toPlainText() for i in scene.print_items() if hasattr(i, "toPlainText")]
+    assert window.project.metadata.artist in texts
+    assert window.project.metadata.album in texts
+
+
+def test_generated_builds_the_no_slider_sticker_with_no_slider_content(qt_app, monkeypatch):
+    from PySide6.QtWidgets import QGraphicsPixmapItem
+
+    monkeypatch.setattr(
+        registry,
+        "load_templates",
+        lambda: _templates(disc=[_full_label(), _sticker_with_slider(), _sticker_no_slider()], cover=[_jcard()]),
+    )
+    window = _window(monkeypatch)
+    window.current_page = PAGE_DISC
+    window.project.metadata = _metadata()
+    window.apply_template(PAGE_DISC, _full_label())
+    window._refresh_template_combo()
+    monkeypatch.setattr(
+        app_module.CoverFilterDialog, "exec", lambda self: (setattr(self, "result_filter_id", "none"), 1)[1]
+    )
+    _fake_message_box(monkeypatch, clicked_index=1)  # Generated from Metadata
+
+    _select(window, STICKER_NO_SLIDER_TEMPLATE)
+
+    scene = window.project.pages[PAGE_DISC]
+    assert scene.template.name == STICKER_NO_SLIDER_TEMPLATE
+    # "No slider to put a snippet on" is a fact about the template's own
+    # geometry -- checked there directly, rather than via an image count
+    # that Clip Layers' own band-rasterization (see the sibling test's
+    # note) makes an unreliable proxy for it.
+    assert len(scene.cut_shape_rects()) == 1
+    images = [i for i in scene.print_items() if isinstance(i, QGraphicsPixmapItem)]
+    assert images
+
+
+def test_generated_with_no_metadata_is_explained_and_the_page_is_untouched(qt_app, monkeypatch, _md_registry):
+    window = _window(monkeypatch)
+    window.current_page = PAGE_DISC
+    window.apply_template(PAGE_DISC, _sticker())
+    window._refresh_template_combo()
+    original = window.project.pages[PAGE_DISC]
+    told = []
+    monkeypatch.setattr(app_module.QMessageBox, "information", lambda *a, **k: told.append(a))
+    _fake_message_box(monkeypatch, clicked_index=1)  # Generated from Metadata
+
+    _select(window, FULL_LABEL_TEMPLATE)
+
+    assert told
+    assert window.project.pages[PAGE_DISC] is original
+
+
+# -- the case back has no fixed target template, only a shape check ----------
+
+
+def test_case_back_generated_is_enabled_for_any_three_panel_template(qt_app, monkeypatch):
+    """build_case_back() works from whatever three-panel shape is already
+    on the page rather than demanding one template by name -- so a
+    *different* three-panel case_back template must still offer Generated."""
+    templates = _templates(
+        disc=[_full_label(), _cd_label()],
+        cover=[_jcard(), CoverTemplate(name="CD Insert", width_mm=240.0, height_mm=120.0, fold_offsets_mm=[120.0], medium=MEDIUM_CD, builtin=True)],
+        case_back=[_tray_card(), _tray_card(name="Another Tray Card")],
+    )
+    monkeypatch.setattr(registry, "load_templates", lambda: templates)
+    window = _window(monkeypatch)
+    window.project.medium = MEDIUM_CD
+    window.apply_template(PAGE_BACK, _tray_card())
+    window.current_page = PAGE_BACK
+    window._refresh_page_combo()
+    window._refresh_template_combo()
+    captured = {}
+
+    def fake_exec(self):
+        captured["enabled"] = self.buttons()[1].isEnabled()
+        self._clicked = self.buttons()[2]  # Cancel
+        return 0
+
+    monkeypatch.setattr(app_module.QMessageBox, "exec", fake_exec)
+    monkeypatch.setattr(app_module.QMessageBox, "clickedButton", lambda self: self._clicked)
+
+    _select(window, "Another Tray Card")
+
+    assert captured["enabled"] is True
+
+
+def test_case_back_generated_is_disabled_for_a_template_with_the_wrong_fold_count(qt_app, monkeypatch):
+    templates = _templates(
+        disc=[_full_label(), _cd_label()],
+        cover=[_jcard(), CoverTemplate(name="CD Insert", width_mm=240.0, height_mm=120.0, fold_offsets_mm=[120.0], medium=MEDIUM_CD, builtin=True)],
+        case_back=[_tray_card(), CoverTemplate(name="Two Panel", width_mm=200.0, height_mm=100.0, fold_offsets_mm=[100.0], kind="case_back", medium=MEDIUM_CD, builtin=True)],
+    )
+    monkeypatch.setattr(registry, "load_templates", lambda: templates)
+    window = _window(monkeypatch)
+    window.project.medium = MEDIUM_CD
+    window.apply_template(PAGE_BACK, _tray_card())
+    window.current_page = PAGE_BACK
+    window._refresh_page_combo()
+    window._refresh_template_combo()
+    captured = {}
+
+    def fake_exec(self):
+        captured["enabled"] = self.buttons()[1].isEnabled()
+        self._clicked = self.buttons()[2]  # Cancel
+        return 0
+
+    monkeypatch.setattr(app_module.QMessageBox, "exec", fake_exec)
+    monkeypatch.setattr(app_module.QMessageBox, "clickedButton", lambda self: self._clicked)
+
+    _select(window, "Two Panel")
+
+    assert captured["enabled"] is False
+
+
+# -- re-selecting the current template is a no-op -----------------------------
+
+
+def test_reselecting_the_current_template_does_nothing(qt_app, monkeypatch, _md_registry):
+    window = _window(monkeypatch)
+    window.current_page = PAGE_DISC
+    original = window.project.pages[PAGE_DISC]
+    shown = []
+    monkeypatch.setattr(app_module.QMessageBox, "exec", lambda self: shown.append(1))
+
+    _select(window, FULL_LABEL_TEMPLATE)
+
+    assert not shown
+    assert window.project.pages[PAGE_DISC] is original
+
+
+# -- the die-cut window J-card -------------------------------------------------
+
+
+def test_generated_is_also_enabled_for_the_window_jcard(qt_app, monkeypatch):
+    """The window variant builds through the same _auto_layout_cover() as the
+    plain card -- build_jcard() turns the whole card end-for-end so the hole
+    falls on the artwork instead of through the track list -- so it gets a
+    generator of its own too."""
+    monkeypatch.setattr(
+        registry,
+        "load_templates",
+        lambda: _templates(disc=[_full_label()], cover=[_jcard(), _jcard_window()]),
+    )
+    window = _window(monkeypatch)
+    window.page_combo.setCurrentIndex(window.page_combo.findData(PAGE_COVER))
+    window.apply_template(PAGE_COVER, _jcard())
+    window._refresh_template_combo()
+    captured = {}
+
+    def fake_exec(self):
+        captured["enabled"] = self.buttons()[1].isEnabled()
+        self._clicked = self.buttons()[2]  # Cancel
+        return 0
+
+    monkeypatch.setattr(app_module.QMessageBox, "exec", fake_exec)
+    monkeypatch.setattr(app_module.QMessageBox, "clickedButton", lambda self: self._clicked)
+
+    _select(window, JCARD_WINDOW_TEMPLATE)
+
+    assert captured["enabled"] is True
+
+
+def test_generated_builds_the_window_jcard_with_nothing_under_the_hole(qt_app, monkeypatch):
+    """End to end through the dropdown: the artwork ends up on the panel with
+    the window in it, and no text is printed where the hole is."""
+    from PySide6.QtWidgets import QGraphicsPixmapItem, QGraphicsTextItem
+
+    from mdtools.constants import px_to_mm
+
+    monkeypatch.setattr(
+        registry,
+        "load_templates",
+        lambda: _templates(disc=[_full_label()], cover=[_jcard(), _jcard_window()]),
+    )
+    window = _window(monkeypatch)
+    window.project.metadata = _metadata()
+    window.page_combo.setCurrentIndex(window.page_combo.findData(PAGE_COVER))
+    window.apply_template(PAGE_COVER, _jcard())
+    window._refresh_template_combo()
+    _fake_message_box(monkeypatch, clicked_index=1)  # Generated from Metadata
+
+    _select(window, JCARD_WINDOW_TEMPLATE)
+
+    scene = window.project.pages[PAGE_COVER]
+    assert scene.template.name == JCARD_WINDOW_TEMPLATE
+    items = scene.print_items()
+    assert items
+
+    def bounds(item):
+        rect = item.mapToScene(item.boundingRect()).boundingRect()
+        return px_to_mm(rect.left()), px_to_mm(rect.right()), px_to_mm(rect.top()), px_to_mm(rect.bottom())
+
+    # The window: left = last fold (67.15) + 10.3, bottom = 73 - 3.45.
+    win_left, win_right = 77.45, 117.45
+    win_bottom, win_top = 69.55, 29.55
+
+    for item in items:
+        if isinstance(item, QGraphicsTextItem):
+            left, right, top, bottom = bounds(item)
+            over_hole = left < win_right and right > win_left and top < win_bottom and bottom > win_top
+            assert not over_hole, f"{item.toPlainText()!r} is printed over the window"
+
+    pixmaps = [i for i in items if isinstance(i, QGraphicsPixmapItem)]
+    artwork = max(pixmaps, key=lambda i: (lambda b: (b[1] - b[0]) * (b[3] - b[2]))(bounds(i)))
+    left, right, top, bottom = bounds(artwork)
+    # On the panel after the folds, spanning the hole -- the die-cut is the
+    # point of this template.
+    #
+    # Half a millimetre of tolerance rather than 0.2: generating this page
+    # bakes the window into the artwork (MainWindow._bake_cover_window), and
+    # a rasterised layer is a whole number of pixels, so its bounding box
+    # rounds outward by up to one -- 0.26mm at the default 96dpi, measured
+    # at 0.92px. Nothing printed moves: everything outside the cut path in
+    # that raster is transparent.
+    assert left == pytest.approx(67.15, abs=0.5)
+    assert right == pytest.approx(126.0, abs=0.5)
+    # What actually matters, and what no rounding can fake: the artwork
+    # covers the whole window.
+    assert left <= win_left
+    assert right >= win_right
+    assert top <= win_top
+    assert bottom >= win_bottom
+
+
+def test_the_plain_jcard_is_still_generatable_on_its_own(qt_app, monkeypatch):
+    """Adding the window variant must not have taken the plain card's own
+    generator away from it."""
+    monkeypatch.setattr(
+        registry,
+        "load_templates",
+        lambda: _templates(disc=[_full_label()], cover=[_jcard(), _jcard_window()]),
+    )
+    window = _window(monkeypatch)
+    window.current_page = PAGE_COVER
+
+    assert window._can_auto_generate_page(PAGE_COVER, _jcard()) is True
+    assert window._can_auto_generate_page(PAGE_COVER, _jcard_window()) is True

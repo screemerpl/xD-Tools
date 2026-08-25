@@ -11,18 +11,43 @@ from pathlib import Path
 import pytest
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
-from mdtools import app_settings, cdburn, decode, foobar
+from mdtools import app_settings, audio_engine, cdburn
 from mdtools.app_window import MainWindow
 from mdtools.panels.burn_dialog import COL_ARTIST, COL_STATUS, COL_TITLE, BurnDialog, _BurnWorker
 from mdtools.project import MEDIUM_CD, MEDIUM_MD
 
 
-def _write_wav(path, *, seconds=10.0, rate=44100):
+class _FakePreviewPlayer:
+    """Stands in for audio_engine.AudioPlayer, for the preview bar's own
+    use -- not the burn worker's, which never touches AudioPlayer at all
+    (it decodes and hands the result straight to cdrecord)."""
+
+    def __init__(self, device=None, gain_db=0.0, samplerate=44100, channels=2):
+        self.stopped = False
+        self.on_finished = None
+
+    def play(self, buffers, on_track_boundary=None, on_finished=None):
+        self.on_finished = on_finished
+
+    def pause(self):
+        pass
+
+    def resume(self):
+        pass
+
+    def seek(self, seconds):
+        pass
+
+    def stop(self):
+        self.stopped = True
+
+
+def _write_wav(path, *, seconds=10.0, rate=44100, channels=2):
     with wave.open(str(path), "wb") as handle:
-        handle.setnchannels(2)
+        handle.setnchannels(channels)
         handle.setsampwidth(2)
         handle.setframerate(rate)
-        handle.writeframes(b"\x00" * int(rate * seconds) * 4)
+        handle.writeframes(b"\x00" * int(rate * seconds) * 2 * channels)
     return path
 
 
@@ -46,20 +71,21 @@ def burnable(monkeypatch):
 # -- what the dialog shows before anything is written --------------------
 
 
-def test_each_track_gets_a_verdict_before_the_button(qt_app, tmp_path, burnable, monkeypatch):
-    """With no resampler around, a hi-res track is a wall; the button has
-    to say so rather than let a disc be spent finding out."""
-    monkeypatch.setattr(decode, "can_convert", lambda: False)
-    sources = _sources(tmp_path, 1) + [(_write_wav(tmp_path / "hi.wav", rate=48000), "Hi-res", "A")]
+def test_each_track_gets_a_verdict_before_the_button(qt_app, tmp_path, burnable):
+    """A surround file is a wall -- audio_engine deliberately doesn't mix
+    channels -- and the button has to say so rather than let a disc be
+    spent finding out."""
+    sources = _sources(tmp_path, 1) + [
+        (_write_wav(tmp_path / "surround.wav", rate=48000, channels=6), "Surround", "A")
+    ]
     dialog = BurnDialog(sources, album="Album", artist="Artist")
 
     assert dialog.table.item(0, COL_STATUS).text() == "OK"
-    assert "44100" in dialog.table.item(1, COL_STATUS).text()
+    assert "48000" in dialog.table.item(1, COL_STATUS).text()
     assert dialog.burn_button.isEnabled() is False, "a disc that cannot be written must not offer to be"
 
 
-def test_a_track_that_will_be_converted_says_so_without_blocking_the_burn(qt_app, tmp_path, burnable, monkeypatch):
-    monkeypatch.setattr(decode, "can_convert", lambda: True)
+def test_a_track_that_will_be_converted_says_so_without_blocking_the_burn(qt_app, tmp_path, burnable):
     sources = _sources(tmp_path, 1) + [(_write_wav(tmp_path / "hi.wav", rate=48000), "Hi-res", "A")]
 
     dialog = BurnDialog(sources, album="Album", artist="Artist")
@@ -176,6 +202,40 @@ def test_a_simulated_run_is_not_described_as_writing_a_disc(qt_app, tmp_path, bu
     dialog._start()
 
     assert asked and "Nothing will be written" in asked[0]
+
+
+# -- the audition preview bar (#18) ---------------------------------------
+
+
+def test_selecting_a_track_enables_the_preview_bar_with_correct_prev_next(qt_app, tmp_path, burnable):
+    dialog = BurnDialog(_sources(tmp_path, 3), album="Album", artist="Artist")
+
+    dialog.table.setCurrentCell(0, 0)
+    assert dialog.preview_bar.play_btn.isEnabled()
+    assert not dialog.preview_bar.prev_btn.isEnabled()
+    assert dialog.preview_bar.next_btn.isEnabled()
+
+    dialog.table.setCurrentCell(2, 0)
+    assert dialog.preview_bar.prev_btn.isEnabled()
+    assert not dialog.preview_bar.next_btn.isEnabled()
+
+
+def test_starting_the_burn_stops_any_playing_preview(qt_app, tmp_path, burnable, monkeypatch):
+    monkeypatch.setattr(audio_engine, "AudioPlayer", _FakePreviewPlayer)
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Ok)
+    dialog = BurnDialog(_sources(tmp_path, 2), album="Album", artist="Artist")
+    # _burn_current_disc() spins up the real worker/scratch-folder machinery
+    # -- out of scope here, which is only checking that preview_bar.stop()
+    # is reached once the confirmation is accepted.
+    monkeypatch.setattr(dialog, "_burn_current_disc", lambda: None)
+    dialog.table.setCurrentCell(0, 0)
+    dialog.preview_bar._on_play_pause_clicked()
+    preview_player_instance = dialog.preview_bar._player
+    assert preview_player_instance is not None
+
+    dialog._start()
+
+    assert preview_player_instance.stopped
 
 
 # -- the worker ----------------------------------------------------------
@@ -329,39 +389,6 @@ def test_an_empty_folder_says_so_rather_than_opening_an_empty_dialog(qt_app, tmp
     MainWindow(show_startup_dialog=False)._burn_cd_from_folder()
 
     assert warned
-
-
-def test_burning_from_foobar_uses_the_playlists_own_paths_and_titles(qt_app, tmp_path, monkeypatch):
-    items = [
-        foobar.PlaylistItem(
-            track_number="1",
-            title="Feel Invincible",
-            album_artist="Skillet",
-            album="Unleashed",
-            date="2016",
-            length_seconds=213,
-            artist="Skillet",
-            path=str(tmp_path / "01.flac"),
-        )
-    ]
-    monkeypatch.setattr(
-        foobar.FoobarClient, "current_playlist", lambda self: foobar.Playlist(id="p1", title="Default", item_count=1, is_current=True)
-    )
-    monkeypatch.setattr(foobar.FoobarClient, "playlist_items", lambda self, playlist_id, limit=500: items)
-
-    captured = {}
-    monkeypatch.setattr(
-        MainWindow,
-        "_run_burn_dialog",
-        lambda self, sources, *, album, artist, year: captured.update(
-            sources=sources, album=album, artist=artist
-        ),
-    )
-
-    MainWindow(show_startup_dialog=False)._burn_cd_from_foobar()
-
-    assert captured["sources"] == [(tmp_path / "01.flac", "Feel Invincible", "Skillet")]
-    assert (captured["album"], captured["artist"]) == ("Unleashed", "Skillet")
 
 
 def test_a_written_disc_offers_its_details_to_an_open_cd_project(qt_app, tmp_path, monkeypatch, burnable):

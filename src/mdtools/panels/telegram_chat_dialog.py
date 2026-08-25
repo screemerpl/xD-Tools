@@ -59,7 +59,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mdtools import album_sort, app_settings, i18n, telegram_bot
+from mdtools import album_sort, app_settings, cdrip, i18n, telegram_bot, user_paths
 from mdtools import translate as mdtools_translate
 
 # Inline photo previews are scaled down to this width if wider -- large
@@ -72,6 +72,22 @@ _PHOTO_MAX_WIDTH = 320
 # arriving as a burst of file messages used to start every one of them
 # immediately, with no limit at all.
 _MAX_CONCURRENT_DOWNLOADS = 3
+
+
+def _guess_image_extension(data: bytes) -> str:
+    """A Telegram "photo" carries no filename at all (see ChatMessage.
+    is_photo's own docstring), so there is no extension to reuse the way a
+    real file attachment's own name already provides one -- sniffed from
+    the bytes' own magic number instead of trusting a guess. Telegram
+    photos are JPEG almost universally, which is also the fallback for
+    anything unrecognised."""
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return ".png"
+    if data.startswith(b"GIF87a") or data.startswith(b"GIF89a"):
+        return ".gif"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return ".webp"
+    return ".jpg"
 
 # A progress callback fires often; recomputing speed on every single call
 # makes it noisy (dividing a tiny byte delta by a tiny time delta). Only
@@ -118,7 +134,14 @@ def pick_album_folder(parent, root: Path) -> tuple[Path, bool]:
     notes already prescribe for a translatable string in a plain
     module-level function -- see project.py's metadata_menu_entries() and
     layers_panel.py's module-level _label_for()."""
-    subfolders = sorted(p for p in root.iterdir() if p.is_dir())
+    # "burn" is cdrip.py's own reserved scratch subfolder name
+    # (RESERVED_SCRATCH_DIRNAMES) -- CD burning works there, never in this
+    # folder directly. Excluded here so it never shows up as if it were
+    # something to record. (Ripping has no scratch folder of its own --
+    # ripped files land directly in this shared folder and stay there.)
+    subfolders = sorted(
+        p for p in root.iterdir() if p.is_dir() and p.name not in cdrip.RESERVED_SCRATCH_DIRNAMES
+    )
     if len(subfolders) <= 1:
         return root, True
     names = [p.name for p in subfolders]
@@ -361,6 +384,21 @@ class _ChatWorker(QThread):
             self._loop.call_soon_threadsafe(self._cancel_event.set)
 
 
+class _ClickableImageLabel(QLabel):
+    """A photo preview that is also the button for saving it -- same
+    press-then-release-inside-the-label pattern as cover_preview.py's own
+    CoverPreview, reused here rather than duplicated by accident: a press
+    that wanders off the label before letting go is how anyone cancels a
+    misclick, on either widget."""
+
+    clicked = Signal()
+
+    def mouseReleaseEvent(self, event) -> None:
+        if event.button() == Qt.MouseButton.LeftButton and self.rect().contains(event.position().toPoint()):
+            self.clicked.emit()
+        super().mouseReleaseEvent(event)
+
+
 class _MessageWidget(QWidget):
     """One row in the transcript -- plain text, an inline photo preview,
     and/or a row of inline buttons. Not a chat-bubble look, matching this
@@ -374,6 +412,7 @@ class _MessageWidget(QWidget):
     _on_file_message() routes it to the queue instead of here."""
 
     button_clicked = Signal(int, int, int)  # message_id, row, col
+    photo_save_requested = Signal(int)  # message_id
 
     def __init__(self, message: telegram_bot.ChatMessage, bot_name: str, parent=None):
         super().__init__(parent)
@@ -404,10 +443,15 @@ class _MessageWidget(QWidget):
 
         # A Telegram "photo" has no filename (see ChatMessage.is_photo's
         # own docstring) -- shown inline here, not routed to the download
-        # queue the way a real file attachment is.
-        self.photo_label: QLabel | None = None
+        # queue the way a real file attachment is. The bytes behind the
+        # preview are kept on the widget (set_photo()) so clicking it to
+        # save doesn't have to re-download anything already on screen.
+        self.photo_label: _ClickableImageLabel | None = None
+        self._photo_bytes: bytes | None = None
         if message.is_photo:
-            self.photo_label = QLabel(self.tr("Loading image..."))
+            self.photo_label = _ClickableImageLabel(self.tr("Loading image..."))
+            self.photo_label.setToolTip(self.tr("Click to save this image"))
+            self.photo_label.clicked.connect(lambda: self.photo_save_requested.emit(self.message_id))
             layout.addWidget(self.photo_label)
 
         for row_index, row in enumerate(message.buttons):
@@ -428,6 +472,7 @@ class _MessageWidget(QWidget):
         if not pixmap.loadFromData(data):
             self.photo_label.setText(self.tr("Could not display image"))
             return
+        self._photo_bytes = data
         if pixmap.width() > _PHOTO_MAX_WIDTH:
             pixmap = pixmap.scaledToWidth(_PHOTO_MAX_WIDTH, Qt.TransformationMode.SmoothTransformation)
         self.photo_label.setPixmap(pixmap)
@@ -438,11 +483,6 @@ class _MessageWidget(QWidget):
         self.translation_label.setText(self.tr("Translated: {text}").format(text=html.escape(translated)))
         self.translation_label.setVisible(True)
 
-
-# What the dialog was closed *for*. The folder alone cannot say, since a
-# downloaded album can go to either medium.
-RECORD = "record"
-BURN = "burn"
 
 
 class _DownloadQueueItem(QWidget):
@@ -457,6 +497,11 @@ class _DownloadQueueItem(QWidget):
     def __init__(self, message: telegram_bot.ChatMessage, parent=None):
         super().__init__(parent)
         self.message_id = message.id
+        # Read by TelegramChatDialog's own aggregate summary -- kept here
+        # rather than re-derived, since this is the one place that already
+        # has the original message to read it from.
+        self.file_size = message.file_size
+        self.last_speed_bps: float | None = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
@@ -513,15 +558,18 @@ class _DownloadQueueItem(QWidget):
         speed = (current - self._last_bytes) / elapsed
         self._last_update_time = now
         self._last_bytes = current
+        self.last_speed_bps = speed
         self.status_label.setText(self.tr("Downloading... ({speed}/s)").format(speed=_human_size(int(speed))))
 
     def set_downloaded(self) -> None:
         self.progress.setValue(100)
         self.status_label.setText(self.tr("Saved"))
+        self.last_speed_bps = None
 
     def set_download_failed(self, error: str) -> None:
         self.status_label.setText(self.tr("Failed: {error}").format(error=error))
         self.retry_btn.setVisible(True)
+        self.last_speed_bps = None
 
 
 class TelegramChatDialog(QDialog):
@@ -562,13 +610,20 @@ class TelegramChatDialog(QDialog):
         # _update_continue_button() below, which both refuse to run while
         # this is non-empty.
         self._active_downloads: set[int] = set()
+        # message ids whose most recent attempt ended in download_failed --
+        # discarded again the moment a retry restarts them. Both this and
+        # _download_progress below exist purely to feed _update_queue_summary().
+        self._failed_downloads: set[int] = set()
+        # message id -> (bytes so far, total bytes) for every queued file
+        # with a known size -- an aggregate progress needs each item's own
+        # current position, not just whichever one last emitted a signal.
+        self._download_progress: dict[int, tuple[int, int]] = {}
         # Read by app_window.py after exec() == Accepted, and handed to
-        # _record_folder_dialog()/_burn_folder() exactly like a folder
-        # picked by hand. `downloaded_action` says which of the two the
-        # user asked for -- the folder alone cannot, since a download can
-        # go to either medium.
+        # _record_folder_dialog() exactly like a folder picked by hand --
+        # that dispatches to burning itself on a CD project, so this dialog
+        # only ever needs the one "Record" button now, whatever medium the
+        # open project turns out to be.
         self.downloaded_folder: str | None = None
-        self.downloaded_action: str = RECORD
 
         layout = QVBoxLayout(self)
 
@@ -608,6 +663,14 @@ class TelegramChatDialog(QDialog):
         queue_title = self.tr("Downloads")
         queue_header = QLabel(f"<b>{queue_title}</b>")
         queue_pane_layout.addWidget(queue_header)
+        # An aggregate line -- queued/active/done counts, overall progress,
+        # summed speed -- fed by the same download_started/progress/
+        # finished/failed signals every per-row _DownloadQueueItem already
+        # reacts to (#7). Hidden until there's anything to report at all.
+        self.queue_summary_label = QLabel()
+        self.queue_summary_label.setWordWrap(True)
+        self.queue_summary_label.setVisible(False)
+        queue_pane_layout.addWidget(self.queue_summary_label)
         self.queue_scroll_area = QScrollArea()
         self.queue_scroll_area.setWidgetResizable(True)
         self._queue = QWidget()
@@ -648,6 +711,12 @@ class TelegramChatDialog(QDialog):
         send_row.addWidget(self.message_edit, 1)
         self.send_btn = QPushButton(self.tr("Send"))
         self.send_btn.setEnabled(False)
+        # Without this, Qt falls back to the first enabled AcceptRole
+        # button in the QDialogButtonBox below the moment focus leaves
+        # whatever held it initially -- which made pressing Enter in this
+        # field also fire "Record Downloaded Albums...", opening the album
+        # picker. Reported directly.
+        self.send_btn.setDefault(True)
         self.send_btn.clicked.connect(self._on_send)
         send_row.addWidget(self.send_btn)
         layout.addLayout(send_row)
@@ -670,18 +739,15 @@ class TelegramChatDialog(QDialog):
         self.buttons = QDialogButtonBox()
         self.continue_btn = QPushButton(self.tr("Record Downloaded Albums..."))
         self.continue_btn.setEnabled(False)
+        self.continue_btn.setAutoDefault(False)
         self.continue_btn.clicked.connect(self._on_continue_clicked)
         self.buttons.addButton(self.continue_btn, QDialogButtonBox.ButtonRole.AcceptRole)
-        self.burn_btn = QPushButton(self.tr("Burn Downloaded Album to CD..."))
-        self.burn_btn.setEnabled(False)
-        self.burn_btn.clicked.connect(self._on_burn_clicked)
-        self.buttons.addButton(self.burn_btn, QDialogButtonBox.ButtonRole.AcceptRole)
         self.close_btn = QPushButton(self.tr("Close"))
+        self.close_btn.setAutoDefault(False)
         self.close_btn.clicked.connect(self.reject)
         self.buttons.addButton(self.close_btn, QDialogButtonBox.ButtonRole.RejectRole)
         layout.addWidget(self.buttons)
         self._update_continue_button()
-        self._update_burn_button()
 
         # Deliberately *not* called here -- see start_connecting()'s own
         # docstring for why plain construction has to stay inert, and
@@ -743,7 +809,6 @@ class TelegramChatDialog(QDialog):
         # this session downloads anything at all.
         self._update_sort_button()
         self._update_continue_button()
-        self._update_burn_button()
 
     def _on_not_authorized(self) -> None:
         self.status_label.setText(self.tr("Not signed in to Telegram."))
@@ -794,6 +859,7 @@ class TelegramChatDialog(QDialog):
 
         widget = _MessageWidget(message, self._bot_name)
         widget.button_clicked.connect(self._on_button_clicked)
+        widget.photo_save_requested.connect(self._on_photo_save_requested)
         self._message_widgets[message.id] = widget
         self._transcript_layout.insertWidget(index, widget)
         # No explicit scroll call here -- the rangeChanged connection set up
@@ -815,6 +881,13 @@ class TelegramChatDialog(QDialog):
         item.retry_requested.connect(self._on_download_requested)
         self._queue_items[message.id] = item
         self._queue_layout.insertWidget(self._queue_layout.count() - 1, item)
+        # Seeded at 0/file_size (not just once downloading actually starts)
+        # so a still-queued file already contributes its own full size to
+        # the aggregate's denominator -- "overall progress" means across
+        # the whole batch shown in this panel, not only whichever files
+        # happen to be active right now.
+        self._download_progress[message.id] = (0, message.file_size or 0)
+        self._update_queue_summary()
 
     def _scroll_to_bottom(self, minimum: int = 0, maximum: int = 0) -> None:
         """Connected directly to QScrollBar.rangeChanged(min, max), hence
@@ -847,6 +920,26 @@ class TelegramChatDialog(QDialog):
     def _on_click_failed(self, message: str) -> None:
         self.status_label.setText(self.tr("Could not do that: {error}").format(error=message))
 
+    def _on_photo_save_requested(self, message_id: int) -> None:
+        """Saves a photo already shown inline in the transcript -- the
+        bytes are already on the widget (set when the preview finished
+        loading), so this never re-downloads anything. A project's own
+        cover art lives inside the .mdproj once chosen; this is only for
+        keeping a picture the bot sent before it has a project to belong
+        to at all, hence a folder of its own (user_paths.artwork_dir())
+        rather than reusing gallery.downloaded_covers_dir()."""
+        widget = self._message_widgets.get(message_id)
+        if widget is None or widget._photo_bytes is None:
+            return
+        data = widget._photo_bytes
+        path = user_paths.artwork_dir() / f"telegram-photo-{message_id}{_guess_image_extension(data)}"
+        try:
+            path.write_bytes(data)
+        except OSError as exc:
+            self.status_label.setText(self.tr("Could not save image: {error}").format(error=exc))
+            return
+        self.status_label.setText(self.tr("Saved image to {path}").format(path=str(path)))
+
     # --- downloading ---------------------------------------------------
 
     def _on_download_requested(self, message_id: int) -> None:
@@ -860,33 +953,88 @@ class TelegramChatDialog(QDialog):
         if item is not None:
             item.set_downloading()
         self._active_downloads.add(message_id)
+        # A retry restarting a previously-failed download -- no longer
+        # failed, and its progress (if any survived from the failed
+        # attempt) starts over from zero.
+        self._failed_downloads.discard(message_id)
+        self._download_progress[message_id] = (0, item.file_size if item is not None and item.file_size else 0)
         self._update_sort_button()
         self._update_continue_button()
-        self._update_burn_button()
+        self._update_queue_summary()
 
     def _on_download_progress(self, message_id: int, current: int, total: int) -> None:
         item = self._queue_items.get(message_id)
         if item is not None:
             item.set_progress(current, total)
+        self._download_progress[message_id] = (current, total)
+        self._update_queue_summary()
 
     def _on_download_finished(self, message_id: int, path: str) -> None:
         item = self._queue_items.get(message_id)
         if item is not None:
             item.set_downloaded()
+            if item.file_size:
+                self._download_progress[message_id] = (item.file_size, item.file_size)
         self._downloaded_files[message_id] = Path(path)
         self._active_downloads.discard(message_id)
         self._update_sort_button()
         self._update_continue_button()
-        self._update_burn_button()
+        self._update_queue_summary()
 
     def _on_download_failed(self, message_id: int, error: str) -> None:
         item = self._queue_items.get(message_id)
         if item is not None:
             item.set_download_failed(error)
         self._active_downloads.discard(message_id)
+        self._failed_downloads.add(message_id)
         self._update_sort_button()
         self._update_continue_button()
-        self._update_burn_button()
+        self._update_queue_summary()
+
+    def _update_queue_summary(self) -> None:
+        """The aggregate line above the download queue (#7) -- counts plus
+        an overall progress and a summed speed, all derived from state the
+        four handlers above already keep (nothing new is asked of
+        _ChatWorker for this)."""
+        total = len(self._queue_items)
+        if total == 0:
+            self.queue_summary_label.setVisible(False)
+            return
+
+        active = len(self._active_downloads)
+        failed = len(self._failed_downloads)
+        finished = len(self._downloaded_files)
+        queued = max(0, total - active - failed - finished)
+
+        current_bytes = 0
+        known_total_bytes = 0
+        for message_id in self._queue_items:
+            current, item_total = self._download_progress.get(message_id, (0, 0))
+            if item_total:
+                current_bytes += current
+                known_total_bytes += item_total
+
+        speed_bps = sum(
+            item.last_speed_bps or 0.0
+            for message_id, item in self._queue_items.items()
+            if message_id in self._active_downloads
+        )
+
+        parts = [self.tr("{finished}/{total} done").format(finished=finished, total=total)]
+        if queued:
+            parts.append(self.tr("{count} queued").format(count=queued))
+        if active:
+            parts.append(self.tr("{count} downloading").format(count=active))
+        if failed:
+            parts.append(self.tr("{count} failed").format(count=failed))
+        if known_total_bytes:
+            percent = int(current_bytes * 100 / known_total_bytes)
+            parts.append(self.tr("{percent}% overall").format(percent=percent))
+        if speed_bps > 0:
+            parts.append(self.tr("{speed}/s").format(speed=_human_size(int(speed_bps))))
+
+        self.queue_summary_label.setText(" · ".join(parts))
+        self.queue_summary_label.setVisible(True)
 
     # --- folder-level actions -------------------------------------------------
 
@@ -956,29 +1104,7 @@ class TelegramChatDialog(QDialog):
             self.continue_btn.setEnabled(True)
             self.continue_btn.setToolTip("")
 
-    def _update_burn_button(self) -> None:
-        """The same reasons as the record button, minus one: **burning is
-        never gated on the MDRem adapter**, because it needs the drive and
-        not the infrared. Copying that gate over would have hidden CD
-        burning from exactly the person most likely to want it -- somebody
-        without an adapter."""
-        if self._active_downloads:
-            self.burn_btn.setEnabled(False)
-            self.burn_btn.setToolTip(self.tr("Wait for the current download(s) to finish first."))
-        elif not self._has_anything_to_record():
-            self.burn_btn.setEnabled(False)
-            self.burn_btn.setToolTip(self.tr("Download at least one file first."))
-        else:
-            self.burn_btn.setEnabled(True)
-            self.burn_btn.setToolTip("")
-
-    def _on_burn_clicked(self) -> None:
-        self._finish_with(BURN)
-
     def _on_continue_clicked(self) -> None:
-        self._finish_with(RECORD)
-
-    def _finish_with(self, action: str) -> None:
         if self._session_folder is None:
             return
         session_folder = Path(self._session_folder)
@@ -994,7 +1120,6 @@ class TelegramChatDialog(QDialog):
         if not ok:
             return
         self.downloaded_folder = str(folder)
-        self.downloaded_action = action
         self.accept()
 
     def _open_download_folder(self) -> None:
@@ -1025,7 +1150,6 @@ class TelegramChatDialog(QDialog):
         # showing the state from before the click.
         self._update_sort_button()
         self._update_continue_button()
-        self._update_burn_button()
 
     # --- photo previews / translation ---------------------------------------
 

@@ -318,8 +318,18 @@ _EXPLICIT_MAP = {
     "þ": "th", "Þ": "Th", "ð": "d", "Ð": "D",
     "‘": "'", "’": "'", "‚": ",",
     "“": '"', "”": '"', "„": '"',
-    "–": "-", "—": "-", "…": "...",
-    " ": " ", "×": "x", "·": "-",
+    # U+2010 HYPHEN, U+2011 NON-BREAKING HYPHEN, U+2012 FIGURE DASH, en
+    # dash, em dash, U+2212 MINUS SIGN -- none of these has an NFKD
+    # decomposition to the plain ASCII "-" (confirmed directly: HYPHEN's
+    # own decomposition is itself), so without an explicit entry each one
+    # falls all the way through to `dropped` instead of degrading to a
+    # hyphen. Real report: a MusicBrainz artist name using U+2010 for
+    # "blink‐182" reached cdrip.py's own sanitize_filename() (which
+    # reuses this function) and broke a rip -- see that module's own
+    # docstring.
+    "‐": "-", "‑": "-", "‒": "-", "–": "-", "—": "-", "−": "-",
+    "…": "...",
+    " ": " ", "×": "x", "·": "-",
 }
 
 

@@ -7,35 +7,26 @@ A rate or depth mismatch is then something the burn dialog can show per
 track, before the disc is committed, rather than a failure discovered by a
 burner half way through a disc it cannot un-burn.
 
-Only WAV and FLAC are read, and deliberately:
+**Only WAV and FLAC, mono or stereo, at any rate or bit depth -- and
+getting Red Book PCM out of either needs no external tool at all any
+more.** An already-Red-Book FLAC decodes losslessly through
+`audio_engine.decode_flac_to_wav()`; anything else goes through
+`audio_engine.resample_and_dither_to_red_book()` (soxr for the rate,
+the project's own verified noise-shaped dither for the bit depth). Both
+are backed by `soundfile` (libsndfile), which decodes FLAC directly at
+any bit depth, including 24-bit -- where `flac.exe` used to be needed for
+the decode half and SoX for the resample+dither half of the very same
+file. `_ensure_pcm()` is the single place that decides.
 
-- WAV needs nothing at all (stdlib `wave`).
-- FLAC is decoded by the `flac.exe` this project already bundles for
-  ripping, so supporting it costs no new dependency and no new megabytes.
-- Anything at a different rate or bit depth -- a 48 kHz / 24-bit download
-  is the normal case, not an exotic one -- goes through **SoX**, which is
-  the only piece here that can resample. `_ensure_pcm()` is the single
-  place that decides, so nothing above this module knows which tool ran.
-
-**SoX rather than ffmpeg, and the reason was measured rather than
-assumed.** ffmpeg was the first choice (it would have brought MP3, M4A and
-Opus with it), but the Windows builds are 128 MB of DLLs -- `avcodec`
-alone is 68 MB, past the size GitHub warns about, and every clone would
-carry it. SoX does the one thing actually needed, resampling, in 6 MB.
-What it costs is breadth: this build reads FLAC, WAV, Ogg Vorbis, WavPack
-and AIFF, and **not MP3** -- the format is in its list, but decoding one
-needs `libmad-0.dll` loaded at runtime and the official package does not
-ship it (verified by running it: writing an MP3 fails with "Unable to load
-LAME encoder library"). Dropping a 32-bit `libmad-0.dll` beside `sox.exe`
-would enable it without any change here.
-
-**Without a resampler, a file that is not already 44.1 kHz / 16-bit /
-stereo is reported rather than converted**, and that is deliberate rather
-than a limitation to route around: `flac.exe` cannot resample, so the
-alternative would be writing something onto a CD that is not what the user
-chose -- exactly the class of mistake this module exists to prevent. With
-SoX present the same file is converted, and the plan says so before
-anything is written (see cdburn.RESAMPLED).
+**Explicit scope decision, not a limitation being routed around: nothing
+except WAV and FLAC is supported, and a source with more than two
+channels (real-world surround audio) is refused rather than mixed down.**
+Earlier versions of this module used SoX for Ogg Vorbis, WavPack, AIFF
+and AU, and for channel mixing -- SoX has been dropped entirely rather
+than kept around for those, since none of them are formats this project
+actually needs to support. A future MP3/Ogg Vorbis *decode* is expected
+to go through `soundfile`/libsndfile directly (confirmed to read both),
+not by reviving SoX.
 
 No Qt here: this is a plain module, like cdrip.py and mdrem.py, so all of
 it is testable without a QApplication.
@@ -43,18 +34,12 @@ it is testable without a QApplication.
 
 from __future__ import annotations
 
-import re
 import shutil
 import struct
-import subprocess
 import wave
 from dataclasses import dataclass
 from pathlib import Path
 
-import sys
-
-from mdtools import cdrip
-from mdtools.cdrip import find_tool, flac_path
 from mdtools.embedded_cover import iter_flac_blocks
 
 # Red Book audio, as fixed as physical constants get: 44.1 kHz, 16-bit,
@@ -68,11 +53,6 @@ FRAMES_PER_SECOND = 75
 # Read without any help: stdlib for WAV, this project's own parser for
 # FLAC's STREAMINFO.
 NATIVE_SUFFIXES = (".wav", ".flac")
-
-# Read only when SoX is available, and only what the bundled build can
-# actually open without extra libraries -- MP3 is deliberately absent, see
-# this module's header.
-CONVERTIBLE_SUFFIXES = (".ogg", ".oga", ".wv", ".aiff", ".aif", ".au")
 
 SUPPORTED_SUFFIXES = NATIVE_SUFFIXES  # kept: callers ask "can I read this?"
 
@@ -125,37 +105,8 @@ class AudioProperties:
         return wrong
 
 
-def sox_path() -> str | None:
-    """The bundled SoX if there is one, otherwise whatever is on PATH.
-
-    **In a folder of its own**, unlike every other bundled tool, and that
-    is not tidiness: the official SoX package is 32-bit, while cd-paranoia
-    and flac are 64-bit builds from MSYS2. Unpacking it beside them
-    overwrote `libwinpthread-1.dll` with a 32-bit copy of the same name --
-    which happened not to break cd-paranoia, purely because it does not
-    import that DLL directly. `zlib1.dll` and `libpng16-16.dll` are just as
-    common, and the next tool added might not be so lucky. One folder per
-    architecture is the fix; Windows resolves an exe's DLLs from its own
-    directory first, so each set stays with its own binary.
-    """
-    bundled = cdrip.tools_dir() / "sox" / ("sox.exe" if sys.platform == "win32" else "sox")
-    if bundled.is_file():
-        return str(bundled)
-    return find_tool("sox")
-
-
-def can_convert() -> bool:
-    """Whether anything can be resampled at all, i.e. whether SoX is there.
-    The burn plan asks this before deciding that a 48 kHz album is a
-    problem rather than a conversion."""
-    return sox_path() is not None
-
-
 def is_supported(path: Path | str) -> bool:
-    suffix = Path(path).suffix.lower()
-    if suffix in NATIVE_SUFFIXES:
-        return True
-    return suffix in CONVERTIBLE_SUFFIXES and can_convert()
+    return Path(path).suffix.lower() in NATIVE_SUFFIXES
 
 
 def analyze(path: Path | str) -> AudioProperties:
@@ -171,8 +122,6 @@ def analyze(path: Path | str) -> AudioProperties:
         return wav_properties(path)
     if suffix == ".flac":
         return flac_properties(path)
-    if suffix in CONVERTIBLE_SUFFIXES and can_convert():
-        return sox_properties(path)
     raise DecodeError(f"unsupported audio format: {path.suffix or path.name}")
 
 
@@ -216,134 +165,43 @@ def flac_properties(path: Path | str) -> AudioProperties:
     raise DecodeError(f"no FLAC stream info in {Path(path).name}")
 
 
-_INFO_FIELD = re.compile(r"^(Channels|Sample Rate|Precision|Duration)\s*:\s*(.+)$", re.MULTILINE)
-_SAMPLES = re.compile(r"=\s*(\d+)\s+samples")
-_PRECISION = re.compile(r"(\d+)")
-
-
-def sox_properties(path: Path | str, *, run=subprocess.run) -> AudioProperties:
-    """What SoX says a file is, from its own `--i` header.
-
-    Only used for formats this module cannot read itself; WAV and FLAC are
-    parsed directly, which needs no subprocess at all. The duration matters
-    most -- it decides how much of the disc a track takes -- and SoX gives
-    it as an exact sample count rather than a rounded time, which is why
-    that is what gets read.
-    """
-    tool = sox_path()
-    if tool is None:
-        raise DecodeError("SoX is not available")
-    result = run([tool, "--i", str(path)], capture_output=True, text=True)
-    text = (result.stdout or "") + (result.stderr or "")
-
-    fields = {name: value.strip() for name, value in _INFO_FIELD.findall(text)}
-    samples = _SAMPLES.search(fields.get("Duration", ""))
-    if "Sample Rate" not in fields or samples is None:
-        raise DecodeError(f"SoX could not read {Path(path).name}: {_first_line(result.stderr)}")
-
-    precision = _PRECISION.search(fields.get("Precision", "16"))
-    return AudioProperties(
-        sample_rate=int(fields["Sample Rate"]),
-        bits_per_sample=int(precision.group(1)) if precision else 16,
-        channels=int(fields.get("Channels", "2")),
-        frames=int(samples.group(1)),
-    )
-
-
-def decode_command(tool: str, source: Path, destination: Path) -> list[str]:
-    """flac.exe decoding one file to WAV. `-f` overwrites a leftover from an
-    earlier, failed attempt rather than stopping to ask about it; `-s` keeps
-    it from drawing a progress bar nobody is watching."""
-    return [tool, "-d", "-f", "-s", "-o", str(destination), str(source)]
-
-
-def convert_command(tool: str, source: Path, destination: Path) -> list[str]:
-    """SoX turning anything it can read into Red Book PCM.
-
-    `-b 16 -c 2` on the *output* set the depth and channel count; `rate -v`
-    is the resampler (very high quality, which is the whole reason for
-    having SoX here at all), and `dither` is what makes reducing 24 bits to
-    16 sound like the recording rather than like quantisation noise. Effects
-    come after the output file, which is SoX's own argument order and not a
-    mistake.
-    """
-    return [
-        tool,
-        str(source),
-        "-b",
-        str(RED_BOOK_BITS),
-        "-c",
-        str(RED_BOOK_CHANNELS),
-        str(destination),
-        "rate",
-        "-v",
-        str(RED_BOOK_RATE),
-        "dither",
-    ]
-
-
-def to_wav(source: Path | str, destination: Path | str, *, run=subprocess.run) -> Path:
+def to_wav(source: Path | str, destination: Path | str) -> Path:
     """`source` as a Red Book WAV at `destination`.
 
     A WAV that is already Red Book is copied rather than run through
     anything: there is nothing to convert, and re-encoding audio that is
-    already exactly right can only lose to it. Anything else goes through
-    SoX, which resamples -- and without SoX it is refused outright rather
-    than written to a disc at the wrong rate.
+    already exactly right can only lose to it. Anything else -- any
+    rate/bit-depth mismatch, mono or stereo -- goes through audio_engine,
+    which needs no external tool at all. More than two channels is refused
+    outright: see this module's own header for why that is a scope
+    decision, not a limitation being routed around.
     """
     source, destination = Path(source), Path(destination)
     properties = analyze(source)
-    if not properties.is_red_book and not can_convert():
+    if properties.channels > RED_BOOK_CHANNELS:
         raise DecodeError(
-            f"{source.name} is {properties.sample_rate} Hz / {properties.bits_per_sample}-bit / "
-            f"{properties.channels}ch, and a CD needs {RED_BOOK_RATE} / {RED_BOOK_BITS} / "
-            f"{RED_BOOK_CHANNELS}. SoX is missing, so it cannot be converted."
+            f"{source.name} has {properties.channels} channels, and only mono and stereo are supported"
         )
-    return _ensure_pcm(source, destination, run=run)
+    return _ensure_pcm(source, destination, properties)
 
 
-def _ensure_pcm(source: Path, destination: Path, *, run) -> Path:
-    """The one place that turns a supported file into a WAV on disk.
+def _ensure_pcm(source: Path, destination: Path, properties: AudioProperties) -> Path:
+    """WAV or FLAC, mono or stereo -- handled entirely by audio_engine, with
+    no external tool involved at all. Imported here rather than at module
+    level: audio_engine.py itself imports this module for the RED_BOOK_*
+    constants, so a module-level import here would be a straight import
+    cycle (see cdrip.py's own identical note on encode_track())."""
+    from mdtools import audio_engine
 
-    A bundled ffmpeg, if this ever grows one, belongs here and nowhere
-    else: every caller above already thinks in terms of "a path to Red Book
-    WAV", and none of them would need changing.
-    """
     suffix = source.suffix.lower()
-    properties = analyze(source)
-
-    if not properties.is_red_book or suffix not in NATIVE_SUFFIXES:
-        tool = sox_path()
-        if tool is None:
-            raise DecodeError(f"{source.name} needs SoX to be converted, and it was not found")
-        result = run(convert_command(tool, source, destination), capture_output=True, text=True)
-        if result.returncode != 0:
-            raise DecodeError(f"converting {source.name} failed: {_first_line(result.stderr)}")
-        if not destination.exists():
-            raise DecodeError(f"converting {source.name} produced no file")
-        return destination
-
-    if suffix == ".wav":
-        shutil.copyfile(source, destination)
-        return destination
-
-    if suffix == ".flac":
-        tool = flac_path()
-        if tool is None:
-            raise DecodeError("the FLAC decoder is missing (bin/win64/flac.exe, or flac on PATH)")
-        result = run(decode_command(tool, source, destination), capture_output=True, text=True)
-        if result.returncode != 0:
-            raise DecodeError(f"decoding {source.name} failed: {_first_line(result.stderr)}")
-        if not destination.exists():
-            raise DecodeError(f"decoding {source.name} produced no file")
-        return destination
-
-    raise DecodeError(f"unsupported audio format: {source.suffix or source.name}")
-
-
-def _first_line(text: str | None) -> str:
-    for line in (text or "").splitlines():
-        line = line.strip()
-        if line:
-            return line
-    return "no output"
+    try:
+        if properties.is_red_book:
+            if suffix == ".wav":
+                shutil.copyfile(source, destination)
+            else:
+                audio_engine.decode_flac_to_wav(source, destination)
+        else:
+            audio_engine.resample_and_dither_to_red_book(source, destination)
+    except audio_engine.AudioEngineError as exc:
+        raise DecodeError(str(exc)) from exc
+    return destination

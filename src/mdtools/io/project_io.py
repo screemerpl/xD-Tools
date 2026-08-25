@@ -25,18 +25,22 @@ from mdtools.canvas.items import (
     LAYER_ROLE,
     get_item_name,
     get_item_scale,
+    get_text_glow,
+    get_text_shadow,
     set_item_name,
     set_item_scale,
+    set_text_glow,
+    set_text_shadow,
 )
 from mdtools.canvas.scene import DesignScene
 from mdtools.project import (
     MEDIUM_MD,
-    PAGE_DISC,
     GrayscaleAdjustment,
     Project,
     ProjectMetadata,
     TextStyle,
     Track,
+    medium_pages,
 )
 from mdtools.templates.models import CoverTemplate, DiscTemplate
 
@@ -86,6 +90,8 @@ def item_to_dict(item) -> dict | None:
             # Without this a wrapped block comes back as unwrapped single
             # lines -- see item_from_dict, and the J-card note there.
             "text_width": item.textWidth(),
+            "shadow": get_text_shadow(item),
+            "glow": get_text_glow(item),
         }
     if isinstance(item, (QGraphicsRectItem, QGraphicsEllipseItem)):
         rect = item.rect()
@@ -141,6 +147,10 @@ def item_from_dict(scene: DesignScene, item_data: dict):
         if text_width > 0:
             item.setTextWidth(text_width)
         item.setTransformOriginPoint(item.boundingRect().center())
+        # Missing from files written before shadow/glow existed -- False for
+        # both is what those items already looked like.
+        set_text_shadow(item, bool(item_data.get("shadow", False)))
+        set_text_glow(item, bool(item_data.get("glow", False)))
     elif kind in ("rect", "ellipse"):
         item = scene.add_rectangle() if kind == "rect" else scene.add_ellipse()
         width, height = item_data["w"], item_data["h"]
@@ -194,16 +204,20 @@ def item_from_dict(scene: DesignScene, item_data: dict):
     return item
 
 
-def _scene_to_dict(scene: DesignScene) -> dict:
-    items = [
-        d
-        for i in scene.items()
-        if i.data(LAYER_ROLE) not in ("cut", "fold") and (d := item_to_dict(i)) is not None
-    ]
+def scene_to_dict(scene: DesignScene) -> dict:
+    """A page's template plus every print item on it, as one JSON-ready
+    dict -- the unit `project_to_dict()`/`load_project()` save/load one
+    page as, and also what MainWindow's "Regenerate with Font..." preview
+    snapshots a page to before rebuilding it, so a cancelled preview can be
+    rebuilt right back via `scene_from_dict()` rather than needing its own,
+    separate undo path (apply_template(), which every auto-layout call goes
+    through, already resets the undo stack -- there is no QUndoStack entry
+    to undo() back to)."""
+    items = [d for i in scene.print_items() if (d := item_to_dict(i)) is not None]
     return {"template": dict(scene.template.__dict__), "items": items}
 
 
-def _scene_from_dict(data: dict) -> DesignScene:
+def scene_from_dict(data: dict) -> DesignScene:
     template = _template_from_dict(data["template"])
     scene = DesignScene(template)
     for item_data in data.get("items", []):
@@ -263,7 +277,7 @@ def project_to_dict(project: Project) -> dict:
     return {
         "version": PROJECT_VERSION,
         "metadata": _metadata_to_dict(project.metadata),
-        "pages": {key: _scene_to_dict(scene) for key, scene in project.pages.items()},
+        "pages": {key: scene_to_dict(scene) for key, scene in project.pages.items()},
         "default_text_style": _text_style_to_dict(project.default_text_style),
         "grayscale_adjustment": _grayscale_adjustment_to_dict(project.grayscale_adjustment),
         "medium": project.medium,
@@ -278,13 +292,21 @@ def save_project(project: Project, path: str | Path) -> None:
 def load_project(path: str | Path) -> Project:
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     metadata = _metadata_from_dict(data.get("metadata", {}))
-    pages = {key: _scene_from_dict(page_data) for key, page_data in data["pages"].items()}
+    pages = {key: scene_from_dict(page_data) for key, page_data in data["pages"].items()}
+    # A project file written before CD-R support existed has no medium in
+    # it and is a MiniDisc project -- read before the required-pages check
+    # below, since which pages are required depends on it (a cassette has
+    # no disc page at all; requiring one unconditionally rejected every
+    # saved cassette project).
+    medium = data.get("medium", MEDIUM_MD)
     # Whatever pages the file holds, in the order it holds them -- not a
-    # fixed pair. A file *without* a disc page is still a broken file, but
-    # one with a third page is a project from a later version, not an
-    # error, and the app can show what it does understand.
-    if PAGE_DISC not in pages:
-        raise ValueError(f"Project file is missing its '{PAGE_DISC}' page")
+    # fixed pair. A file missing one of its own medium's required pages is
+    # still a broken file, but one with a third, unrecognised page is a
+    # project from a later version, not an error, and the app can show
+    # what it does understand.
+    missing = [mp.page for mp in medium_pages(medium) if not mp.optional and mp.page not in pages]
+    if missing:
+        raise ValueError(f"Project file is missing its {missing!r} page(s)")
     default_text_style = _text_style_from_dict(data.get("default_text_style", {}))
     grayscale_adjustment = _grayscale_adjustment_from_dict(data.get("grayscale_adjustment", {}))
     return Project(
@@ -292,9 +314,7 @@ def load_project(path: str | Path) -> Project:
         pages=pages,
         default_text_style=default_text_style,
         grayscale_adjustment=grayscale_adjustment,
-        # A project file written before CD-R support existed has no medium
-        # in it and is a MiniDisc project.
-        medium=data.get("medium", MEDIUM_MD),
+        medium=medium,
         # A project saved before cassettes existed is not a cassette, so
         # what this says about it does not matter -- the default keeps it
         # a number rather than a None every reader has to guard against.

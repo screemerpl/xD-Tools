@@ -41,17 +41,31 @@ def fake_home(tmp_path, monkeypatch):
 
 
 def test_projects_live_in_a_named_subfolder_of_documents(fake_home):
-    assert user_paths.projects_dir() == fake_home / "Documents" / "MiniDiscProjects"
+    assert user_paths.projects_dir() == fake_home / "Documents" / "XDProjects"
 
 
 def test_the_projects_folder_is_created_on_demand(fake_home):
     """A dialog pointed at a directory that does not exist falls back
     somewhere arbitrary, which is the whole thing being fixed."""
-    assert not (fake_home / "Documents" / "MiniDiscProjects").exists()
+    assert not (fake_home / "Documents" / "XDProjects").exists()
 
     created = user_paths.projects_dir()
 
     assert created.is_dir()
+
+
+def test_printing_lives_in_a_subfolder_of_the_projects_folder(fake_home):
+    assert user_paths.printing_dir() == user_paths.projects_dir() / "printing"
+    assert user_paths.printing_dir().is_dir()
+
+
+def test_audio_lives_in_a_subfolder_of_the_projects_folder(fake_home):
+    """Deliberately not created just by asking -- see audio_dir()'s own
+    docstring for why (it backs a default value read routinely, e.g. from
+    opening Window > Settings, and mkdir-ing as a side effect of that would
+    be too eager)."""
+    assert user_paths.audio_dir() == user_paths.documents_dir() / user_paths.PROJECTS_FOLDER_NAME / "Audio"
+    assert not user_paths.audio_dir().exists()
 
 
 def test_a_read_only_documents_falls_back_rather_than_raising(fake_home, monkeypatch):
@@ -92,13 +106,13 @@ def test_a_saved_project_reopens_where_it_actually_lives(fake_home, tmp_path):
     assert user_paths.project_start_path(elsewhere) == elsewhere
 
 
-def test_exports_land_beside_the_project_they_came_from(fake_home, tmp_path):
+def test_exports_always_land_in_the_printing_folder(fake_home, tmp_path):
+    """Not beside whichever project happened to be open -- every export
+    (from a saved project or an unsaved one alike) lands in one
+    predictable place."""
     project = str(tmp_path / "albums" / "thing.mdproj")
-    assert user_paths.export_start_path(project) == str(tmp_path / "albums")
-
-
-def test_exports_from_an_unsaved_project_fall_back_to_the_projects_folder(fake_home):
-    assert user_paths.export_start_path(None) == str(user_paths.projects_dir())
+    assert user_paths.export_start_path(project) == str(user_paths.printing_dir())
+    assert user_paths.export_start_path(None) == str(user_paths.printing_dir())
 
 
 # --- the suggested filename -------------------------------------------
@@ -188,14 +202,30 @@ def test_add_image_starts_in_pictures(qt_app, fake_home, monkeypatch):
     assert seen == [str(fake_home / "Pictures")]
 
 
-def test_exports_start_beside_a_saved_project(qt_app, fake_home, monkeypatch, tmp_path):
+def test_exports_start_in_the_printing_folder(qt_app, fake_home, monkeypatch, tmp_path):
     seen = _capture(monkeypatch, QFileDialog, "getSaveFileName")
     window = MainWindow(show_startup_dialog=False)
     window.current_project_path = str(tmp_path / "here" / "thing.mdproj")
 
     window._export_svg()
 
-    assert seen == [str(tmp_path / "here")]
+    assert seen == [str(user_paths.printing_dir())]
+
+
+def test_exports_suggest_the_same_name_save_as_would(qt_app, fake_home, monkeypatch):
+    """Same base name as Save As uses for the project itself ("Artist -
+    Album (Year) -MD"), just the export's own extension -- so the cut/print
+    set for an album is named to match its own .mdproj at a glance."""
+    saves = _capture(monkeypatch, QFileDialog, "getSaveFileName")
+    window = MainWindow(show_startup_dialog=False)
+    window.project.metadata = ProjectMetadata(album="Album", artist="Artist", year=1999, tracks=[Track("A")])
+
+    window._export_svg()
+    window._export_png()
+
+    expected = str(user_paths.printing_dir() / "Artist - Album (1999) -MD.svg")
+    expected_png = str(user_paths.printing_dir() / "Artist - Album (1999) -MD.png")
+    assert saves == [expected, expected_png]
 
 
 def test_the_album_folder_picker_starts_in_music(qt_app, fake_home, monkeypatch):

@@ -2,8 +2,8 @@
 extracting it to tagged FLAC files that foobar2000 can then play into the
 deck.
 
-The actual work is done by two bundled command line programs rather than
-by talking to the drive ourselves -- see `bin/win64/ATTRIBUTION.md`:
+Reading the disc itself is done by a bundled command line program rather
+than by talking to the drive ourselves -- see `bin/win64/ATTRIBUTION.md`:
 
 - **cd-paranoia** (libcdio's maintained port of Xiph's cdparanoia), which
   is what makes this worth doing at all. Windows will happily hand you a
@@ -12,13 +12,22 @@ by talking to the drive ourselves -- see `bin/win64/ATTRIBUTION.md`:
   jitter correction and re-reads on scratches. That is the entire subject
   cdparanoia exists for, and reimplementing it over `IOCTL_CDROM_RAW_READ`
   would be a worse version of it.
-- **flac**, to encode what came off the disc.
 
-Both are located through `tools_dir()`, which mirrors `gallery.gallery_dir()`
-/ `icons.icons_dir()` exactly: `bin/<platform>` beside the source checkout in
-dev mode, or inside a PyInstaller bundle's `sys._MEIPASS` in a frozen build.
-Nothing is bundled for Linux -- there `find_tool()` falls through to PATH,
-where a distro's own `cdparanoia`/`flac` packages live.
+Encoding what came off the disc, previously the bundled `flac.exe`, is now
+`audio_engine.encode_wav_to_flac()` -- `soundfile` (libsndfile), which
+writes the FLAC and its tags in one pass, no subprocess involved.
+decode.py's own FLAC *decoding* went the same way, so the bundled
+`flac.exe` binary is not actually required by anything in this codebase
+any more -- `flac_path()` is kept as a small, harmless locator function
+(nothing currently calls it), and the binary itself is left bundled rather
+than pulled out in the same change that stopped needing it.
+
+cd-paranoia is located through `tools_dir()`, which mirrors
+`gallery.gallery_dir()` / `icons.icons_dir()` exactly: `bin/<platform>`
+beside the source checkout in dev mode, or inside a PyInstaller bundle's
+`sys._MEIPASS` in a frozen build. Nothing is bundled for Linux -- there
+`find_tool()` falls through to PATH, where a distro's own `cdparanoia`
+package lives.
 
 No Qt anywhere in here, matching mdrem.py and foobar.py: the panels import
 this, never the other way round, and everything except the two functions
@@ -44,6 +53,8 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from mdtools.mdrem import transliterate
+
 # A CDDA sector is 1/75th of a second of 16-bit stereo 44.1kHz audio.
 SECTOR_BYTES = 2352
 SECTORS_PER_SECOND = 75
@@ -56,7 +67,6 @@ PREGAP_SECTORS = 150
 # Nothing here is quick, and a drive that is spinning up, retrying a
 # scratch, or simply absent must not wedge the app forever.
 TOC_TIMEOUT_S = 60.0
-ENCODE_TIMEOUT_S = 300.0
 
 # How often a running rip is checked on. Also the worst case delay before
 # Stop takes effect, which is what keeps this well under a second.
@@ -135,13 +145,15 @@ def flac_path() -> str | None:
 
 
 def missing_tools() -> list[str]:
-    """Which of the two are unavailable, for a preflight message that names
-    them rather than failing halfway through a rip."""
+    """Which of the tools a rip needs are unavailable, for a preflight
+    message that names them rather than failing halfway through a rip.
+
+    Just cd-paranoia now: encoding the ripped WAV to FLAC goes through
+    audio_engine.encode_wav_to_flac() (soundfile/libsndfile), not the
+    bundled flac.exe, so a rip no longer needs it at all."""
     missing = []
     if cdparanoia_path() is None:
         missing.append("cd-paranoia")
-    if flac_path() is None:
-        missing.append("flac")
     return missing
 
 
@@ -415,8 +427,23 @@ def sanitize_filename(text: str) -> str:
     """Same job as gallery._sanitize_filename, kept separate because this
     one also has to survive a trailing dot or space -- Windows silently
     drops those from a directory name, which would make the folder we
-    create and the folder we then write into two different places."""
-    cleaned = _INVALID_FILENAME_CHARS.sub("_", text).strip(" .")
+    create and the folder we then write into two different places.
+
+    Transliterated to ASCII first (mdrem.transliterate(), the same
+    conversion a disc/track title already goes through before being
+    written to a MiniDisc). Real report: a MusicBrainz artist name
+    carrying a Unicode HYPHEN (U+2010, not the plain ASCII "-") produced
+    a folder Python's own (Unicode-clean) path APIs created correctly,
+    but cd-paranoia.exe -- a narrow-API mingw binary, which decodes its
+    own argv through the process's *ANSI codepage*, not UTF-8 -- could
+    not represent that character on this machine's codepage (cp1250) and
+    failed to open its output file inside the very folder that had just
+    been created, with "No such file or directory": two different byte
+    sequences for what was meant to be the same folder. A folder name has
+    to survive that conversion on every machine's own codepage, not just
+    the one this was diagnosed on, so this goes all the way to ASCII
+    rather than trying to allow whatever one codepage happens to cover."""
+    cleaned = _INVALID_FILENAME_CHARS.sub("_", transliterate(text).text).strip(" .")
     return cleaned or "Unknown"
 
 
@@ -533,16 +560,6 @@ def rip_command(tool: str, device: str, number: int, wav_path: Path) -> list[str
     return [tool, "-d", device, "-e", "-w", str(number), str(wav_path)]
 
 
-def encode_command(tool: str, task: RipTask) -> list[str]:
-    """-f overwrites a leftover from an interrupted run rather than
-    stopping to ask; -s keeps the encoder from competing with our own
-    progress reporting."""
-    command = [tool, "-f", "-s"]
-    command += [f"--tag={name}={value}" for name, value in task.tags.items()]
-    command += ["-o", str(task.flac_path), str(task.wav_path)]
-    return command
-
-
 def rip_track(
     device: str,
     task: RipTask,
@@ -614,7 +631,27 @@ def rip_track(
     if process.returncode != 0:
         # The log is deliberately left behind on failure: it holds
         # cdparanoia's per-sector account of what went wrong.
-        raise CdRipError(_first_useful_line(tail) or f"cd-paranoia failed on track {task.number}")
+        complaint = _first_useful_line(tail) or f"cd-paranoia failed on track {task.number}"
+        # Real report: cd-paranoia's own "Cannot open specified output
+        # file" for a path whose parent folder mkdir() (just above) did
+        # not complain about -- and this was not a one-off: it kept
+        # failing on retry even once the folder plainly already existed,
+        # while other albums (other folders, same parent) ripped fine.
+        # That combination is not fully explained yet (a per-folder
+        # permission/ACL problem and a security-software block naming that
+        # one path are both still open candidates) -- surfaced as a hint
+        # pointing at where to look, not a confident diagnosis, since one
+        # guessed at wrongly already. Only fires for the one cdparanoia
+        # complaint that actually implies a folder-access problem, and
+        # keeps the tool's own original wording alongside it either way.
+        if "cannot open specified output file" in complaint.lower():
+            complaint += (
+                " -- cd-paranoia (bundled, unsigned) could not write into this specific folder. "
+                "Check the folder's own permissions, and whether security software (e.g. Windows' "
+                "Controlled Folder Access) is blocking cd-paranoia.exe from it specifically -- or "
+                "try a rip folder outside Documents in Window > Settings..."
+            )
+        raise CdRipError(complaint)
 
     actual = task.wav_path.stat().st_size if task.wav_path.exists() else 0
     if actual < task.expected_wav_bytes:
@@ -634,55 +671,53 @@ def _wav_fraction(task: RipTask) -> float:
     return min(1.0, size / max(1, task.expected_wav_bytes))
 
 
-def encode_track(task: RipTask, *, run=subprocess.run, keep_wav: bool = False) -> None:
+def encode_track(task: RipTask, *, keep_wav: bool = False) -> None:
     """WAV to FLAC, then the WAV goes -- it is twice the size of what
-    replaces it and has served its purpose."""
-    tool = flac_path()
-    if tool is None:
-        raise CdRipError("flac was not found")
+    replaces it and has served its purpose.
+
+    Encoded through audio_engine.encode_wav_to_flac() (soundfile/
+    libsndfile), not the bundled flac.exe -- no subprocess, so no
+    timeout/argv-encoding concerns either: tags reach libsndfile as plain
+    Python strings rather than command-line arguments, which is what made
+    test_the_encoder_writes_non_ascii_tags_without_mangling_them (see
+    test_cdrip.py) a real question before -- flac.exe's own argv handling
+    of a Polish or Japanese title was an assumption about the tool, not
+    something this code could guarantee. Writing UTF-8 Vorbis comments
+    directly needs no such assumption.
+
+    audio_engine is imported here, not at module level: audio_engine.py
+    itself imports decode.py for the RED_BOOK_* constants, and decode.py
+    imports cdrip.py (this module) for find_tool()/flac_path() -- a
+    module-level import here would be a straight import cycle. Deferred
+    to call time, by which every module involved has already finished
+    loading, it isn't one."""
+    from mdtools import audio_engine
+
     try:
-        completed = run(
-            encode_command(tool, task),
-            capture_output=True,
-            text=True,
-            errors="replace",
-            timeout=ENCODE_TIMEOUT_S,
-            creationflags=NO_WINDOW,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise CdRipError(f"encoding track {task.number} timed out") from exc
-    except OSError as exc:
-        raise CdRipError(f"could not run flac: {exc}") from exc
-    if completed.returncode != 0:
-        raise CdRipError(_first_useful_line(completed.stderr or "") or f"flac failed on track {task.number}")
+        audio_engine.encode_wav_to_flac(task.wav_path, task.flac_path, tags=task.tags)
+    except audio_engine.AudioEngineError as exc:
+        raise CdRipError(f"encoding track {task.number} failed: {exc}") from exc
     if not keep_wav:
         task.wav_path.unlink(missing_ok=True)
 
 
 # --- housekeeping -----------------------------------------------------
 
-_RIP_SUFFIXES = {".flac", ".wav", ".log"}
-
-
-def clean_stale_rip_folders(root: Path, keep: Path | None = None) -> list[Path]:
-    """Removes previous rips, leaving the one about to be used alone.
-
-    Old rips are cleared at the *start* of a new one rather than at the end
-    of the last, because the files stay in foobar2000's playlist for as long
-    as the user might want to play them again -- deleting them the moment a
-    recording finished would pull them out from under it.
-
-    Only folders holding nothing but rip output are touched. The rip folder
-    is configurable, so it can be pointed at somewhere that also holds
-    something else, and a recursive delete has no business guessing."""
-    removed = []
-    if not root.is_dir():
-        return removed
-    for child in sorted(root.iterdir()):
-        if not child.is_dir() or (keep is not None and child == keep):
-            continue
-        if any(item.is_dir() or item.suffix.lower() not in _RIP_SUFFIXES for item in child.iterdir()):
-            continue
-        shutil.rmtree(child, ignore_errors=True)
-        removed.append(child)
-    return removed
+# Burning's own scratch work happens in a dedicated subfolder of the
+# shared audio folder (app_settings.cd_rip_folder()) -- burn_dialog.py's
+# "burn" work_dir, unrelated to ripping. Reserved here so callers listing
+# the shared folder's own subfolders (picking an "album" to sort/record)
+# can filter it out rather than offering scratch space as if it were one.
+#
+# Ripping deliberately has **no** scratch folder or automatic cleanup of
+# its own any more, and must not grow one back: a folder of nothing but
+# .flac files (permanently-organized albums included) looks identical to
+# "stale rip output" by content alone, and this codebase already
+# `shutil.rmtree()`'d a real user's downloaded albums once by trying to
+# clean up what it guessed was an old rip in this same shared folder.
+# Ripped files are written directly into app_settings.cd_rip_folder() (via
+# rip_folder_name()) and simply accumulate there forever -- explicit
+# instruction: nothing in this app may ever delete anything from that
+# folder on its own.
+BURN_SCRATCH_DIRNAME = "burn"
+RESERVED_SCRATCH_DIRNAMES = {BURN_SCRATCH_DIRNAME}

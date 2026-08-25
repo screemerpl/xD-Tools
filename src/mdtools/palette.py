@@ -152,6 +152,32 @@ def relative_luminance(hex_colour: str) -> float:
     return 0.2126 * red + 0.7152 * green + 0.0722 * blue
 
 
+def tint_monochrome_png(data: bytes, colour: str) -> bytes:
+    """Recolours a single-colour-plus-alpha image to `colour`, keeping its
+    alpha channel exactly as it is.
+
+    For a mark that is really a *mask* -- one opaque colour and a shape cut
+    out of it by alpha, which is what assets/img/cd_digital_audio.png is
+    (verified: exactly one opaque colour in it, pure black). Such a mark
+    printed on a dark panel is invisible, so it has to be able to become
+    the panel's own ink the way every piece of text on that panel already
+    does.
+
+    Deliberately **not** for an image with real internal colour: the
+    MiniDisc logo beside it is black *and* white, and flattening that to
+    one colour would erase the wordmark inside it. Callers pass a colour
+    only for the marks they know are masks -- everything else keeps using
+    scene.add_image() on the file itself.
+    """
+    image = Image.open(io.BytesIO(data)).convert("RGBA")
+    alpha = image.getchannel("A")
+    tinted = Image.new("RGBA", image.size, Swatch(hex=colour, weight=0).rgb + (255,))
+    tinted.putalpha(alpha)
+    out = io.BytesIO()
+    tinted.save(out, format="PNG")
+    return out.getvalue()
+
+
 def readable_text_colour(background: str) -> str:
     """Black or white, whichever contrasts more with `background`.
 

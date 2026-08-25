@@ -37,6 +37,29 @@ if ($env:MDTOOLS_TELEGRAM_API_ID -and $env:MDTOOLS_TELEGRAM_API_HASH) {
     Write-Warning "No Telegram API credentials: set MDTOOLS_TELEGRAM_API_ID/_HASH to bake them in. The build works, but users must supply their own to sign in."
 }
 
+# bin/win64 in the repo also carries flac.exe/libFLAC.dll -- kept there
+# only so tests can encode fixtures with a real, independent FLAC encoder
+# (see decode.py/audio_engine.py's own notes on why: ripping and CD/WAV-FLAC
+# conversion both go through audio_engine.encode_wav_to_flac()/soundfile
+# now, not flac.exe). Nothing at runtime calls flac.exe any more
+# (cdrip.missing_tools() only checks for cd-paranoia), so it does not belong
+# in what ships to users -- staged into a pruned copy here rather than
+# `--add-data`-ing the repo folder wholesale, which would bundle it anyway.
+$runtimeToolsDir = "build/bin_win64_runtime"
+if (Test-Path $runtimeToolsDir) {
+    Remove-Item -Recurse -Force $runtimeToolsDir
+}
+New-Item -ItemType Directory -Force $runtimeToolsDir | Out-Null
+$runtimeToolFiles = @(
+    "cd-paranoia.exe", "cdrecord.exe", "cygwin1.dll",
+    "libcdio-19.dll", "libcdio_cdda-2.dll", "libcdio_paranoia-2.dll",
+    "libcharset-1.dll", "libiconv-2.dll", "libwinpthread-1.dll",
+    "ATTRIBUTION.md"
+)
+foreach ($file in $runtimeToolFiles) {
+    Copy-Item "bin/win64/$file" -Destination $runtimeToolsDir
+}
+
 & ".venv/Scripts/pyinstaller.exe" --noconfirm --windowed --name "xD-Tools" --paths src `
     --icon "assets/img/xdtools.ico" `
     --add-data "src/mdtools/templates/defaults.json;mdtools/templates" `
@@ -46,7 +69,7 @@ if ($env:MDTOOLS_TELEGRAM_API_ID -and $env:MDTOOLS_TELEGRAM_API_HASH) {
     --add-data "$qtTranslations/qtbase_ja.qm;PySide6/translations" `
     --add-data "assets/img;assets/img" `
     --add-data "assets/icons;assets/icons" `
-    --add-data "bin/win64;bin/win64" `
+    --add-data "$runtimeToolsDir;bin/win64" `
     src/mdtools/main.py
 
 Write-Host "Build output: dist/xD-Tools/xD-Tools.exe"

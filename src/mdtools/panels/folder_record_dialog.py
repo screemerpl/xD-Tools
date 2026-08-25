@@ -3,33 +3,30 @@ on disk as files.
 
 The third way into the same recording flow, and structurally the simplest.
 Where CdRipDialog has to *make* the audio first, this one only has to point
-foobar2000 at files that already exist:
+at files that already exist:
 
   1. pick a folder; list the audio files in it, in filename order
-  2. empty foobar's playlist and put them in it
-  3. read the playlist back -- that is where every title, artist and length
-     comes from, because foobar has just read the tags for us
-  4. fill in what the tags did not say (year, cover art) from iTunes
-  5. hand off to RecordDialog, unchanged and unaware where the files came
-     from
+  2. read each file's own tags (title, artist, length) directly
+  3. fill in what the tags did not say (year, cover art) from iTunes
+  4. hand the files' paths, in this order, off to RecordDialog -- unchanged
+     and unaware where they came from
 
-Step 3 is worth being precise about: nothing here parses a tag. There is no
-tag library in this project, and foobar is a better one than anything that
-could be bolted on for this. What a file has no tag for falls back to its
-filename (foobar.PlaylistItem.display_title).
+Step 2 used to go through foobar2000's own playlist -- putting the files
+into it and reading its columns back, because there was no tag library in
+this project and foobar already read tags perfectly well. That reasoning
+stopped applying once `tracks.py` existed (see its own module docstring):
+`tracks.playlist_items_from_paths()` reads a file's tags directly with
+`mutagen`, the same way `audio_folder.metadata_from_folder()` already does
+for the "Import from Folder..." button. Reading a folder's worth of local
+files this way is fast enough that it no longer needs a worker thread or
+a progress bar -- there is no external process to wait on any more.
 
-Step 4 is the one place this differs from the CD flow, and the difference
+Step 3 is the one place this differs from the CD flow, and the difference
 is in what is missing. A CD is identified from its TOC, which is exact; a
 folder is identified by what somebody typed into its tags years ago, so the
 lookup here is enrichment only -- year and cover art -- and never replaces a
-title. What is about to be played is what will be on the disc; a search
-result is a guess about it.
-
-The load runs on a worker thread. foobar accepts a command line in about a
-second and then reads the files asynchronously, so the wait is normally
-short -- but both halves have a 30 second timeout, and a minute of frozen
-window is not something to leave to chance. Same shape as CdRipDialog's
-_RipWorker, minus everything to do with a disc.
+title. What is in the files is what will be on the disc; a search result is
+a guess about it.
 """
 
 from __future__ import annotations
@@ -37,8 +34,9 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QApplication,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
@@ -46,8 +44,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QMessageBox,
-    QProgressBar,
     QPushButton,
     QSpinBox,
     QTreeWidget,
@@ -56,7 +52,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mdtools import app_settings, audio_folder, embedded_cover, foobar, mixtape_cover, user_paths
+from mdtools import app_settings, audio_folder, embedded_cover, mixtape_cover, tracks, user_paths
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
 from mdtools.project import MEDIUM_MD, medium_name, ProjectMetadata
 
@@ -77,50 +73,27 @@ def _mmss(seconds: float) -> str:
     return f"{seconds // 60}:{seconds % 60:02d}"
 
 
-class _LoadWorker(QThread):
-    """Replaces foobar's playlist with these files and reads it back."""
-
-    failed = Signal(str)
-    loaded = Signal(list)  # list[foobar.PlaylistItem]
-
-    def __init__(self, client: foobar.FoobarClient, exe: str, paths: list[Path], parent=None):
-        super().__init__(parent)
-        self._client = client
-        self._exe = exe
-        self._paths = paths
-
-    def run(self) -> None:
-        try:
-            playlist = foobar.replace_current_playlist(self._client, self._exe, self._paths)
-            items = self._client.playlist_items(playlist.id)
-        except foobar.FoobarError as exc:
-            self.failed.emit(str(exc))
-            return
-        self.loaded.emit(items)
-
-
 class FolderRecordDialog(QDialog):
-    def __init__(self, base_url: str = foobar.DEFAULT_BASE_URL, parent=None, medium: str = MEDIUM_MD):
+    def __init__(self, parent=None, medium: str = MEDIUM_MD):
         """`medium` is wording only -- see CdRipDialog's own note."""
         super().__init__(parent)
         self._medium = medium
         self._target = medium_name(medium)
         self.setWindowTitle(self._window_title())
         self.resize(600, 560)
-        self._client = foobar.FoobarClient(base_url)
         self._paths: list[Path] = []
-        self._items: list[foobar.PlaylistItem] = []
-        self._worker: _LoadWorker | None = None
+        self._items: list[tracks.PlaylistItem] = []
         self._folder: Path | None = None
         # What the folder name suggested, so a field still holding it can be
         # told apart from one the user typed into -- see _resolve().
         self._guessed: tuple[str, str, int | None] = ("", "", None)
         # Read by MainWindow after exec() and handed to RecordDialog. Unlike
         # the CD flow -- which writes its titles into the files it created,
-        # so the playlist alone carries them -- these are somebody else's
-        # files and nothing here rewrites them, so an edit made in this
-        # dialog reaches the disc only by being passed forward.
+        # so their tags alone carry them -- these are somebody else's files
+        # and nothing here rewrites them, so an edit made in this dialog
+        # reaches the disc only by being passed forward.
         self.result_metadata: ProjectMetadata | None = None
+        self.result_paths: list[Path] = []
 
         layout = QVBoxLayout(self)
         layout.addWidget(self._build_folder_row())
@@ -161,15 +134,7 @@ class FolderRecordDialog(QDialog):
         self.warning_label.setVisible(False)
         layout.addWidget(self.warning_label)
 
-        self.progress = QProgressBar()
-        self.progress.setRange(0, 0)  # indeterminate: foobar reports no progress
-        self.progress.setTextVisible(False)
-        self.progress.setVisible(False)
-        layout.addWidget(self.progress)
-
-        self.status_label = QLabel(
-            self.tr("Choose the folder holding the album. It replaces foobar2000's current playlist.")
-        )
+        self.status_label = QLabel(self.tr("Choose the folder holding the album."))
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
 
@@ -218,14 +183,12 @@ class FolderRecordDialog(QDialog):
         return user_paths.music_start_path()
 
     def set_folder(self, folder: Path) -> None:
-        """Lists what is in the folder and loads it into foobar2000.
+        """Lists what is in the folder and reads their tags.
 
-        Loading happens here rather than behind a second button: picking a
+        Reading happens here rather than behind a second button: picking a
         folder in this dialog *is* the decision, and asking the user to then
         confirm it was asking them to press a button for something they had
-        already done. It does replace their current playlist, which is why
-        the dialog says so before they browse -- the same bargain Record CD
-        makes."""
+        already done."""
         self._folder = folder
         self.folder_edit.setText(str(folder))
         self._paths = audio_folder.list_audio_files(folder)
@@ -246,14 +209,13 @@ class FolderRecordDialog(QDialog):
         self.artist_edit.setText(artist)
         self.album_edit.setText(album)
         self.year_spin.setValue(year or 0)
-        self.record_btn.setEnabled(False)  # until foobar has actually taken them
         self._warn_about_count()
         self._load()
 
     def _show_filenames(self) -> None:
-        """What is known before foobar has seen the files: their names, in
-        the order they will be played. Replaced by the real tags as soon as
-        the playlist has been loaded."""
+        """What is known before the tags have been read: the files' own
+        names, in the order they will be played. Replaced by the real tags
+        as soon as they have been read."""
         self.tree.clear()
         for index, path in enumerate(self._paths, start=1):
             QTreeWidgetItem(self.tree, [str(index), path.stem, "", ""])
@@ -274,110 +236,40 @@ class FolderRecordDialog(QDialog):
         )
         self.warning_label.setVisible(True)
 
-    # --- loading ----------------------------------------------------------
+    # --- reading the tags ---------------------------------------------------
 
     def _on_record(self) -> None:
-        """Hands the loaded playlist over to the recording window."""
+        """Hands the loaded album over to the recording window."""
         if not self._items:
             return
         self.result_metadata = self._final_metadata()
+        self.result_paths = list(self._paths)
         self.accept()
 
     def _load(self) -> None:
-        """Replaces foobar's playlist with this folder, on a worker thread.
-
-        Kept separate from set_folder so that listing a folder and sending
-        it somewhere stay two different things in the code, even though one
-        follows the other for the user."""
+        """Reads every file's tags directly -- no external player involved,
+        and fast enough (plain local file reads through mutagen) to run
+        right here rather than on a worker thread."""
         if not self._paths:
             return
-        exe = self._resolve_foobar_exe()
-        if exe is None:
-            return
-        if not self._foobar_reachable():
-            return
-
-        self._set_running(True)
-        self.progress.setVisible(True)
-        self.status_label.setText(self.tr("Loading the tracks into foobar2000..."))
-
-        self._worker = _LoadWorker(self._client, exe, self._paths, self)
-        self._worker.failed.connect(self._on_failed)
-        self._worker.loaded.connect(self._on_loaded)
-        self._worker.finished.connect(self._on_worker_finished)
-        self._worker.start()
-
-    def _resolve_foobar_exe(self) -> str | None:
-        """The same check the CD flow makes, for the same reason: Beefweb
-        cannot be given a file outside foobar's own configured music
-        directories (it answers 403), so the files go in through foobar's
-        command line and its location has to be known."""
-        exe = app_settings.foobar_exe() or (foobar.find_foobar_exe() or "")
-        if exe and Path(exe).is_file():
-            if not app_settings.foobar_exe():
-                app_settings.set_foobar_exe(exe)
-            return exe
-        QMessageBox.warning(
-            self,
-            self._window_title(),
-            self.tr(
-                "foobar2000 could not be found. The tracks are loaded into it through its own program file, "
-                "so its location has to be set in Window > Settings..."
-            ),
-        )
-        return None
-
-    def _foobar_reachable(self) -> bool:
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            self._client.current_playlist()
-        except foobar.FoobarError as exc:
-            QMessageBox.warning(
-                self,
-                self._window_title(),
-                self.tr(
-                    "Could not reach foobar2000: {error}\n\nIt must be running with the Beefweb Remote "
-                    "Control component (foo_beefweb) enabled."
-                ).format(error=exc),
-            )
-            return False
-        return True
-
-    def _set_running(self, running: bool) -> None:
-        for widget in (
-            self.browse_btn,
-            self.tree,
-            self.artist_edit,
-            self.album_edit,
-            self.year_spin,
-        ):
-            widget.setEnabled(not running)
-
-    def _on_failed(self, message: str) -> None:
-        self.status_label.setText(self.tr("Could not load the tracks: {error}").format(error=message))
+            items = tracks.playlist_items_from_paths(self._paths)
+        finally:
+            QApplication.restoreOverrideCursor()
+        self._on_loaded(items)
 
     def _on_loaded(self, items: list) -> None:
         self._items = items
-        if not items:
-            self.status_label.setText(
-                self.tr("foobar2000 accepted no tracks from that folder -- none of them could be played.")
-            )
-            return
         self._show_playlist(items)
         self.result_metadata = self._capture_metadata(items)
         self.cover_label.set_cover(self.result_metadata.cover_art)
         self.record_btn.setEnabled(True)
-        self.status_label.setText(
-            self.tr("Loaded into foobar2000. Check the album below, then record.")
-        )
-
-    def _on_worker_finished(self) -> None:
-        self._worker = None
-        self._set_running(False)
-        self.progress.setVisible(False)
+        self.status_label.setText(self.tr("Check the album below, then record."))
 
     def _show_playlist(self, items: list) -> None:
-        """What foobar made of the files -- the real titles and lengths,
-        which is also what the disc will be titled from."""
+        """The real titles and lengths, read from the files -- which is also
+        what the disc will be titled from."""
         self.tree.clear()
         for index, item in enumerate(items, start=1):
             QTreeWidgetItem(
@@ -386,7 +278,7 @@ class FolderRecordDialog(QDialog):
             )
         self.tree.resizeColumnToContents(0)
         self.tree.resizeColumnToContents(3)
-        self._warn_about_length(foobar.total_seconds(items))
+        self._warn_about_length(tracks.total_seconds(items))
 
     def _warn_about_length(self, total: int) -> None:
         if total <= DISC_SP_SECONDS:
@@ -402,17 +294,16 @@ class FolderRecordDialog(QDialog):
     # --- metadata ----------------------------------------------------------
 
     def _capture_metadata(self, items: list) -> ProjectMetadata:
-        """The playlist as project metadata, reconciled with the album
-        fields.
+        """The album as project metadata, reconciled with the album fields.
 
         Three sources, in strict order of authority: what the user typed
         beats what the files are tagged with, which beats what the folder
         name looked like. The middle rung is the one that is easy to get
-        wrong -- the fields are *prefilled* from the folder name before
-        foobar has read a single tag, so treating whatever is in them as
-        the user's word would let a folder called "Album" quietly rename a
+        wrong -- the fields are *prefilled* from the folder name before a
+        single tag has been read, so treating whatever is in them as the
+        user's word would let a folder called "Album" quietly rename a
         properly tagged record."""
-        metadata = foobar.metadata_from_playlist(items)
+        metadata = tracks.metadata_from_playlist(items)
         guessed_artist, guessed_album, guessed_year = self._guessed
         metadata.artist = self._resolve(self.artist_edit.text().strip(), guessed_artist, metadata.artist)
         metadata.album = self._resolve(self.album_edit.text().strip(), guessed_album, metadata.album)
@@ -453,9 +344,8 @@ class FolderRecordDialog(QDialog):
     def _fetch_cover(self, metadata: ProjectMetadata) -> None:
         """Enrichment only: a year the tags did not have, and a cover.
 
-        Never a title. What foobar is about to play is what will be on the
-        disc, in that order; an iTunes result is whatever the search
-        matched."""
+        Never a title. What is in the files is what will be on the disc, in
+        that order; an iTunes result is whatever the search matched."""
         self.status_label.setText(self.tr("Looking up cover art..."))
         chosen = fetch_into(self.cover_label, metadata.artist, metadata.album, len(metadata.tracks))
         if chosen is not None and metadata.year is None:
@@ -480,23 +370,3 @@ class FolderRecordDialog(QDialog):
             year=self.year_spin.value() or captured.year,
             cover_art=self.cover_label.data,
         )
-
-    # --- shutdown ----------------------------------------------------------
-
-    def reject(self) -> None:
-        """A load in flight is left to finish rather than cancelled.
-
-        There is nothing to interrupt that would help: the work is inside
-        foobar2000, the playlist has already been cleared, and stopping
-        halfway would leave it holding part of an album with no indication
-        why. It is seconds, not the minutes a rip takes."""
-        if self._worker is not None and self._worker.isRunning():
-            self.status_label.setText(self.tr("Waiting for foobar2000 to finish..."))
-            return
-        super().reject()
-
-    def closeEvent(self, event) -> None:
-        if self._worker is not None and self._worker.isRunning():
-            event.ignore()
-            return
-        super().closeEvent(event)

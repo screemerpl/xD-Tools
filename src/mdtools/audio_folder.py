@@ -26,6 +26,14 @@ mind about tags, but a path where no player is involved.
 **It never renames, moves or rewrites anything.** These are the user's own
 music files, not the disposable rip folder cdrip.py owns.
 
+`metadata_from_folder()`, added for the Metadata dialog's "Import from
+Folder..." (replacing what used to be "Load from foobar2000" there,
+explicit user request), is a second exception to the "never reads a tag"
+rule above, for the same reason `album_from_folder()` already is: filling
+in the metadata editor by hand should not require foobar2000 to be
+running with the album already loaded first, any more than burning one
+should.
+
 Order comes from the filename, because a filename is the only ordering
 signal available before foobar has seen the files -- and it is a good one:
 essentially every ripper and download names tracks with the number in front.
@@ -49,6 +57,8 @@ from mdtools.multidisc import (
     leading_number,
     order_by_disc_and_track,
 )
+from mdtools.project import ProjectMetadata
+from mdtools.tracks import metadata_from_playlist, playlist_items_from_paths
 
 # What foobar2000 plays out of the box, plus the common lossless oddities.
 # A generous list rather than a strict one: a file it turns out not to
@@ -223,6 +233,30 @@ def album_from_folder(folder: Path | str) -> FolderAlbum:
         artist=_commonest(artists) or guessed_artist,
         year=_year_from(_commonest(years)) or guessed_year,
     )
+
+
+def metadata_from_folder(folder: Path | str) -> ProjectMetadata:
+    """A folder's own tags as project metadata -- the Metadata dialog's
+    "Import from Folder..." button, standing in for what used to be "Load
+    from foobar2000" there.
+
+    Builds the same `tracks.PlaylistItem` records the recording flows
+    build, then hands them to `tracks.metadata_from_playlist()`
+    unchanged -- so the album/artist/year majority-vote and
+    compilation-naming logic (`tracks.album_title()`/`album_artist()`/
+    `apply_compilation_naming()`) is exactly the same code either way,
+    not a second copy of it that could drift from the original.
+
+    Reads tags with `mutagen`'s "easy" interface (via
+    `tracks.playlist_items_from_paths()`) rather than
+    `embedded_cover.flac_tags()` (the hand-rolled, FLAC-only parser
+    `album_from_folder()` above uses): this button's whole point is
+    reading whatever is actually in the tags, and mutagen reads whatever
+    format it recognises -- FLAC, WAV's own RIFF INFO chunk, MP3, and
+    more -- under one common set of field names, where the hand-rolled
+    parser only ever understood FLAC."""
+    paths = list_audio_files(Path(folder))
+    return metadata_from_playlist(playlist_items_from_paths(paths))
 
 
 def _commonest(values: list[str]) -> str:

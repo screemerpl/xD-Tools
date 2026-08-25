@@ -1,23 +1,34 @@
-"""Recording > "Record to MiniDisc from foobar2000..." -- records an album
-from foobar2000 onto a MiniDisc over S/PDIF, then titles the result.
+"""Recording > "Record to MiniDisc..." -- records an album onto a MiniDisc
+over S/PDIF, then titles the result.
 
 The sequence, and why each step is where it is:
 
-  1. read the current foobar playlist (this is what will be recorded, so it
-     is also where the titles come from -- not an iTunes lookup, which
-     returns whatever release the search matched)
-  2. force playback order to straight-through-once, or the disc would end
-     up in a different order than the titles
-  3. arm the deck (RECORD -> record-pause) and *ask the user to confirm it*
-  4. release the pause, then a moment later start playback -- in that
+  1. read the given files (this is what will be recorded, so it is also
+     where the titles come from -- not an iTunes lookup, which returns
+     whatever release the search matched)
+  2. arm the deck (RECORD -> record-pause) and *ask the user to confirm it*
+  3. release the pause, then a moment later start playback -- in that
      order, so the deck is already recording when the first note arrives
-  5. poll foobar until the playlist ends
-  6. stop the deck, then hand off to the normal Upload Tracklist dialog
+  4. play the album through xD-Tools' own AudioPlayer (audio_engine.py)
+     until it reports the queue finished
+  5. stop the deck, then write the titles and eject unattended -- no
+     confirmation in between, the same reasoning the multi-disc flow
+     below already applies per-disc: nobody sits through a whole album,
+     so a question between the music ending and the titles going out
+     would leave the deck holding an untitled disc until somebody came
+     back (see _title_single_disc)
 
-Deliberately no worker thread: every step here is either instantaneous
-(one HTTP call to localhost, one infrared frame) or a poll driven by a
-QTimer. The genuinely long part -- writing the titles -- already has its
-own threaded dialog, which this reuses rather than reimplements.
+This dialog used to drive foobar2000 over Beefweb, polling its now-playing
+index every 250ms to decide when a track changed and when the album
+ended -- a real, poll-bounded lag on both the MDRem track mark and the
+disc/side boundary. `AudioPlayer.play()` decodes and plays the files
+itself and fires `on_track_boundary`/`on_finished` from its own realtime
+audio callback the instant a boundary is crossed, so both of those are
+now exact rather than "whatever the next poll happens to see" --
+`panels/playback_bridge.py`'s `PlaybackBridge` is what gets those
+callbacks safely from that audio thread onto this one. The `QTimer` that
+used to drive the poll is kept, but demoted to a pure progress-bar
+refresh; nothing recording-accuracy-relevant depends on it any more.
 
 Track splitting is the deck's job and is not verified here. Sony decks
 mark a new track when the signal drops to silence and returns
@@ -39,10 +50,12 @@ character the deck cannot show) is on screen *here* before the first note
 plays. Where each disc ends is `multidisc.py`; this dialog only drives it.
 
 **Reordering.** The table's Up/Down buttons change the order the album is
-recorded in, which means the order foobar2000 plays it in -- so a reordered
-table rebuilds foobar's playlist from the files themselves before anything
-starts (see _apply_order_to_foobar). That is the one blocking step in this
-dialog, and it only ever happens after the user has actually moved a row.
+recorded in. That used to mean rebuilding foobar2000's own playlist to
+match (the one blocking step in this dialog, and a real source of past
+bugs -- foobar sorts an incoming batch by filename, silently undoing a
+reorder). With this dialog decoding and playing the files itself,
+reordering is just reordering the local track list; nothing external to
+push it into or read it back from.
 """
 
 from __future__ import annotations
@@ -50,9 +63,8 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import QCoreApplication, QTimer, Qt
 from PySide6.QtWidgets import (
-    QApplication,
     QCheckBox,
     QDialog,
     QDialogButtonBox,
@@ -69,9 +81,12 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from mdtools import app_settings, embedded_cover, foobar, mdrem, mixtape_cover, multidisc
+from mdtools import app_settings, audio_engine, embedded_cover, mdrem, mixtape_cover, multidisc, tracks
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
+from mdtools.panels.erase_dialog import EraseDiscDialog
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
+from mdtools.panels.playback_bridge import PlaybackBridge
+from mdtools.panels.preview_player import PreviewPlayerBar
 from mdtools.project import ProjectMetadata, Track
 
 # An MD holds 80 minutes in SP. The deck also has MDLP (LP2/LP4) for 160/320,
@@ -83,8 +98,9 @@ DISC_SP_SECONDS = 80 * 60
 # note is never clipped; the gap becomes a moment of leading silence.
 LEAD_IN_MS = 1500
 
-# Also how late a track mark can land: it is sent on the poll that first
-# sees a new track, so a slower poll pushes the mark further into it.
+# Now a pure progress-bar refresh interval -- nothing recording-accuracy
+# relevant is timed against this any more, unlike when it drove a foobar2000
+# poll (see the module docstring).
 POLL_MS = 250
 
 # Multi-disc only: how long after the album's last track ends before the
@@ -92,14 +108,6 @@ POLL_MS = 250
 # TOC before it will take anything else; two seconds is the user's own
 # number, and short enough that nobody has to be standing there.
 TITLING_DELAY_MS = 2000
-
-# Applied to foobar2000's own output volume at the start of every recording
-# (see _start() below) -- a layout choice, not a measured spec, the same
-# kind of deliberate headroom-below-0dB margin as any other digital transfer
-# leaves before recording, explicit user request. Set through
-# FoobarClient.set_volume(), confirmed live against a running foobar2000/
-# foo_beefweb.
-RECORDING_VOLUME_DB = -5.0
 
 # RECORD pressed *during* recording adds a track mark -- established on an
 # MDS-JE480 by recording, sending it mid-way, and finding two tracks.
@@ -120,45 +128,40 @@ class RecordDialog(QDialog):
     def __init__(
         self,
         port: str,
-        base_url: str = foobar.DEFAULT_BASE_URL,
+        paths: list[Path | str],
         parent=None,
         metadata: ProjectMetadata | None = None,
     ):
-        """`metadata`, when given, is what the disc gets titled from instead
-        of the playlist's own tags.
+        """`paths` is the album's files, in the order they should be
+        recorded -- read directly (via `tracks.playlist_items_from_paths()`),
+        no external player involved.
+
+        `metadata`, when given, is what the disc gets titled from instead
+        of the files' own tags.
 
         Only Record Folder passes it, and only because it has to: a folder
         holds somebody else's files, which nothing here rewrites, so an
         album name typed into that dialog can reach the disc no other way.
         The CD flow deliberately does *not* -- it writes its titles into the
-        files it created, so the playlist already carries them, and one
-        source of truth beats two that can disagree. Either way it describes
-        the very playlist that is about to be recorded: it is built from the
-        same items, moments earlier."""
+        files it created, so the tags already carry them, and one source of
+        truth beats two that can disagree. Either way it describes the very
+        files that are about to be recorded: it is built from the same
+        list, moments earlier."""
         super().__init__(parent)
-        self.setWindowTitle(self.tr("Record to MiniDisc from foobar2000"))
+        self.setWindowTitle(self.tr("Record to MiniDisc"))
         self.resize(560, 560)
         self._port = port
-        self._client = foobar.FoobarClient(base_url)
-        self._playlist: foobar.Playlist | None = None
-        self._items: list[foobar.PlaylistItem] = []
+        self._items: list[tracks.PlaylistItem] = tracks.playlist_items_from_paths(paths) if paths else []
         self._recording = False
-        self._started = False  # playback has actually been seen running
-        self._highest_index = -1
-        self._marked_index = -1
-        # Several discs: the plan, which disc is being recorded, and whether
-        # foobar has already been told to stop at this disc's last track.
+        self._current_local_index = 0
+        # Several discs: the plan, which disc is being recorded.
         self._plan: multidisc.MultiDiscPlan | None = None
         self._disc = 0
-        self._stop_armed = False
         # None means "wherever the arithmetic puts them"; a list means the
         # user has placed the breaks by hand and they are not to be moved.
         self._manual_breaks: list[int] | None = None
-        # Set by the Up/Down buttons. Until it is, foobar's playlist and
-        # this table are the same order and there is nothing to push back.
-        self._order_changed = False
-        # Read by MainWindow after exec(): the playlist that was recorded,
-        # as project metadata, with cover art if any was found. None means
+        # Read by MainWindow after exec(): the files that were recorded, as
+        # project metadata, with cover art if any was found. None means
         # nothing was recorded, so nothing should be adopted.
         self.result_metadata: ProjectMetadata | None = None
         self._given_metadata = metadata
@@ -166,6 +169,12 @@ class RecordDialog(QDialog):
         # opening a serial port costs far more than sending, and a track
         # mark's accuracy depends on how fast it goes out.
         self._deck: mdrem.MDRemClient | None = None
+        self._player: audio_engine.AudioPlayer | None = None
+        # See the module docstring: this is what gets AudioPlayer's
+        # realtime-thread callbacks safely onto this (the GUI) thread.
+        self._bridge = PlaybackBridge(self)
+        self._bridge.track_boundary.connect(self._on_track_boundary)
+        self._bridge.finished.connect(self._on_disc_finished)
 
         layout = QVBoxLayout(self)
 
@@ -201,18 +210,14 @@ class RecordDialog(QDialog):
         self.tree.setRootIsDecorated(False)
         self.tree.setColumnHidden(COL_DISC, True)  # nothing to say until there is more than one
         self.tree.currentItemChanged.connect(lambda *_: self._refresh_split_button())
+        self.tree.currentItemChanged.connect(lambda *_: self._refresh_preview())
 
         self.up_btn = QPushButton(self.tr("Move Up"))
         self.up_btn.clicked.connect(lambda: self._move_selected(-1))
         self.down_btn = QPushButton(self.tr("Move Down"))
         self.down_btn.clicked.connect(lambda: self._move_selected(1))
         for button in (self.up_btn, self.down_btn):
-            button.setToolTip(
-                self.tr(
-                    "Changes the order the album is recorded in. foobar2000's playlist is rebuilt to match "
-                    "when recording starts, so this needs the tracks to be files on disk."
-                )
-            )
+            button.setToolTip(self.tr("Changes the order the album is recorded in."))
         self.split_btn = QPushButton(self.tr("Start Disc Here"))
         self.split_btn.clicked.connect(self._toggle_split)
         self.split_btn.setToolTip(
@@ -236,6 +241,11 @@ class RecordDialog(QDialog):
         table_row.addWidget(self.tree, 1)
         table_row.addLayout(side)
         layout.addLayout(table_row)
+
+        self.preview_bar = PreviewPlayerBar()
+        self.preview_bar.prev_requested.connect(lambda: self._step_preview(-1))
+        self.preview_bar.next_requested.connect(lambda: self._step_preview(1))
+        layout.addWidget(self.preview_bar)
 
         hint = QLabel(
             self.tr(
@@ -309,6 +319,9 @@ class RecordDialog(QDialog):
         layout.addWidget(self.status_label)
 
         self.buttons = QDialogButtonBox()
+        self.erase_btn = QPushButton(self.tr("Erase MiniDisc..."))
+        self.erase_btn.clicked.connect(self._erase_disc)
+        self.buttons.addButton(self.erase_btn, QDialogButtonBox.ButtonRole.ActionRole)
         self.start_btn = QPushButton(self.tr("Start Recording"))
         self.start_btn.clicked.connect(self._start)
         self.buttons.addButton(self.start_btn, QDialogButtonBox.ButtonRole.AcceptRole)
@@ -319,41 +332,24 @@ class RecordDialog(QDialog):
 
         self._timer = QTimer(self)
         self._timer.setInterval(POLL_MS)
-        self._timer.timeout.connect(self._poll)
+        self._timer.timeout.connect(self._refresh_progress)
 
-        self._load_playlist()
+        self._load_items()
         self._refresh_split_button()
 
     # --- preflight ----------------------------------------------------
 
-    def _load_playlist(self) -> None:
-        try:
-            self._playlist = self._client.current_playlist()
-            if self._playlist is not None:
-                self._items = self._client.playlist_items(self._playlist.id)
-        except foobar.FoobarError as exc:
-            self.summary_label.setText(
-                self.tr(
-                    "Could not reach foobar2000: {error}\n\nIt must be running with the Beefweb Remote "
-                    "Control component (foo_beefweb) enabled."
-                ).format(error=exc)
-            )
-            self.start_btn.setEnabled(False)
-            return
-
+    def _load_items(self) -> None:
         if not self._items:
-            self.summary_label.setText(self.tr("foobar2000's current playlist is empty -- load the album first."))
+            self.summary_label.setText(self.tr("There are no tracks to record."))
             self.start_btn.setEnabled(False)
             return
 
-        # The album's own order, taken from the files rather than from
-        # however they happen to sit in foobar2000: a double album dropped
-        # in as one folder arrives with its two discs interleaved, because
-        # foobar sorts by filename and both discs number their tracks from
-        # one. Marking the order as changed is what gets that pushed back
-        # into foobar before recording -- without it the table would be
-        # right and the recording would still follow foobar's own order.
-        ordered = foobar.sort_by_disc_and_track(self._items)
+        # The album's own order, taken from the files rather than however
+        # they happen to have been handed over: a double album dropped in
+        # as one folder routinely arrives with its two discs interleaved,
+        # because both discs number their tracks from one.
+        ordered = tracks.sort_by_disc_and_track(self._items)
         if [item.path for item in ordered] != [item.path for item in self._items]:
             # Whatever the caller handed over is parallel to the *old* order
             # and has to move with it. Record Folder and the Telegram
@@ -365,31 +361,28 @@ class RecordDialog(QDialog):
             permutation = [positions[id(item)] for item in ordered]
             given = self._given_metadata
             if given is not None and len(given.tracks) == len(permutation):
-                self._given_metadata = replace(
-                    given, tracks=[given.tracks[index] for index in permutation]
-                )
+                self._given_metadata = replace(given, tracks=[given.tracks[index] for index in permutation])
             self._items = ordered
-            self._order_changed = True
         # And where those files say one disc ends. Seeded rather than
         # applied: the checkbox is still the user's to tick (a two-CD album
         # can perfectly well go onto one MiniDisc in LP2), but if they do
         # tick it, the split they get is the album's own rather than one
         # worked out from running times. "Split Automatically" goes back to
         # the arithmetic.
-        self._manual_breaks = foobar.disc_breaks(self._items) or None
+        self._manual_breaks = tracks.disc_breaks(self._items) or None
 
         # The seed for every field on this dialog. Given metadata wins where
         # there is any (only Record Folder passes it -- see __init__), else
-        # the playlist speaks for itself.
-        self._seed = self._given_metadata or foobar.metadata_from_playlist(self._items)
+        # the files speak for themselves.
+        self._seed = self._given_metadata or tracks.metadata_from_playlist(self._items)
         self._fill_fields(self._seed)
 
-        total = foobar.total_seconds(self._items)
+        total = tracks.total_seconds(self._items)
         self.summary_label.setText(
             self.tr(
-                'Playlist "{playlist}" -- {count} tracks, {total} total.\n'
-                "It will be recorded to the disc in this order, then titled from these names."
-            ).format(playlist=self._playlist.title, count=len(self._items), total=_mmss(total))
+                "{count} tracks, {total} total.\n"
+                "They will be recorded to the disc in this order, then titled from these names."
+            ).format(count=len(self._items), total=_mmss(total))
         )
         if self._manual_breaks:
             # Otherwise ticking the box below produces a split nobody asked
@@ -403,15 +396,6 @@ class RecordDialog(QDialog):
                 ).format(count=len(self._manual_breaks) + 1)
             )
         self._ensure_cover()
-        if self._order_changed:
-            # Put foobar into that order now rather than at Start. It has to
-            # happen before recording either way -- what this buys is that
-            # the playlist on screen in foobar2000 agrees with the table
-            # here from the moment the dialog opens, instead of the two
-            # disagreeing until a button is pressed. Deferred by a
-            # zero-delay timer so the window is up (and the status line
-            # readable) while it runs, since the rebuild blocks.
-            QTimer.singleShot(0, self._push_order_now)
         # Ticked when the *files* say there is more than one disc, because
         # that is not a guess about anything: the album says what it is, and
         # leaving the box clear meant a table numbered 01..17, 01..17 with
@@ -494,16 +478,13 @@ class RecordDialog(QDialog):
         if chosen is not None and not self.year_spin.value() and chosen.year:
             self.year_spin.setValue(chosen.year)
         if not self.cover_label.data:
-            # Last resort: the sleeve the files themselves carry. Reachable
-            # here because %path% is in the playlist's column set, so this
-            # covers a plain foobar playlist as well as a loaded folder --
-            # see embedded_cover for why it ranks below the search.
+            # Last resort: the sleeve the files themselves carry.
             self.cover_label.set_cover(embedded_cover.cover_from_files(i.path for i in self._items if i.path))
 
     # --- the split ----------------------------------------------------
 
     def _plan_tracks(self) -> list[Track]:
-        """The playlist as something multidisc.split_discs can weigh.
+        """The album as something multidisc.split_discs can weigh.
 
         Built from the *items*, not from the tree: what decides the split is
         how long each track runs, and that is a fact about the file, not
@@ -524,13 +505,13 @@ class RecordDialog(QDialog):
         if not self._items:
             return
         capacity = self.disc_minutes_spin.value() * 60
-        tracks = self._plan_tracks()
+        plan_tracks = self._plan_tracks()
         if not self.multi_check.isChecked():
-            self._plan = multidisc.plan_from_breaks(tracks, [], capacity)
+            self._plan = multidisc.plan_from_breaks(plan_tracks, [], capacity)
         elif self._manual_breaks is None:
-            self._plan = multidisc.split_discs(tracks, capacity)
+            self._plan = multidisc.split_discs(plan_tracks, capacity)
         else:
-            self._plan = multidisc.plan_from_breaks(tracks, self._manual_breaks, capacity)
+            self._plan = multidisc.plan_from_breaks(plan_tracks, self._manual_breaks, capacity)
         self._refresh_disc_column()
         self._refresh_split_label()
         self._refresh_warning()
@@ -575,7 +556,7 @@ class RecordDialog(QDialog):
 
     def _refresh_warning(self) -> None:
         """The one-disc warning, which the multi-disc option supersedes."""
-        total = foobar.total_seconds(self._items)
+        total = tracks.total_seconds(self._items)
         if self._multi() or total <= DISC_SP_SECONDS:
             self.warning_label.setVisible(False)
             return
@@ -610,6 +591,16 @@ class RecordDialog(QDialog):
     def _selected_row(self) -> int:
         item = self.tree.currentItem()
         return self.tree.indexOfTopLevelItem(item) if item is not None else -1
+
+    def _refresh_preview(self) -> None:
+        row = self._selected_row()
+        path = Path(self._items[row].path) if 0 <= row < len(self._items) and self._items[row].path else None
+        self.preview_bar.set_current(path, has_prev=row > 0, has_next=0 <= row < len(self._items) - 1)
+
+    def _step_preview(self, delta: int) -> None:
+        row = self._selected_row() + delta
+        if 0 <= row < self.tree.topLevelItemCount():
+            self.tree.setCurrentItem(self.tree.topLevelItem(row))
 
     def _on_multi_toggled(self, _checked: bool) -> None:
         self._recompute_plan()
@@ -655,13 +646,12 @@ class RecordDialog(QDialog):
             return
         self._items[row], self._items[target] = self._items[target], self._items[row]
         if len(self._seed.tracks) == len(self._items):
-            tracks = list(self._seed.tracks)
-            tracks[row], tracks[target] = tracks[target], tracks[row]
-            self._seed = replace(self._seed, tracks=tracks)
+            seed_tracks = list(self._seed.tracks)
+            seed_tracks[row], seed_tracks[target] = seed_tracks[target], seed_tracks[row]
+            self._seed = replace(self._seed, tracks=seed_tracks)
         moved = self.tree.takeTopLevelItem(row)
         self.tree.insertTopLevelItem(target, moved)
         self.tree.setCurrentItem(moved)
-        self._order_changed = True
         self._recompute_plan()
 
     # --- recording ----------------------------------------------------
@@ -671,18 +661,15 @@ class RecordDialog(QDialog):
             return
         if not self._confirm_overwrite():
             return
-        if not self._apply_order_to_foobar():
-            return
-        try:
-            self._client.prepare_for_recording()
-            self._client.set_volume(RECORDING_VOLUME_DB)
-            self._client.stop()
-        except foobar.FoobarError as exc:
-            self._fail(self.tr("foobar2000: {error}").format(error=exc))
-            return
+        self.preview_bar.stop()
+        self._player = audio_engine.AudioPlayer(
+            device=audio_engine.resolve_output_device(app_settings.audio_output_device()),
+            gain_db=app_settings.recording_gain_db(),
+        )
 
         self._disc = 0
         self.start_btn.setEnabled(False)
+        self.erase_btn.setEnabled(False)
         self.mark_check.setEnabled(False)
         self._set_fields_editable(False)
         self.close_btn.setText(self.tr("Stop"))
@@ -695,23 +682,39 @@ class RecordDialog(QDialog):
         for an ordinary album, and once per disc for a long one."""
         if not self._arm_deck():
             return
-        first, _last = self._disc_bounds()
         self._recording = True
-        self._started = False
-        self._stop_armed = False
-        self._highest_index = first - 1
-        # The deck opens a track of its own when recording starts, so the
-        # first track of *every* disc must not be marked again.
-        self._marked_index = first
+        self._current_local_index = 0
         self.progress.setValue(0)
+        # Decoded, resampled and dithered *before* the pause is released --
+        # otherwise the deck sits running into silence for however long
+        # that takes (several seconds, for a whole disc's worth of tracks)
+        # instead of just the deliberate LEAD_IN_MS below.
+        # _report_decode_progress keeps the status label moving meanwhile,
+        # so this doesn't read as the dialog having hung. Dithered via
+        # load_for_recording(), not load_for_playback() -- the deck's own
+        # digital S/PDIF input takes exactly Red Book PCM, the same as a
+        # CD-R burn (see audio_engine.load_for_recording()'s own
+        # docstring).
+        first, last = self._disc_bounds()
+        paths = [Path(item.path) for item in self._items[first : last + 1]]
+        try:
+            buffers = audio_engine.load_for_recording(
+                paths, samplerate=self._player.samplerate, on_progress=self._report_decode_progress
+            )
+        except audio_engine.AudioEngineError as exc:
+            self._fail(self.tr("Could not decode the album for playback: {error}").format(error=exc))
+            return
+        if not self._send_key("SEND PAUSE"):  # releases record-pause
+            return
         self.status_label.setText(
             self.tr("Recording disc {number} -- waiting for the first track...").format(number=self._disc + 1)
             if self._multi()
             else self.tr("Recording started -- waiting for the first track...")
         )
         # Pause released first, playback a moment later: the deck is then
-        # already running when audio arrives.
-        QTimer.singleShot(LEAD_IN_MS, self._begin_playback)
+        # already running when audio arrives. The buffers are already
+        # decoded, so nothing but this deliberate gap delays it now.
+        QTimer.singleShot(LEAD_IN_MS, lambda: self._begin_playback(buffers))
 
     def _confirm_overwrite(self) -> bool:
         if self._multi() and self._plan is not None:
@@ -734,111 +737,6 @@ class RecordDialog(QDialog):
             QMessageBox.StandardButton.Cancel,
         )
         return answer == QMessageBox.StandardButton.Ok
-
-    def _push_order_now(self) -> None:
-        """The sort's other half: getting it into foobar2000.
-
-        Called once, from _load_playlist, and only when sorting actually
-        moved something. A failure here is not fatal -- it says so and
-        leaves the order pending, so Start tries again and refuses rather
-        than recording something this list does not describe."""
-        if not self._order_changed:
-            return
-        if self._apply_order_to_foobar():
-            self.status_label.setVisible(True)
-            self.status_label.setText(
-                self.tr("foobar2000's playlist is now in this order -- the album's own, from the files.")
-            )
-
-    def _apply_order_to_foobar(self) -> bool:
-        """Pushes a reordered table back into foobar2000, by rebuilding its
-        playlist from the files in this order.
-
-        Nothing else would do: the recording is foobar playing its own
-        playlist, so a table reordered only here would title the disc in one
-        order and record it in another -- which is not hypothetical, it was
-        reported from a live recording that put the wrong track on a disc.
-        The rebuild goes through foobar's command line rather than Beefweb,
-        which refuses any file outside foobar's own configured music folders
-        (a 403 that, on a normal install, applies to every file there is),
-        and `replace_current_playlist()` reads the resulting order back and
-        insists on it -- foobar sorts an incoming batch by filename, so the
-        order asked for is emphatically not the order that lands.
-
-        This is the one blocking call in this dialog. It only ever runs
-        after the user has actually moved a row, and only once per
-        recording."""
-        if not self._order_changed:
-            return True
-        paths = [item.path for item in self._items]
-
-        # Moving the items is the right way round and is tried first: it
-        # touches no files, clears nothing, and leaves the playlist intact
-        # if it fails. The rebuild below is the fallback, and it is a
-        # heavier and more destructive thing -- it empties the playlist
-        # before it can refill it.
-        if self._playlist is not None:
-            try:
-                if foobar.reorder_playlist(self._client, self._playlist.id, paths):
-                    self._order_changed = False
-                    return True
-            except foobar.FoobarError:
-                pass  # say nothing yet; the rebuild may still manage it
-
-        if not all(paths):
-            QMessageBox.warning(
-                self,
-                self.tr("Record to MiniDisc"),
-                self.tr(
-                    "Some of these entries are not files on disk, so the new order cannot be given to "
-                    "foobar2000. Put the playlist in the order you want there instead."
-                ),
-            )
-            return False
-        exe = self._resolve_foobar_exe()
-        if exe is None:
-            return False
-
-        self.status_label.setVisible(True)
-        self.status_label.setText(self.tr("Putting foobar2000's playlist into this order..."))
-        # Repainted by hand: the rebuild below blocks this thread, so
-        # without it the message above would never reach the screen.
-        QApplication.processEvents()
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            playlist = foobar.replace_current_playlist(self._client, exe, paths)
-        except foobar.FoobarError as exc:
-            QMessageBox.warning(
-                self,
-                self.tr("Record to MiniDisc"),
-                self.tr("foobar2000 could not be given the new order: {error}").format(error=exc),
-            )
-            return False
-        finally:
-            QApplication.restoreOverrideCursor()
-
-        self._playlist = playlist
-        self._order_changed = False
-        return True
-
-    def _resolve_foobar_exe(self) -> str | None:
-        """The same check the CD and folder flows make, for the same reason
-        -- Beefweb cannot be handed a file outside foobar's own configured
-        music directories."""
-        exe = app_settings.foobar_exe() or (foobar.find_foobar_exe() or "")
-        if exe and Path(exe).is_file():
-            if not app_settings.foobar_exe():
-                app_settings.set_foobar_exe(exe)
-            return exe
-        QMessageBox.warning(
-            self,
-            self.tr("Record to MiniDisc"),
-            self.tr(
-                "foobar2000 could not be found, so its playlist cannot be reordered. Set its location in "
-                "Window > Settings..., or put the playlist in the order you want in foobar2000 itself."
-            ),
-        )
-        return None
 
     def _arm_deck(self) -> bool:
         """RECORD puts the deck into record-pause, then the user confirms it
@@ -872,31 +770,32 @@ class RecordDialog(QDialog):
         self._fail(self.tr("Cancelled -- the deck was not recording."))
         return False
 
-    def _begin_playback(self) -> None:
-        if not self._recording or self._playlist is None:
+    def _begin_playback(self, buffers: list) -> None:
+        if not self._recording or self._player is None:
             return
-        if not self._send_key("SEND PAUSE"):  # releases record-pause
-            return
-        first, last = self._disc_bounds()
-        try:
-            # Cleared explicitly rather than trusted: prepare_for_recording()
-            # clears it once, at the start of the whole run, which says
-            # nothing about what the disc before this one left set.
-            self._client.set_stop_after_current_track(False)
-            self._client.play(self._playlist.id, first)
-            if self._multi() and first == last:
-                # A one-track disc has no later transition to notice, so the
-                # boundary has to be armed straight away.
-                self._client.set_stop_after_current_track(True)
-                self._stop_armed = True
-        except foobar.FoobarError as exc:
-            self._fail(self.tr("foobar2000: {error}").format(error=exc))
-            return
+        self._player.play(
+            buffers,
+            on_track_boundary=self._bridge.track_boundary.emit,
+            on_finished=self._bridge.finished.emit,
+        )
         self._timer.start()
 
+    def _report_decode_progress(self, index: int, total: int, path: Path) -> None:
+        """`load_for_recording`'s own callback, called synchronously from
+        inside its decode loop -- decoding a whole disc up front (see
+        _begin_disc) can take a few real seconds, and processEvents() is
+        what actually lets the label repaint mid-loop, since nothing else
+        returns to the event loop until decoding finishes."""
+        self.status_label.setText(
+            self.tr("Preparing track {index} of {total}: {name}...").format(
+                index=index, total=total, name=path.stem
+            )
+        )
+        QCoreApplication.processEvents()
+
     def _disc_bounds(self) -> tuple[int, int]:
-        """The playlist indices the disc being recorded covers, as
-        [first, last]. The whole playlist when there is only one disc."""
+        """The item indices the disc being recorded covers, as [first, last].
+        The whole album when there is only one disc."""
         disc = self._current_disc()
         if disc is None or not self._multi():
             return 0, len(self._items) - 1
@@ -907,89 +806,35 @@ class RecordDialog(QDialog):
             return None
         return self._plan.discs[self._disc]
 
-    def _poll(self) -> None:
-        try:
-            state = self._client.player_state()
-        except foobar.FoobarError as exc:
-            self._fail(self.tr("Lost contact with foobar2000: {error}").format(error=exc))
+    def _on_track_boundary(self, local_index: int) -> None:
+        """Fired by AudioPlayer (via PlaybackBridge) the instant playback
+        crosses into the buffer at `local_index`, sample-accurately -- see
+        the module docstring for what this replaces.
+
+        Never fires for `local_index == 0`: AudioPlayer only calls this on
+        a transition *into* a later buffer, so the disc's first track
+        (which the deck already opens one of when recording starts) is
+        never marked again here, with no special-casing needed for it."""
+        self._current_local_index = local_index
+        if self.mark_check.isChecked():
+            self._send_key(TRACK_MARK_KEY)
+
+    def _refresh_progress(self) -> None:
+        if not self._recording or self._player is None:
             return
-
-        if state.is_playing or state.playback_state == foobar.PAUSED:
-            _first, last = self._disc_bounds()
-            if self._multi() and state.item_index > last:
-                # The stop-after-this-track flag did not take. Ending the
-                # disc here costs a fraction of the next track recorded onto
-                # the end of this one; letting it run would put the whole of
-                # the next disc there.
-                try:
-                    self._client.stop()
-                except foobar.FoobarError:
-                    pass
-                self._disc_finished()
-                return
-            self._mark_if_new_track(state.item_index)
-            self._started = True
-            self._highest_index = max(self._highest_index, state.item_index)
-            self._arm_stop_if_last(state.item_index)
-            self._show_progress(state)
-            return
-
-        # Stopped. Before playback ever started this is just the gap between
-        # play() and foobar actually running, not the end of the album.
-        if self._started:
-            self._disc_finished()
-
-    def _arm_stop_if_last(self, index: int) -> None:
-        """Tells foobar2000 to stop when this track ends, once the disc's
-        last track is the one playing.
-
-        Armed on the transition *into* the last track rather than left set
-        for the whole disc, because the flag applies to whatever is playing
-        when it is read -- setting it at the start would end the disc after
-        its first track. The same reasoning, and the same mechanism, as the
-        cassette's side break."""
-        if not self._multi() or self._stop_armed:
-            return
-        _first, last = self._disc_bounds()
-        if index != last:
-            return
-        try:
-            self._client.set_stop_after_current_track(True)
-            self._stop_armed = True
-        except foobar.FoobarError:
-            pass  # the poll above still ends the disc, a moment later
-
-    def _mark_if_new_track(self, index: int) -> None:
-        """A track mark at every transition, which is what makes a gapless
-        album split correctly -- the deck's own silence detection cannot
-        find a boundary that has no silence at it.
-
-        Never marks the first track: the deck already starts one when
-        recording begins, and marking again immediately would leave a
-        fraction-of-a-second track at the very start."""
-        if not self.mark_check.isChecked() or index < 0:
-            return
-        if not self._started or index <= self._marked_index:
-            self._marked_index = max(self._marked_index, index)
-            return
-        self._marked_index = index
-        self._send_key(TRACK_MARK_KEY)
-
-    def _show_progress(self, state: foobar.PlayerState) -> None:
         first, last = self._disc_bounds()
-        done = sum(item.length_seconds for item in self._items[first : max(first, state.item_index)])
-        elapsed = done + state.position
+        current = first + self._current_local_index
+        done = sum(item.length_seconds for item in self._items[first:current])
+        elapsed = done + self._player.position_seconds
         total = max(1, sum(item.length_seconds for item in self._items[first : last + 1]))
         self.progress.setValue(int(1000 * min(1.0, elapsed / total)))
-        title = (
-            self._items[state.item_index].display_title() if 0 <= state.item_index < len(self._items) else ""
-        )
+        title = self._items[current].display_title() if 0 <= current < len(self._items) else ""
         if self._multi() and self._plan is not None:
             self.status_label.setText(
                 self.tr("Disc {disc} of {discs}, track {index} of {count}: {title} -- {elapsed} of {total}").format(
                     disc=self._disc + 1,
                     discs=self._plan.count,
-                    index=state.item_index - first + 1,
+                    index=current - first + 1,
                     count=last - first + 1,
                     title=title,
                     elapsed=_mmss(elapsed),
@@ -999,7 +844,7 @@ class RecordDialog(QDialog):
             return
         self.status_label.setText(
             self.tr("Recording {index} of {count}: {title} -- {elapsed} of {total}").format(
-                index=state.item_index + 1,
+                index=current + 1,
                 count=len(self._items),
                 title=title,
                 elapsed=_mmss(elapsed),
@@ -1007,9 +852,15 @@ class RecordDialog(QDialog):
             )
         )
 
-    def _disc_finished(self) -> None:
+    def _on_disc_finished(self) -> None:
         """The end of a disc -- which for an ordinary album is the end of
-        the recording, and for a long one is the end of one of several."""
+        the recording, and for a long one is the end of one of several.
+
+        Fired by AudioPlayer once every buffer it was given has played out
+        -- unlike the old poll loop, there is no "stopped partway through"
+        state to detect here: AudioPlayer always plays its whole queue to
+        completion unless `.stop()` is called (which `reject()` does, and
+        which does not fire this)."""
         self._timer.stop()
         self._recording = False
         self._send_key("SEND STOP")
@@ -1017,23 +868,18 @@ class RecordDialog(QDialog):
         # to the same port, which this one would still be holding.
         self._close_deck()
         self.progress.setValue(1000)
-        first, last = self._disc_bounds()
-
-        if self._highest_index < last:
-            self._finish_run(
-                self.tr(
-                    "Playback stopped at track {reached} of {count}, so the disc is incomplete. "
-                    "Titling it now would name tracks that were never recorded."
-                ).format(reached=self._highest_index - first + 1, count=last - first + 1)
-            )
-            return
 
         self._capture_metadata()
         if not self._multi():
             self.close_btn.setText(self.tr("Close"))
             self.mark_check.setEnabled(True)
-            self.status_label.setText(self.tr("Recording finished. The titles can be written now."))
-            self._offer_titling()
+            self.status_label.setText(
+                self.tr("Recording finished. Writing titles now -- leave the adapter pointing at the deck.")
+            )
+            # Two seconds, so the deck has finished writing its TOC after
+            # STOP and will take the titling keys -- same reasoning as the
+            # multi-disc wait just below.
+            QTimer.singleShot(TITLING_DELAY_MS, self._title_single_disc)
             return
 
         self.status_label.setText(
@@ -1044,6 +890,29 @@ class RecordDialog(QDialog):
         # Two seconds, so the deck has finished writing its TOC after STOP
         # and will take the titling keys.
         QTimer.singleShot(TITLING_DELAY_MS, self._title_current_disc)
+
+    def _title_single_disc(self) -> None:
+        """Writes the album's titles and ejects, unattended -- nobody sits
+        through a whole recording, so a confirmation between the music
+        ending and the titles going out would leave the deck holding an
+        untitled disc until somebody came back. Same reasoning
+        _title_current_disc() already applies per-disc on a multi-disc
+        run; this is that same treatment for the ordinary, single-disc
+        case, which used to ask twice (write titles now? then eject?)."""
+        metadata = self.result_metadata or tracks.metadata_from_playlist(self._items)
+        # A disc that was just recorded has no titles to erase, and erasing
+        # is roughly half the total time.
+        dialog = MDRemUploadDialog(metadata, self._port, self, clear_default=False, unattended=True)
+        dialog.exec()
+        if dialog.succeeded:
+            self.status_label.setText(self.tr("Recording finished. Titles written and the disc ejected."))
+        else:
+            self.status_label.setText(
+                self.tr(
+                    "Recording finished, but the titles could not be written. The disc itself is fine -- "
+                    "the titles can be written again from Tools > Metadata..."
+                )
+            )
 
     def _title_current_disc(self) -> None:
         """Writes this disc's titles, ejects it, and asks for the next --
@@ -1112,12 +981,12 @@ class RecordDialog(QDialog):
     def _capture_metadata(self) -> None:
         """Reads the dialog back as the project's metadata.
 
-        The widgets are the source, not the playlist, because the user has
-        been able to correct them since it was loaded -- and the artwork was
-        already settled at that point too (see _ensure_cover), so nothing
-        here goes near the network. That matters for more than speed: this
-        runs the instant an album finishes playing, and a lookup that hung
-        there would hold up the offer to write the titles.
+        The widgets are the source, not the files, because the user has
+        been able to correct them since they were loaded -- and the artwork
+        was already settled at that point too (see _ensure_cover), so
+        nothing here goes near the network. That matters for more than
+        speed: this runs the instant an album finishes playing, and a
+        lookup that hung there would hold up the offer to write the titles.
 
         It describes the whole album, every disc of it, because that is what
         the label is for -- the per-disc slices titling needs are cut from
@@ -1162,11 +1031,10 @@ class RecordDialog(QDialog):
         being a mixtape for having been looked at. The same mistake was
         found and fixed in MetadataDialog once already.
 
-        Built one per *playlist item* rather than one per seed track: the
-        playlist is what is actually going onto the disc, so if the two ever
-        disagreed about how many tracks there are, it is the playlist that
-        is right."""
-        tracks = []
+        Built one per item rather than one per seed track: the items are
+        what is actually going onto the disc, so if the two ever disagreed
+        about how many tracks there are, it is the items that are right."""
+        result = []
         for index, item in enumerate(self._items):
             row = self.tree.topLevelItem(index)
             seed = self._seed.tracks[index] if index < len(self._seed.tracks) else None
@@ -1178,26 +1046,19 @@ class RecordDialog(QDialog):
             artist = (
                 row.text(COL_ARTIST).strip() if row is not None else (seed.artist if seed else item.artist)
             )
-            tracks.append(
-                Track(title=title, time_seconds=item.length_seconds or None, artist=artist)
-            )
-        return tracks
+            result.append(Track(title=title, time_seconds=item.length_seconds or None, artist=artist))
+        return result
 
-    def _offer_titling(self) -> None:
-        answer = QMessageBox.question(
-            self,
-            self.tr("Record to MiniDisc"),
-            self.tr("Write the album and track titles onto the disc now?"),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if answer != QMessageBox.StandardButton.Yes:
-            return
-        # Whatever _capture_metadata settled on, so an album name corrected
-        # before the recording is the one written onto the disc.
-        metadata = self.result_metadata or foobar.metadata_from_playlist(self._items)
-        # A disc that was just recorded has no titles to erase, and erasing
-        # is roughly half the total time.
-        MDRemUploadDialog(metadata, self._port, self, clear_default=False).exec()
+    def _erase_disc(self) -> None:
+        """Erase MiniDisc... -- clears whatever disc is currently in the
+        deck. Used to be a standalone Recording menu entry, reachable
+        whether or not this dialog was even open; moved here since erasing
+        the wrong disc is most likely to come up right before recording
+        onto it. Reuses this dialog's own port rather than resolving a
+        fresh one -- it is already known, and there is only ever one deck
+        to erase. Disabled for the duration of an actual recording (see
+        _start/_fail), so it can't be reached while the deck is busy."""
+        EraseDiscDialog(self._port, self).exec()
 
     # --- helpers ------------------------------------------------------
 
@@ -1221,26 +1082,28 @@ class RecordDialog(QDialog):
     def _fail(self, message: str) -> None:
         self._timer.stop()
         self._recording = False
+        if self._player is not None:
+            self._player.stop()
         self._close_deck()
         self.progress.setVisible(False)
         self.status_label.setVisible(True)
         self.status_label.setText(message)
         self.close_btn.setText(self.tr("Close"))
         self.start_btn.setEnabled(True)
+        self.erase_btn.setEnabled(True)
         self.mark_check.setEnabled(True)
         self._set_fields_editable(True)
 
     def reject(self) -> None:
         """Stopping mid-recording has to stop both ends -- leaving the deck
-        recording silence after foobar has stopped would append a long empty
-        track to the disc."""
+        recording silence after playback has stopped would append a long
+        empty track to the disc."""
+        self.preview_bar.stop()
         if self._recording:
             self._timer.stop()
             self._recording = False
-            try:
-                self._client.stop()
-            except foobar.FoobarError:
-                pass
+            if self._player is not None:
+                self._player.stop()
             self._send_key("SEND STOP")
         self._close_deck()
         super().reject()

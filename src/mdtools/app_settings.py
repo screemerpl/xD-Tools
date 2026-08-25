@@ -18,11 +18,13 @@ from pathlib import Path
 
 from PySide6.QtCore import QSettings, QStandardPaths
 
+from mdtools import user_paths
+
 # Fallback defaults -- what every DPI value used to be as a fixed constant
 # before it became user-configurable. Used until the user opens Window >
 # Settings... and changes something, and as the reset target there.
 DEFAULT_SCREEN_DPI = 96.0
-DEFAULT_EXPORT_DPI = 300.0
+DEFAULT_EXPORT_DPI = 144.0  # Cricut Design Space's own requirement
 DEFAULT_BAKE_DPI = DEFAULT_EXPORT_DPI * 3
 
 # xD-Tools' own Telegram API credentials are **injected at build time, never
@@ -37,19 +39,19 @@ _MDREM_ENABLED_KEY = "mdrem_enabled"
 _EXPERIMENTAL_FEATURES_ENABLED_KEY = "experimental_features_enabled"
 _MDREM_PORT_KEY = "mdrem_port"
 _MDREM_EXTENDED_REMOTE_KEY = "mdrem_extended_remote"
-_FOOBAR_URL_KEY = "foobar_url"
-_FOOBAR_EXE_KEY = "foobar_exe"
 _CD_RIP_FOLDER_KEY = "cd_rip_folder"
 _CD_DRIVE_KEY = "cd_drive"
 _MUSIC_FOLDER_KEY = "music_folder"
 _TELEGRAM_API_ID_KEY = "telegram_api_id"
 _TELEGRAM_API_HASH_KEY = "telegram_api_hash"
 _TELEGRAM_BOT_USERNAME_KEY = "telegram_bot_username"
-_TELEGRAM_DOWNLOAD_FOLDER_KEY = "telegram_download_folder"
 _TELEGRAM_PHONE_KEY = "telegram_phone"
-
-# foo_beefweb's own default listening address.
-DEFAULT_FOOBAR_URL = "http://localhost:8880"
+_REGENERATE_FONT_FAMILY_KEY = "regenerate_font_family"
+_AUDIO_OUTPUT_DEVICE_KEY = "audio_output_device"
+_TAPE_AUDIO_OUTPUT_DEVICE_KEY = "tape_audio_output_device"
+_RECORDING_GAIN_DB_KEY = "recording_gain_db"
+_LAST_NEW_PROJECT_MEDIUM_KEY = "new_project/last_medium"
+_LAST_NEW_PROJECT_TEMPLATE_KEY_PREFIX = "new_project/last_template"
 
 
 def _config_dir() -> Path:
@@ -166,39 +168,105 @@ def set_mdrem_port(value: str) -> None:
     _settings().setValue(_MDREM_PORT_KEY, str(value))
 
 
-def foobar_url() -> str:
-    """Base URL of foobar2000's Beefweb Remote Control component, used by
-    Record to MiniDisc. Configurable because Beefweb's port is."""
-    return str(_settings().value(_FOOBAR_URL_KEY, DEFAULT_FOOBAR_URL) or DEFAULT_FOOBAR_URL)
+def last_regenerate_font_family() -> str | None:
+    """The font family last chosen in Toolbar > "Regenerate with
+    Font..."'s picker, or None if it has never been used -- the dialog
+    opens on this instead of the application's own default font, so a
+    user who settles on a face doesn't have to re-pick it every time."""
+    value = _settings().value(_REGENERATE_FONT_FAMILY_KEY, "")
+    return str(value) if value else None
 
 
-def set_foobar_url(value: str) -> None:
-    _settings().setValue(_FOOBAR_URL_KEY, str(value).strip() or DEFAULT_FOOBAR_URL)
+def set_last_regenerate_font_family(family: str) -> None:
+    _settings().setValue(_REGENERATE_FONT_FAMILY_KEY, str(family))
 
 
-def foobar_exe() -> str:
-    """foobar2000's own executable, which Record CD needs *in addition to*
-    the Beefweb URL above -- the two do different halves of the same job.
-    Beefweb cannot be given files outside its configured music directories
-    (see foobar.add_files_via_cli), so the ripped tracks go in through the
-    command line instead.
-
-    Empty means "not chosen yet"; callers fall back to
-    foobar.find_foobar_exe()."""
-    return str(_settings().value(_FOOBAR_EXE_KEY, "") or "")
+def last_new_project_medium() -> str:
+    """The medium last chosen in File > New, or "" if none has ever been
+    chosen -- creating one project after another normally means the same
+    medium each time, so the dialog opens on it instead of always
+    defaulting back to MiniDisc."""
+    return str(_settings().value(_LAST_NEW_PROJECT_MEDIUM_KEY, ""))
 
 
-def set_foobar_exe(value: str) -> None:
-    _settings().setValue(_FOOBAR_EXE_KEY, str(value).strip())
+def set_last_new_project_medium(medium: str) -> None:
+    _settings().setValue(_LAST_NEW_PROJECT_MEDIUM_KEY, str(medium))
+
+
+def last_new_project_template(medium: str, page: str) -> str:
+    """The *name* of the template last chosen for one page of one medium in
+    File > New, or "" if never recorded. "" also covers an optional page
+    deliberately left on "(none)" -- that already is that page's own
+    default, so there's nothing more useful to distinguish it from "never
+    chosen" for."""
+    return str(_settings().value(f"{_LAST_NEW_PROJECT_TEMPLATE_KEY_PREFIX}/{medium}/{page}", ""))
+
+
+def set_last_new_project_template(medium: str, page: str, template_name: str) -> None:
+    _settings().setValue(f"{_LAST_NEW_PROJECT_TEMPLATE_KEY_PREFIX}/{medium}/{page}", str(template_name))
+
+
+def audio_output_device() -> str:
+    """The output device a MiniDisc recording's source material plays
+    through -- typically an interface's S/PDIF feeding the deck. Saved as
+    a device *name* (PortAudio's own index is not stable across a reboot
+    or a USB replug), same "a saved value is never silently replaced by
+    whatever else happens to be plugged in" rule mdrem_port() follows.
+
+    A cassette recording uses its own separate setting
+    (tape_audio_output_device()) -- explicit request, since a MiniDisc
+    deck typically wants a digital (S/PDIF) output and a cassette deck an
+    analogue line output, which are routinely two different physical
+    interfaces (or two different outputs on the same one).
+
+    Empty means "not chosen yet" -- callers (audio_engine.resolve_device())
+    fall back to the OS default output device, exactly like a preview
+    playback always does regardless of this setting."""
+    return str(_settings().value(_AUDIO_OUTPUT_DEVICE_KEY, "") or "")
+
+
+def set_audio_output_device(value: str) -> None:
+    _settings().setValue(_AUDIO_OUTPUT_DEVICE_KEY, str(value).strip())
+
+
+def tape_audio_output_device() -> str:
+    """The cassette recording's own output device -- see
+    audio_output_device()'s own docstring for why this is a second,
+    independent setting rather than the same one MiniDisc recording uses."""
+    return str(_settings().value(_TAPE_AUDIO_OUTPUT_DEVICE_KEY, "") or "")
+
+
+def set_tape_audio_output_device(value: str) -> None:
+    _settings().setValue(_TAPE_AUDIO_OUTPUT_DEVICE_KEY, str(value).strip())
+
+
+# Headroom against clipping on the digital/analogue transfer -- explicit
+# user request, previously a hardcoded RECORDING_VOLUME_DB constant
+# duplicated in record_dialog.py and tape_record_dialog.py, applied via
+# foobar2000's own set_volume(). Now a real setting this engine's own
+# AudioPlayer reads instead, so it no longer has to live twice.
+DEFAULT_RECORDING_GAIN_DB = -5.0
+
+
+def recording_gain_db() -> float:
+    """How far below full scale a recording's output is played, for
+    headroom on the digital/analogue path into the deck or burner. A
+    QSettings float round-trips as a string, hence the explicit float()
+    the way screen_dpi()/etc. also need it."""
+    return float(_settings().value(_RECORDING_GAIN_DB_KEY, DEFAULT_RECORDING_GAIN_DB))
+
+
+def set_recording_gain_db(value: float) -> None:
+    _settings().setValue(_RECORDING_GAIN_DB_KEY, float(value))
 
 
 def default_cd_rip_folder() -> str:
-    """Under the system temp folder by default: a rip is the raw material
-    for a recording, not a music collection, and one album is a few hundred
-    megabytes that most users will never want again once the disc is
-    written. Changeable in Window > Settings for anyone who does."""
-    base = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.TempLocation)
-    return str(Path(base) / "MDTools CD Rip")
+    """XDProjects/Audio by default -- shared with Telegram bot downloads,
+    since both are audio destined for the same recording flow. Previously
+    the system temp folder, which did not survive a reboot and was not
+    where a user would think to look for it. Changeable in Window >
+    Settings for anyone who wants it somewhere else."""
+    return str(user_paths.audio_dir())
 
 
 def cd_rip_folder() -> str:
@@ -332,22 +400,6 @@ def telegram_bot_username() -> str:
 
 def set_telegram_bot_username(value: str) -> None:
     _settings().setValue(_TELEGRAM_BOT_USERNAME_KEY, str(value).strip())
-
-
-def default_telegram_download_folder() -> str:
-    """Under the system temp folder by default, same reasoning as
-    default_cd_rip_folder(): a downloaded album is raw material for a
-    recording, not a permanent library."""
-    base = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.TempLocation)
-    return str(Path(base) / "MDTools Telegram Downloads")
-
-
-def telegram_download_folder() -> str:
-    return str(_settings().value(_TELEGRAM_DOWNLOAD_FOLDER_KEY, "") or default_telegram_download_folder())
-
-
-def set_telegram_download_folder(value: str) -> None:
-    _settings().setValue(_TELEGRAM_DOWNLOAD_FOLDER_KEY, str(value).strip())
 
 
 def telegram_session_path() -> Path:

@@ -30,7 +30,7 @@ from PySide6.QtWidgets import QApplication
 SIZE = 1024
 INK = "#f2f4f8"  # the note itself, light: this sits on dark title bars
 FACE = "#1b1e28"  # the grin, cut out of the head
-ACCENT = "#2a82da"  # the app's own accent, from theme.py
+ACCENT = "#5865f2"  # the app's own accent, from theme.py
 
 ASSETS = Path(__file__).resolve().parents[1] / "assets" / "img"
 PNG = ASSETS / "xdtools.png"

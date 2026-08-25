@@ -3,9 +3,11 @@
 build/
 dist/
 *.egg-info/
-# Generowany przez PyInstaller — scripts/build_windows.ps1 buduje z flag CLI,
-# nie z tego pliku.
+# Generowane przez PyInstaller — scripts/build_windows.ps1 buduje z flag CLI,
+# nie z tych plików. MDTools.spec został po dawnej nazwie aplikacji; każdy
+# build zapisuje dziś xD-Tools.spec.
 MDTools.spec
+xD-Tools.spec
 
 # Python
 __pycache__/

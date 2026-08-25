@@ -118,12 +118,13 @@ class MDRemUploadDialog(QDialog):
 
         `unattended` gives up the preview this dialog exists for: it starts
         writing as soon as it opens, ejects without asking and closes itself
-        when it is done. Only the multi-disc recording flow passes it, and
-        only because the user is not at the machine -- that flow records a
-        disc, titles it, ejects it and asks for the next one, so a
-        confirmation between the music ending and the titles being written
-        would leave the deck sitting with an untitled disc until somebody
-        came back. Everything the preview would have shown (the
+        when it is done. RecordDialog passes it after *any* MD recording
+        finishes now, not just a multi-disc one -- nobody sits through a
+        whole album, so a confirmation between the music ending and the
+        titles being written would leave the deck sitting with an untitled
+        disc until somebody came back, the same reasoning that already
+        applied to a multi-disc run (record a disc, title it, eject it,
+        ask for the next). Everything the preview would have shown (the
         transliterated titles, anything dropped) was already on screen in
         the recording dialog before the album started playing."""
         super().__init__(parent)

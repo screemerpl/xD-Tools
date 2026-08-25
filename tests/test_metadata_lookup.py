@@ -183,3 +183,111 @@ def test_fetch_artwork_raises_metadata_lookup_error_on_network_failure(monkeypat
 
     with pytest.raises(MetadataLookupError):
         fetch_artwork("https://example.com/cover.jpg")
+
+
+# -- artist photos (search_artists / find_artist_photo) ----------------------
+
+
+def _fake_artist_urlopen(search_payload: dict, image_bytes: bytes = b"fake-photo-bytes"):
+    def urlopen(request, timeout=None):
+        url = request.full_url
+        if url.startswith(metadata_lookup.ARTIST_SEARCH_URL):
+            return _FakeResponse(search_payload)
+        return _FakeImageResponse(image_bytes)
+
+    return urlopen
+
+
+class _FakeImageResponse:
+    def __init__(self, body: bytes):
+        self._body = body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def read(self) -> bytes:
+        return self._body
+
+
+def test_search_artists_ranks_by_name_similarity_then_popularity(monkeypatch):
+    """Verified live against the real Deezer API (2026-08-21): two acts
+    both called "Taylor Swift" score an identical 1.0 name match, so
+    nb_fan is what actually has to decide which one somebody means."""
+    payload = {
+        "data": [
+            {"id": 1, "name": "Taylor Swift", "nb_fan": 11, "picture_xl": "https://example.com/obscure.jpg"},
+            {"id": 2, "name": "Taylor Swift", "nb_fan": 12691966, "picture_xl": "https://example.com/real.jpg"},
+        ]
+    }
+    monkeypatch.setattr(metadata_lookup.urllib.request, "urlopen", _fake_artist_urlopen(payload))
+
+    candidates = metadata_lookup.search_artists("Taylor Swift")
+
+    assert candidates[0].id == 2
+    assert candidates[0].nb_fan == 12691966
+
+
+def test_find_artist_photo_downloads_the_best_matches_picture(monkeypatch):
+    payload = {"data": [{"id": 1, "name": "Taylor Swift", "nb_fan": 100, "picture_xl": "https://example.com/a.jpg"}]}
+    monkeypatch.setattr(
+        metadata_lookup.urllib.request, "urlopen", _fake_artist_urlopen(payload, b"the-actual-photo-bytes")
+    )
+
+    photo = metadata_lookup.find_artist_photo("Taylor Swift")
+
+    assert photo == b"the-actual-photo-bytes"
+
+
+def test_find_artist_photo_returns_none_when_nothing_is_found(monkeypatch):
+    monkeypatch.setattr(metadata_lookup.urllib.request, "urlopen", _fake_artist_urlopen({"data": []}))
+
+    assert metadata_lookup.find_artist_photo("Some Obscure Nobody") is None
+
+
+def test_find_artist_photo_refuses_a_poorly_matching_name(monkeypatch):
+    """A photo is of one specific person -- "close enough" is not good
+    enough the way it can be for an album edition."""
+    payload = {
+        "data": [{"id": 1, "name": "Completely Unrelated Band", "nb_fan": 999999, "picture_xl": "https://x/y.jpg"}]
+    }
+    monkeypatch.setattr(metadata_lookup.urllib.request, "urlopen", _fake_artist_urlopen(payload))
+
+    assert metadata_lookup.find_artist_photo("Taylor Swift") is None
+
+
+def test_find_artist_photo_is_silent_on_a_search_failure(monkeypatch):
+    import urllib.error
+
+    def broken_urlopen(request, timeout=None):
+        raise urllib.error.URLError("boom")
+
+    monkeypatch.setattr(metadata_lookup.urllib.request, "urlopen", broken_urlopen)
+
+    assert metadata_lookup.find_artist_photo("Taylor Swift") is None
+
+
+def test_find_artist_photo_is_silent_on_a_download_failure(monkeypatch):
+    import urllib.error
+
+    payload = {"data": [{"id": 1, "name": "Taylor Swift", "nb_fan": 100, "picture_xl": "https://example.com/a.jpg"}]}
+
+    def urlopen(request, timeout=None):
+        if request.full_url.startswith(metadata_lookup.ARTIST_SEARCH_URL):
+            return _FakeResponse(payload)
+        raise urllib.error.URLError("boom")
+
+    monkeypatch.setattr(metadata_lookup.urllib.request, "urlopen", urlopen)
+
+    assert metadata_lookup.find_artist_photo("Taylor Swift") is None
+
+
+def test_find_artist_photo_of_a_blank_name_makes_no_request(monkeypatch):
+    def urlopen(request, timeout=None):
+        raise AssertionError("should never be called for a blank artist")
+
+    monkeypatch.setattr(metadata_lookup.urllib.request, "urlopen", urlopen)
+
+    assert metadata_lookup.find_artist_photo("   ") is None

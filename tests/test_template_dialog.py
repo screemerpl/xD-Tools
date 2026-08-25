@@ -18,6 +18,36 @@ def test_builtin_template_cannot_be_deleted(qt_app, tmp_path, monkeypatch):
     assert len(dialog.templates["disc"]) == before
 
 
+def test_a_case_back_template_can_be_added_and_is_its_own_kind(qt_app, tmp_path, monkeypatch):
+    """The Template Manager's Add... menu offers "Case back" as its own
+    entry -- a case back is a CoverTemplate like a cover/insert is, but a
+    different family, the same reasoning "Shell label" already has its own
+    entry for."""
+    monkeypatch.setattr(registry, "user_templates_path", lambda: tmp_path / "templates.json")
+    dialog = TemplateManagerDialog()
+
+    dialog._add_template("case_back")
+
+    kind, added_template = dialog.list_widget.currentItem().data(1)
+    assert kind == "case_back"
+    assert added_template.kind == "case_back"
+    assert added_template in dialog.templates["case_back"]
+    assert added_template not in dialog.templates["cover"]
+
+
+def test_case_back_templates_are_listed_with_their_own_label(qt_app, tmp_path, monkeypatch):
+    monkeypatch.setattr(registry, "user_templates_path", lambda: tmp_path / "templates.json")
+    dialog = TemplateManagerDialog()
+
+    row = next(
+        i
+        for i in range(dialog.list_widget.count())
+        if dialog.list_widget.item(i).data(1)[0] == "case_back"
+    )
+
+    assert dialog.list_widget.item(row).text().startswith("Case Back:")
+
+
 def test_user_added_template_can_be_deleted(qt_app, tmp_path, monkeypatch):
     monkeypatch.setattr(registry, "user_templates_path", lambda: tmp_path / "templates.json")
     dialog = TemplateManagerDialog()

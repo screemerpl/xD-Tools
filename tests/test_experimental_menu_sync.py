@@ -168,7 +168,7 @@ def downloads(tmp_path) -> Path:
 
 
 def test_sort_telegram_downloads_sorts_the_configured_folder(qt_app, monkeypatch, downloads):
-    app_settings.set_telegram_download_folder(str(downloads))
+    app_settings.set_cd_rip_folder(str(downloads))
     a = _touch(downloads, "a.flac")
     b = _touch(downloads, "b.flac")
     tags = {a: ("Caskets", "Lost Souls"), b: ("Skillet", "Unleashed")}
@@ -189,16 +189,22 @@ def test_sort_telegram_downloads_creates_the_folder_if_missing(qt_app, monkeypat
     """Nothing to sort in a folder that doesn't exist yet -- must not
     crash, same "created on demand" rule as cdrip.ensure_folder()."""
     missing = tmp_path / "not-created-yet"
-    app_settings.set_telegram_download_folder(str(missing))
-    monkeypatch.setattr(app_module.QMessageBox, "information", staticmethod(lambda *a, **k: None))
+    app_settings.set_cd_rip_folder(str(missing))
+    informed = []
+    monkeypatch.setattr(
+        app_module.QMessageBox, "information", staticmethod(lambda *a, **k: informed.append(a[2]))
+    )
 
     _window()._sort_telegram_downloads()
 
     assert missing.is_dir()
+    # Reported directly: this used to say "already sorted", which is not
+    # true of a folder with nothing in it at all.
+    assert "empty" in informed[0]
 
 
 def test_record_from_telegram_downloads_sorts_then_asks_which_album(qt_app, monkeypatch, downloads):
-    app_settings.set_telegram_download_folder(str(downloads))
+    app_settings.set_cd_rip_folder(str(downloads))
     a = _touch(downloads, "a.flac")
     b = _touch(downloads, "b.flac")
     tags = {a: ("Caskets", "Lost Souls"), b: ("Skillet", "Unleashed")}
@@ -218,7 +224,7 @@ def test_record_from_telegram_downloads_sorts_then_asks_which_album(qt_app, monk
 
 
 def test_record_from_telegram_downloads_with_one_album_skips_the_picker(qt_app, monkeypatch, downloads):
-    app_settings.set_telegram_download_folder(str(downloads))
+    app_settings.set_cd_rip_folder(str(downloads))
     _touch(downloads, "a.flac")
     monkeypatch.setattr(
         app_module.QInputDialog,
@@ -234,8 +240,55 @@ def test_record_from_telegram_downloads_with_one_album_skips_the_picker(qt_app, 
     assert recorded == [downloads]
 
 
+def test_record_from_audio_folder_with_nothing_in_it_says_so_and_opens_nothing(qt_app, monkeypatch, downloads):
+    """Reported directly: an empty audio folder used to open
+    FolderRecordDialog anyway (which then showed its own disabled-Record,
+    "no audio files" state -- easy to mistake for the metadata editor,
+    since it has the same kind of Artist/Album/Year fields) instead of
+    saying up front that there is nothing to record."""
+    app_settings.set_cd_rip_folder(str(downloads))
+    informed = []
+    monkeypatch.setattr(
+        app_module.QMessageBox, "information", staticmethod(lambda *a, **k: informed.append(a[2]))
+    )
+    window = _window()
+    monkeypatch.setattr(
+        window,
+        "_record_folder_dialog",
+        lambda *a, **k: pytest.fail("must not open a recording dialog for an empty folder"),
+    )
+
+    window._record_from_telegram_downloads()
+
+    assert informed
+    assert "nothing to record" in informed[0]
+
+
+def test_record_from_audio_folder_asks_among_already_sorted_albums_too(qt_app, monkeypatch, downloads):
+    """Not just freshly-sorted loose files -- a folder that already holds
+    several album subfolders (the normal case once CD rips and Telegram
+    downloads share one folder: whatever accumulated there over past
+    sessions) must still offer the picker. sort_folder() only ever acts on
+    files sitting loose directly in the folder, so pre-existing subfolders
+    have to be picked up by pick_album_folder() on their own."""
+    app_settings.set_cd_rip_folder(str(downloads))
+    _touch(downloads / "Caskets - Lost Souls", "01.flac")
+    _touch(downloads / "Skillet - Unleashed", "01.flac")
+    _touch(downloads / "Falling In Reverse - Popular Monster", "01.flac")
+    monkeypatch.setattr(
+        app_module.QInputDialog, "getItem", staticmethod(lambda *a, **k: ("Skillet - Unleashed", True))
+    )
+    recorded: list[Path] = []
+    window = _window()
+    monkeypatch.setattr(window, "_record_folder_dialog", recorded.append)
+
+    window._record_from_telegram_downloads()
+
+    assert recorded == [downloads / "Skillet - Unleashed"]
+
+
 def test_cancelling_the_album_picker_does_not_record(qt_app, monkeypatch, downloads):
-    app_settings.set_telegram_download_folder(str(downloads))
+    app_settings.set_cd_rip_folder(str(downloads))
     a = _touch(downloads, "a.flac")
     b = _touch(downloads, "b.flac")
     tags = {a: ("Caskets", "Lost Souls"), b: ("Skillet", "Unleashed")}

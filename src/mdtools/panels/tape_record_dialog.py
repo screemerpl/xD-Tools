@@ -1,5 +1,5 @@
-"""Recording > "Record to Cassette from foobar2000..." -- records an album
-onto a compact cassette, one side at a time.
+"""Recording > "Record to Cassette..." -- records an album onto a compact
+cassette, one side at a time.
 
 Everything else this app records to is driven: a MiniDisc deck takes its
 keys over infrared, a CD-R burner takes a command line. **A tape deck here
@@ -15,9 +15,9 @@ The sequence per side:
      the only confirmation there is that the deck is actually rolling
   2. ten seconds of nothing, so the music misses the leader (see tape.py --
      leader tape is not magnetic, and anything recorded onto it is gone)
-  3. foobar2000 plays that side's tracks, and is told to stop after the
-     last one rather than being caught afterwards, so the side ends where
-     it should
+  3. xD-Tools' own AudioPlayer (audio_engine.py) plays that side's tracks --
+     only that side's, sliced up front, so playback simply ends where the
+     side does, with no need to arm anything to stop early
   4. the user stops the deck and turns the tape over
 
 Where the break falls is `tape.split_sides()`, the same function the shell
@@ -26,20 +26,26 @@ and a recording that turns over after track six would each be defensible
 alone and wrong together.
 
 The audio path is the deck's analogue inputs, and nothing here depends on
-that: xD-Tools presses no buttons and watches foobar2000, so how the sound
-gets from the sound card to the tape is entirely outside this loop. The
-deck's own input selector and recording level are the user's to set, which
-the manual says and this does not try to enforce.
+that: xD-Tools plays the album itself and fires an event when a side ends,
+so how the sound gets from the sound card to the tape is entirely outside
+this loop. The deck's own input selector and recording level are the
+user's to set, which the manual says and this does not try to enforce.
 
-No worker thread, for the same reason RecordDialog has none: every step is
-either one HTTP call to localhost or a QTimer tick.
+This used to drive foobar2000 over Beefweb the way RecordDialog once did,
+polling its now-playing index to decide when a side ended -- see that
+module's own docstring for the full reasoning behind the swap to
+AudioPlayer. No worker thread either way: every step here is either
+instantaneous or a QTimer tick, and the genuinely real-time part (playback
+itself) runs on AudioPlayer's own audio callback thread, reached safely
+through `panels/playback_bridge.py`.
 """
 
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import QCoreApplication, QTimer, Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -57,14 +63,11 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from mdtools import embedded_cover, foobar, mixtape_cover, tape
+from mdtools import app_settings, audio_engine, embedded_cover, mixtape_cover, tape, tracks
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
+from mdtools.panels.playback_bridge import PlaybackBridge
+from mdtools.panels.preview_player import PreviewPlayerBar
 from mdtools.project import ProjectMetadata, Track
-
-# Same headroom every other recording here leaves -- see
-# record_dialog.RECORDING_VOLUME_DB. A tape has less of it than a MiniDisc,
-# not more.
-RECORDING_VOLUME_DB = -5.0
 
 POLL_MS = 250
 COUNTDOWN_MS = 1000
@@ -78,27 +81,28 @@ def _mmss(seconds: float) -> str:
 class TapeRecordDialog(QDialog):
     def __init__(
         self,
-        base_url: str = foobar.DEFAULT_BASE_URL,
+        paths: list[Path | str],
         parent=None,
         metadata: ProjectMetadata | None = None,
         total_minutes: float = tape.DEFAULT_LENGTH.total_minutes,
     ):
         super().__init__(parent)
-        self.setWindowTitle(self.tr("Record to Cassette from foobar2000"))
+        self.setWindowTitle(self.tr("Record to Cassette"))
         self.resize(560, 620)
-        self._client = foobar.FoobarClient(base_url)
-        self._playlist: foobar.Playlist | None = None
-        self._items: list[foobar.PlaylistItem] = []
+        self._items: list[tracks.PlaylistItem] = tracks.playlist_items_from_paths(paths) if paths else []
         self._given_metadata = metadata
         self._seed = ProjectMetadata()
         self._plan: tape.TapePlan | None = None
 
         self._side = 0  # which side is being recorded, 0 = A
         self._recording = False
-        self._started = False  # playback has actually been seen running
-        self._stop_armed = False  # foobar has been told to stop after this track
+        self._current_local_index = 0
         self._remaining = 0  # seconds of leader silence still to go
-        self._highest_index = -1
+        self._player: audio_engine.AudioPlayer | None = None
+        self._pending_buffers: list | None = None
+        self._bridge = PlaybackBridge(self)
+        self._bridge.track_boundary.connect(self._on_track_boundary)
+        self._bridge.finished.connect(self._on_side_finished)
 
         # Read by MainWindow after exec(): what was recorded, as project
         # metadata. None means nothing was, so nothing should be adopted.
@@ -147,7 +151,13 @@ class TapeRecordDialog(QDialog):
             [self.tr("Side"), self.tr("#"), self.tr("Title"), self.tr("Artist"), self.tr("Length")]
         )
         self.tree.setRootIsDecorated(False)
+        self.tree.currentItemChanged.connect(lambda *_: self._refresh_preview())
         layout.addWidget(self.tree)
+
+        self.preview_bar = PreviewPlayerBar()
+        self.preview_bar.prev_requested.connect(lambda: self._step_preview(-1))
+        self.preview_bar.next_requested.connect(lambda: self._step_preview(1))
+        layout.addWidget(self.preview_bar)
 
         self.fit_label = QLabel()
         self.fit_label.setWordWrap(True)
@@ -183,13 +193,13 @@ class TapeRecordDialog(QDialog):
 
         self._timer = QTimer(self)
         self._timer.setInterval(POLL_MS)
-        self._timer.timeout.connect(self._poll)
+        self._timer.timeout.connect(self._refresh_progress)
         self._countdown = QTimer(self)
         self._countdown.setInterval(COUNTDOWN_MS)
         self._countdown.timeout.connect(self._tick)
 
         self._select_length(total_minutes)
-        self._load_playlist()
+        self._load_items()
 
     # --- preflight ----------------------------------------------------
 
@@ -197,35 +207,21 @@ class TapeRecordDialog(QDialog):
         index = self.length_combo.findData(minutes)
         self.length_combo.setCurrentIndex(index if index >= 0 else self.length_combo.count() - 1)
 
-    def _load_playlist(self) -> None:
-        try:
-            self._playlist = self._client.current_playlist()
-            if self._playlist is not None:
-                self._items = self._client.playlist_items(self._playlist.id)
-        except foobar.FoobarError as exc:
-            self.summary_label.setText(
-                self.tr(
-                    "Could not reach foobar2000: {error}\n\nIt must be running with the Beefweb Remote "
-                    "Control component (foo_beefweb) enabled."
-                ).format(error=exc)
-            )
-            self.start_btn.setEnabled(False)
-            return
-
+    def _load_items(self) -> None:
         if not self._items:
-            self.summary_label.setText(self.tr("foobar2000's current playlist is empty -- load the album first."))
+            self.summary_label.setText(self.tr("There are no tracks to record."))
             self.start_btn.setEnabled(False)
             return
 
-        self._seed = self._given_metadata or foobar.metadata_from_playlist(self._items)
+        self._seed = self._given_metadata or tracks.metadata_from_playlist(self._items)
         self._fill_fields(self._seed)
 
-        total = foobar.total_seconds(self._items)
+        total = tracks.total_seconds(self._items)
         self.summary_label.setText(
             self.tr(
-                'Playlist "{playlist}" -- {count} tracks, {total} total.\n'
+                "{count} tracks, {total} total.\n"
                 "It will be recorded in this order, in two sides, through the deck's line inputs."
-            ).format(playlist=self._playlist.title, count=len(self._items), total=_mmss(total))
+            ).format(count=len(self._items), total=_mmss(total))
         )
         self._ensure_cover()
         # The shortest tape that holds it, if the user has not already been
@@ -271,7 +267,7 @@ class TapeRecordDialog(QDialog):
     # --- the split ----------------------------------------------------
 
     def _plan_tracks(self) -> list[Track]:
-        """The playlist as something tape.split_sides can weigh.
+        """The album as something tape.split_sides can weigh.
 
         Built from the *items*, not from the tree: what decides the split is
         how long each track runs, and that is a fact about the file, not
@@ -320,8 +316,22 @@ class TapeRecordDialog(QDialog):
             return None
         return self._plan.sides[self._side]
 
+    def _selected_row(self) -> int:
+        item = self.tree.currentItem()
+        return self.tree.indexOfTopLevelItem(item) if item is not None else -1
+
+    def _refresh_preview(self) -> None:
+        row = self._selected_row()
+        path = Path(self._items[row].path) if 0 <= row < len(self._items) and self._items[row].path else None
+        self.preview_bar.set_current(path, has_prev=row > 0, has_next=0 <= row < len(self._items) - 1)
+
+    def _step_preview(self, delta: int) -> None:
+        row = self._selected_row() + delta
+        if 0 <= row < self.tree.topLevelItemCount():
+            self.tree.setCurrentItem(self.tree.topLevelItem(row))
+
     def _side_bounds(self) -> tuple[int, int]:
-        """The playlist indices this side covers, as [first, last]."""
+        """The item indices this side covers, as [first, last]."""
         boundary = len(self._plan.sides[0].tracks) if self._plan else 0
         if self._side == 0:
             return 0, boundary - 1
@@ -341,9 +351,10 @@ class TapeRecordDialog(QDialog):
         self.instruction_label.setText(
             f"<b>{heading}</b><br>"
             + self.tr(
-                "Put the deck into record on side {side}, set its input to the line it is fed from, then "
-                "press the button below. The first {seconds} seconds are recorded silent, so the music "
-                "clears the leader tape."
+                "Press RECORD and PAUSE together on side {side} (record-pause -- armed, but not yet "
+                "moving), set its input to the line it is fed from, then press the button below. Once "
+                "the tracks are ready you will be told to release Pause; the first {seconds} seconds "
+                "after that are recorded silent, so the music clears the leader tape."
             ).format(side=side.label, seconds=tape.LEADER_SECONDS)
         )
         self.start_btn.setText(self.tr("Recording -- Start Side {side}").format(side=side.label))
@@ -358,25 +369,54 @@ class TapeRecordDialog(QDialog):
             self._finish()
             return
 
+        self.preview_bar.stop()
+        if self._player is None:
+            self._player = audio_engine.AudioPlayer(
+                device=audio_engine.resolve_output_device(app_settings.tape_audio_output_device()),
+                gain_db=app_settings.recording_gain_db(),
+            )
+
+        self.status_label.setVisible(True)
+        # Decoded and resampled *before* the leader countdown starts --
+        # otherwise the deck keeps rolling onto (already-magnetic) tape for
+        # however long that takes, on top of the deliberate LEADER_SECONDS
+        # of silence the countdown itself accounts for.
+        # _report_decode_progress keeps the status label moving meanwhile,
+        # so this doesn't read as the dialog having hung.
+        first, last = self._side_bounds()
+        paths = [Path(item.path) for item in self._items[first : last + 1]]
         try:
-            self._client.prepare_for_recording()
-            self._client.set_volume(RECORDING_VOLUME_DB)
-            self._client.stop()
-        except foobar.FoobarError as exc:
-            self._fail(self.tr("foobar2000: {error}").format(error=exc))
+            buffers = audio_engine.load_for_playback(
+                paths, samplerate=self._player.samplerate, on_progress=self._report_decode_progress
+            )
+        except audio_engine.AudioEngineError as exc:
+            self._fail(self.tr("Could not decode this side for playback: {error}").format(error=exc))
             return
 
         self._recording = True
-        self._started = False
-        self._stop_armed = False
-        self._highest_index = -1
+        self._current_local_index = 0
         self._set_fields_editable(False)
         self.start_btn.setEnabled(False)
         self.close_btn.setText(self.tr("Stop"))
         self.progress.setVisible(True)
         self.progress.setValue(0)
-        self.status_label.setVisible(True)
+        self._pending_buffers = buffers
         self._remaining = tape.LEADER_SECONDS
+        # Decoding is done, so this is the exact moment the deck should
+        # actually start moving. A passive label change was tried first and
+        # reported as too easy to miss ("no popup, it just goes straight
+        # into the countdown") -- a blocking dialog forces the user to
+        # actually see this, and doubles as the sync point: the leader
+        # countdown only starts once they have dismissed it, which is the
+        # same moment they should be releasing Pause.
+        self.instruction_label.setText(
+            "<b>" + self.tr("Release Pause now") + "</b><br>" + self.tr("The deck should start rolling.")
+        )
+        QMessageBox.information(
+            self,
+            self.tr("Record to Cassette"),
+            self.tr("Release Pause now -- the deck should start rolling."),
+        )
         self._tick_display()
         self._countdown.start()
 
@@ -394,6 +434,18 @@ class TapeRecordDialog(QDialog):
         )
         return answer == QMessageBox.StandardButton.Ok
 
+    def _report_decode_progress(self, index: int, total: int, path: Path) -> None:
+        """`load_for_playback`'s own callback, called synchronously from
+        inside its decode loop -- see _on_start_clicked for why decoding
+        now happens before the leader countdown, and record_dialog.py's
+        own copy of this method for why processEvents() is needed here."""
+        self.status_label.setText(
+            self.tr("Preparing track {index} of {total}: {name}...").format(
+                index=index, total=total, name=path.stem
+            )
+        )
+        QCoreApplication.processEvents()
+
     def _tick_display(self) -> None:
         self.status_label.setText(
             self.tr("Recording silence over the leader -- {seconds}s").format(seconds=self._remaining)
@@ -408,73 +460,37 @@ class TapeRecordDialog(QDialog):
         self._begin_playback()
 
     def _begin_playback(self) -> None:
-        if not self._recording or self._playlist is None:
+        if not self._recording or self._player is None:
             return
-        first, last = self._side_bounds()
-        try:
-            self._client.play(self._playlist.id, first)
-            if first == last:
-                # A one-track side: there is no later transition to notice,
-                # so the boundary has to be armed straight away.
-                self._client.set_stop_after_current_track(True)
-                self._stop_armed = True
-        except foobar.FoobarError as exc:
-            self._fail(self.tr("foobar2000: {error}").format(error=exc))
+        buffers = self._pending_buffers
+        self._pending_buffers = None
+        if buffers is None:
             return
+        self._player.play(
+            buffers,
+            on_track_boundary=self._bridge.track_boundary.emit,
+            on_finished=self._bridge.finished.emit,
+        )
         self._timer.start()
 
-    def _poll(self) -> None:
-        try:
-            state = self._client.player_state()
-        except foobar.FoobarError as exc:
-            self._fail(self.tr("Lost contact with foobar2000: {error}").format(error=exc))
-            return
+    def _on_track_boundary(self, local_index: int) -> None:
+        self._current_local_index = local_index
 
-        if state.is_playing or state.playback_state == foobar.PAUSED:
-            self._started = True
-            self._highest_index = max(self._highest_index, state.item_index)
-            self._arm_stop_if_last(state.item_index)
-            self._show_progress(state)
-            return
-
-        if self._started:
-            self._side_finished()
-
-    def _arm_stop_if_last(self, index: int) -> None:
-        """Tells foobar2000 to stop when this track ends, once the side's
-        last track is the one playing.
-
-        Armed on the transition *into* the last track rather than left set
-        for the whole side, because the flag applies to whatever is playing
-        when it is read -- setting it at the start would end the side after
-        its first track."""
-        _first, last = self._side_bounds()
-        if self._stop_armed or index != last:
-            return
-        try:
-            self._client.set_stop_after_current_track(True)
-            self._stop_armed = True
-        except foobar.FoobarError:
-            # Not fatal: the poll below still stops playback at the
-            # boundary, just a fraction of a second late.
-            pass
-
-    def _show_progress(self, state: foobar.PlayerState) -> None:
+    def _refresh_progress(self) -> None:
         side = self._current_side()
-        first, _last = self._side_bounds()
-        if side is None:
+        if side is None or self._player is None:
             return
-        done = sum(item.length_seconds for item in self._items[first : max(first, state.item_index)])
-        elapsed = done + state.position
+        first, _last = self._side_bounds()
+        current = first + self._current_local_index
+        done = sum(item.length_seconds for item in self._items[first:current])
+        elapsed = done + self._player.position_seconds
         total = max(1, int(side.music_seconds))
         self.progress.setValue(int(1000 * min(1.0, elapsed / total)))
-        title = (
-            self._items[state.item_index].display_title() if 0 <= state.item_index < len(self._items) else ""
-        )
+        title = self._items[current].display_title() if 0 <= current < len(self._items) else ""
         self.status_label.setText(
             self.tr("Side {side}, track {index} of {count}: {title} -- {elapsed} of {total}").format(
                 side=side.label,
-                index=state.item_index - first + 1,
+                index=current - first + 1,
                 count=len(side.tracks),
                 title=title,
                 elapsed=_mmss(elapsed),
@@ -482,24 +498,13 @@ class TapeRecordDialog(QDialog):
             )
         )
 
-    def _side_finished(self) -> None:
+    def _on_side_finished(self) -> None:
+        """Fired by AudioPlayer once this side's whole queue has played out
+        -- see RecordDialog._on_disc_finished for why there is no "stopped
+        partway" state to detect here any more."""
         self._timer.stop()
         self._recording = False
         self.progress.setValue(1000)
-        _first, last = self._side_bounds()
-        side = self._current_side()
-
-        if self._highest_index < last:
-            self.status_label.setText(
-                self.tr(
-                    "Playback stopped early, so side {side} is incomplete. Stop the deck, rewind, and "
-                    "start the side again."
-                ).format(side=side.label if side else "")
-            )
-            self.start_btn.setEnabled(True)
-            self._set_fields_editable(True)
-            self.close_btn.setText(self.tr("Close"))
-            return
 
         if self._side == 0 and self._plan is not None and self._plan.sides[1].tracks:
             self._side = 1
@@ -512,8 +517,9 @@ class TapeRecordDialog(QDialog):
             self.instruction_label.setText(
                 f"<b>{heading}</b><br>"
                 + self.tr(
-                    "Stop the deck, take the cassette out and turn it over, then put the deck into record "
-                    "again for side {side} and press the button below."
+                    "Stop the deck, take the cassette out and turn it over, then press RECORD and PAUSE "
+                    "together (record-pause) for side {side} and press the button below. You will be "
+                    "told when to release Pause."
                 ).format(side=next_side.label)
             )
             self.start_btn.setText(self.tr("Recording -- Start Side {side}").format(side=next_side.label))
@@ -571,17 +577,17 @@ class TapeRecordDialog(QDialog):
         )
 
     def _tracks_from_tree(self) -> list[Track]:
-        """One Track per playlist item, from the Title and Artist columns --
-        the Artist column included, or a compilation would stop being one
-        for having been recorded (see RecordDialog._tracks_from_tree)."""
-        tracks = []
+        """One Track per item, from the Title and Artist columns -- the
+        Artist column included, or a compilation would stop being one for
+        having been recorded (see RecordDialog._tracks_from_tree)."""
+        result = []
         for index, item in enumerate(self._items):
             row = self.tree.topLevelItem(index)
             seed = self._seed.tracks[index] if index < len(self._seed.tracks) else None
             title = row.text(2).strip() if row is not None else (seed.title if seed else item.display_title())
             artist = row.text(3).strip() if row is not None else (seed.artist if seed else item.artist)
-            tracks.append(Track(title=title, time_seconds=item.length_seconds or None, artist=artist))
-        return tracks
+            result.append(Track(title=title, time_seconds=item.length_seconds or None, artist=artist))
+        return result
 
     # --- helpers ------------------------------------------------------
 
@@ -589,6 +595,8 @@ class TapeRecordDialog(QDialog):
         self._timer.stop()
         self._countdown.stop()
         self._recording = False
+        if self._player is not None:
+            self._player.stop()
         self.progress.setVisible(False)
         self.status_label.setVisible(True)
         self.status_label.setText(message)
@@ -597,19 +605,18 @@ class TapeRecordDialog(QDialog):
         self._set_fields_editable(True)
 
     def reject(self) -> None:
-        """Stops foobar2000, and says what the user has to stop themselves.
+        """Stops playback, and says what the user has to stop themselves.
 
         There is no second end to stop from here -- the deck will happily go
         on recording silence onto the rest of the side, and only the person
         in front of it can prevent that."""
+        self.preview_bar.stop()
         if self._recording:
             self._timer.stop()
             self._countdown.stop()
             self._recording = False
-            try:
-                self._client.stop()
-            except foobar.FoobarError:
-                pass
+            if self._player is not None:
+                self._player.stop()
             QMessageBox.information(
                 self,
                 self.tr("Record to Cassette"),
