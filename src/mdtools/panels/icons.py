@@ -46,13 +46,36 @@ def icons_dir() -> Path:
     return base / "assets" / "icons"
 
 
+def _render_svg(painter: QPainter, name: str, rect) -> None:
+    QSvgRenderer(str(icons_dir() / f"{name}.svg")).render(painter, rect)
+
+
 def _load_svg_icon(name: str) -> QIcon:
     pixmap = QPixmap(SIZE, SIZE)
     pixmap.fill(Qt.GlobalColor.transparent)
-    renderer = QSvgRenderer(str(icons_dir() / f"{name}.svg"))
     painter = QPainter(pixmap)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    renderer.render(painter)
+    _render_svg(painter, name, pixmap.rect())
+    painter.end()
+    return QIcon(pixmap)
+
+
+def _load_svg_icon_with_badge(name: str, badge: str) -> QIcon:
+    """`badge` rendered small, in the bottom-right corner, over `name` --
+    composed here at render time out of two already-bundled SVGs rather
+    than a third file, so ATTRIBUTION.md's "no modifications were made to
+    the source SVGs" holds for this too: neither source file is touched,
+    only the pixmap they are painted into."""
+    from PySide6.QtCore import QRect
+
+    pixmap = QPixmap(SIZE, SIZE)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    _render_svg(painter, name, pixmap.rect())
+    badge_size = round(SIZE * 0.62)
+    badge_rect = QRect(SIZE - badge_size, SIZE - badge_size, badge_size, badge_size)
+    _render_svg(painter, badge, badge_rect)
     painter.end()
     return QIcon(pixmap)
 
@@ -139,3 +162,17 @@ def grayscale_icon() -> QIcon:
     """A half-light-half-dark moon, for the zoom toolbar's Grayscale
     preview toggle."""
     return _load_svg_icon("grayscale")
+
+
+def regenerate_icon() -> QIcon:
+    """The recycling symbol, for the page toolbar's Regenerate."""
+    return _load_svg_icon("regenerate")
+
+
+def regenerate_font_icon() -> QIcon:
+    """The recycling symbol with a small "input Latin letters" badge in
+    the corner -- Regenerate with Font..., composed from two already-
+    bundled icons (see _load_svg_icon_with_badge) rather than a third
+    downloaded file, since no single Twemoji glyph means "regenerate, but
+    with a chosen font"."""
+    return _load_svg_icon_with_badge("regenerate", "text")

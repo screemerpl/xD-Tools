@@ -21,11 +21,20 @@ ZOOM_TOOLBAR_ICON_FNS = [
     icons.grayscale_icon,
 ]
 
-ALL_ICON_FNS = TOOL_PANEL_ICON_FNS + ZOOM_TOOLBAR_ICON_FNS
+PAGE_TOOLBAR_ICON_FNS = [icons.regenerate_icon]
+
+ALL_ICON_FNS = TOOL_PANEL_ICON_FNS + ZOOM_TOOLBAR_ICON_FNS + PAGE_TOOLBAR_ICON_FNS
+
+# Composed from two already-bundled files at render time (see
+# icons._load_svg_icon_with_badge) rather than mapping to one file of its
+# own -- covered by the rendering/distinctness/color tests below, but kept
+# out of ALL_ICON_FNS since test_icons_dir_points_at_the_bundled_assets_folder
+# assumes a 1:1 name-to-file mapping that this icon doesn't have.
+COMPOSITE_ICON_FNS = [icons.regenerate_font_icon]
 
 
 def test_every_icon_renders_a_non_null_non_empty_pixmap(qt_app):
-    for fn in ALL_ICON_FNS:
+    for fn in ALL_ICON_FNS + COMPOSITE_ICON_FNS:
         icon = fn()
         assert not icon.isNull(), f"{fn.__name__} produced a null QIcon"
         pixmap = icon.pixmap(icons.SIZE, icons.SIZE)
@@ -34,7 +43,8 @@ def test_every_icon_renders_a_non_null_non_empty_pixmap(qt_app):
 
 
 def test_icons_are_visually_distinct_from_each_other(qt_app):
-    images = [fn().pixmap(icons.SIZE, icons.SIZE).toImage() for fn in ALL_ICON_FNS]
+    fns = ALL_ICON_FNS + COMPOSITE_ICON_FNS
+    images = [fn().pixmap(icons.SIZE, icons.SIZE).toImage() for fn in fns]
     for i, image_a in enumerate(images):
         for image_b in images[i + 1 :]:
             assert image_a != image_b
@@ -49,7 +59,7 @@ def test_icons_are_colorful_not_a_single_flat_tint(qt_app):
     legitimate exception (a solid colored square plus a slightly
     different anti-aliased rounded-corner shade == 2), so the threshold
     here is ">= 2", not "> 2"."""
-    for fn in ALL_ICON_FNS:
+    for fn in ALL_ICON_FNS + COMPOSITE_ICON_FNS:
         image = fn().pixmap(icons.SIZE, icons.SIZE).toImage()
         colors = {
             image.pixelColor(x, y).rgb()

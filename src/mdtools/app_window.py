@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSlider,
     QToolBar,
+    QToolButton,
 )
 
 from mdtools import (
@@ -274,22 +275,30 @@ class MainWindow(QMainWindow):
         self.template_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self.template_combo.currentIndexChanged.connect(self._on_template_combo_changed)
         toolbar.addWidget(self.template_combo)
-        self.regenerate_btn = QPushButton(self.tr("Regenerate"))
+        # Icon-only, like the Tools panel's own buttons -- the label that
+        # used to be the button's visible text now lives in its tooltip
+        # instead (see ToolPanel._icon_button's identical convention).
+        self.regenerate_btn = QToolButton()
+        self.regenerate_btn.setIcon(icons.regenerate_icon())
         self.regenerate_btn.setToolTip(
-            self.tr("Rebuild this page from the project's metadata, with its default fonts and styling")
+            self.tr("Regenerate: rebuild this page from the project's metadata, with its default fonts and styling")
         )
         self.regenerate_btn.clicked.connect(self._regenerate_current_page)
         toolbar.addWidget(self.regenerate_btn)
-        self.regenerate_font_btn = QPushButton(self.tr("Regenerate with Font..."))
+        self.regenerate_font_btn = QToolButton()
+        self.regenerate_font_btn.setIcon(icons.regenerate_font_icon())
+        self.regenerate_font_btn.setToolTip(
+            self.tr("Regenerate with Font...: rebuild this page using a font you pick")
+        )
         self.regenerate_font_btn.clicked.connect(self._open_regenerate_font_dialog)
         toolbar.addWidget(self.regenerate_font_btn)
         self.addToolBar(toolbar)
 
         zoom_toolbar = QToolBar(self.tr("Zoom"), self)
-        # Icon + text together (not the Tools panel's icon-only style --
-        # these actions never had a tooltip-only convention, so dropping
-        # the visible label would be a bigger UX change than "add icons").
-        zoom_toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        # Icon-only, like the Tools panel's own buttons and the two
+        # Regenerate buttons above -- each label now lives in its own
+        # tooltip instead of next to the icon.
+        zoom_toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
         zoom_toolbar.addAction(icons.zoom_out_icon(), self.tr("Zoom Out"), self.view.zoom_out)
         self.zoom_label = QLabel("100%")
         zoom_toolbar.addWidget(self.zoom_label)

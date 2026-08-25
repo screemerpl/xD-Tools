@@ -164,7 +164,10 @@ def test_the_toolbar_has_a_regenerate_button_left_of_the_font_one(qt_app, monkey
     window = _md_window(monkeypatch, disc=[_full_label()], cover=[_jcard()])
     toolbar = window.regenerate_btn.parent()
 
-    assert window.regenerate_btn.text() == "Regenerate"
+    # Icon-only now -- the label lives in the tooltip instead.
+    assert window.regenerate_btn.text() == ""
+    assert "Regenerate" in window.regenerate_btn.toolTip()
+    assert not window.regenerate_btn.icon().isNull()
     # Same toolbar, and ahead of the font button in it.
     assert window.regenerate_font_btn.parent() is toolbar
     children = toolbar.findChildren(type(window.regenerate_btn))
