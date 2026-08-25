@@ -17,20 +17,27 @@ from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
 from mdtools.panels.metadata_dialog import MetadataDialog
 from mdtools.panels.record_dialog import RecordDialog
 from mdtools.panels.tape_record_dialog import TapeRecordDialog
+from mdtools.panels.telegram_chat_dialog import TelegramChatDialog
 
-# Every dialog MainWindow can hand to _drive_recording_bar().
-DRIVING_DIALOGS = [RecordDialog, TapeRecordDialog, BurnDialog, CdRipDialog, MetadataDialog]
+# Every dialog MainWindow can hand to _drive_recording_bar() -- not only
+# the six recording/rip/burn/upload dialogs: TelegramChatDialog is wired
+# in too, not because it competes for the same MDRem port/audio device/
+# optical drive (it doesn't), but because it drives the same one shared
+# bar with its own download-queue status.
+DRIVING_DIALOGS = [RecordDialog, TapeRecordDialog, BurnDialog, CdRipDialog, MetadataDialog, TelegramChatDialog]
 
 # The ones the user can hide -- MetadataDialog is left out on purpose: it
 # only ever proxies for the MDRemUploadDialog it opens, and has no Hide
 # button of its own (see its own request_show()).
-HIDEABLE_DIALOGS = [RecordDialog, TapeRecordDialog, BurnDialog, CdRipDialog, MDRemUploadDialog]
+HIDEABLE_DIALOGS = [RecordDialog, TapeRecordDialog, BurnDialog, CdRipDialog, MDRemUploadDialog, TelegramChatDialog]
 
 # Per-track progress exists only where it is genuinely available. Burning
 # is the deliberate exclusion: cdrecord writes a disc as one continuous
 # DAO stream with no per-track breakdown to report. Titling has no
 # per-track concept at all, and MetadataDialog only ever proxies titling.
-NO_TRACK_PROGRESS = [BurnDialog, MDRemUploadDialog, MetadataDialog]
+# A Telegram download queue has no single "current track" either -- up to
+# _MAX_CONCURRENT_DOWNLOADS files can be in flight at once.
+NO_TRACK_PROGRESS = [BurnDialog, MDRemUploadDialog, MetadataDialog, TelegramChatDialog]
 
 
 @pytest.mark.parametrize("dialog_class", DRIVING_DIALOGS, ids=lambda c: c.__name__)

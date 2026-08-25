@@ -608,43 +608,120 @@ class MainWindow(QMainWindow):
             self,
             self.tr("Busy"),
             self.tr(
-                "A recording, ripping, burning or title-writing operation is still running. "
-                "Finish or stop it first -- use “Show recording window” in the bar at the "
-                "bottom if you hid it."
+                "A recording, ripping, burning, title-writing or Telegram download operation "
+                "is still running. Finish or stop it first -- use “Show recording window” in "
+                "the bar at the bottom if you hid it."
             ),
         )
 
-    def _guard_no_concurrent_operation(self) -> bool:
-        """Only one recording/rip/burn/upload may run at a time -- Hide
-        (see each dialog's own request_stop()/_on_hide_clicked()) lets
-        MainWindow stay interactive while one keeps running in the
-        background, which would otherwise let a second one be started to
-        fight the first over the same MDRem port/audio device/optical
-        drive. self._active_recording_dialog is set for a dialog's whole
-        modal lifetime -- see _drive_recording_bar() -- so it already
-        doubles as "is anything like this currently open at all",
-        independent of whether that dialog happens to be hidden right
-        now. Returns True when it is safe to proceed."""
-        if self._active_recording_dialog is None:
+    def _new_metadata_dialog(self, metadata) -> MetadataDialog:
+        """MetadataDialog, wired to a guard that ignores *itself*.
+
+        It is handed `_guard_no_concurrent_operation` so its "Upload
+        Tracklist" button cannot fight a recording/rip/burn already
+        running over the same MDRem port. But the dialog also holds the
+        progress bar while it is open (it proxies for that upload), so
+        the plain guard looked at `_active_recording_dialog`, found this
+        very dialog, and refused -- making Upload Tracklist permanently
+        unusable with a "something is still running" box and nothing
+        actually running. Asking "is anything *other than me* running"
+        is the question that was always meant."""
+        cell: dict = {}
+        dialog = MetadataDialog(
+            metadata,
+            self,
+            medium=self.project.medium,
+            is_recording_busy=lambda: self._guard_no_concurrent_operation(ignoring=cell.get("dialog")),
+        )
+        cell["dialog"] = dialog
+        return dialog
+
+    def _guard_no_concurrent_operation(self, ignoring=None) -> bool:
+        """Only one recording/rip/burn/upload/Telegram-chat operation may
+        run at a time -- Hide (see each dialog's own request_stop()/
+        _on_hide_clicked()) lets MainWindow stay interactive while one
+        keeps running in the background, which would otherwise let a
+        second one be started to fight the first over the same MDRem
+        port/audio device/optical drive -- or, for the Telegram chat
+        dialog specifically, over the one shared bottom progress bar
+        itself, which only one dialog can ever be wired into at a time.
+        self._active_recording_dialog is set for a dialog's whole modal
+        lifetime -- see _drive_recording_bar() -- so it already doubles
+        as "is anything like this currently open at all", independent of
+        whether that dialog happens to be hidden right now. Returns True
+        when it is safe to proceed.
+
+        `ignoring` excludes one dialog from the question -- see
+        _new_metadata_dialog(), the one caller that has to ask "is
+        anything other than me running?" rather than "is anything
+        running?"."""
+        if self._active_recording_dialog in (None, ignoring):
             return True
         self._warn_recording_in_progress()
         return False
 
-    def _drive_recording_bar(self, dialog, *, track_progress: bool) -> None:
+    def _drive_recording_bar(self, dialog, *, track_progress: bool, connect_running: bool = True) -> None:
         """Connects one of the six operation dialogs to the bottom bar --
         called right before its exec(), paired with _release_recording_bar()
         right after. Safe to call while dialog.exec() is itself still
         running: exec()'s own nested event loop keeps delivering queued
         signals app-wide, so a MainWindow-owned bar updates live even
-        while its driving dialog is modal."""
+        while its driving dialog is modal.
+
+        **The bar has exactly one owner, and a second dialog does not
+        take it.** Every hideable operation asks
+        _guard_no_concurrent_operation() before opening, so two of those
+        can never overlap -- but MetadataDialog deliberately opens
+        without that guard (editing metadata is an ordinary thing to want
+        to do mid-rip), and it used to seize the bar on the way in and
+        switch it off again on the way out, taking a running rip's
+        progress and its own way back with it. Reported exactly that way:
+        opened Metadata during a CD rip, closed it, bar gone. Nothing is
+        lost by declining here -- MetadataDialog's only bar-worthy
+        operation is its nested title upload, which asks that same guard
+        itself and is refused while anything else is running."""
+        if self._active_recording_dialog not in (None, dialog):
+            return
         self._active_recording_dialog = dialog
-        dialog.running_changed.connect(
-            lambda running, d=dialog: self._on_recording_running_changed(d, running, track_progress)
-        )
+        # Up front, not on the first running_changed(True): a dialog can
+        # be hidden before it ever starts working, and this bar carries
+        # the only way back to a hidden window -- see
+        # panels/recording_progress_bar.py's own module docstring.
+        self.recording_bar.attach(track_progress=track_progress)
+        # `connect_running` is False only for the metadata proxy, which
+        # connects running_changed itself and for its whole lifetime --
+        # see _drive_recording_bar_for_metadata().
+        if connect_running:
+            dialog.running_changed.connect(
+                lambda running, d=dialog: self._on_recording_running_changed(d, running, track_progress)
+            )
         dialog.overall_progress_changed.connect(self.recording_bar.set_overall)
         if track_progress:
             dialog.track_progress_changed.connect(self.recording_bar.set_track)
         dialog.visibility_changed.connect(self._on_recording_dialog_visibility_changed)
+
+    def _drive_recording_bar_for_metadata(self, dialog) -> None:
+        """MetadataDialog is not itself an operation -- it only proxies
+        for the MDRemUploadDialog its "Upload Tracklist" button opens.
+
+        So it takes the bar when that upload actually starts and gives it
+        back when the upload ends, rather than holding it for as long as
+        the metadata editor happens to be open. Holding it throughout put
+        a progress bar reading "Waiting..." with a Stop button under the
+        main window merely because somebody opened Project Metadata,
+        describing something that was not happening -- and, worse, made
+        this dialog look like a running operation to everything that asks
+        _active_recording_dialog."""
+        dialog.running_changed.connect(
+            lambda running, d=dialog: self._on_metadata_upload_running(d, running)
+        )
+
+    def _on_metadata_upload_running(self, dialog, running: bool) -> None:
+        if running:
+            self._drive_recording_bar(dialog, track_progress=False, connect_running=False)
+            self.recording_bar.start(track_progress=False)
+        else:
+            self._release_recording_bar(dialog, keep_running_connected=True)
 
     def _on_recording_dialog_visibility_changed(self, hidden: bool) -> None:
         """Tracked here as well as on the bar: whether the dialog is
@@ -659,21 +736,35 @@ class MainWindow(QMainWindow):
         if running:
             self.recording_bar.start(track_progress=track_progress)
             return
-        # The work is over, so the bar goes -- but several of these
-        # dialogs do not close themselves when it does (RecordDialog
-        # waits for Close even after titling), and the bar carries the
-        # only way back to one the user has hidden. Hiding it on top of a
-        # still-open hidden dialog stranded the operation: no window, no
-        # bar, and a main window that refused to close because the guard
-        # could still see the dialog. Reported exactly that way. Asking
-        # for it back is also simply what somebody who hid a job they
-        # were waiting on expects to happen when it finishes.
+        # The work is over -- but the bar deliberately stays up until the
+        # dialog itself closes (_release_recording_bar), because several
+        # of these do not close themselves when the work ends
+        # (RecordDialog waits for Close even after titling) and this bar
+        # carries the only way back to one the user has hidden. Taking it
+        # away here stranded the operation: no window, no bar, and a main
+        # window that refused to close because the guard could still see
+        # the dialog. Reported exactly that way, then reported again from
+        # the other side -- a bar vanishing mid-job while the user was
+        # doing something else in the main window. Asking for the window
+        # back is separately just what somebody who hid a job they were
+        # waiting on expects when it finishes.
         if self._recording_dialog_hidden:
             dialog.request_show()
-        self.recording_bar.stop()
 
-    def _release_recording_bar(self, dialog) -> None:
-        signals = [dialog.running_changed, dialog.overall_progress_changed, dialog.visibility_changed]
+    def _release_recording_bar(self, dialog, *, keep_running_connected: bool = False) -> None:
+        """The mirror of _drive_recording_bar(), and just as strict about
+        ownership: a dialog that never took the bar (see there) must not
+        put it away on its way out, or closing it strands whatever is
+        genuinely still running behind it.
+
+        `keep_running_connected` is for the metadata proxy, which hands
+        the bar back after each upload but stays open and may start
+        another -- see _drive_recording_bar_for_metadata()."""
+        if self._active_recording_dialog is not dialog:
+            return
+        signals = [dialog.overall_progress_changed, dialog.visibility_changed]
+        if not keep_running_connected:
+            signals.append(dialog.running_changed)
         if hasattr(dialog, "track_progress_changed"):
             signals.append(dialog.track_progress_changed)
         for signal in signals:
@@ -681,8 +772,7 @@ class MainWindow(QMainWindow):
                 signal.disconnect()
             except (TypeError, RuntimeError):
                 pass  # nothing was connected, or the dialog's C++ object is already gone
-        if self._active_recording_dialog is dialog:
-            self._active_recording_dialog = None
+        self._active_recording_dialog = None
         self._recording_dialog_hidden = False
         self.recording_bar.stop()
 
@@ -1445,10 +1535,8 @@ class MainWindow(QMainWindow):
         # sees what they're accepting" shape as every other MetadataDialog
         # entry point -- an import someone changes their mind about should
         # be as cancellable as a hand edit is.
-        dialog = MetadataDialog(
-            other.metadata, self, medium=self.project.medium, is_recording_busy=self._guard_no_concurrent_operation
-        )
-        self._drive_recording_bar(dialog, track_progress=False)
+        dialog = self._new_metadata_dialog(other.metadata)
+        self._drive_recording_bar_for_metadata(dialog)
         try:
             accepted = exec_hideable(dialog) == MetadataDialog.DialogCode.Accepted
         finally:
@@ -2090,7 +2178,17 @@ class MainWindow(QMainWindow):
         app_settings._bundled_telegram_credentials()) and the only way
         forward is registering an app of one's own. Telling someone to "set
         the bot username" when the credentials are what is missing would
-        send them to a field that is already correct."""
+        send them to a field that is already correct.
+
+        Goes through the same _guard_no_concurrent_operation()/
+        _drive_recording_bar() pair as the other five operation dialogs
+        (#27) -- not because a chat session competes for the MDRem port/
+        audio device/optical drive those exist to protect (it doesn't),
+        but because it drives the very same single bottom progress bar
+        with its own download-queue status, and that bar can only ever
+        belong to one dialog at a time."""
+        if not self._guard_no_concurrent_operation():
+            return
         if not app_settings.telegram_bot_username():
             QMessageBox.information(
                 self,
@@ -2116,8 +2214,17 @@ class MainWindow(QMainWindow):
             Path(app_settings.cd_rip_folder()),
             self,
         )
+        # Wired up *before* start_connecting(), which emits
+        # running_changed(True) itself -- connecting afterwards missed
+        # that first emission, so the bar never appeared and a chat
+        # hidden straight after opening could not be got back at all.
+        self._drive_recording_bar(dialog, track_progress=False)
         dialog.start_connecting()
-        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.downloaded_folder is not None:
+        try:
+            result = exec_hideable(dialog)
+        finally:
+            self._release_recording_bar(dialog)
+        if result == QDialog.DialogCode.Accepted and dialog.downloaded_folder is not None:
             # One "Record Downloaded Albums..." button now, whatever the
             # project's medium: _record_folder_dialog dispatches to burning
             # itself on a CD project, the same as every other entry point.
@@ -3576,10 +3683,8 @@ class MainWindow(QMainWindow):
     def _edit_metadata(self) -> None:
         if self.project is None:
             return
-        dialog = MetadataDialog(
-            self.project.metadata, self, medium=self.project.medium, is_recording_busy=self._guard_no_concurrent_operation
-        )
-        self._drive_recording_bar(dialog, track_progress=False)
+        dialog = self._new_metadata_dialog(self.project.metadata)
+        self._drive_recording_bar_for_metadata(dialog)
         try:
             accepted = exec_hideable(dialog) == MetadataDialog.DialogCode.Accepted
         finally:

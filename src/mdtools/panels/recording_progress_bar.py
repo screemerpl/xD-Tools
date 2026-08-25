@@ -19,6 +19,19 @@ widget instead -- see app_window.py's _build_recording_bar().
 Never registered for a View-menu toggle, unlike the three QDockWidgets --
 its own visibility is purely operation-driven, exactly like every one of
 the mirrored dialogs' own progress bars starting out hidden.
+
+**Visible for an attached dialog's whole lifetime, not just while it is
+actively progressing.** attach() shows this bar and stop() is the only
+thing that hides it again -- so between _drive_recording_bar() and
+_release_recording_bar() (app_window.py) nothing can take it away.
+Tying visibility to running_changed instead was shipped once and broke
+twice over: a dialog hidden before its operation had started left no bar
+and so no way back to it at all, and an operation reaching its own quiet
+moment (finished, between discs, waiting to be closed) took the bar --
+including the "Show recording window" button -- down with it while the
+dialog was still open and hidden. Both were reported directly. The bar
+carries the only route back to a hidden window, so it has to outlive
+every pause in the work it is reporting on.
 """
 
 from __future__ import annotations
@@ -77,13 +90,31 @@ class RecordingProgressBar(QWidget):
 
         self.setVisible(False)
 
+    def attach(self, *, track_progress: bool) -> None:
+        """A dialog has just been wired up (app_window.py's
+        _drive_recording_bar()) -- show this bar and keep it up until
+        _release_recording_bar() calls stop(), whatever the operation
+        does in between.
+
+        Shown from attach rather than from the first running_changed(True)
+        because a dialog can be hidden before it ever starts working, and
+        a hidden dialog with no bar on screen is unreachable -- see the
+        module docstring."""
+        self.setVisible(True)
+        self._reset(track_progress=track_progress)
+        self.overall_label.setText(self.tr("Waiting..."))
+
     def start(self, *, track_progress: bool) -> None:
         """Called from running_changed(True) -- see app_window.py's
-        _drive_recording_bar(). Does not touch show_dialog_btn: a dialog
-        may already be hidden going into a new phase (e.g. still hidden
-        for disc 2 of a multi-disc recording that was hidden during
-        disc 1), and this must not un-hide that state by accident."""
-        self.setVisible(True)
+        _drive_recording_bar(). Deliberately does *not* show the bar
+        (attach() already did) and does not touch show_dialog_btn: a
+        dialog may already be hidden going into a new phase (e.g. still
+        hidden for disc 2 of a multi-disc recording that was hidden
+        during disc 1), and this must not un-hide that state by
+        accident."""
+        self._reset(track_progress=track_progress)
+
+    def _reset(self, *, track_progress: bool) -> None:
         self.overall_bar.setValue(0)
         self.overall_label.setText("")
         self.track_bar.setVisible(track_progress)
@@ -93,6 +124,11 @@ class RecordingProgressBar(QWidget):
             self.track_label.setText("")
 
     def stop(self) -> None:
+        """The one and only thing that hides this bar -- called from
+        _release_recording_bar(), i.e. once the dialog has actually
+        closed. Never from running_changed(False): an operation that has
+        finished but whose window is still open (hidden or not) still
+        needs the way back this bar carries."""
         self.setVisible(False)
         self.show_dialog_btn.setVisible(False)
 

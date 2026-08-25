@@ -508,6 +508,24 @@ auto-picked (`readable_text_colour()` against the text colour itself).
 Every auto-generated label/cover turns shadow on by default; manually
 added text stays plain (opt-in via Properties).
 
+**`cover_filters.py`'s strengths are counts across the image, never
+pixel sizes.** A cover arrives from iTunes/Deezer/MusicBrainz/embedded
+FLAC art/the user's own files at whatever size that source provides, so
+an absolute constant (a 14px mosaic block, a 6px blur radius, a 10px dot
+cell — the original values) made each filter hit a small cover far
+harder than a large one: pixelate kept 0.91 of a 300px cover but 0.99 of
+a 1200px one, and was reported as "almost unrecognizable". `_divide()`
+turns a division count into a pixel size against the image's *shorter*
+side. Pixelate also averages each block (`BOX`) rather than sampling one
+pixel of it (`NEAREST`), which is what a mosaic actually is. Halftone's
+`HALFTONE_CELLS` is capped by (smallest cover worth supporting ≈300px) ÷
+`_HALFTONE_MIN_CELL_PX` — ask for more and small covers clamp to the
+minimum and stop matching large ones, defeating the point. **Do not
+reintroduce a pixel-sized constant here.** `BRIGHTEN_AMOUNT` is the
+deliberate exception at 0.55, matching `cd_layout.LIGHTEN`: it is a
+legibility control, not a stylistic one (label text prints over it, and
+a lighter wash leaves dark covers unreadable).
+
 **Cover/palette derivation**: `palette.py` pulls background/accent/text
 out of a cover image (Pillow quantize + WCAG luminance for text). Every
 auto-generated page (disc label, CD ring, J-card, cassette shell/J-card)
@@ -632,15 +650,48 @@ start from whatever's already placed, not reset to none.
 below the design view, above the status bar, showing overall *and*
 per-track progress plus Stop and "Show recording window". Each operation
 dialog (`RecordDialog`, `TapeRecordDialog`, `BurnDialog`, `CdRipDialog`,
-`MDRemUploadDialog`, and `MetadataDialog` proxying its titling) keeps its
-own bar and additionally emits `running_changed`/
-`overall_progress_changed`/`track_progress_changed`/`visibility_changed`,
-plus `request_stop()`/`request_show()` — one shape, asserted in
+`MDRemUploadDialog`, `MetadataDialog` proxying its titling, and
+`TelegramChatDialog` mirroring its download-queue status) keeps its own
+bar and additionally emits `running_changed`/`overall_progress_changed`/
+`track_progress_changed`/`visibility_changed`, plus `request_stop()`/
+`request_show()` — one shape, asserted in
 `tests/test_operation_dialog_contract.py`, so `_drive_recording_bar()`
 never needs to know which dialog it holds. **No per-track progress for
-burning** (cdrecord writes a disc as one continuous DAO stream) or
-titling — those three deliberately do not define
+burning** (cdrecord writes a disc as one continuous DAO stream), titling,
+or a Telegram download queue (several files can be in flight at once,
+with no single "current" one) — those four deliberately do not define
 `track_progress_changed`, and a test guards that.
+
+**The bar is visible for an attached dialog's whole lifetime** —
+`_drive_recording_bar()` → `recording_bar.attach()` shows it,
+`_release_recording_bar()` → `stop()` is the *only* thing that hides it.
+Tying visibility to `running_changed` instead shipped broken twice over:
+a dialog hidden before its operation started left no bar and so no way
+back to it, and an operation's own quiet moments (finished but waiting
+to be closed, between discs) took the bar — including "Show recording
+window" — away from a still-open hidden dialog. Both reported directly.
+**The bar carries the only route back to a hidden window, so it must
+outlive every pause in the work it reports on.** Anything emitting
+`running_changed(True)` from its own constructor/starter (as
+`TelegramChatDialog.start_connecting()` does) must be wired up *before*
+that call or the emission is missed entirely.
+
+**The bar has exactly one owner.** `_drive_recording_bar()` declines if
+another dialog already holds it, and `_release_recording_bar()` declines
+to put it away unless the dialog releasing it is the owner. Every
+hideable operation asks `_guard_no_concurrent_operation()` first so two
+of those can't overlap — but **`MetadataDialog` deliberately opens
+without that guard** (editing metadata mid-rip is ordinary), and it used
+to seize the bar on the way in and switch it off on the way out, taking
+a running rip's progress and its way back with it. Reported exactly that
+way. It is also *not* an operation, only a proxy for the
+`MDRemUploadDialog` its "Upload Tracklist" opens, so it takes the bar
+via `_drive_recording_bar_for_metadata()` **only while that upload
+runs** — holding it for the editor's whole lifetime both put up a
+"Waiting…" bar for something that wasn't happening and made
+`_guard_no_concurrent_operation()` see *itself*, which permanently
+refused Upload Tracklist with a "still running" box and nothing running
+(hence the guard's `ignoring` parameter and `_new_metadata_dialog()`).
 
 **Hide keeps an operation running; two things exist only because of
 that.** `exec_hideable()` is what survives a Hide at all (see the gotcha
@@ -651,6 +702,12 @@ quitting out from under a live worker thread is the silent
 `QThread`-destroyed process abort. **Only one recording/rip/burn/upload
 may ever be in flight**; `MainWindow._active_recording_dialog` is set for
 a dialog's whole modal lifetime and is what both guards read.
+`TelegramChatDialog` shares this same guard even though a chat session
+touches none of those physical resources — what it *does* share with the
+other six is the one bottom progress bar itself, which only one dialog
+can ever be wired into at a time, and reusing the existing guard was
+simpler and safer than inventing a second, parallel single-owner
+mechanism just for it.
 
 ## PySide6/Qt gotchas hit in this codebase
 
