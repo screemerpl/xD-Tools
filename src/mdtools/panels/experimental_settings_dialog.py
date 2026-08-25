@@ -13,36 +13,18 @@ than a bot token.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
-    QFileDialog,
     QFormLayout,
-    QHBoxLayout,
     QLabel,
     QLineEdit,
     QMessageBox,
     QPushButton,
-    QWidget,
 )
 
-from mdtools import app_settings, cdrip
+from mdtools import app_settings
 from mdtools.panels.telegram_login_dialog import TelegramLoginDialog
-
-
-def _with_button(edit: QLineEdit, button: QPushButton) -> QWidget:
-    """Own copy of settings_dialog.py's identical helper -- nine lines is
-    the cheaper side of the trade against pulling settings_dialog.py's
-    private helper across module boundaries for it (same reasoning
-    user_paths.sanitize_filename gives for its own copy of cdrip's)."""
-    widget = QWidget()
-    row = QHBoxLayout(widget)
-    row.setContentsMargins(0, 0, 0, 0)
-    row.addWidget(edit, 1)
-    row.addWidget(button)
-    return widget
 
 
 class ExperimentalSettingsDialog(QDialog):
@@ -90,42 +72,36 @@ class ExperimentalSettingsDialog(QDialog):
         self.bot_username_edit.setPlaceholderText("@your_bot")
         layout.addRow(self.tr("Bot username"), self.bot_username_edit)
 
-        self.download_folder_edit = QLineEdit(app_settings.telegram_download_folder())
-        self.download_folder_edit.setToolTip(
-            self.tr("Where an album downloaded from the bot is saved before being recorded.")
-        )
-        browse_btn = QPushButton(self.tr("Browse..."))
-        browse_btn.clicked.connect(self._browse_download_folder)
-        layout.addRow(self.tr("Download folder"), _with_button(self.download_folder_edit, browse_btn))
+        # No "Download folder" row any more -- merged with the CD rip
+        # folder (Window > Settings), since a downloaded album and a CD rip
+        # are both just audio on their way into the same recording flow,
+        # and keeping two separately-configurable folders for the same
+        # purpose only invited them to drift apart.
 
         self.status_label = QLabel()
         layout.addRow(self.tr("Status"), self.status_label)
-        self._refresh_status()
 
         sign_in_btn = QPushButton(self.tr("Sign in to Telegram..."))
         sign_in_btn.clicked.connect(self._sign_in)
         layout.addRow(sign_in_btn)
+
+        self.sign_out_btn = QPushButton(self.tr("Sign out"))
+        self.sign_out_btn.clicked.connect(self._sign_out)
+        layout.addRow(self.sign_out_btn)
+
+        self._refresh_status()
 
     def _refresh_status(self) -> None:
         """Local file presence only -- no network round trip just to open
         this dialog. Same deliberately-optimistic convention the MDRem port
         combo already uses for a saved-but-maybe-unplugged port: this can't
         promise the session is still valid, only that one was saved."""
-        if app_settings.telegram_session_path().exists():
+        signed_in = app_settings.telegram_session_path().exists()
+        if signed_in:
             self.status_label.setText(self.tr("A saved sign-in exists locally."))
         else:
             self.status_label.setText(self.tr("Not signed in yet."))
-
-    def _browse_download_folder(self) -> None:
-        start = self.download_folder_edit.text().strip()
-        if start:
-            try:
-                cdrip.ensure_folder(Path(start))
-            except cdrip.CdRipError:
-                start = ""
-        path = QFileDialog.getExistingDirectory(self, self.tr("Download folder"), start)
-        if path:
-            self.download_folder_edit.setText(path)
+        self.sign_out_btn.setEnabled(signed_in)
 
     def _sign_in(self) -> None:
         """Reads the credentials straight from app_settings rather than from
@@ -145,27 +121,15 @@ class ExperimentalSettingsDialog(QDialog):
         dialog.exec()
         self._refresh_status()
 
+    def _sign_out(self) -> None:
+        """Deletes the local Telethon session file -- the same file a
+        fresh sign-in creates, and the same one _refresh_status() checks
+        for. This is a local, offline operation: nothing is revoked on
+        Telegram's own servers, it just forgets the session on this
+        machine, same as forgetting a browser's saved login."""
+        app_settings.telegram_session_path().unlink(missing_ok=True)
+        self._refresh_status()
+
     def _on_accept(self) -> None:
         app_settings.set_telegram_bot_username(self.bot_username_edit.text())
-        app_settings.set_telegram_download_folder(self.download_folder_edit.text())
-        self._create_download_folder()
         self.accept()
-
-    def _create_download_folder(self) -> None:
-        """Same "warn, don't block OK" rule SettingsDialog's CD rip folder
-        follows: a drive that isn't there right now is worth saying, not a
-        reason to refuse the setting."""
-        folder = self.download_folder_edit.text().strip()
-        if not folder:
-            return
-        try:
-            cdrip.ensure_folder(Path(folder))
-        except cdrip.CdRipError as exc:
-            QMessageBox.warning(
-                self,
-                self.tr("Download folder"),
-                self.tr(
-                    "That folder could not be created: {error}\n\nThe setting has been saved anyway, but a "
-                    "download cannot be saved there until it exists."
-                ).format(error=exc),
-            )

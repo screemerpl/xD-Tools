@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import math
 
 from PySide6.QtCore import QRectF, Qt
@@ -26,6 +27,7 @@ from mdtools.canvas.items import (
     make_template_outline,
     opaque_content_rect,
     set_item_scale,
+    set_text_shadow,
     tag_print_layer,
 )
 from mdtools import app_settings
@@ -36,6 +38,35 @@ from mdtools.templates.models import CoverTemplate, DiscTemplate
 # constructed before a QApplication/QGuiApplication exists, and this module
 # is imported well before main() creates one.
 DEFAULT_RECT_FILL_HEX = "#4a90d9"
+
+# Set only from within font_family_override() below -- read by add_text()
+# every time it creates a new text item.
+_active_font_family: str | None = None
+
+
+@contextlib.contextmanager
+def font_family_override(font_family: str | None):
+    """While active, every `DesignScene.add_text()` call anywhere starts
+    the new item on `font_family` instead of the application's own default
+    font -- the mechanism behind Toolbar > "Regenerate with Font...".
+
+    Every piece of auto-generated text on a page -- jcard_layout._text()
+    (shared by the J-card, the CD ring label, the CD insert, and the
+    cassette shell label/J-card) *and* this module's own
+    seed_disc_defaults() insertion-mark triangle/label -- ultimately calls
+    add_text() to create its item, so overriding it here is what lets one
+    context manager cover all of them with no change needed to any of
+    those call sites individually. Scoped and restored (not a persistent
+    setting) because it only ever needs to apply for the duration of one
+    synchronous "rebuild this page" call.
+    """
+    global _active_font_family
+    previous = _active_font_family
+    _active_font_family = font_family
+    try:
+        yield
+    finally:
+        _active_font_family = previous
 
 
 class DesignScene(QGraphicsScene):
@@ -308,6 +339,10 @@ class DesignScene(QGraphicsScene):
         # always-visible default rather than inheriting that; explicitly
         # colored/loaded items (project_io.py) override this immediately.
         item.setDefaultTextColor(QColor("black"))
+        if _active_font_family:
+            font = item.font()
+            font.setFamily(_active_font_family)
+            item.setFont(font)
         # QTextDocument keeps a 4px margin on every side by default. It is
         # invisible on a wide block and ruinous on a narrow one -- on a
         # 6.5mm case spine it left about 7px for the type itself, forcing
@@ -376,8 +411,13 @@ class DesignScene(QGraphicsScene):
         triangle_font.setPointSizeF(20)
         triangle.setFont(triangle_font)
         triangle.setTransformOriginPoint(triangle.boundingRect().center())
+        # This mark is about to sit on top of a full-bleed cover once the
+        # disc is auto-laid out (see auto_layout.recolour_insertion_mark) --
+        # the same reason jcard_layout._text() always turns this on too.
+        set_text_shadow(triangle, True)
 
         label = self.add_text("INSERT THIS END")
+        set_text_shadow(label, True)
 
         # the *disc shape's* own width, not sceneRect().width() -- that also
         # spans a slider label (if this template has one), which would

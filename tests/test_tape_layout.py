@@ -131,6 +131,31 @@ def test_a_side_label_says_which_side_it_is(qt_app):
         assert side.label in _texts(scene.print_items())
 
 
+def test_the_shell_labels_accent_matches_the_j_cards_own(qt_app):
+    """Same fix as the CD disc label: accent_colour()'s result depends on
+    what it's scored against, so scoring the shell label's own accent
+    against a flat white (as it used to) meant it could never actually
+    agree with the J-card's spine accent for the same album -- even though
+    both claim to be "the accent colour". This locks the two to the exact
+    same computation (dominant_colour -> accent_colour(against=that)),
+    not just a similarly-shaped one.
+    """
+    from mdtools.palette import accent_colour, dominant_colour
+
+    metadata = _album(4)
+    plan = tape.split_sides(metadata.tracks, 60)
+
+    label_scene = DesignScene(_template(SHELL_LABEL, "label"))
+    tape_layout.build_side_label(label_scene, metadata, plan.sides[0])
+    letter = next(
+        item for item in label_scene.print_items() if hasattr(item, "toPlainText") and item.toPlainText() == "A"
+    )
+
+    background = dominant_colour(metadata.cover_art)
+    expected_accent = accent_colour(metadata.cover_art, against=background)
+    assert letter.defaultTextColor().name() == expected_accent
+
+
 def test_the_side_letter_is_the_biggest_thing_on_the_label(qt_app):
     """It is read while the tape is halfway into the deck."""
     metadata = _album(6)

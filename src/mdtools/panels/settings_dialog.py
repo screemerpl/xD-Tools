@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 
 from PySide6.QtCore import Qt
 
-from mdtools import app_settings, cdrip, foobar, mdrem
+from mdtools import app_settings, audio_engine, cdrip, mdrem
 
 DPI_RANGE = (20.0, 4800.0)
 
@@ -91,6 +91,7 @@ class SettingsDialog(QDialog):
         )
         layout.addRow(self.tr("Bake DPI"), self.bake_dpi_spin)
 
+        self._build_audio_output_row(layout)
         self._build_experimental_row(layout)
         self._build_mdrem_rows(layout)
 
@@ -102,6 +103,101 @@ class SettingsDialog(QDialog):
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addRow(buttons)
+
+    def _build_audio_output_row(self, layout: QFormLayout) -> None:
+        """Which device xD-Tools' own audio engine plays recording source
+        material through -- e.g. an interface's line/S/PDIF output feeding
+        a MiniDisc deck or a CD burner's monitor path. Unrelated to the
+        MDRem checkbox below: this has nothing to do with the infrared
+        adapter. This is what replaced foobar2000's own output device
+        setting once recording stopped driving foobar2000 at all -- see
+        audio_engine.py's own module docstring.
+
+        Two independent rows, not one -- explicit request: a MiniDisc deck
+        typically wants a digital (S/PDIF) output and a cassette deck an
+        analogue line output, which are routinely two different physical
+        interfaces (or two different outputs on the same one). See
+        app_settings.audio_output_device()/tape_audio_output_device()."""
+        self.audio_device_combo = self._build_device_combo_row(
+            layout,
+            self.tr("MiniDisc audio output device"),
+            app_settings.audio_output_device(),
+            self.tr(
+                "The output device audio is played through while recording to MiniDisc -- typically a "
+                "digital (S/PDIF) output feeding the deck. Leave as \"System default\" to use whatever "
+                "the operating system currently considers the default output."
+            ),
+        )
+        self.tape_audio_device_combo = self._build_device_combo_row(
+            layout,
+            self.tr("Cassette audio output device"),
+            app_settings.tape_audio_output_device(),
+            self.tr(
+                "The output device audio is played through while recording to cassette -- typically an "
+                "analogue line output feeding the deck. Leave as \"System default\" to use whatever the "
+                "operating system currently considers the default output."
+            ),
+        )
+
+        self.recording_gain_spin = QDoubleSpinBox()
+        self.recording_gain_spin.setRange(-24.0, 0.0)
+        self.recording_gain_spin.setDecimals(1)
+        self.recording_gain_spin.setSuffix(self.tr(" dB"))
+        self.recording_gain_spin.setValue(app_settings.recording_gain_db())
+        self.recording_gain_spin.setToolTip(
+            self.tr(
+                "Headroom below full scale while recording, so a hot digital source has no chance to clip "
+                "on the way in. Does not affect preview playback."
+            )
+        )
+        layout.addRow(self.tr("Recording gain"), self.recording_gain_spin)
+
+    def _build_device_combo_row(
+        self, layout: QFormLayout, label: str, selected: str, tooltip: str
+    ) -> QComboBox:
+        """One "device combo + Refresh button" row -- factored out so the
+        MiniDisc and Cassette rows (see _build_audio_output_row) are built
+        identically rather than as two hand-copied blocks."""
+        combo = QComboBox()
+        combo.setToolTip(tooltip)
+        refresh_btn = QPushButton(self.tr("Refresh"))
+        refresh_btn.setToolTip(self.tr("Re-lists the currently available output devices."))
+        refresh_btn.clicked.connect(lambda: self._populate_audio_devices(combo, self._selected_audio_device(combo)))
+
+        device_widget = QWidget()
+        device_row = QHBoxLayout(device_widget)
+        device_row.setContentsMargins(0, 0, 0, 0)
+        device_row.addWidget(combo, 1)
+        device_row.addWidget(refresh_btn)
+        layout.addRow(label, device_widget)
+
+        self._populate_audio_devices(combo, selected)
+        return combo
+
+    def _populate_audio_devices(self, combo: QComboBox, selected: str) -> None:
+        """Lists the output devices currently present, but never drops
+        `selected` -- same "a saved choice survives even when its device
+        happens to be unplugged right now" rule _populate_ports() follows
+        for the MDRem port, just for a sound card/interface instead of a
+        serial adapter."""
+        combo.clear()
+        combo.addItem(self.tr("System default"), "")
+        names = []
+        try:
+            devices = audio_engine.list_output_devices()
+        except audio_engine.AudioEngineError:
+            devices = []
+        for device in devices:
+            combo.addItem(device.name, device.name)
+            names.append(device.name)
+        if selected and selected not in names:
+            combo.addItem(self.tr("{device} (not connected)").format(device=selected), selected)
+        index = combo.findData(selected)
+        if index >= 0:
+            combo.setCurrentIndex(index)
+
+    def _selected_audio_device(self, combo: QComboBox) -> str:
+        return str(combo.currentData() or "")
 
     def _build_experimental_row(self, layout: QFormLayout) -> None:
         """Gates work-in-progress features that aren't ready for everyone --
@@ -153,15 +249,6 @@ class SettingsDialog(QDialog):
         self._mdrem_port_widget = port_widget
         layout.addRow(self.tr("MDRem port"), port_widget)
 
-        self.foobar_url_edit = QLineEdit(app_settings.foobar_url())
-        self.foobar_url_edit.setToolTip(
-            self.tr(
-                "Where foobar2000's Beefweb Remote Control component listens, used by Record to MiniDisc. "
-                "Change it only if you moved Beefweb off its default port."
-            )
-        )
-        layout.addRow(self.tr("foobar2000 (Beefweb) URL"), self.foobar_url_edit)
-
         self._build_cd_rows(layout)
         self._mdrem_form = layout
 
@@ -171,20 +258,8 @@ class SettingsDialog(QDialog):
     def _build_cd_rows(self, layout: QFormLayout) -> None:
         """Settings for Record CD to MiniDisc.
 
-        Neither is tied to the MDRem checkbox, for the same reason the
-        Beefweb URL above is not: they describe foobar2000 and the
-        filesystem, not the infrared adapter."""
-        self.foobar_exe_edit = QLineEdit(app_settings.foobar_exe() or (foobar.find_foobar_exe() or ""))
-        self.foobar_exe_edit.setToolTip(
-            self.tr(
-                "foobar2000's own program file. Ripped CD tracks are loaded through it rather than through "
-                "Beefweb, which refuses files outside the music folders configured in foobar itself."
-            )
-        )
-        browse_exe = QPushButton(self.tr("Browse..."))
-        browse_exe.clicked.connect(self._browse_foobar_exe)
-        layout.addRow(self.tr("foobar2000 program"), _with_button(self.foobar_exe_edit, browse_exe))
-
+        Not tied to the MDRem checkbox: this describes the filesystem, not
+        the infrared adapter."""
         self.cd_rip_folder_edit = QLineEdit(app_settings.cd_rip_folder())
         self.cd_rip_folder_edit.setToolTip(
             self.tr(
@@ -195,13 +270,6 @@ class SettingsDialog(QDialog):
         browse_folder = QPushButton(self.tr("Browse..."))
         browse_folder.clicked.connect(self._browse_rip_folder)
         layout.addRow(self.tr("CD rip folder"), _with_button(self.cd_rip_folder_edit, browse_folder))
-
-    def _browse_foobar_exe(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(
-            self, self.tr("foobar2000 program"), self.foobar_exe_edit.text(), self.tr("Programs (*.exe);;All files (*)")
-        )
-        if path:
-            self.foobar_exe_edit.setText(path)
 
     def _browse_rip_folder(self) -> None:
         """Creates the configured folder before browsing to it.
@@ -244,10 +312,6 @@ class SettingsDialog(QDialog):
             self.mdrem_port_combo.setCurrentIndex(index)
 
     def _sync_mdrem_enabled(self, enabled: bool) -> None:
-        """Only the port follows the checkbox. The foobar2000 address does
-        not: reading a playlist (the Metadata dialog's "Load from
-        foobar2000") needs foobar, not the infrared adapter, so tying it to
-        the adapter would disable a setting the user still needs."""
         self._mdrem_port_widget.setEnabled(enabled)
 
     def _detect_port(self) -> None:
@@ -276,16 +340,20 @@ class SettingsDialog(QDialog):
         self.export_dpi_spin.setValue(app_settings.DEFAULT_EXPORT_DPI)
         self.bake_dpi_spin.setValue(app_settings.DEFAULT_BAKE_DPI)
         self.cd_rip_folder_edit.setText(app_settings.default_cd_rip_folder())
+        self._populate_audio_devices(self.audio_device_combo, "")
+        self._populate_audio_devices(self.tape_audio_device_combo, "")
+        self.recording_gain_spin.setValue(app_settings.DEFAULT_RECORDING_GAIN_DB)
 
     def _on_accept(self) -> None:
         app_settings.set_screen_dpi(self.screen_dpi_spin.value())
         app_settings.set_default_export_dpi(self.export_dpi_spin.value())
         app_settings.set_bake_dpi(self.bake_dpi_spin.value())
+        app_settings.set_audio_output_device(self._selected_audio_device(self.audio_device_combo))
+        app_settings.set_tape_audio_output_device(self._selected_audio_device(self.tape_audio_device_combo))
+        app_settings.set_recording_gain_db(self.recording_gain_spin.value())
         app_settings.set_experimental_features_enabled(self.experimental_check.isChecked())
         app_settings.set_mdrem_enabled(self.mdrem_check.isChecked())
         app_settings.set_mdrem_port(self.selected_port())
-        app_settings.set_foobar_url(self.foobar_url_edit.text())
-        app_settings.set_foobar_exe(self.foobar_exe_edit.text())
         app_settings.set_cd_rip_folder(self.cd_rip_folder_edit.text())
         self._create_rip_folder()
         self.accept()

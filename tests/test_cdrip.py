@@ -212,6 +212,30 @@ def test_folder_name_survives_a_title_windows_would_mangle():
     assert cdrip.rip_folder_name("", "") == "Unknown Artist - Unknown Album"
 
 
+def test_folder_name_survives_a_musicbrainz_style_unicode_hyphen():
+    """Real report: a MusicBrainz artist name carrying U+2010 HYPHEN (not
+    the plain ASCII "-") produced a folder Python's own Unicode-clean
+    path APIs created correctly, but cd-paranoia.exe -- a narrow-API
+    mingw binary that decodes its own argv through the process's ANSI
+    codepage, not UTF-8 -- could not represent on this machine's codepage
+    (cp1250), and failed to open its output file inside the very folder
+    that had just been created: two different byte sequences for what
+    was meant to be the same folder. sanitize_filename() must
+    transliterate to plain ASCII so a folder name survives that
+    conversion on any machine's codepage, not just the one this broke on."""
+    artist = "blink" + chr(0x2010) + "182"
+
+    name = cdrip.rip_folder_name(artist, "Greatest Hits")
+
+    assert name.isascii()
+    assert name == "blink-182 - Greatest Hits"
+
+
+def test_sanitize_filename_transliterates_non_ascii_punctuation():
+    assert cdrip.sanitize_filename("Zażółć gęślą jaźń").isascii()
+    assert cdrip.sanitize_filename("Motörhead").isascii()  # o-umlaut
+
+
 def test_expected_wav_bytes_is_the_toc_length_in_cdda_sectors():
     plan = cdrip.build_rip_plan(_toc(), Path("/rips/x"), [])
     assert plan.tasks[0].expected_wav_bytes == 44 + 22617 * 2352
@@ -412,6 +436,43 @@ def test_a_failed_rip_keeps_its_log_and_reports_what_is_in_it(monkeypatch, tmp_p
     assert [p.name for p in tmp_path.glob("*.log")] == ["01 - A Song.log"]
 
 
+def test_a_blocked_output_file_gets_a_security_software_hint(monkeypatch, tmp_path):
+    """Real report: cd-paranoia refused to open its own output file with
+    "No such file or directory" in a folder rip_track had just created
+    successfully moments earlier -- the signature of security software
+    (Windows' Controlled Folder Access, an antivirus) silently blocking the
+    bundled, unsigned cd-paranoia.exe specifically. cdparanoia's own wording
+    must still come through, with the hint appended, not replacing it."""
+    monkeypatch.setattr(cdrip, "cdparanoia_path", lambda: "cd-paranoia")
+    task = _one_task(tmp_path)
+
+    class _Failing:
+        returncode = None
+
+        def __init__(self, log):
+            self._log = log
+            self._polled = False
+
+        def poll(self):
+            if not self._polled:
+                self._polled = True
+                return None
+            self._log.write(
+                f"Cannot open specified output file {task.wav_path}: No such file or directory\n"
+            )
+            self._log.flush()
+            self.returncode = 1
+            return 1
+
+    def fake_popen(command, stderr=None, **kwargs):
+        return _Failing(stderr)
+
+    with pytest.raises(cdrip.CdRipError, match="Controlled Folder Access") as excinfo:
+        cdrip.rip_track("D:", task, popen=fake_popen, sleep=lambda _: None)
+
+    assert "Cannot open specified output file" in str(excinfo.value)
+
+
 def test_rip_command_asks_for_stderr_progress_and_a_wav():
     command = cdrip.rip_command("cd-paranoia", "D:", 3, Path("/tmp/3.wav"))
     assert "-e" in command  # machine-readable progress, "for wrapper scripts"
@@ -459,16 +520,23 @@ def _flac_vorbis_comments(path: Path) -> list[str]:
     return []
 
 
-@pytest.mark.skipif(cdrip.flac_path() is None, reason="the bundled flac encoder is not present")
-def test_the_bundled_encoder_writes_non_ascii_tags_without_mangling_them(tmp_path):
-    """Runs the real flac.exe from bin/.
+def test_the_encoder_writes_non_ascii_tags_without_mangling_them(tmp_path):
+    """Verified against a hand-written Vorbis-comment parser
+    (_flac_vorbis_comments), not soundfile/mutagen, since those are what
+    wrote/could read them back.
 
-    Not a formality: tags reach the encoder as command line arguments, and a
-    Polish or Japanese album title surviving that trip on Windows is an
-    assumption about how the tool handles its own argv, not something the
-    code here can guarantee. If it ever stops being true, every title on
-    every ripped disc is silently wrong -- and would then be written onto
-    the MiniDisc that way."""
+    Encoding now goes through audio_engine.encode_wav_to_flac()
+    (soundfile/libsndfile), not flac.exe -- tags reach libsndfile as plain
+    Python strings, not command-line arguments, so surviving a Polish or
+    Japanese title is no longer an assumption about a tool's own argv
+    handling the way it was when this ran flac.exe directly. Still worth
+    proving directly rather than assuming it from the library's own docs.
+
+    Comments are compared lowercase: libsndfile always writes the field
+    *name* (not the value) lowercase regardless of the case given here --
+    a real, confirmed difference from flac.exe's own behaviour (which
+    preserved whatever case was passed), but not a mangling one, since
+    Vorbis comment field names are case-insensitive by spec."""
     task = cdrip.RipTask(
         number=1,
         title="Zażółć gęślą jaźń",
@@ -482,12 +550,11 @@ def test_the_bundled_encoder_writes_non_ascii_tags_without_mangling_them(tmp_pat
     cdrip.encode_track(task)
 
     assert task.flac_path.is_file()
-    comments = _flac_vorbis_comments(task.flac_path)
-    assert "TITLE=Zażółć gęślą jaźń" in comments
-    assert "ARTIST=サカナクション" in comments
+    comments = [c.lower() for c in _flac_vorbis_comments(task.flac_path)]
+    assert "title=zażółć gęślą jaźń" in comments
+    assert "artist=サカナクション" in comments
 
 
-@pytest.mark.skipif(cdrip.flac_path() is None, reason="the bundled flac encoder is not present")
 def test_encoding_removes_the_wav_it_replaced(tmp_path):
     task = cdrip.RipTask(1, "A", 1, tmp_path / "in.wav", tmp_path / "out.flac", {"TITLE": "A"})
     _write_silent_wav(task.wav_path)
@@ -496,15 +563,23 @@ def test_encoding_removes_the_wav_it_replaced(tmp_path):
     assert task.flac_path.is_file()
 
 
-def test_encode_failure_is_reported_with_the_encoders_own_message(monkeypatch, tmp_path):
-    monkeypatch.setattr(cdrip, "flac_path", lambda: "flac")
+def test_encoding_can_keep_the_wav_when_asked(tmp_path):
+    task = cdrip.RipTask(1, "A", 1, tmp_path / "in.wav", tmp_path / "out.flac", {"TITLE": "A"})
+    _write_silent_wav(task.wav_path)
+    cdrip.encode_track(task, keep_wav=True)
+    assert task.wav_path.exists()
+    assert task.flac_path.is_file()
+
+
+def test_encode_failure_is_reported_as_a_cdriperror(tmp_path):
+    """No WAV was ever written at source -- audio_engine.encode_wav_to_flac()
+    has nothing to encode, which is exactly the "clean-looking return is
+    not evidence, check the actual output" case its own docstring
+    describes."""
     task = _one_task(tmp_path)
 
-    def fake_run(command, **kwargs):
-        return _FakeCompleted(stderr="in.wav: ERROR: file is not a valid WAVE file", returncode=1)
-
-    with pytest.raises(cdrip.CdRipError, match="not a valid WAVE"):
-        cdrip.encode_track(task, run=fake_run)
+    with pytest.raises(cdrip.CdRipError):
+        cdrip.encode_track(task)
 
 
 # --- bundled tools ----------------------------------------------------
@@ -528,32 +603,16 @@ def test_both_tools_are_bundled_and_actually_run():
 
 
 # --- housekeeping -----------------------------------------------------
-
-
-def test_stale_rip_folders_are_removed_except_the_one_in_use(tmp_path):
-    old = tmp_path / "Old Artist - Old Album"
-    old.mkdir()
-    (old / "01 - x.flac").write_bytes(b"")
-    keep = tmp_path / "New Artist - New Album"
-    keep.mkdir()
-
-    removed = cdrip.clean_stale_rip_folders(tmp_path, keep=keep)
-
-    assert removed == [old]
-    assert not old.exists()
-    assert keep.exists()
-
-
-def test_a_folder_holding_anything_but_rip_output_is_left_alone(tmp_path):
-    """The rip folder is user-configurable, so it can be pointed somewhere
-    that also holds something else. A recursive delete has no business
-    guessing."""
-    theirs = tmp_path / "Holiday Photos"
-    theirs.mkdir()
-    (theirs / "beach.jpg").write_bytes(b"")
-
-    assert cdrip.clean_stale_rip_folders(tmp_path) == []
-    assert (theirs / "beach.jpg").exists()
+#
+# clean_stale_rip_folders() used to live here and delete anything that
+# looked like leftover rip output before a new rip started. Removed
+# outright, not just fixed: it once `shutil.rmtree()`'d a real user's
+# permanently organized albums because a folder of nothing but .flac
+# files looks exactly like a stale rip either way, and there is no
+# reliable way to tell them apart by content alone. Explicit instruction:
+# nothing in this app may ever delete a file from the shared audio folder
+# on its own -- see test_cd_rip_dialog.py's own
+# test_starting_a_rip_never_deletes_anything_in_the_shared_folder.
 
 
 # --- making the rip folder --------------------------------------------

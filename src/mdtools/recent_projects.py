@@ -17,7 +17,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QSettings, QStandardPaths
 
-MAX_RECENT = 5
+MAX_RECENT = 12
 _SETTINGS_KEY = "recent_projects"
 
 

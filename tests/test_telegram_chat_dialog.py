@@ -163,6 +163,22 @@ class _BusyWorker:
 # --- plain construction must stay inert ---------------------------------
 
 
+def test_enter_in_the_message_field_sends_rather_than_triggering_record(qt_app, tmp_path):
+    """Reported directly: pressing Enter while typing a chat message opened
+    the "Choose Album" picker instead of sending the message. Qt falls
+    back to the first enabled AcceptRole button in the QDialogButtonBox
+    (Record Downloaded Albums...) once focus leaves whatever held it
+    initially, unless Send is explicitly made the dialog's default and the
+    others are excluded from autoDefault."""
+    dialog = TelegramChatDialog("123456", "hash", "@my_bot", tmp_path)
+    try:
+        assert dialog.send_btn.isDefault()
+        assert dialog.continue_btn.autoDefault() is False
+        assert dialog.close_btn.autoDefault() is False
+    finally:
+        dialog.close()
+
+
 def test_plain_construction_starts_no_worker(qt_app, tmp_path):
     """The regression this whole file is built around -- see the module
     docstring. Deliberately does *not* mock the client factory: if this
@@ -389,6 +405,178 @@ def test_end_to_end_a_bad_image_shows_a_fallback_message(qt_app, monkeypatch, tm
         widget = dialog._message_widgets[raw.id]
         _pump_until(lambda: widget.photo_label.text() != "Loading image...")
         assert "Could not display image" in widget.photo_label.text()
+    finally:
+        _shutdown(dialog)
+
+
+# --- saving a photo out of the transcript (#8) ------------------------------
+
+
+def test_clicking_a_loaded_photo_saves_it_to_the_artwork_folder(qt_app, monkeypatch, tmp_path):
+    """The bytes behind the inline preview are already on the widget by the
+    time it can be clicked at all -- saving must not re-download anything,
+    only write out what's already there."""
+    artwork_dir = tmp_path / "artwork"
+
+    def _fake_artwork_dir():
+        # Mirrors the real user_paths.artwork_dir()'s own contract: it
+        # creates the folder on demand, the caller never has to.
+        artwork_dir.mkdir(parents=True, exist_ok=True)
+        return artwork_dir
+
+    monkeypatch.setattr(module.user_paths, "artwork_dir", _fake_artwork_dir)
+    fake = FakeTelethonClient(authorized=True)
+    dialog = _dialog(monkeypatch, tmp_path, fake)
+    try:
+        _pump_until(lambda: dialog._session_folder is not None)
+
+        raw = FakeMessage(photo=True, file=FakeFile(None, len(_TINY_PNG)), content=_TINY_PNG)
+        _deliver(dialog, fake, raw)
+        widget = dialog._message_widgets[raw.id]
+        _pump_until(lambda: not widget.photo_label.pixmap().isNull())
+
+        widget.photo_label.clicked.emit()
+
+        saved = list(artwork_dir.iterdir())
+        assert len(saved) == 1
+        assert saved[0].read_bytes() == _TINY_PNG
+        assert saved[0].suffix == ".png"
+        assert str(saved[0]) in dialog.status_label.text()
+    finally:
+        _shutdown(dialog)
+
+
+def test_clicking_a_photo_that_has_not_finished_loading_does_nothing(qt_app, monkeypatch, tmp_path):
+    """Deliberately built by hand rather than through the full async
+    worker + _deliver() pipeline -- _deliver()'s own pump loop drains
+    Qt's whole pending event queue on every iteration, so by the time it
+    returns, a fake (near-instant) photo download has usually *already*
+    arrived too, making the "not loaded yet" moment impossible to land on
+    reliably through that path. A bare widget with no set_photo() call at
+    all is the actual state under test: still just "Loading image...",
+    with nothing yet on self._photo_bytes."""
+    artwork_dir = tmp_path / "artwork"
+    monkeypatch.setattr(module.user_paths, "artwork_dir", lambda: artwork_dir)
+    dialog = TelegramChatDialog("123456", "hash", "@my_bot", tmp_path)
+    message = module.telegram_bot.ChatMessage(id=1, outgoing=False, text="", is_photo=True)
+    widget = module._MessageWidget(message, "my_bot")
+    dialog._message_widgets[message.id] = widget
+    assert widget._photo_bytes is None
+
+    dialog._on_photo_save_requested(message.id)
+
+    assert not artwork_dir.exists()
+
+
+def test_a_bad_image_cannot_be_saved_since_nothing_was_ever_kept(qt_app, monkeypatch, tmp_path):
+    artwork_dir = tmp_path / "artwork"
+
+    def _fake_artwork_dir():
+        # Mirrors the real user_paths.artwork_dir()'s own contract: it
+        # creates the folder on demand, the caller never has to.
+        artwork_dir.mkdir(parents=True, exist_ok=True)
+        return artwork_dir
+
+    monkeypatch.setattr(module.user_paths, "artwork_dir", _fake_artwork_dir)
+    fake = FakeTelethonClient(authorized=True)
+    dialog = _dialog(monkeypatch, tmp_path, fake)
+    try:
+        _pump_until(lambda: dialog._session_folder is not None)
+
+        raw = FakeMessage(photo=True, file=FakeFile(None, 5), content=b"not-an-image")
+        _deliver(dialog, fake, raw)
+        widget = dialog._message_widgets[raw.id]
+        _pump_until(lambda: widget.photo_label.text() != "Loading image...")
+
+        dialog._on_photo_save_requested(raw.id)
+
+        assert not artwork_dir.exists()
+    finally:
+        _shutdown(dialog)
+
+
+# --- the download queue's aggregate summary (#7) ----------------------------
+
+
+def test_queue_summary_is_hidden_with_no_files(qt_app, tmp_path):
+    dialog = TelegramChatDialog("123456", "hash", "@my_bot", tmp_path)
+
+    assert dialog.queue_summary_label.isVisible() is False
+
+
+def test_queue_summary_reports_counts_and_overall_progress(qt_app, tmp_path):
+    """Built directly against the dialog's own handlers rather than through
+    the full async worker + _deliver() pipeline: this suite's fake download
+    reports progress in one single (size, size) callback, which makes
+    landing on an in-between "still downloading" moment through the real
+    pipeline just as unreliable to time as the equivalent photo-preview
+    race noted above -- calling the signal handlers directly gives full
+    control over which state each of several files is in at once."""
+    dialog = TelegramChatDialog("123456", "hash", "@my_bot", tmp_path)
+    dialog.show()  # isVisible() reflects the whole ancestor chain, not just its own flag
+
+    def _msg(message_id: int, size: int) -> module.telegram_bot.ChatMessage:
+        return module.telegram_bot.ChatMessage(
+            id=message_id, outgoing=False, text="", file_name=f"{message_id}.flac", file_size=size
+        )
+
+    finished_msg = _msg(1, 100)
+    active_msg = _msg(2, 200)
+    queued_msg = _msg(3, 300)
+    failed_msg = _msg(4, 400)
+    for msg in (finished_msg, active_msg, queued_msg, failed_msg):
+        dialog._on_file_message(msg, is_new=True)
+
+    dialog._on_download_started(finished_msg.id)
+    dialog._on_download_finished(finished_msg.id, str(tmp_path / "1.flac"))
+    dialog._on_download_started(active_msg.id)
+    dialog._on_download_progress(active_msg.id, 100, 200)  # half-way
+    dialog._on_download_started(failed_msg.id)
+    dialog._on_download_failed(failed_msg.id, "network gone")
+    # queued_msg is left untouched -- still just sitting in the queue.
+
+    assert dialog.queue_summary_label.isVisible() is True
+    text = dialog.queue_summary_label.text()
+    assert "1/4 done" in text
+    assert "1 queued" in text
+    assert "1 downloading" in text
+    assert "1 failed" in text
+    # known totals: 100 (finished) + 200 (active) + 300 (queued, seeded at
+    # 0/size the moment it was queued) + 400 (failed, seeded then never
+    # progressed) = 1000; current: 100 + 100 + 0 + 0 = 200 -> 20%.
+    assert "20% overall" in text
+
+
+def test_a_retry_resets_that_files_own_progress_and_clears_its_failed_state(qt_app, tmp_path):
+    dialog = TelegramChatDialog("123456", "hash", "@my_bot", tmp_path)
+    msg = module.telegram_bot.ChatMessage(id=1, outgoing=False, text="", file_name="a.flac", file_size=100)
+    dialog._on_file_message(msg, is_new=True)
+
+    dialog._on_download_started(msg.id)
+    dialog._on_download_progress(msg.id, 80, 100)
+    dialog._on_download_failed(msg.id, "network gone")
+    assert "1 failed" in dialog.queue_summary_label.text()
+
+    dialog._on_download_started(msg.id)  # the retry
+
+    assert "1 failed" not in dialog.queue_summary_label.text()
+    assert "1 downloading" in dialog.queue_summary_label.text()
+    assert dialog._download_progress[msg.id] == (0, 100)
+
+
+def test_end_to_end_downloading_updates_the_queue_summary(qt_app, monkeypatch, tmp_path):
+    fake = FakeTelethonClient(authorized=True)
+    dialog = _dialog(monkeypatch, tmp_path, fake)
+    try:
+        _pump_until(lambda: dialog._session_folder is not None)
+
+        raw = FakeMessage(text="here", file=FakeFile("Unleashed.flac", 100))
+        _deliver(dialog, fake, raw)
+        _pump_until(lambda: raw.id in dialog._downloaded_files)
+
+        assert dialog.queue_summary_label.isVisible() is True
+        assert "1/1 done" in dialog.queue_summary_label.text()
+        assert "100% overall" in dialog.queue_summary_label.text()
     finally:
         _shutdown(dialog)
 

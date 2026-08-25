@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import copy
 import sys
 from pathlib import Path
@@ -17,33 +18,50 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMainWindow,
     QMessageBox,
+    QPushButton,
     QSlider,
     QToolBar,
+    QToolButton,
 )
 
-from mdtools import album_sort, app_settings, gallery, i18n, mixtape_cover, recent_projects, user_paths
-from mdtools.auto_layout import place_cover_on_label, place_logo_on_slider, recolour_insertion_mark
+from mdtools import (
+    album_sort,
+    app_settings,
+    cdrip,
+    cover_filters,
+    gallery,
+    i18n,
+    mixtape_cover,
+    recent_projects,
+    user_paths,
+)
+from mdtools.auto_layout import (
+    build_sticker_label,
+    place_cover_on_label,
+    place_logo_on_slider,
+    recolour_insertion_mark,
+)
 from mdtools.gallery import save_downloaded_cover
-from mdtools.jcard_layout import build_jcard
-from mdtools.metadata_lookup import MetadataLookupError, find_cover
+from mdtools.jcard_layout import build_jcard, has_cover_window
+from mdtools.metadata_lookup import MetadataLookupError, find_artist_photo, find_cover
 from mdtools.canvas.items import get_item_name, set_item_name
-from mdtools.canvas.scene import DesignScene
+from mdtools.canvas.scene import DesignScene, font_family_override
 from mdtools.canvas.view import DesignView
 from mdtools.clipboard import Clipboard
 from mdtools.commands import AddItemCommand, DeleteItemsCommand, PropertyEditCommand, SetPixmapCommand, SwapZCommand
 from mdtools.constants import mm_to_px
 from mdtools.grayscale import BRIGHTNESS_RANGE, CONTRAST_RANGE
 from mdtools.io.png_export import export_png, render_scene_to_image
-from mdtools.io.project_io import item_from_dict, item_to_dict, load_project, save_project
+from mdtools.io.project_io import item_from_dict, item_to_dict, load_project, save_project, scene_from_dict, scene_to_dict
 from mdtools.io.svg_export import export_svg
 from mdtools.panels.about_dialog import AboutDialog
+from mdtools.panels.add_page_dialog import AddPageDialog
 from mdtools.panels.asset_gallery_dialog import AssetGalleryDialog
 from mdtools.panels.cd_rip_dialog import CdRipDialog
-from mdtools.panels.erase_dialog import EraseDiscDialog
+from mdtools.panels.cover_filter_dialog import CoverFilterDialog
 from mdtools.panels.experimental_settings_dialog import ExperimentalSettingsDialog
-from mdtools import foobar
-from mdtools.audio_folder import album_from_folder
-from mdtools.cd_layout import CdLayoutError, build_case_back, build_disc_label, build_insert
+from mdtools.audio_folder import album_from_folder, list_audio_files
+from mdtools.cd_layout import CdLayoutError, build_case_back, build_disc_label, build_front_insert, build_insert
 from mdtools import tape
 from mdtools.tape_layout import TapeLayoutError, build_side_label
 from mdtools.tape_layout import build_jcard as build_tape_jcard
@@ -56,6 +74,7 @@ from mdtools.mdrem import disc_title
 from mdtools.panels.mdrem_port import resolve_port
 from mdtools.panels.metadata_dialog import MetadataDialog
 from mdtools.panels.record_dialog import RecordDialog
+from mdtools.panels.regenerate_font_dialog import RegenerateFontDialog
 from mdtools.panels.tape_record_dialog import TapeRecordDialog
 from mdtools.panels.new_design_dialog import NewDesignDialog
 from mdtools.panels.print_dialog import PrintDialog
@@ -63,7 +82,7 @@ from mdtools.panels.properties_panel import PropertiesPanel
 from mdtools.panels.remote_dialog import RemoteDialog
 from mdtools.panels.settings_dialog import SettingsDialog
 from mdtools.panels.startup_dialog import StartupDialog
-from mdtools.panels.telegram_chat_dialog import BURN, TelegramChatDialog, pick_album_folder
+from mdtools.panels.telegram_chat_dialog import TelegramChatDialog, pick_album_folder
 from mdtools.panels.tool_panel import ToolPanel
 from mdtools.project import (
     MEDIUM_CD,
@@ -92,11 +111,36 @@ from mdtools.templates.template_dialog import TemplateManagerDialog
 # label with its slider sticker, and the plain three-panel J-card (the
 # window variant would cut a hole through the cover artwork).
 FULL_LABEL_TEMPLATE = "Full disc label (with Slider)"
+# The same full-face label, minus the slider cutout/sticker -- built by the
+# exact same _auto_layout_disc_label(), just with no slider shape for the
+# MiniDisc logo to land on (auto_layout.place_logo_on_slider() already
+# no-ops gracefully when there's nothing to place it on).
+FULL_LABEL_NO_SLIDER_TEMPLATE = "Full disc label"
+# The small chamfered "sticker" disc label -- a different shape from the
+# full-face templates above, built by _auto_layout_sticker_label() instead
+# of _auto_layout_disc_label() (see auto_layout.build_sticker_label()).
+# The no-slider twin is the same relationship FULL_LABEL_NO_SLIDER_TEMPLATE
+# has to FULL_LABEL_TEMPLATE: same layout, no slider to fill.
+STICKER_TEMPLATE = "MiniDisc Disc Label (with Slider)"
+STICKER_NO_SLIDER_TEMPLATE = "MiniDisc Disc Label"
 JCARD_TEMPLATE = "MiniDisc Cover (J-Card)"
+# The same three-panel card with a 40x40mm die-cut window in it. Built by
+# the exact same _auto_layout_cover(), which hands build_jcard() a card
+# turned end-for-end: the window has to fall on the *artwork* (a die-cut
+# sleeve showing the disc through the front of the case) rather than
+# through the middle of the track list, so the front and back panels swap
+# over and every element on all three rotates the other way. See
+# jcard_layout.window_on_track_panel(), which is what actually decides it
+# from the template's own geometry.
+JCARD_WINDOW_TEMPLATE = "MiniDisc Cover (J-Card + Window)"
 # The CD equivalents. The folded insert rather than the flat front, because
 # it is the one with somewhere to put a track list.
 CD_LABEL_TEMPLATE = "CD Disc Label (Standard Hub)"
 CD_INSERT_TEMPLATE = "CD Slim Case Insert (Folded, 2 Panels)"
+# The same insert, minus the fold -- built by the exact same
+# _auto_layout_cd_insert(), just placing the cover across the whole card
+# instead of just its right panel (see cd_layout.build_front_insert()).
+CD_INSERT_FRONT_TEMPLATE = "CD Slim Case Insert (Front)"
 # The cassette's: one inlay card and the same sticker twice, once per face.
 TAPE_JCARD_TEMPLATE = "Cassette J-Card"
 TAPE_LABEL_TEMPLATE = "Cassette Shell Label"
@@ -113,8 +157,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         # Not "Label Designer" any more, and not MiniDisc-only either:
         # designing labels is one of several
-        # things this does, alongside recording a disc from foobar2000,
-        # titling it over infrared, and standing in for the deck's remote.
+        # things this does, alongside recording a disc, titling it over
+        # infrared, and standing in for the deck's remote.
         # "xD-Tools": the x stands in for M or C, which is the joke and
         # also, now, the truth -- it does MiniDisc and CD alike.
         self.setWindowTitle(self.tr("xD-Tools - Retro Media Studio"))
@@ -143,6 +187,15 @@ class MainWindow(QMainWindow):
         self.startup_cancelled = False
         self._connected_scenes: set = set()
         self.clipboard = Clipboard()
+        # Which CoverFilterDialog choice a disc/shell label was last built
+        # with, this session -- _reused_cover_filter() reads it so
+        # "Regenerate with Font..." and a full re-layout don't re-ask a
+        # question that's already been answered for this project. Session-
+        # only, deliberately not saved into the .mdproj: the filter itself
+        # is already baked into whatever image is on the page, this is only
+        # ever needed again if something asks to *rebuild* that page.
+        self._last_cover_filter_id: str | None = None
+        self._reusing_cover_filter = False
         # One QUndoStack per project (undo history for a discarded project's
         # items isn't meaningful); QUndoGroup gives the Edit menu's
         # Undo/Redo actions a stable identity that survives swapping the
@@ -185,13 +238,67 @@ class MainWindow(QMainWindow):
         # had nowhere to appear.
         self.page_combo.currentIndexChanged.connect(self._on_page_combo_changed)
         toolbar.addWidget(self.page_combo)
+        # Add/remove a page -- used to be Templates > "Add Page..."/"Remove
+        # This Page"; moved beside the page selector they act on, as a
+        # plain +/- pair rather than two menu entries. Both still go
+        # through _add_page()/_remove_page(), which already ask their own
+        # questions (which page to add, confirming a removal) -- nothing
+        # about the underlying behaviour changed, only where it's reached
+        # from.
+        self.add_page_btn = QPushButton(self.tr("+"))
+        self.add_page_btn.setFixedWidth(28)
+        self.add_page_btn.setToolTip(self.tr("Add Page..."))
+        self.add_page_btn.clicked.connect(self._add_page)
+        toolbar.addWidget(self.add_page_btn)
+        self.remove_page_btn = QPushButton(self.tr("-"))
+        self.remove_page_btn.setFixedWidth(28)
+        self.remove_page_btn.setToolTip(self.tr("Remove This Page"))
+        self.remove_page_btn.clicked.connect(self._remove_page)
+        toolbar.addWidget(self.remove_page_btn)
+        toolbar.addWidget(QLabel(self.tr("Template:")))
+        self.template_combo = QComboBox()
+        # Filled from the registry, filtered to the current page's own
+        # template kind and the project's medium -- see
+        # _refresh_template_combo(). Usually one entry (there's normally
+        # only one built-in per page/medium), plus any custom ones the
+        # user has cloned or saved -- see _on_template_combo_changed() for
+        # what picking a different one actually does.
+        #
+        # A page's own kind (disc/cover/label/case_back) changes with the
+        # page selector, and their template names vary a lot in length --
+        # "CD Disc Label (Standard Hub)" against "CD Jewel Case Back (Tray
+        # Card)" against just "sticker". Qt's default AdjustToContentsOnFirstShow
+        # locks the combo's width to whatever happened to be in it the
+        # first time it was shown, which then truncates every longer name
+        # that shows up later -- AdjustToContents keeps it sized to
+        # whatever is actually selected right now.
+        self.template_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+        self.template_combo.currentIndexChanged.connect(self._on_template_combo_changed)
+        toolbar.addWidget(self.template_combo)
+        # Icon-only, like the Tools panel's own buttons -- the label that
+        # used to be the button's visible text now lives in its tooltip
+        # instead (see ToolPanel._icon_button's identical convention).
+        self.regenerate_btn = QToolButton()
+        self.regenerate_btn.setIcon(icons.regenerate_icon())
+        self.regenerate_btn.setToolTip(
+            self.tr("Regenerate: rebuild this page from the project's metadata, with its default fonts and styling")
+        )
+        self.regenerate_btn.clicked.connect(self._regenerate_current_page)
+        toolbar.addWidget(self.regenerate_btn)
+        self.regenerate_font_btn = QToolButton()
+        self.regenerate_font_btn.setIcon(icons.regenerate_font_icon())
+        self.regenerate_font_btn.setToolTip(
+            self.tr("Regenerate with Font...: rebuild this page using a font you pick")
+        )
+        self.regenerate_font_btn.clicked.connect(self._open_regenerate_font_dialog)
+        toolbar.addWidget(self.regenerate_font_btn)
         self.addToolBar(toolbar)
 
         zoom_toolbar = QToolBar(self.tr("Zoom"), self)
-        # Icon + text together (not the Tools panel's icon-only style --
-        # these actions never had a tooltip-only convention, so dropping
-        # the visible label would be a bigger UX change than "add icons").
-        zoom_toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        # Icon-only, like the Tools panel's own buttons and the two
+        # Regenerate buttons above -- each label now lives in its own
+        # tooltip instead of next to the icon.
+        zoom_toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
         zoom_toolbar.addAction(icons.zoom_out_icon(), self.tr("Zoom Out"), self.view.zoom_out)
         self.zoom_label = QLabel("100%")
         zoom_toolbar.addWidget(self.zoom_label)
@@ -348,54 +455,60 @@ class MainWindow(QMainWindow):
         # metadata editor as well, which put the one dialog used while
         # designing a label in the same menu as three that drive a tape
         # deck; the editor is now a Tools panel button, next to the layers
-        # it feeds. The three sources -- a CD, whatever foobar already has,
-        # and a folder of files -- all end in the same recording.
+        # it feeds. The two sources -- a CD, and a folder of files -- both
+        # end in the same recording. There used to be a separate "Burn
+        # Audio CD from ..." action beside the folder entry; that collapsed
+        # into this one (see _record_folder_dialog), which dispatches to
+        # burning instead of recording on a CD project -- one "Record"
+        # entry per source, doing whatever the open project's medium calls
+        # for, rather than making the user pick the right one of two.
+        #
+        # A third entry, "Record to MiniDisc from foobar2000...", used to
+        # sit here for whatever was already queued in a separately-running
+        # foobar2000 -- retired along with the rest of the foobar2000
+        # integration (see RecordDialog's own module docstring): there is
+        # no "whatever's queued in some other app" concept once recording
+        # decodes and plays its own files.
         recording_menu = self.menuBar().addMenu(self.tr("&Recording"))
-        # Hidden rather than disabled without the adapter: like the other
-        # MDRem entry points, there is nothing it could usefully do.
+        # Hidden rather than disabled without the adapter (on a MiniDisc/
+        # cassette project -- a CD project needs no adapter at all, so
+        # these stay visible for it regardless): like the other MDRem entry
+        # points, there is nothing it could usefully do.
         self.record_cd_action = recording_menu.addAction(
             self.tr("Record CD to MiniDisc..."), self._record_cd
         )
         self.record_folder_action = recording_menu.addAction(
             self.tr("Record Folder to MiniDisc..."), self._record_folder
         )
-        self.record_action = recording_menu.addAction(
-            self.tr("Record to MiniDisc from foobar2000..."), self._record_from_foobar
+        # Moved here from Experimental -- neither needs a live chat session
+        # at all, both just act on whatever has already accumulated in the
+        # one configured audio folder (shared by CD ripping and Telegram
+        # bot downloads -- see app_settings.cd_rip_folder() -- so these are
+        # named for what they act on, not for one particular source of it;
+        # see telegram_chat_dialog.py's own note on why that folder is no
+        # longer a fresh one per session). Sorting is medium-agnostic (no
+        # _sync_mdrem_actions() gating); recording collapses onto whichever
+        # medium the open project is for, the same "just Record" shape the
+        # entries above follow.
+        self.telegram_sort_action = recording_menu.addAction(
+            self.tr("Sort Audio Folder into Albums..."), self._sort_telegram_downloads
         )
-        recording_menu.addSeparator()
-        # Burning needs no infrared adapter -- it is the drive's own job --
-        # so unlike everything above, these two are never hidden by
-        # _sync_mdrem_actions().
-        self.burn_folder_action = recording_menu.addAction(
-            self.tr("Burn Audio CD from Folder..."), self._burn_cd_from_folder
-        )
-        self.burn_foobar_action = recording_menu.addAction(
-            self.tr("Burn Audio CD from foobar2000..."), self._burn_cd_from_foobar
-        )
-        recording_menu.addSeparator()
-        # Erasing is not recording, but it is what you do to a disc you are
-        # about to record over, and it is the same deck and the same
-        # adapter -- keeping it here beats a menu of its own for one entry.
-        self.erase_disc_action = recording_menu.addAction(
-            self.tr("Erase MiniDisc..."), self._erase_disc
-        )
-        # The software remote used to be reachable only from the startup
-        # screen (closing the current project just to press a transport key
-        # was the only way to it) -- reported directly. Same "not recording,
-        # same deck/adapter" reasoning as Erase just above.
-        self.remote_action = recording_menu.addAction(
-            self.tr("Remote Control..."), self._open_remote_control
+        self.telegram_record_action = recording_menu.addAction(
+            self.tr("Record from Audio Folder..."), self._record_from_telegram_downloads
         )
         # _sync_mdrem_actions() is deliberately *not* called here: it also
-        # gates two entries in the Experimental menu, which is built
-        # further down. It runs once both menus exist.
+        # touches the Experimental menu, which is built further down. It
+        # runs once both menus exist. Erasing moved out of this menu
+        # entirely -- it's a button on the MiniDisc record dialog now (see
+        # record_dialog.py's own _erase_disc), reached right before
+        # recording onto the disc it clears, which is when it actually
+        # comes up. The remote moved to the Window menu, below.
 
+        # Changing a page's template, and adding/removing a page, both moved
+        # to the page toolbar -- the Template dropdown next to the page
+        # selector, and the +/- buttons beside it (see _build_page_toolbar).
         templates_menu = self.menuBar().addMenu(self.tr("&Templates"))
         templates_menu.addAction(self.tr("Manage Templates..."), self._manage_templates)
-        templates_menu.addAction(self.tr("Change Template for This Page..."), self._change_page_template)
-        templates_menu.addSeparator()
-        templates_menu.addAction(self.tr("Add Page..."), self._add_page)
-        templates_menu.addAction(self.tr("Remove This Page"), self._remove_page)
 
         view_menu = self.menuBar().addMenu(self.tr("&View"))
         view_menu.addAction(self.tr("Zoom In"), self.view.zoom_in).setShortcut(QKeySequence.StandardKey.ZoomIn)
@@ -424,30 +537,26 @@ class MainWindow(QMainWindow):
         self.telegram_chat_action = self.experimental_menu.addAction(
             self.tr("Download Album from Telegram Bot..."), self._open_telegram_bot_chat
         )
-        # Neither of these needs a live chat session at all -- both just act
-        # on whatever has already accumulated in the one configured
-        # download folder (see telegram_chat_dialog.py's own note on why
-        # that folder is no longer a fresh one per session). Not gated
-        # behind the Telegram-session check telegram_chat_action uses,
-        # since sorting/recording what's already on disk needs no bot
-        # connection either.
-        self.experimental_menu.addAction(
-            self.tr("Sort Telegram Downloads into Album Folders..."), self._sort_telegram_downloads
-        )
-        self.telegram_record_action = self.experimental_menu.addAction(
-            self.tr("Record from Telegram Downloads..."), self._record_from_telegram_downloads
-        )
-        # Deliberately not gated on the MDRem setting, unlike the recording
-        # entry above it: burning needs the drive, not the adapter.
-        self.telegram_burn_action = self.experimental_menu.addAction(
-            self.tr("Burn Telegram Downloads to Audio CD..."), self._burn_from_telegram_downloads
-        )
+        # "Sort Audio Folder into Albums..." and "Record from Audio
+        # Folder..." moved to the Recording menu -- see the comment
+        # there. This menu now holds only what actually needs the
+        # experimental-features flag: signing in, and starting a chat.
         self._sync_experimental_menu()
-        # Both menus exist now, so the adapter/medium gating can run.
-        self._sync_mdrem_actions()
 
         window_menu = self.menuBar().addMenu(self.tr("&Window"))
         window_menu.addAction(self.tr("Settings..."), self._show_settings)
+        # The software remote used to live in the Recording menu, next to
+        # Erase -- moved here since, like Erase, it drives the deck
+        # directly and has nothing to do with which label is being
+        # designed (it used to be reachable only from the startup screen,
+        # closing whatever project was open just to press a transport key,
+        # which is what put it in Recording in the first place).
+        self.remote_action = window_menu.addAction(
+            self.tr("Remote Control..."), self._open_remote_control
+        )
+        # Every menu _sync_mdrem_actions() touches (Recording, Window's own
+        # Remote entry) now exists, so the adapter/medium gating can run.
+        self._sync_mdrem_actions()
 
         help_menu = self.menuBar().addMenu(self.tr("&Help"))
         self._build_language_menu(help_menu)
@@ -602,6 +711,7 @@ class MainWindow(QMainWindow):
         self._refresh_layers()
         self.properties_panel.set_item(None)
         self._warn_if_unverified(scene)
+        self._refresh_template_combo()
 
     def _warn_if_unverified(self, scene: DesignScene) -> None:
         if not scene.template.verified:
@@ -792,59 +902,6 @@ class MainWindow(QMainWindow):
         elif page_template_kind(page) == "disc":
             scene.seed_disc_defaults()
 
-    def _change_page_template(self) -> None:
-        """Swaps the current page onto a different template.
-
-        Until this existed, a template could only be chosen when the project
-        was created -- picking the wrong one meant starting over."""
-        if self.project is None:
-            return
-        scene = self._current_scene()
-        if scene is None:
-            return
-
-        from mdtools.templates import registry
-
-        kind = page_template_kind(self.current_page)
-        # Only this project's own medium: a CD project has no use for a
-        # J-card and swapping one in would describe a case it does not have.
-        templates = [
-            t
-            for t in registry.load_templates()[kind]
-            if getattr(t, "medium", MEDIUM_MD) == self.project.medium
-        ]
-        if not templates:
-            return
-        names = [template.name for template in templates]
-        current = scene.template.name
-        chosen_name, ok = QInputDialog.getItem(
-            self,
-            self.tr("Change Template"),
-            self.tr("Template for this page:"),
-            names,
-            names.index(current) if current in names else 0,
-            False,
-        )
-        if not ok:
-            return
-        template = templates[names.index(chosen_name)]
-        if template.name == current:
-            return
-
-        answer = QMessageBox.warning(
-            self,
-            self.tr("Change Template"),
-            self.tr(
-                "Changing the template clears this page: every layer on it is removed, and the undo history "
-                "is reset.\n\nThe other page and the project's metadata are left alone."
-            ),
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Cancel,
-        )
-        if answer != QMessageBox.StandardButton.Ok:
-            return
-        self.apply_template(self.current_page, template)
-
     def _add_page(self) -> None:
         """Adds one of the pages this project does not have yet.
 
@@ -852,6 +909,11 @@ class MainWindow(QMainWindow):
         the disc and cover pages are created with the project. The template
         is picked from the family that page takes, so this needs no list of
         its own -- see project.page_template_kind().
+
+        One dialog asks all of it -- which page, which template, and empty
+        or built from the metadata. It was two `QInputDialog`s and no third
+        question at all; both were reported together (see AddPageDialog's
+        own docstring).
         """
         if self.project is None:
             return
@@ -865,34 +927,20 @@ class MainWindow(QMainWindow):
             )
             return
 
-        names = [page_title(page, self.project.medium) for page in missing]
-        chosen, ok = QInputDialog.getItem(self, self.tr("Add Page"), self.tr("Page:"), names, 0, False)
-        if not ok:
-            return
-        page = missing[names.index(chosen)]
-
-        from mdtools.templates import registry
-
-        templates = [
-            t
-            for t in registry.load_templates()[page_template_kind(page)]
-            if getattr(t, "medium", MEDIUM_MD) == self.project.medium
-        ]
-        if not templates:
-            QMessageBox.warning(
-                self,
-                self.tr("Add Page"),
-                self.tr("There are no templates for that page (Templates > Manage Templates)."),
-            )
-            return
-        template_names = [t.name for t in templates]
-        chosen_template, ok = QInputDialog.getItem(
-            self, self.tr("Add Page"), self.tr("Template:"), template_names, 0, False
+        dialog = AddPageDialog(
+            pages=[(page, page_title(page, self.project.medium)) for page in missing],
+            templates_for=self._templates_for_page,
+            can_generate=self._can_auto_generate_page,
+            parent=self,
         )
-        if not ok:
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        page = dialog.selected_page
+        chosen = dialog.selected_template
+        if page is None or chosen is None:
             return
 
-        template = copy.deepcopy(templates[template_names.index(chosen_template)])
+        template = copy.deepcopy(chosen)
         scene = DesignScene(template)
         self._populate_new_scene(scene, template, page)
         self.project.pages[page] = scene
@@ -900,6 +948,31 @@ class MainWindow(QMainWindow):
         self.current_page = page
         self._refresh_page_combo()
         self._show_page(page)
+        if dialog.generate:
+            # The page exists and is on screen by now, which is what this
+            # needs: every _auto_layout_* method works on a page the
+            # project already has, and some of them switch to it and run
+            # Clip Layers.
+            self._generate_page_from_metadata(page, template)
+
+    def _templates_for_page(self, page: str) -> list:
+        """Every template `page` can take, for this project's medium.
+
+        The page's own family decides the list (project.page_template_kind
+        -- several pages share "cover"), and the medium filters it, or a CD
+        project would be offered a MiniDisc J-card. The same pairing
+        _refresh_template_combo() and NewDesignDialog already read, kept in
+        one method now that AddPageDialog needs it per page change too.
+        """
+        from mdtools.templates import registry
+
+        if self.project is None:
+            return []
+        return [
+            template
+            for template in registry.load_templates().get(page_template_kind(page), [])
+            if getattr(template, "medium", MEDIUM_MD) == self.project.medium
+        ]
 
     def _remove_page(self) -> None:
         """Removes the page on screen, if it is one the project can do
@@ -1214,7 +1287,15 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             QMessageBox.critical(self, self.tr("Import Metadata"), self.tr("Could not read project:\n{error}").format(error=exc))
             return
-        self.project.metadata = other.metadata
+        # Opened for review rather than applied outright, same "the user
+        # sees what they're accepting" shape as every other MetadataDialog
+        # entry point -- an import someone changes their mind about should
+        # be as cancellable as a hand edit is.
+        dialog = MetadataDialog(other.metadata, self, medium=self.project.medium)
+        if dialog.exec() != MetadataDialog.DialogCode.Accepted or dialog.result_metadata is None:
+            return
+        self.project.metadata = dialog.result_metadata
+        self._mark_dirty()
         self.statusBar().showMessage(self.tr("Imported metadata from {path}").format(path=path), 5000)
 
     def _open_project(self) -> None:
@@ -1306,28 +1387,46 @@ class MainWindow(QMainWindow):
         return True
 
     def _export_svg(self) -> None:
-        scene = self._current_scene()
-        if scene is None:
+        if self.project is None:
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, self.tr("Export Cut SVG"), self._export_start_path(), self.tr("SVG (*.svg)")
+            self, self.tr("Export Cut SVG"), self._export_start_path("svg"), self.tr("SVG (*.svg)")
         )
         if not path:
             return
-        export_svg(scene, path)
+        for page in self.project.ordered_pages():
+            export_svg(self.project.pages[page], self._paged_export_path(path, page))
         self.statusBar().showMessage(self.tr("Exported cut outline to {path}").format(path=path), 5000)
 
     def _export_png(self) -> None:
-        scene = self._current_scene()
-        if scene is None:
+        if self.project is None:
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, self.tr("Export Print PNG"), self._export_start_path(), self.tr("PNG (*.png)")
+            self, self.tr("Export Print PNG"), self._export_start_path("png"), self.tr("PNG (*.png)")
         )
         if not path:
             return
-        export_png(scene, path, grayscale=False)
+        for page in self.project.ordered_pages():
+            export_png(self.project.pages[page], self._paged_export_path(path, page), grayscale=False)
         self.statusBar().showMessage(self.tr("Exported print artwork to {path}").format(path=path), 5000)
+
+    # Every page of the project (disc, cover, and whatever else the medium
+    # adds) is exported in one go, since a cut-and-print set is only useful
+    # as a whole -- exporting just whichever page happened to be on screen
+    # silently left the rest of the set behind. Each page gets its own file,
+    # named after the page it is so the set can't be shuffled once saved.
+    _EXPORT_PAGE_SUFFIXES = {
+        PAGE_DISC: "disc",
+        PAGE_COVER: "cover",
+        PAGE_BACK: "case-back",
+        PAGE_SIDE_A: "label-a",
+        PAGE_SIDE_B: "label-b",
+    }
+
+    def _paged_export_path(self, path: str, page: str) -> str:
+        base = Path(path)
+        suffix = self._EXPORT_PAGE_SUFFIXES.get(page, page)
+        return str(base.with_name(f"{base.stem}-{suffix}{base.suffix}"))
 
     def _export_png_grayscale(self) -> None:
         """Unlike the plain color export above, grayscale export first
@@ -1350,11 +1449,18 @@ class MainWindow(QMainWindow):
         self._sync_grayscale_controls()
 
         path, _ = QFileDialog.getSaveFileName(
-            self, self.tr("Export Print PNG (Grayscale)"), self._export_start_path(), self.tr("PNG (*.png)")
+            self, self.tr("Export Print PNG (Grayscale)"), self._export_start_path("png"), self.tr("PNG (*.png)")
         )
         if not path:
             return
-        export_png(scene, path, grayscale=True, brightness=adjustment.brightness, contrast=adjustment.contrast)
+        for page in self.project.ordered_pages():
+            export_png(
+                self.project.pages[page],
+                self._paged_export_path(path, page),
+                grayscale=True,
+                brightness=adjustment.brightness,
+                contrast=adjustment.contrast,
+            )
         self.statusBar().showMessage(self.tr("Exported print artwork to {path}").format(path=path), 5000)
 
     def _print_project(self) -> None:
@@ -1427,46 +1533,54 @@ class MainWindow(QMainWindow):
         for_md = medium in (None, MEDIUM_MD)
         for_cd = medium in (None, MEDIUM_CD)
 
-        # Ripping a CD needs no adapter, but this entry does not stop at
-        # ripping -- it goes straight on to record what it ripped, which
-        # does. Splitting a rip-only entry out of it would be inventing a
-        # feature nobody asked for. Same for loading a folder into
-        # foobar2000: on its own it is not a feature anyone asked for.
+        # Ripping a CD needs no adapter -- and, since it now offers "Just
+        # Metadata" as well as "Record Now" (see _offer_recording_the_rip),
+        # it no longer strictly needs one to be useful at all. Only the
+        # "Record Now" half of it does; that is resolved and checked at the
+        # point it is actually chosen, not here. Same for reading a
+        # folder's own tags: on its own it is not a feature anyone asked
+        # for, so it stays adapter-gated below.
         # A cassette deck is driven by the person in front of it, so a
-        # cassette project needs no adapter for any of these -- the three
-        # sources are the same three either way, and only the machine at
+        # cassette project needs no adapter for either of these -- the two
+        # sources are the same two either way, and only the machine at
         # the end of them changes. Which is why they are one set of entries
         # that rename themselves, not two sets where one is always hidden.
         for_tape = medium == MEDIUM_TAPE
-        for action, name in (
-            (self.record_cd_action, self.tr("Record CD to {medium}...")),
-            (self.record_folder_action, self.tr("Record Folder to {medium}...")),
-            (self.record_action, self.tr("Record to {medium} from foobar2000...")),
-        ):
-            action.setText(name.format(medium=self._recording_target_name()))
-            action.setVisible(for_tape or (adapter and for_md))
-        # Erasing and the remote are nothing but adapter keypresses, so
-        # without one there is not even a partial operation to offer.
-        self.erase_disc_action.setVisible(adapter and for_md)
+        # "Record CD to..." has no burning twin (there is no "burn a CD
+        # from a CD rip" flow) -- but it no longer needs the adapter-only
+        # rule that used to justify mentioning that, since ripping alone
+        # (see above) is offered regardless.
+        self.record_cd_action.setText(
+            self.tr("Record CD to {medium}...").format(medium=self._recording_target_name())
+        )
+        self.record_cd_action.setVisible(for_tape or for_md)
+        # Record Folder... dispatches to burning internally when the open
+        # project is a CD one (see _record_folder_dialog) -- collapsing
+        # what used to be a separate "Burn Audio CD from ..." action beside
+        # it into one entry that always says "Record" and does whatever
+        # the medium calls for. Burning needs the drive, not the adapter,
+        # so this stays visible for a CD project even with MDRem switched
+        # off.
+        self.record_folder_action.setText(
+            self.tr("Record Folder to {medium}...").format(medium=self._recording_target_name())
+        )
+        self.record_folder_action.setVisible(for_tape or for_cd or (adapter and for_md))
+        # The remote is nothing but adapter keypresses, so without one
+        # there is not even a partial operation to offer. Erasing followed
+        # the same rule while it lived here; now that it's a button on the
+        # MiniDisc record dialog, that dialog is simply never reachable
+        # without the adapter in the first place, so there's nothing left
+        # to gate.
         self.remote_action.setVisible(adapter and for_md)
-        # Burning needs the drive, not the adapter -- so these two follow
-        # the medium alone, and stay put when MDRem is switched off.
-        self.burn_folder_action.setVisible(for_cd)
-        self.burn_foobar_action.setVisible(for_cd)
 
-        # The Experimental menu's two hand-offs are the same pair of
-        # operations reached from a different place, so they follow exactly
-        # the same rules -- reported as not changing with the medium.
-        # "Download Album from Telegram Bot..." and "Sort Telegram
-        # Downloads..." are untouched: downloading and tidying files belong
-        # to neither medium.
+        # "Sort Audio Folder into Albums..." stays visible regardless of
+        # medium or adapter -- tidying files on disk belongs to neither.
         self.telegram_record_action.setText(
-            self.tr("Record from Telegram Downloads to {medium}...").format(
+            self.tr("Record from Audio Folder to {medium}...").format(
                 medium=self._recording_target_name()
             )
         )
-        self.telegram_record_action.setVisible(for_tape or (adapter and for_md))
-        self.telegram_burn_action.setVisible(for_cd)
+        self.telegram_record_action.setVisible(for_tape or for_cd or (adapter and for_md))
 
     def _recording_target_name(self) -> str:
         """What a recording lands on, for a menu entry to name.
@@ -1505,6 +1619,273 @@ class MainWindow(QMainWindow):
         chosen = self.page_combo.currentData()
         if chosen is not None and chosen != self.current_page:
             self._show_page(chosen)
+
+    def _template_choices_for_current_page(self) -> list:
+        """Every template that could be picked for the page on screen --
+        the current page's own kind (disc/cover/label/case_back), filtered
+        to the project's medium so a CD project is never offered a J-card
+        by name alone. Shared by the toolbar dropdown's own refresh and by
+        what picking an entry in it actually does, so the two can never
+        disagree about which templates exist."""
+        if self.project is None:
+            return []
+        from mdtools.templates import registry
+
+        kind = page_template_kind(self.current_page)
+        return [
+            t
+            for t in registry.load_templates()[kind]
+            if getattr(t, "medium", MEDIUM_MD) == self.project.medium
+        ]
+
+    def _refresh_template_combo(self) -> None:
+        """Rebuilds the toolbar's Template dropdown from the page on
+        screen -- usually one entry (there's normally only a single
+        built-in template per page/medium), plus whatever the user has
+        cloned or saved of their own.
+
+        Selecting the current page's own template by *name*, not identity:
+        `scene.template` is whatever object was handed to DesignScene when
+        the page was built, never the same Python object a fresh
+        registry.load_templates() call returns.
+        """
+        self.template_combo.blockSignals(True)
+        self.template_combo.clear()
+        scene = self._current_scene()
+        if scene is None:
+            self.template_combo.blockSignals(False)
+            return
+        templates = self._template_choices_for_current_page()
+        current_name = scene.template.name
+        for template in templates:
+            self.template_combo.addItem(template.name, template.name)
+        index = self.template_combo.findData(current_name)
+        if index < 0:
+            # The page's own template isn't among the current choices at
+            # all (e.g. it was since deleted from the registry) -- show
+            # what is actually on screen rather than silently jumping to
+            # the first entry, which would make picking anything else
+            # look like a no-op the first time.
+            self.template_combo.addItem(current_name, current_name)
+            index = self.template_combo.count() - 1
+        self.template_combo.setCurrentIndex(index)
+        self.template_combo.blockSignals(False)
+
+    def _auto_layout_template_names_for_page(self, page: str) -> set[str]:
+        """Every template name the *content* generator for `page` actually
+        knows how to build -- the other half of _auto_layout_method_for_
+        page(): that one says what to run, this one says which template(s)
+        it can run against. "Generated from Metadata" is only ever offered
+        in the Template dropdown when the template being switched to is
+        one of these. An empty set means no known algorithm exists yet for
+        this page under the current medium.
+
+        Most pages have exactly one -- most _auto_layout_* methods above
+        look their own template up by one fixed name rather than accepting
+        whatever is currently on the page. Four are exceptions: the
+        MiniDisc disc label, where _auto_layout_disc_label() can build
+        either the full-face label or its "(with Slider)" twin (see its
+        own docstring for why that's safe -- the slider-logo placement
+        already no-ops gracefully with nothing to place it on); the small
+        chamfered sticker label, the same story one level down --
+        _auto_layout_sticker_label() building either
+        STICKER_TEMPLATE or STICKER_NO_SLIDER_TEMPLATE; and the CD
+        insert, where _auto_layout_cd_insert() can build either the folded
+        two-panel insert or the front-only one (see its own docstring --
+        the front-only build is just the folded one's right-panel cover
+        placement, stretched across the whole unfolded card instead); and
+        the MiniDisc J-card, where _auto_layout_cover() can build either
+        the plain card or the die-cut window variant (build_jcard() turns
+        the card end-for-end for the latter, so the window lands on the
+        artwork instead of through the track list).
+
+        The case back has no entry here on purpose -- see
+        _can_auto_generate_page(), which checks it structurally instead,
+        because build_case_back() itself works from whatever three-panel
+        shape is already on the page rather than demanding one template by
+        name.
+        """
+        if self.project is None:
+            return set()
+        if self.project.medium == MEDIUM_TAPE:
+            return {
+                PAGE_COVER: {TAPE_JCARD_TEMPLATE},
+                PAGE_SIDE_A: {TAPE_LABEL_TEMPLATE},
+                PAGE_SIDE_B: {TAPE_LABEL_TEMPLATE},
+            }.get(page, set())
+        if self.project.medium == MEDIUM_CD:
+            return {
+                PAGE_DISC: {CD_LABEL_TEMPLATE},
+                PAGE_COVER: {CD_INSERT_TEMPLATE, CD_INSERT_FRONT_TEMPLATE},
+            }.get(page, set())
+        return {
+            PAGE_DISC: {
+                FULL_LABEL_TEMPLATE,
+                FULL_LABEL_NO_SLIDER_TEMPLATE,
+                STICKER_TEMPLATE,
+                STICKER_NO_SLIDER_TEMPLATE,
+            },
+            PAGE_COVER: {JCARD_TEMPLATE, JCARD_WINDOW_TEMPLATE},
+        }.get(page, set())
+
+    def _can_auto_generate_page(self, page: str, template) -> bool:
+        """Whether "Generated from Metadata" is a real option once `page`
+        is switched onto `template`.
+
+        Every automatic layout in this file is written against one or more
+        specific, hardcoded templates (see
+        _auto_layout_template_names_for_page) -- there is no generic "fill
+        any shape in" algorithm, so switching to a template nothing here
+        knows how to build for would make that button a silent no-op.
+        Disabling it is the honest answer until a real generator for that
+        template exists.
+
+        The case back is the one page with no fixed target template --
+        build_case_back() works from whatever three-panel shape is
+        already there (see its own docstring), so the check here is
+        structural (two fold lines, i.e. three panels) instead of a name
+        match.
+        """
+        if page == PAGE_BACK:
+            return len(getattr(template, "fold_offsets_mm", None) or []) == 2
+        return template.name in self._auto_layout_template_names_for_page(page)
+
+    def _on_template_combo_changed(self, index: int) -> None:
+        """Picking a different entry in the toolbar's Template dropdown.
+
+        A custom (non-builtin) template is applied outright -- it is
+        already the user's own choice, saved via Tools > "Save as
+        Template..." or the Template Manager, so there's nothing left to
+        ask; the page becomes exactly what that template holds, same as
+        File > New does for a template carrying items. A built-in
+        template asks first, because it is shared and picking one is
+        typically not a one-off -- and offers a choice File > New never
+        needed: start the page empty, or, where a generator for this
+        exact template exists, build it fresh from the project's own
+        metadata.
+        """
+        if self.project is None or index < 0:
+            return
+        name = self.template_combo.itemData(index)
+        if name is None:
+            return
+        scene = self._current_scene()
+        if scene is not None and name == scene.template.name:
+            return  # the refresh landing here again, not a real choice
+        template = next((t for t in self._template_choices_for_current_page() if t.name == name), None)
+        if template is None:
+            self._refresh_template_combo()
+            return
+
+        if not template.builtin:
+            self.apply_template(self.current_page, template)
+            return
+
+        self._offer_template_replacement(template)
+
+    def _offer_template_replacement(self, template) -> None:
+        """The question a built-in template asks in the toolbar dropdown:
+        start the page empty, or build it fresh from the project's own
+        metadata -- see _can_auto_generate_page() for why that second
+        option isn't always available."""
+        page = self.current_page
+        can_generate = self._can_auto_generate_page(page, template)
+
+        box = QMessageBox(self)
+        box.setWindowTitle(self.tr("Change Template"))
+        box.setText(
+            self.tr(
+                "Switch this page to \"{name}\"? Everything currently on it is removed, and the "
+                "undo history is reset."
+            ).format(name=template.name)
+        )
+        empty_btn = box.addButton(self.tr("Empty Template"), QMessageBox.ButtonRole.AcceptRole)
+        generate_btn = box.addButton(self.tr("Generated from Metadata"), QMessageBox.ButtonRole.AcceptRole)
+        generate_btn.setEnabled(can_generate)
+        if not can_generate:
+            generate_btn.setToolTip(
+                self.tr(
+                    "There is no automatic layout for this template yet -- it can still be used "
+                    "as a blank starting point."
+                )
+            )
+        cancel_btn = box.addButton(QMessageBox.StandardButton.Cancel)
+        box.setDefaultButton(cancel_btn)
+        box.exec()
+        clicked = box.clickedButton()
+
+        if clicked is empty_btn:
+            self.apply_template(page, template)
+            return
+        if clicked is generate_btn and can_generate:
+            self._generate_page_from_metadata(page, template)
+            return
+        # Cancel, or the dialog was otherwise dismissed -- the page is
+        # untouched, but the dropdown already shows the template that was
+        # merely being considered, so it has to be put back.
+        self._refresh_template_combo()
+
+    def _generate_page_from_metadata(self, page: str, template) -> None:
+        """Switches `page` onto `template` and builds it from the
+        project's own metadata -- the "Generated from Metadata" half of
+        _offer_template_replacement(), split out because the case back
+        needs an explicit template swap first (build_case_back() never
+        does one itself, see _can_auto_generate_page()) while every other
+        page's own _auto_layout_* method already applies its target
+        template internally.
+
+        Shares the same "is there actually anything to build from"
+        guards _auto_layout_from_metadata() uses -- there is no point
+        clearing the page for a generator that has nothing to draw.
+        """
+        metadata = self.project.metadata
+        if not metadata.album and not metadata.artist:
+            QMessageBox.information(
+                self,
+                self.tr("Change Template"),
+                self.tr("Fill in the album and artist in the Tools panel's Metadata... first."),
+            )
+            self._refresh_template_combo()
+            return
+
+        if not metadata.cover_art:
+            self._fetch_cover_into_metadata(metadata)
+        if not metadata.cover_art:
+            QMessageBox.warning(
+                self,
+                self.tr("Change Template"),
+                self.tr(
+                    "No cover art could be found for this album, and the layout is built around "
+                    "it. Add an image yourself, or fetch one with the Metadata dialog's lookup."
+                ),
+            )
+            self._refresh_template_combo()
+            return
+
+        if page == PAGE_BACK:
+            self.apply_template(page, template)
+        # disc_template_name/cover_template_name: the exact template the
+        # user just picked in the dropdown, not whatever happens to be on
+        # the page right now (still the *old* one at this point, for every
+        # page but the case back) -- only meaningful for the two pages
+        # with more than one buildable template, silently ignored
+        # everywhere else.
+        method = self._auto_layout_method_for_page(
+            page, disc_template_name=template.name, cover_template_name=template.name
+        )
+        if method is None:
+            self._refresh_template_combo()
+            return
+        method(metadata)
+        # Belt and suspenders: every _auto_layout_* method above applies
+        # its own template internally and that already refreshes this
+        # combo via apply_template() -> _show_page(). But some of them can
+        # still bail out before doing so (e.g. the cover-background picker
+        # being cancelled midway) -- in that case the dropdown's own
+        # selection has already moved to the template that was merely
+        # being considered, and needs putting back to whatever is actually
+        # on the page.
+        self._refresh_template_combo()
 
     def _sync_experimental_menu(self) -> None:
         """Shows/hides the whole Experimental menu per Window > Settings'
@@ -1571,45 +1952,60 @@ class MainWindow(QMainWindow):
             app_settings.telegram_api_id(),
             app_settings.telegram_api_hash(),
             app_settings.telegram_bot_username(),
-            Path(app_settings.telegram_download_folder()),
+            Path(app_settings.cd_rip_folder()),
             self,
         )
         dialog.start_connecting()
         if dialog.exec() == QDialog.DialogCode.Accepted and dialog.downloaded_folder is not None:
-            folder = Path(dialog.downloaded_folder)
-            if dialog.downloaded_action == BURN:
-                self._burn_folder(folder)
-            else:
-                self._record_folder_dialog(folder)
+            # One "Record Downloaded Albums..." button now, whatever the
+            # project's medium: _record_folder_dialog dispatches to burning
+            # itself on a CD project, the same as every other entry point.
+            self._record_folder_dialog(Path(dialog.downloaded_folder))
 
     def _sort_telegram_downloads(self) -> None:
-        """Experimental > Sort Telegram Downloads into Album Folders... --
-        the same operation TelegramChatDialog's own "Sort into Album
-        Folders" button runs, but reachable without opening a chat at all.
+        """Recording > Sort Audio Folder into Albums... -- the same
+        operation TelegramChatDialog's own "Sort into Album Folders"
+        button runs, but reachable without opening a chat at all.
 
-        Acts on the one configured download folder directly (created on
-        demand, same "created at the moment it's actually needed" rule as
+        Acts on the CD rip folder directly (created on demand, same
+        "created at the moment it's actually needed" rule as
         cdrip.ensure_folder()/user_paths.projects_dir() -- there's nothing
         to sort in a folder that doesn't exist yet, but no reason to fail
-        over that either), not a browsed folder: since downloads no longer
-        land in a fresh per-session subfolder (see telegram_chat_dialog.py),
-        this is the one place everything accumulates, and sort_folder()
-        already groups by ALBUM tag alone with no session bookkeeping
-        needed."""
-        root = Path(app_settings.telegram_download_folder())
+        over that either), not a browsed folder: Telegram downloads land in
+        this same folder (app_settings.cd_rip_folder() -- merged with the
+        old, separate telegram_download_folder() setting, since a
+        downloaded album and a CD rip are both just audio on their way
+        into the same recording flow) and no longer in a fresh per-session
+        subfolder (see telegram_chat_dialog.py), so this is the one place
+        everything accumulates, and sort_folder() already groups by ALBUM
+        tag alone with no session bookkeeping needed."""
+        root = Path(app_settings.cd_rip_folder())
         root.mkdir(parents=True, exist_ok=True)
         folders = album_sort.sort_folder(root)
         if not folders:
-            # Two genuinely different reasons for "nothing moved", and saying
-            # "only one album" for both is what made this confusing to read
-            # in the already-sorted case (reported in those terms: "pokazuje
-            # ze nie ma nic do sortowania bo dwa juz sa posortowane"). A
-            # single unmoved album is still loose at this point, so asking
-            # the folder afterwards tells the two apart unambiguously.
+            # Three genuinely different reasons for "nothing moved", and
+            # collapsing any two of them into one message is what made this
+            # confusing to read: "already sorted" was previously also shown
+            # for a folder with nothing in it at all, which is not sorted,
+            # it is just empty (reported directly, about the sibling
+            # "Record from Audio Folder..." action making the same mistake
+            # -- silently proceeding rather than saying so). A single
+            # unmoved album is still loose at this point, so checking the
+            # folder afterwards tells all three apart unambiguously.
+            # "burn" (cdrip.RESERVED_SCRATCH_DIRNAMES) is CD burning's own
+            # scratch subfolder -- excluded here so a folder holding only
+            # that still reads as empty, not as "already sorted". (Ripping
+            # has no scratch folder of its own -- ripped files land
+            # directly in this shared folder and stay there.)
+            has_real_content = any(
+                child.name not in cdrip.RESERVED_SCRATCH_DIRNAMES for child in root.iterdir()
+            )
             if album_sort.loose_audio_files(root):
                 message = self.tr("These tracks all belong to one album -- there is nothing to separate.")
-            else:
+            elif has_real_content:
                 message = self.tr("Everything is already sorted into album folders.")
+            else:
+                message = self.tr("There is nothing to sort -- the audio folder is empty.")
             QMessageBox.information(self, self.tr("Sort into Album Folders"), message)
             return
         QMessageBox.information(
@@ -1619,9 +2015,11 @@ class MainWindow(QMainWindow):
         )
 
     def _record_from_telegram_downloads(self) -> None:
-        """Experimental > Record from Telegram Downloads... -- records
-        whatever has already been downloaded through the Telegram bot chat,
-        without opening the bot chat itself.
+        """Recording > Record from Audio Folder... -- records whatever has
+        already been downloaded through the Telegram bot chat (or ripped
+        from a CD, or dropped in by hand -- this acts on the whole shared
+        audio folder, not just Telegram's own contribution to it), without
+        opening the bot chat itself.
 
         Sorts first (silently, same reasoning as
         TelegramChatDialog._on_continue_clicked()'s own auto-sort fix: a
@@ -1629,23 +2027,24 @@ class MainWindow(QMainWindow):
         would otherwise be handed to pick_album_folder() as if it were a
         single album, mixing every downloaded album's tracks into one
         recording), then asks which album only when there's genuinely more
-        than one to choose from."""
-        folder = self._pick_telegram_album()
-        if folder is not None:
-            self._record_folder_dialog(folder)
+        than one to choose from.
 
-    def _burn_from_telegram_downloads(self) -> None:
-        """Experimental > Burn Telegram Downloads to Audio CD...
-
-        The burning twin of _record_from_telegram_downloads. **Not gated on
-        the MDRem setting**, unlike that one: a burn needs the drive, not
-        the infrared adapter, and copying the recording entry's gate
-        wholesale would have hidden this from exactly the person most
-        likely to want it.
-        """
+        Reported directly: an empty audio folder used to open
+        FolderRecordDialog anyway, which then showed its own "no audio
+        files" status with the Record button disabled -- a dialog to
+        dismiss for what is really a one-line "there's nothing here" --
+        rather than saying so up front and stopping."""
         folder = self._pick_telegram_album()
-        if folder is not None:
-            self._burn_folder(folder)
+        if folder is None:
+            return
+        if not list_audio_files(folder):
+            QMessageBox.information(
+                self,
+                self.tr("Record from Audio Folder"),
+                self.tr("There is nothing to record -- the audio folder is empty."),
+            )
+            return
+        self._record_folder_dialog(folder)
 
     def _pick_telegram_album(self) -> Path | None:
         """Which downloaded album to act on, sorted first.
@@ -1658,7 +2057,7 @@ class MainWindow(QMainWindow):
         together. Asking which album only happens when there is genuinely
         more than one.
         """
-        root = Path(app_settings.telegram_download_folder())
+        root = Path(app_settings.cd_rip_folder())
         root.mkdir(parents=True, exist_ok=True)
         album_sort.sort_folder(root)
         folder, ok = pick_album_folder(self, root)
@@ -1729,6 +2128,20 @@ class MainWindow(QMainWindow):
         box.addButton(self.tr("Later"), QMessageBox.ButtonRole.RejectRole)
         box.exec()
         if box.clickedButton() is restart_btn:
+            # QApplication.quit() asks every top-level window to close
+            # first (respecting closeEvent), so without this check,
+            # restarting would silently discard whatever hadn't been
+            # saved yet -- closeEvent()'s own guard runs, but only after
+            # the new process has already been launched.
+            if not self._may_discard_changes():
+                return
+            # closeEvent() (which quit() below triggers) treats an
+            # ordinary close as "go back to the startup screen", not "exit"
+            # -- exactly like File > Exit, this has to say otherwise first,
+            # or the old instance ends up sitting on the startup screen
+            # instead of actually closing. Reported directly: the old
+            # window stayed open after "Restart Now".
+            self._quitting = True
             self._restart_app()
 
     @staticmethod
@@ -1780,38 +2193,70 @@ class MainWindow(QMainWindow):
             return None
         return resolve_port(self)
 
-    def _record_from_foobar(self) -> None:
-        # The whole flow runs through the adapter -- it is what arms the deck
-        # and what marks the tracks -- so with the adapter switched off there
-        # is nothing here to do. Silent rather than a dialog: the menu entry
-        # is hidden in that state, so this is a backstop, not a path anyone
-        # is meant to arrive at. Without the adapter, recording means
-        # pressing record on the deck and letting its LEVEL-SYNC split the
-        # tracks.
-        port = self._resolve_recording_port()
-        if port is None:
-            return
-        self._run_record_dialog(port)
-
     def _record_cd(self) -> None:
-        """Recording > Record CD to MiniDisc... -- rips the disc into
-        foobar2000's playlist, then records that playlist exactly as the
-        entry above does.
+        """Recording > Record CD to {medium}... -- rips the disc to tagged
+        FLAC files, then asks whether to record those files now or just
+        bring the disc's metadata into the project.
 
-        The port is resolved before the rip rather than after it: the rip is
-        the expensive half, and discovering there is no adapter to record
-        through is worth finding out beforehand."""
-        port = self._resolve_recording_port()
-        if port is None:
-            return
-        rip = CdRipDialog(app_settings.foobar_url(), self, medium=self._recording_medium())
+        Ripping needs no adapter at all -- only recording does -- so the
+        port is resolved *after* a successful rip, and only once the user
+        has actually said they want to record, rather than up front the
+        way it used to be. Explicit request: a rip should be usable
+        entirely on its own, ending with nothing more than the album's
+        metadata landing in the project, for whoever wants the label right
+        without recording right now (no adapter at hand, or no disc to
+        record onto yet)."""
+        rip = CdRipDialog(self, medium=self._recording_medium())
         if rip.exec() != QDialog.DialogCode.Accepted:
             return
+        if not self._offer_recording_the_rip(rip.result_metadata):
+            return
+        port = self._resolve_recording_port()
+        if port is None:
+            return
         # The rip's own metadata goes forward. Its titles are the ones it
-        # wrote into the files, so they say the same thing the playlist
-        # does -- what it adds is the artwork it found (or the user picked)
-        # while identifying the disc, which nothing in a playlist carries.
-        self._run_record_dialog(port, metadata=rip.result_metadata)
+        # wrote into the files, so they say the same thing the files
+        # themselves do -- what it adds is the artwork it found (or the
+        # user picked) while identifying the disc, which a tag does not
+        # carry.
+        self._run_record_dialog(port, rip.result_paths, metadata=rip.result_metadata)
+
+    def _offer_recording_the_rip(self, metadata: ProjectMetadata) -> bool:
+        """Record this now, or just take its metadata? Returns True for
+        "record now" (the caller resolves a port and hands off to
+        RecordDialog next); for "just metadata" this applies it to the
+        project itself and returns False, since there is nothing left for
+        the caller to do. Cancelling leaves the rip exactly as it finished
+        -- the files stay on disk, the project is untouched."""
+        box = QMessageBox(
+            QMessageBox.Icon.Question,
+            self.tr("Record CD"),
+            self.tr(
+                "The disc has been ripped.\n\nRecord it now, or just bring its title and track list into "
+                "the project?"
+            ),
+            parent=self,
+        )
+        record_btn = box.addButton(self.tr("Record Now"), QMessageBox.ButtonRole.AcceptRole)
+        metadata_btn = box.addButton(self.tr("Just Metadata"), QMessageBox.ButtonRole.ActionRole)
+        box.addButton(self.tr("Cancel"), QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() is record_btn:
+            return True
+        if box.clickedButton() is metadata_btn:
+            self._apply_metadata_to_project(metadata)
+        return False
+
+    def _apply_metadata_to_project(self, metadata: ProjectMetadata) -> None:
+        """Adopts `metadata` onto the open project directly -- no second
+        review dialog, unlike _import_metadata(): this already went
+        through the user's own edits in CdRipDialog before it was
+        accepted, the same "the dialog's own Accept is the review" shape
+        BurnDialog's own result_metadata hand-off already follows."""
+        if self.project is None:
+            return
+        self.project.metadata = metadata
+        self._mark_dirty()
 
     def _record_folder(self) -> None:
         """Recording > Record Folder to MiniDisc... -- the plain menu entry,
@@ -1824,11 +2269,11 @@ class MainWindow(QMainWindow):
         self._record_folder_dialog()
 
     def _record_folder_dialog(self, initial_folder: Path | None = None) -> None:
-        """Recording > Record Folder to MiniDisc... -- loads an album that
-        is already on disk into foobar2000's playlist, then records it.
+        """Recording > Record Folder to MiniDisc... -- reads the tags of an
+        album that is already on disk, then records those files.
 
         The same shape as _record_cd, and for the same reasons: the port is
-        resolved first (there is no point loading a playlist for a recording
+        resolved first (there is no point reading a folder for a recording
         that cannot happen), and the dialog's own result is the hand-off.
         Unlike the CD, its metadata *is* passed on -- see FolderRecordDialog
         for why files nobody rewrote cannot carry an edit by themselves.
@@ -1839,27 +2284,43 @@ class MainWindow(QMainWindow):
         where the folder is already known rather than something to ask the
         user to pick. The plain menu entry (initial_folder=None) is
         unaffected -- FolderRecordDialog behaves exactly as before, browse
-        step included."""
+        step included.
+
+        On a CD project this dispatches straight to burning instead --
+        "Record Folder to {medium}..." is one entry now, collapsed from a
+        separate "Record" and "Burn" pair, and does whatever the medium
+        calls for rather than making the user pick the right one."""
+        if self._recording_medium() == MEDIUM_CD:
+            self._burn_cd_from_folder(initial_folder)
+            return
         port = self._resolve_recording_port()
         if port is None:
             return
-        folder = FolderRecordDialog(app_settings.foobar_url(), self, medium=self._recording_medium())
+        folder = FolderRecordDialog(self, medium=self._recording_medium())
         if initial_folder is not None:
             folder.set_folder(initial_folder)
         if folder.exec() != QDialog.DialogCode.Accepted:
             return
-        self._run_record_dialog(port, metadata=folder.result_metadata)
+        self._run_record_dialog(port, folder.result_paths, metadata=folder.result_metadata)
 
     # -- burning a CD-R ---------------------------------------------------
 
-    def _burn_cd_from_folder(self) -> None:
-        """Recording > Burn Audio CD from Folder...
+    def _burn_cd_from_folder(self, initial_folder: Path | None = None) -> None:
+        """The burning half of "Record Folder to {medium}..." on a CD
+        project (see _record_folder_dialog, which this is now reached
+        through rather than through a menu entry of its own).
 
         No adapter, no foobar2000, no playlist: a burn hands the files
         straight to cdrdao, so a folder is all this needs -- which is why
         audio_folder.album_from_folder() reads the FLAC tags itself instead
         of routing through a player the way the recording flows do.
-        """
+
+        `initial_folder`, when given (the Telegram hand-off), skips the
+        browse step exactly like _record_folder_dialog's own parameter of
+        the same name."""
+        if initial_folder is not None:
+            self._burn_folder(initial_folder)
+            return
         # Same starting point as Record Folder to MiniDisc...: back where
         # the last album came from, since the next one is very likely a
         # sibling of it.
@@ -1874,10 +2335,7 @@ class MainWindow(QMainWindow):
         """Burns a folder that is already known, with no browse step.
 
         Split out of _burn_cd_from_folder for the Telegram hand-off, the
-        same way _record_folder_dialog was. Note _burn_cd_from_folder stays
-        a zero-argument method: connecting a menu action straight to
-        something that takes a parameter hands it QAction.triggered's
-        `checked` bool (see the PySide gotchas in CLAUDE.md).
+        same way _record_folder_dialog was.
         """
         album = album_from_folder(folder)
         if not album.tracks:
@@ -1892,36 +2350,6 @@ class MainWindow(QMainWindow):
             album=album.album,
             artist=album.artist,
             year=album.year,
-        )
-
-    def _burn_cd_from_foobar(self) -> None:
-        """Recording > Burn Audio CD from foobar2000...
-
-        Only the playlist's *paths* are wanted here -- the burn reads the
-        files itself -- but the titles come back with them, and they are
-        the ones the user has already curated, so they are used as they
-        are (the same reasoning record_dialog.py gives for titling from the
-        playlist rather than from a lookup).
-        """
-        client = foobar.FoobarClient(app_settings.foobar_url())
-        try:
-            playlist = client.current_playlist()
-            items = client.playlist_items(playlist.id) if playlist else []
-        except foobar.FoobarError as exc:
-            QMessageBox.warning(self, self.tr("Burn Audio CD"), str(exc))
-            return
-
-        sources = [(Path(item.path), item.display_title(), item.artist) for item in items if item.path]
-        if not sources:
-            QMessageBox.warning(
-                self,
-                self.tr("Burn Audio CD"),
-                self.tr("foobar2000's playlist is empty, or its files are not reachable from here."),
-            )
-            return
-        metadata = foobar.metadata_from_playlist(items)
-        self._run_burn_dialog(
-            sources, album=metadata.album, artist=metadata.artist, year=metadata.year
         )
 
     def _run_burn_dialog(self, sources, *, album: str, artist: str, year) -> None:
@@ -1951,71 +2379,59 @@ class MainWindow(QMainWindow):
         self.project.metadata = dialog.result_metadata
         self._mark_dirty()
 
-    def _erase_disc(self) -> None:
-        """Recording > Erase MiniDisc... -- clears the disc in the deck.
-
-        Deliberately not tied to the open project: it acts on whatever is
-        physically in the deck, which has nothing to do with which label is
-        being designed. Same backstop as the other MDRem entries, since the
-        whole operation is adapter keypresses."""
-        if not app_settings.mdrem_enabled():
-            return
-        port = resolve_port(self)
-        if port is None:
-            return
-        EraseDiscDialog(port, self).exec()
-
     def _open_remote_control(self) -> None:
-        """Recording > Remote Control... -- the same software remote the
+        """Window > Remote Control... -- the same software remote the
         startup screen's own Remote button opens, now reachable without
         having to close whatever project is currently open first.
 
-        Deliberately not tied to the open project, same as Erase MiniDisc
-        just above: it drives the deck directly and has nothing to do with
-        which label is being designed."""
+        Deliberately not tied to the open project: it drives the deck
+        directly and has nothing to do with which label is being
+        designed. (Erase MiniDisc used to sit right beside this for the
+        same reason -- it's a button on the MiniDisc record dialog now,
+        see record_dialog.py's own _erase_disc.)"""
         port = resolve_port(self)
         if port is None:
             return
         RemoteDialog(port, self).exec()
 
-    def _run_record_dialog(self, port: str, metadata: ProjectMetadata | None = None) -> None:
+    def _run_record_dialog(
+        self, port: str, paths: list[Path], metadata: ProjectMetadata | None = None
+    ) -> None:
         """The recording itself, shared by every entry point -- by the time
-        it runs, "what is in foobar's playlist" is the only input, whether
-        a CD put it there, a folder did, the Telegram bot did, or the user
+        it runs, `paths` (which files, in which order) is the only input,
+        whether a CD rip produced them, a folder did, or the Telegram bot
         did.
 
         Which machine it goes to is the project's business, not the
         source's: a rip is a rip whether it ends up on a MiniDisc or on
-        side A of a C90, so the branch belongs here rather than in four
-        callers."""
+        side A of a C90, so the branch belongs here rather than in every
+        caller."""
         if self.project is not None and self.project.medium == MEDIUM_TAPE:
-            self._run_tape_record_dialog(metadata)
+            self._run_tape_record_dialog(paths, metadata)
             return
-        dialog = RecordDialog(port, app_settings.foobar_url(), self, metadata=metadata)
+        dialog = RecordDialog(port, paths, self, metadata=metadata)
         dialog.exec()
         # What was just recorded is also what the label should describe, so
-        # the playlist's metadata (plus whatever cover art was found for it)
-        # is adopted by the project rather than left for the user to retype
+        # its metadata (plus whatever cover art was found for it) is
+        # adopted by the project rather than left for the user to retype
         # into the Tools panel's Metadata dialog by hand.
         if dialog.result_metadata is not None and self.project is not None:
             self.project.metadata = dialog.result_metadata
             self._mark_dirty()
-            self._auto_layout_project(dialog.result_metadata)
+            self._prompt_post_recording_layout()
 
-    def _run_tape_record_dialog(self, metadata: ProjectMetadata | None = None) -> None:
+    def _run_tape_record_dialog(
+        self, paths: list[Path], metadata: ProjectMetadata | None = None
+    ) -> None:
         """The cassette's own recording: two sides, and a user who is told
         what to press rather than a deck that is driven.
 
-        No port and no drive, so nothing was resolved on the way in -- if
-        foobar2000 is not reachable, TapeRecordDialog says so itself rather
-        than being pre-checked.
+        No port and no drive, so nothing was resolved on the way in.
         """
         minutes = (
             self.project.tape_total_minutes if self.project is not None else tape.DEFAULT_LENGTH.total_minutes
         )
-        dialog = TapeRecordDialog(
-            app_settings.foobar_url(), self, metadata=metadata, total_minutes=minutes
-        )
+        dialog = TapeRecordDialog(paths, self, metadata=metadata, total_minutes=minutes)
         dialog.exec()
         if dialog.result_metadata is None or self.project is None:
             return
@@ -2024,7 +2440,26 @@ class MainWindow(QMainWindow):
         # the recording did rather than where a default would have.
         self.project.tape_total_minutes = dialog.total_minutes
         self._mark_dirty()
-        self._auto_layout_project(dialog.result_metadata)
+        self._prompt_post_recording_layout()
+
+    def _prompt_post_recording_layout(self) -> None:
+        """After a recording, the project's metadata has already been
+        adopted from what was just played -- but the label itself is no
+        longer built automatically (explicit user request: this used to
+        silently regenerate the disc/cover layout right after recording,
+        which could clobber a layout already being worked on). Point at
+        the Tools panel's Metadata... editor and the magic wand button
+        instead, so building the label from that metadata stays a
+        deliberate click rather than something that just happens."""
+        QMessageBox.information(
+            self,
+            self.tr("Recording Finished"),
+            self.tr(
+                "The album's metadata has been filled in from the recording. Review it in "
+                "the Tools panel's Metadata... dialog, then click the magic wand button "
+                "there to lay out the label."
+            ),
+        )
 
     def _auto_layout_from_metadata(self) -> None:
         """Tools panel: build the disc label from the project's metadata,
@@ -2128,52 +2563,189 @@ class MainWindow(QMainWindow):
         metadata.cover_art = data
         save_downloaded_cover(chosen.artist_name, chosen.collection_name, data)
 
-    def _export_start_path(self) -> str:
-        """Exports land beside the project they came from, or in the
-        projects folder if it has never been saved -- the SVG that cuts a
-        design and the PNG that prints it are the same job as the .mdproj,
-        and the set is only findable at cutting time if they stayed
-        together."""
-        return user_paths.export_start_path(self.current_project_path)
+    def _export_start_path(self, extension: str = "") -> str:
+        """Every export lands in XDProjects/printing (see
+        user_paths.export_start_path's own docstring), suggested under the
+        same name Save As would use for this project -- "Artist - Album
+        (Year) -MD"/"-CD", the medium suffix `_suggested_project_name()`
+        already adds -- so the cut/print set for an album is named to
+        match its own .mdproj at a glance. `_paged_export_path()` then
+        appends which page it is (-disc/-cover/...) on top of that. Empty
+        metadata suggests no filename at all, same as Save As.
+
+        `extension` left blank means "just the folder, no suggested
+        filename at all" -- what PrintDialog wants as a start_dir, since it
+        names its own sheets itself."""
+        if not extension:
+            return user_paths.export_start_path(self.current_project_path)
+        name = self._suggested_project_name()
+        filename = f"{name}.{extension}" if name else ""
+        return user_paths.export_start_path(self.current_project_path, filename)
 
     def _template_named(self, kind: str, name: str):
         from mdtools.templates import registry
 
         return next((t for t in registry.load_templates()[kind] if t.name == name), None)
 
+    def _generator_template_name_for_page(self, page: str) -> str | None:
+        """The template already on `page`, if an automatic layout can build
+        that one -- otherwise None, meaning "leave this page alone".
+
+        This is what stops a whole-project layout (the Tools panel's magic
+        wand, and the layout offered after a recording) from imposing its
+        own idea of which template each page should have. Both used to call
+        each `_auto_layout_*` method with no template name at all, so every
+        one of them fell back to its own hardcoded default and *replaced*
+        whatever the user had chosen -- a project deliberately set up with
+        the small sticker disc label came back with the full-face one,
+        every time. Reported directly, for the magic wand and then for the
+        post-recording layout, which is one bug: they are the same method.
+
+        Two answers mean "skip":
+        - **A custom template.** It is the user's own, may carry its own
+          saved layers, and nothing here knows how to build it -- explicit
+          instruction ("if custom template is selected autogenerate should
+          not generate this page"). Note a *renamed* built-in reads as
+          buildable-by-name only if the name still matches, which is the
+          same rule the Template dropdown already applies.
+        - **A built-in nothing can generate**, which after the J-card
+          window variant landed means only a built-in the user has renamed
+          through the Template Manager.
+
+        Anything else returns its own name, which the caller passes back as
+        both `disc_template_name` and `cover_template_name` -- each is
+        consumed only by the page kind that has more than one buildable
+        template and ignored otherwise, exactly as
+        "Regenerate with Font..." already does it.
+        """
+        if self.project is None:
+            return None
+        scene = self.project.pages.get(page)
+        template = getattr(scene, "template", None)
+        if template is None:
+            return None
+        if not getattr(template, "builtin", False):
+            return None
+        if not self._can_auto_generate_page(page, template):
+            return None
+        return template.name
+
+    def _generate_page_up_to_its_template(self, page: str, metadata: ProjectMetadata) -> bool:
+        """Rebuild `page` onto the template it already has, or do nothing.
+
+        Returns whether it built anything, so a caller can tell "skipped
+        on purpose" from "built" -- see _generator_template_name_for_page
+        for when it skips.
+        """
+        name = self._generator_template_name_for_page(page)
+        if name is None:
+            return False
+        method = self._auto_layout_method_for_page(page, disc_template_name=name, cover_template_name=name)
+        if method is None:
+            return False
+        method(metadata)
+        return True
+
     def _auto_layout_project(self, metadata: ProjectMetadata) -> None:
         """Turns an album into a first draft of the project's pages: the
         disc label and the J-card, or a CD's ring label, case insert and --
         if there is one -- its case back.
 
-        After a recording this runs without asking. That is deliberate: the
-        recording flow has already asked for confirmation several times
-        over, and an extra prompt at the very end -- after the user has
-        watched an album go down in real time -- would be noise. The Tools
-        panel button, which is a single click out of nowhere, does confirm.
+        After a recording this runs without confirming first. That is
+        deliberate: the recording flow has already asked for confirmation
+        several times over, and an extra "are you sure" at the very end --
+        after the user has watched an album go down in real time -- would
+        be noise. The Tools panel button, which is a single click out of
+        nowhere, does confirm.
+
+        One thing it *does* still ask either way: any disc/shell label this
+        touches prompts for a background treatment via
+        _choose_cover_background() before it is built -- that is a real
+        creative choice with six visibly different outcomes, not a "did you
+        mean to do this" the user has already answered by getting this far.
         """
         if self.project is None or not metadata.cover_art:
             return
         if self.project.medium == MEDIUM_TAPE:
             self._auto_layout_tape(metadata)
             return
+        # Every page below is built *onto the template it already has*,
+        # and skipped when that template is the user's own -- see
+        # _generator_template_name_for_page. The page order is unchanged
+        # (the disc label goes last on a CD because it switches the page
+        # combo and runs Clip Layers).
         if self.project.medium == MEDIUM_CD:
-            self._auto_layout_cd_insert(metadata)
+            self._generate_page_up_to_its_template(PAGE_COVER, metadata)
             # Only if the project has one: the case back is optional, and
             # laying out a page that does not exist is not a thing to do
             # quietly or loudly.
             if PAGE_BACK in self.project.pages:
-                self._auto_layout_cd_case_back(metadata)
-            self._auto_layout_cd_disc_label(metadata)
+                self._generate_page_up_to_its_template(PAGE_BACK, metadata)
+            self._generate_page_up_to_its_template(PAGE_DISC, metadata)
             return
-        self._auto_layout_cover(metadata)
-        self._auto_layout_disc_label(metadata)
+        self._generate_page_up_to_its_template(PAGE_COVER, metadata)
+        self._generate_page_up_to_its_template(PAGE_DISC, metadata)
 
-    def _auto_layout_disc_label(self, metadata: ProjectMetadata) -> None:
+    def _choose_cover_background(self, cover_art: bytes, title: str) -> bytes | None:
+        """Shows CoverFilterDialog for `cover_art` and returns the filtered
+        PNG bytes the user picked, or None if they closed/cancelled it --
+        callers treat None as "skip building this label" rather than
+        silently falling back to some default treatment.
+
+        Every disc-shaped or shell-shaped label prints the cover full-bleed
+        behind text (unlike a J-card or CD insert's front panel, where the
+        cover *is* the point) -- this is the one thing all three of them
+        share, so the dialog is offered from exactly the three call sites
+        that place a cover this way, not from the cover/J-card/insert
+        layouts.
+
+        While `_reused_cover_filter()` is active, this skips the dialog
+        entirely and reuses whichever filter was last chosen this session
+        (see "Regenerate with Font..." -- rebuilding every page with a new
+        font must not re-ask a question about background treatment that has
+        already been answered)."""
+        if self._reusing_cover_filter:
+            filter_id = self._last_cover_filter_id or cover_filters.FILTER_NONE
+            return cover_filters.apply_cover_filter(cover_art, filter_id)
+        dialog = CoverFilterDialog(cover_art, title, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted or dialog.result_filter_id is None:
+            return None
+        self._last_cover_filter_id = dialog.result_filter_id
+        return cover_filters.apply_cover_filter(cover_art, dialog.result_filter_id)
+
+    @contextlib.contextmanager
+    def _reused_cover_filter(self):
+        """See _choose_cover_background()'s docstring -- scopes "don't ask,
+        reuse the last answer" to exactly the call this wraps."""
+        previous = self._reusing_cover_filter
+        self._reusing_cover_filter = True
+        try:
+            yield
+        finally:
+            self._reusing_cover_filter = previous
+
+    def _auto_layout_disc_label(self, metadata: ProjectMetadata, *, template_name: str | None = None) -> None:
         """The full-face template, the cover across it cropped to the cut
-        outline, and the MiniDisc logo on the slider sticker."""
-        template = self._template_named("disc", FULL_LABEL_TEMPLATE)
+        outline, and the MiniDisc logo on the slider sticker.
+
+        `template_name` defaults to the "(with Slider)" variant -- the
+        canonical first draft every "build the whole project" caller wants
+        (`_auto_layout_project`, the Tools panel's magic wand, the
+        post-recording layout). Passing `FULL_LABEL_NO_SLIDER_TEMPLATE`
+        instead builds the exact same way, just without a slider shape for
+        the MiniDisc logo to land on: `place_logo_on_slider()` already
+        returns None gracefully for a template with no slider (see its own
+        docstring), so no logo item is ever added rather than something
+        having to notice and remove one afterwards."""
+        template = self._template_named("disc", template_name or FULL_LABEL_TEMPLATE)
         if template is None:
+            return
+
+        # Asked before anything on the page changes, so cancelling leaves
+        # it completely untouched rather than mid-way through a template
+        # swap with no cover to show for it.
+        background = self._choose_cover_background(metadata.cover_art, self.tr("Disc Label Background"))
+        if background is None:
             return
 
         # Clip Layers works on the *current* page, so the disc page has to be
@@ -2186,10 +2758,14 @@ class MainWindow(QMainWindow):
         # insertion mark the template change just seeded. Not an undo command:
         # those items were not added by one either (apply_template resets the
         # stack and seeds them directly), so there is nothing to undo back to.
-        recolour_insertion_mark(scene, metadata.cover_art)
+        # Sampled from the *filtered* artwork, not the raw cover -- that is
+        # what actually ends up behind this text, and a filter that changes
+        # how bright the top of the cover reads (or replaces it outright,
+        # e.g. halftone) has to be what this decision is based on.
+        recolour_insertion_mark(scene, background)
 
         self.undo_stack.beginMacro(self.tr("Lay Out Disc Label"))
-        cover = place_cover_on_label(scene, metadata.cover_art)
+        cover = place_cover_on_label(scene, background)
         if cover is not None:
             # Behind whatever the template change seeded (the insertion-mark
             # triangle and its label), not on top: a full-bleed cover would
@@ -2199,24 +2775,93 @@ class MainWindow(QMainWindow):
             cover.setZValue(min((item.zValue() for item in behind), default=0.0) - 1.0)
             self.undo_stack.push(AddItemCommand(scene, cover, self.tr("Cover Art")))
         logo_path = gallery.gallery_dir() / "mdlogo.png"
-        logo = scene.add_image(str(logo_path)) if logo_path.exists() else None
-        if place_logo_on_slider(scene, logo) is not None:
-            self.undo_stack.push(AddItemCommand(scene, logo, self.tr("MiniDisc Logo")))
+        # Only added when there's actually a slider shape to place it on --
+        # place_logo_on_slider() already no-ops for a template without one
+        # (see its own docstring), but scene.add_image() itself doesn't
+        # know that, so calling it unconditionally would leave an
+        # unpositioned, un-undo-tracked orphan image sitting on the scene
+        # for the no-slider variant.
+        if len(scene.cut_shape_rects()) >= 2 and logo_path.exists():
+            logo = scene.add_image(str(logo_path))
+            if place_logo_on_slider(scene, logo) is not None:
+                self.undo_stack.push(AddItemCommand(scene, logo, self.tr("MiniDisc Logo")))
         self.undo_stack.endMacro()
 
         # The cover is deliberately oversized so it covers the label
         # completely; this is what trims the overhang back to the cut shape.
         self._clip_layers()
 
-    def _auto_layout_cover(self, metadata: ProjectMetadata) -> None:
+    def _auto_layout_sticker_label(self, metadata: ProjectMetadata, *, template_name: str | None = None) -> None:
+        """The small chamfered "sticker" disc label: cover art across the
+        face, a top band carrying the insertion mark, and a bottom band
+        carrying Artist / a rule / Album + the year -- the same
+        background/accent/ink palette the J-card's back panel uses, scaled
+        down to fit a label a fraction of that panel's size. See
+        auto_layout.build_sticker_label() for where the actual layout
+        happens; this method is the same shape as _auto_layout_disc_label()
+        just above, targeting a different template family.
+
+        `template_name` defaults to the "(with Slider)" variant, matching
+        _auto_layout_disc_label()'s own default for the full-face
+        templates. Passing `STICKER_NO_SLIDER_TEMPLATE` instead builds the
+        exact same way, just without a slider shape for the cover snippet
+        or the MiniDisc logo to land on -- build_sticker_label() and
+        place_logo_on_slider() both already no-op gracefully for a
+        template with no slider.
+        """
+        template = self._template_named("disc", template_name or STICKER_TEMPLATE)
+        if template is None:
+            return
+
+        background = self._choose_cover_background(metadata.cover_art, self.tr("Disc Label Background"))
+        if background is None:
+            return
+
+        # Clip Layers works on the *current* page, so the disc page has to be
+        # the one on screen before any of this runs.
+        self.page_combo.setCurrentIndex(self.page_combo.findData(PAGE_DISC))
+        self.apply_template(PAGE_DISC, template)
+        scene = self.project.pages[PAGE_DISC]
+
+        self.undo_stack.beginMacro(self.tr("Lay Out Disc Label"))
+        for item in build_sticker_label(scene, metadata, background_art=background):
+            self.undo_stack.push(AddItemCommand(scene, item, self.tr("Disc Label")))
+
+        logo_path = gallery.gallery_dir() / "mdlogo.png"
+        # Same "only when there's actually a slider" guard
+        # _auto_layout_disc_label() uses, and for the same reason: calling
+        # scene.add_image() unconditionally would leave an unpositioned,
+        # un-undo-tracked orphan image on the no-slider variant.
+        if len(scene.cut_shape_rects()) >= 2 and logo_path.exists():
+            logo = scene.add_image(str(logo_path))
+            if place_logo_on_slider(scene, logo) is not None:
+                self.undo_stack.push(AddItemCommand(scene, logo, self.tr("MiniDisc Logo")))
+        self.undo_stack.endMacro()
+
+        # The cover is deliberately oversized so it covers the label (and
+        # the slider) completely; this is what trims the overhang back to
+        # each cut shape.
+        self._clip_layers()
+
+    def _auto_layout_cover(self, metadata: ProjectMetadata, *, template_name: str | None = None) -> None:
         """The three-panel J-card: cover art turned onto the front, an
         accent band down the spine, and the track list on the back.
+
+        `template_name` defaults to the plain card. Passing
+        `JCARD_WINDOW_TEMPLATE` instead builds the die-cut window variant,
+        which is the same call throughout -- build_jcard() reads the window
+        off the template it was given and turns the whole card end-for-end
+        for it, so the hole falls on the artwork rather than through the
+        middle of the track list. Nothing here has to know that happened.
 
         Deliberately *not* run through Clip Layers, unlike the disc label.
         Nothing here overhangs by more than a pen width, and clipping would
         rasterise the panel blocks and the track list -- turning text that
-        is still worth editing into a flat image."""
-        template = self._template_named("cover", JCARD_TEMPLATE)
+        is still worth editing into a flat image. That holds for the window
+        variant too: the window is a hole in the *cut* path, so export and
+        the cutter both already take it out of the artwork, with nothing to
+        bake into the layer itself."""
+        template = self._template_named("cover", template_name or JCARD_TEMPLATE)
         if template is None:
             return
 
@@ -2232,6 +2877,40 @@ class MainWindow(QMainWindow):
             self.undo_stack.push(AddItemCommand(scene, item, self.tr("J-Card")))
         self.undo_stack.endMacro()
 
+        if has_cover_window(template):
+            self._bake_cover_window(scene)
+
+    def _bake_cover_window(self, scene) -> None:
+        """Bake a die-cut window into the cover artwork, and nothing else.
+
+        The artwork spans the window deliberately, and export already takes
+        the hole out of it at render time -- but the *layer* still carries
+        those pixels, so on screen the window is invisible and the card
+        looks exactly like the plain one. Reported directly ("artwork is not
+        cropped to the window").
+
+        Deliberately **not** self._clip_layers(), which is the whole-page
+        operation: that also rasterises the panel background blocks, whose
+        own overhang past the card's rounded corners falls outside the cut
+        line and so is never printed anyway (the plain J-card has had that
+        same harmless overhang all along). Turning those into pixmaps is
+        exactly what the "a J-card is not run through Clip Layers" rule
+        exists to prevent. Only pixmap layers are rebuilt here, which on
+        this page means the cover image alone -- every text layer and every
+        panel block stays editable, and no page switch is needed either,
+        since this works on the scene it is handed rather than on whichever
+        page happens to be on screen.
+        """
+        _removed, images, _shapes = scene.plan_clip_layers()
+        if not images:
+            return
+        label = self.tr("Clip Layers")
+        self.undo_stack.beginMacro(label)
+        for item, new_pixmap in images:
+            self.undo_stack.push(SetPixmapCommand(item, item.pixmap(), new_pixmap, self.tr("Clip Image")))
+        self.undo_stack.endMacro()
+        self._refresh_layers()
+
     def _auto_layout_cd_disc_label(self, metadata: ProjectMetadata) -> None:
         """The ring: the cover lightened across the whole face, the album's
         details in the bands clear of the hub, and the Digital Audio mark.
@@ -2245,6 +2924,10 @@ class MainWindow(QMainWindow):
         if template is None:
             return
 
+        background = self._choose_cover_background(metadata.cover_art, self.tr("Disc Label Background"))
+        if background is None:
+            return
+
         # Clip Layers works on the *current* page.
         self.page_combo.setCurrentIndex(self.page_combo.findData(PAGE_DISC))
         self.apply_template(PAGE_DISC, template)
@@ -2252,7 +2935,12 @@ class MainWindow(QMainWindow):
 
         logo_path = gallery.gallery_dir() / "cd_digital_audio.png"
         try:
-            items = build_disc_label(scene, metadata, str(logo_path) if logo_path.exists() else None)
+            items = build_disc_label(
+                scene,
+                metadata,
+                str(logo_path) if logo_path.exists() else None,
+                background_art=background,
+            )
         except CdLayoutError:
             return
 
@@ -2287,23 +2975,54 @@ class MainWindow(QMainWindow):
             self.undo_stack.push(AddItemCommand(scene, item, self.tr("Case Back")))
         self.undo_stack.endMacro()
 
-    def _auto_layout_cd_insert(self, metadata: ProjectMetadata) -> None:
-        """The folded slim-case insert: cover on the right panel, track list
-        on the left.
+    def _auto_layout_cd_insert(self, metadata: ProjectMetadata, *, template_name: str | None = None) -> None:
+        """The folded slim-case insert: cover on the right panel always;
+        the left panel is the track list, or -- if this project also has a
+        case back -- the artist's name, year and photo instead, since the
+        track list already lives on the tray card and repeating it here
+        would just be the same list twice (see cd_layout.build_insert).
+
+        `template_name` defaults to the folded, two-panel insert -- the
+        canonical first draft every "build the whole project" caller wants.
+        Passing `CD_INSERT_FRONT_TEMPLATE` instead builds the exact same
+        cover placement (cd_layout.build_front_insert(), which reuses
+        place_insert_cover() unchanged) across the *whole* card rather than
+        just its right panel: there is no fold, so there is nowhere for a
+        track list or artist panel to go, and the artist-photo lookup is
+        skipped outright rather than fetching a photo with no panel to put
+        it on.
 
         Not run through Clip Layers, for the same reason the J-card is not:
         nothing overhangs, and clipping would rasterise a track list that is
         still worth editing.
         """
-        template = self._template_named("cover", CD_INSERT_TEMPLATE)
+        is_front_only = template_name == CD_INSERT_FRONT_TEMPLATE
+        template = self._template_named("cover", template_name or CD_INSERT_TEMPLATE)
         if template is None:
             return
+
+        has_case_back = not is_front_only and PAGE_BACK in self.project.pages
+        artist_photo = None
+        if has_case_back:
+            # A network lookup, so the same wait-cursor courtesy
+            # _fetch_cover_into_metadata already extends to the album cover
+            # lookup -- this one is silent on failure by design (see
+            # metadata_lookup.find_artist_photo), so there is nothing to
+            # report either way, just a cursor while it runs.
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            try:
+                artist_photo = find_artist_photo(metadata.artist)
+            finally:
+                QApplication.restoreOverrideCursor()
 
         self.apply_template(PAGE_COVER, template)
         scene = self.project.pages[PAGE_COVER]
 
         try:
-            items = build_insert(scene, metadata)
+            if is_front_only:
+                items = build_front_insert(scene, metadata)
+            else:
+                items = build_insert(scene, metadata, has_case_back=has_case_back, artist_photo=artist_photo)
         except CdLayoutError:
             return
 
@@ -2312,11 +3031,9 @@ class MainWindow(QMainWindow):
             self.undo_stack.push(AddItemCommand(scene, item, self.tr("Case Insert")))
         self.undo_stack.endMacro()
 
-    def _auto_layout_tape(self, metadata: ProjectMetadata) -> None:
-        """The inlay card, and a shell label for each side of the tape.
-
-        Where the split falls is `tape.split_sides()`'s answer, not this
-        method's -- the same function the recording flow uses to decide when
+    def _tape_plan(self, metadata: ProjectMetadata) -> tape.TapePlan:
+        """Where the split falls is `tape.split_sides()`'s answer, not this
+        window's -- the same function the recording flow uses to decide when
         to ask the user to turn the tape over. That is the point of sharing
         it: a label that says side B starts at track seven, and a recording
         that turns over after track six, would each be defensible alone and
@@ -2326,37 +3043,79 @@ class MainWindow(QMainWindow):
         set by the recording flow and saved with the file -- so a label laid
         out after recording splits exactly where the recording did, and one
         laid out before it uses the same default the recording dialog will
-        open on.
+        open on."""
+        return tape.split_sides(metadata.tracks, self.project.tape_total_minutes)
+
+    def _auto_layout_tape(self, metadata: ProjectMetadata) -> None:
+        """The inlay card, and a shell label for each side of the tape.
+
+        Each of the three pages is skipped when its own template is not one
+        an automatic layout can build -- see
+        _generator_template_name_for_page. The two shell labels are handled
+        together rather than one call each, so the background-treatment
+        question is still asked once for the pair; passing only the sides
+        that are actually going to be built also means a project whose
+        labels both use a custom template is never asked it at all.
         """
-        plan = tape.split_sides(metadata.tracks, self.project.tape_total_minutes)
+        plan = self._tape_plan(metadata)
+        if self._generator_template_name_for_page(PAGE_COVER) is not None:
+            self._auto_layout_tape_jcard(metadata, plan)
+        sides = tuple(
+            page
+            for page in (PAGE_SIDE_A, PAGE_SIDE_B)
+            if self._generator_template_name_for_page(page) is not None
+        )
+        if sides:
+            self._auto_layout_tape_sides(metadata, plan, pages=sides)
 
+    def _auto_layout_tape_jcard(self, metadata: ProjectMetadata, plan: tape.TapePlan) -> None:
         jcard = self._template_named("cover", TAPE_JCARD_TEMPLATE)
-        if jcard is not None:
-            self.apply_template(PAGE_COVER, jcard)
-            scene = self.project.pages[PAGE_COVER]
-            try:
-                items = build_tape_jcard(scene, metadata, plan=plan)
-            except TapeLayoutError:
-                items = []
-            if items:
-                self.undo_stack.beginMacro(self.tr("Lay Out J-Card"))
-                for item in items:
-                    self.undo_stack.push(AddItemCommand(scene, item, self.tr("J-Card")))
-                self.undo_stack.endMacro()
+        if jcard is None:
+            return
+        self.apply_template(PAGE_COVER, jcard)
+        scene = self.project.pages[PAGE_COVER]
+        try:
+            items = build_tape_jcard(scene, metadata, plan=plan)
+        except TapeLayoutError:
+            items = []
+        if items:
+            self.undo_stack.beginMacro(self.tr("Lay Out J-Card"))
+            for item in items:
+                self.undo_stack.push(AddItemCommand(scene, item, self.tr("J-Card")))
+            self.undo_stack.endMacro()
 
+    def _auto_layout_tape_sides(
+        self, metadata: ProjectMetadata, plan: tape.TapePlan, pages: tuple[str, ...] = (PAGE_SIDE_A, PAGE_SIDE_B)
+    ) -> None:
+        """A shell label for each side named in `pages` -- both by default,
+        or just one (see "Regenerate with Font..."'s preview, which only
+        ever wants to touch the single page currently on screen).
+
+        Asked once regardless of how many sides that ends up being, not
+        once per side -- both shell labels carry the same photo, just
+        cropped by a different hole/band arrangement, so asking twice would
+        be the same question asked twice in a row. Cancelling skips the
+        shell label(s); anything else this call doesn't touch (the J-card)
+        is left alone.
+        """
         label = self._template_named("label", TAPE_LABEL_TEMPLATE)
         if label is None:
             return
-        for page, side in ((PAGE_SIDE_A, plan.sides[0]), (PAGE_SIDE_B, plan.sides[1])):
+        background = self._choose_cover_background(metadata.cover_art, self.tr("Shell Label Background"))
+        if background is None:
+            return
+        sides = {PAGE_SIDE_A: plan.sides[0], PAGE_SIDE_B: plan.sides[1]}
+        for page in pages:
             if page not in self.project.pages:
                 continue
+            side = sides[page]
             # Clip Layers works on the *current* page, so the label has to
             # be the one on screen before any of this runs.
             self.page_combo.setCurrentIndex(self.page_combo.findData(page))
             self.apply_template(page, copy.deepcopy(label))
             scene = self.project.pages[page]
             try:
-                items = build_side_label(scene, metadata, side)
+                items = build_side_label(scene, metadata, side, background_art=background)
             except TapeLayoutError:
                 continue
             self.undo_stack.beginMacro(self.tr("Lay Out Shell Label"))
@@ -2368,6 +3127,263 @@ class MainWindow(QMainWindow):
             # trims the overhang *and* punches those holes through the
             # artwork, so the sticker does not cover the drive.
             self._clip_layers()
+
+    # -- Regenerate with Font... ---------------------------------------------
+
+    def _auto_layout_method_for_page(
+        self, page: str, *, disc_template_name: str | None = None, cover_template_name: str | None = None
+    ):
+        """Which single-page auto-layout call rebuilds `page`, for whichever
+        medium the project currently is -- the mapping "Regenerate with
+        Font..."'s preview and the Template dropdown's "Generated from
+        Metadata" both use to rebuild only the page in question. None means
+        this page has no automatic layout of its own (should not happen
+        for a page a real project actually has, but a template gone
+        missing already makes every one of these a silent no-op, and this
+        is no different).
+
+        `disc_template_name`/`cover_template_name` only matter for the
+        pages with more than one template a generator can build (see
+        _auto_layout_template_names_for_page) -- a MiniDisc disc page (the
+        full-face label or the small sticker label, and each of those has
+        its own "(with Slider)" twin besides -- see
+        _auto_layout_minidisc_disc_label()), a MiniDisc cover page (the
+        plain J-card or the die-cut window variant) and a CD cover page
+        (the folded two-panel insert or the front-only one). Each says
+        which of its page's templates to build, and both are silently
+        ignored everywhere else. Left `None`,
+        _auto_layout_minidisc_disc_label()/_auto_layout_cover()/
+        _auto_layout_cd_insert() each fall back to their own default (the
+        "(with Slider)" full-face disc label, the plain J-card, the folded
+        insert) on their own, which keeps every *other* caller (the
+        full-project layout, the Tools panel's magic wand, the
+        post-recording layout -- none of which go through this method at
+        all) built exactly as before."""
+        metadata = self.project.metadata
+        if self.project.medium == MEDIUM_TAPE:
+            plan = self._tape_plan(metadata)
+            return {
+                PAGE_COVER: lambda m: self._auto_layout_tape_jcard(m, plan),
+                PAGE_SIDE_A: lambda m: self._auto_layout_tape_sides(m, plan, pages=(PAGE_SIDE_A,)),
+                PAGE_SIDE_B: lambda m: self._auto_layout_tape_sides(m, plan, pages=(PAGE_SIDE_B,)),
+            }.get(page)
+        if self.project.medium == MEDIUM_CD:
+            return {
+                PAGE_DISC: self._auto_layout_cd_disc_label,
+                PAGE_COVER: lambda m: self._auto_layout_cd_insert(m, template_name=cover_template_name),
+                PAGE_BACK: self._auto_layout_cd_case_back,
+            }.get(page)
+        return {
+            PAGE_DISC: lambda m: self._auto_layout_minidisc_disc_label(m, template_name=disc_template_name),
+            PAGE_COVER: lambda m: self._auto_layout_cover(m, template_name=cover_template_name),
+        }.get(page)
+
+    def _auto_layout_minidisc_disc_label(self, metadata: ProjectMetadata, *, template_name: str | None = None) -> None:
+        """Routes to whichever of the two MiniDisc disc-label families
+        `template_name` actually names: _auto_layout_disc_label() for the
+        full-face label (either variant), _auto_layout_sticker_label() for
+        the small chamfered sticker (either variant). `None` -- every
+        caller except the Template dropdown's "Generated from Metadata"
+        and "Regenerate with Font..." -- defaults to the full-face label,
+        matching _auto_layout_disc_label()'s own default and so every
+        pre-existing caller's behaviour."""
+        if template_name in (STICKER_TEMPLATE, STICKER_NO_SLIDER_TEMPLATE):
+            self._auto_layout_sticker_label(metadata, template_name=template_name)
+        else:
+            self._auto_layout_disc_label(metadata, template_name=template_name)
+
+    def _snapshot_page(self, page: str) -> dict:
+        return scene_to_dict(self.project.pages[page])
+
+    def _restore_page(self, page: str, snapshot: dict) -> None:
+        """Rebuilds `page` from a snapshot taken by _snapshot_page() --
+        the undo path for "Regenerate with Font..."'s preview. The real
+        regenerate always goes through apply_template(), which resets the
+        undo stack entirely (its commands would reference items on a scene
+        that's about to be discarded), so there is no QUndoStack entry to
+        undo() back to; rebuilding straight from a saved snapshot is the
+        same technique a project's own save/load already relies on."""
+        old_scene = self.project.pages.get(page)
+        if old_scene is not None:
+            self._connected_scenes.discard(id(old_scene))
+        self.project.pages[page] = scene_from_dict(snapshot)
+        self._reset_undo_stack()
+        self._mark_dirty()
+        if page == self.current_page:
+            self._show_page(page)
+
+    def _regeneration_metadata(self, title: str) -> ProjectMetadata | None:
+        """The metadata a single-page rebuild needs, or None with the reason
+        already on screen.
+
+        Shared by the toolbar's "Regenerate" and "Regenerate with Font..."
+        buttons, whose preconditions are identical: an album to build from,
+        and cover art, which every one of these layouts is built around.
+        """
+        metadata = self.project.metadata
+        if not metadata.album and not metadata.artist:
+            QMessageBox.information(
+                self,
+                title,
+                self.tr("Fill in the album and artist in the Tools panel's Metadata... first."),
+            )
+            return None
+        if not metadata.cover_art:
+            self._fetch_cover_into_metadata(metadata)
+        if not metadata.cover_art:
+            QMessageBox.warning(
+                self,
+                title,
+                self.tr(
+                    "No cover art could be found for this album, and the layout is built around it. Add "
+                    "an image yourself, or fetch one with the Metadata dialog's lookup."
+                ),
+            )
+            return None
+        return metadata
+
+    def _regenerate_current_page(self) -> None:
+        """Toolbar > "Regenerate": rebuild the current page from the
+        project's metadata with its own default styling.
+
+        The same call "Regenerate with Font..." makes, minus the font
+        substitution -- so this is the way back to a page's default look
+        after a font has been tried on it, as well as the quickest way to
+        rebuild a page that has been edited into a corner. It confirms
+        first for the same reason that one does: it clears the page and
+        resets the undo history.
+
+        The template is not changed: whatever is on the page is what gets
+        rebuilt, which for a custom template means there is nothing to do
+        (see _generator_template_name_for_page).
+        """
+        if self.project is None:
+            return
+        scene = self._current_scene()
+        if scene is None:
+            return
+        page = self.current_page
+        title = self.tr("Regenerate")
+        name = self._generator_template_name_for_page(page)
+        if name is None:
+            QMessageBox.information(
+                self,
+                title,
+                self.tr(
+                    "This page's template is not one the automatic layout knows how to build, so there "
+                    "is nothing to regenerate. Pick a built-in template for this page first."
+                ),
+            )
+            return
+        metadata = self._regeneration_metadata(title)
+        if metadata is None:
+            return
+        answer = QMessageBox.warning(
+            self,
+            title,
+            self.tr("Are you sure? This rebuilds this page from the metadata, and resets the undo history."),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        method = self._auto_layout_method_for_page(page, disc_template_name=name, cover_template_name=name)
+        if method is None:
+            return
+        with self._reused_cover_filter():
+            method(metadata)
+        self._refresh_layers()
+
+    def _open_regenerate_font_dialog(self) -> None:
+        """Toolbar > "Regenerate with Font...": preview a different font on
+        the current page, then, only if accepted and confirmed, rebuild
+        that one page -- and only that page -- with it.
+
+        Preview and the final regenerate are the *same* auto-layout call
+        (whichever one _auto_layout_method_for_page() maps the current page
+        to) every other automatic layout in this app already goes through
+        (font_family_override() substitutes the font those calls' own text
+        creation uses; _reused_cover_filter() stops them from re-asking a
+        background-treatment question this project has already answered),
+        so nothing here can show one thing in the preview and build another
+        for real.
+        """
+        if self.project is None:
+            return
+        scene = self._current_scene()
+        if scene is None:
+            return
+        page = self.current_page
+        metadata = self.project.metadata
+        # Captured once, up front: which of the (possibly several)
+        # templates a page's generator can build is whatever is already on
+        # the page *before* this ran, and both Preview and the final
+        # rebuild must keep rebuilding that same one -- e.g. a MiniDisc
+        # disc label built without its slider must not silently gain one
+        # back just because its font changed. Passed as both kwargs below;
+        # each is only consumed by whichever page kind actually has more
+        # than one buildable template, and ignored otherwise.
+        current_template_name = scene.template.name
+
+        if self._regeneration_metadata(self.tr("Regenerate with Font")) is None:
+            return
+
+        dialog = RegenerateFontDialog(self)
+        preview_snapshot: dict | None = None
+
+        def _run_preview(family: str) -> None:
+            nonlocal preview_snapshot
+            method = self._auto_layout_method_for_page(
+                page, disc_template_name=current_template_name, cover_template_name=current_template_name
+            )
+            if method is None:
+                return
+            if preview_snapshot is None:
+                preview_snapshot = self._snapshot_page(page)
+            else:
+                # Restore the true original first, not the previous
+                # preview -- two Previews in a row (font A, then font B)
+                # must not compound onto each other.
+                self._restore_page(page, preview_snapshot)
+            with font_family_override(family), self._reused_cover_filter():
+                method(metadata)
+            self._refresh_layers()
+
+        dialog.preview_requested.connect(_run_preview)
+        accepted = dialog.exec() == QDialog.DialogCode.Accepted
+        chosen_family = dialog.selected_family
+
+        if accepted:
+            answer = QMessageBox.warning(
+                self,
+                self.tr("Regenerate with Font"),
+                self.tr(
+                    'Are you sure? This regenerates this label using "{family}", and resets the undo '
+                    "history."
+                ).format(family=chosen_family),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if answer == QMessageBox.StandardButton.Yes:
+                # Rebuilt fresh rather than just "keeping" whatever Preview
+                # left on screen -- Preview may never have run at all (OK
+                # pressed with no Preview click first), and rebuilding is
+                # cheap and exactly idempotent with what Preview itself
+                # already does, so there is no reason to special-case it.
+                method = self._auto_layout_method_for_page(
+                page, disc_template_name=current_template_name, cover_template_name=current_template_name
+            )
+                if method is not None:
+                    with font_family_override(chosen_family), self._reused_cover_filter():
+                        method(metadata)
+                    self._refresh_layers()
+                return
+
+        # Cancelled outright, or backed out of the confirmation -- put the
+        # page back exactly how it looked before Preview was ever clicked.
+        if preview_snapshot is not None:
+            self._restore_page(page, preview_snapshot)
+            self._refresh_layers()
 
     def _edit_metadata(self) -> None:
         if self.project is None:

@@ -62,10 +62,12 @@ def _read(dialog, monkeypatch, toc, releases):
 class _FakeWorker:
     made: list = []
 
-    def __init__(self, device, plan, client, exe, parent=None, playlist_paths=None):
+    def __init__(self, device, plan, parent=None):
         self.plan = plan
-        self.playlist_paths = list(playlist_paths or [])
         self.dialog = parent
+        # What the dialog itself computed as "everything ripped so far plus
+        # this disc" -- there is no playlist any more to read it back from.
+        self.playlist_paths = list(parent._current_paths) if parent is not None else []
         _FakeWorker.made.append(self)
         for name in ("track_started", "progress", "stage", "failed", "cancelled", "succeeded", "finished"):
             setattr(self, name, _Signal())
@@ -100,8 +102,6 @@ class _Signal:
 def fake_worker(monkeypatch):
     _FakeWorker.made = []
     monkeypatch.setattr(module, "_RipWorker", _FakeWorker)
-    monkeypatch.setattr(CdRipDialog, "_resolve_foobar_exe", lambda self: "foobar2000.exe")
-    monkeypatch.setattr(CdRipDialog, "_foobar_reachable", lambda self: True)
     return _FakeWorker.made
 
 
@@ -207,7 +207,7 @@ def test_the_album_keeps_its_name_across_the_set(dialog, monkeypatch, toc, fake_
     assert dialog.artist_edit.text() == "Bajm"
 
 
-def test_the_playlist_ends_up_holding_the_whole_set(dialog, monkeypatch, toc, fake_worker):
+def test_the_result_ends_up_holding_the_whole_set(dialog, monkeypatch, toc, fake_worker):
     """Not just the disc that finished last -- what gets recorded is the
     album."""
     _read(dialog, monkeypatch, toc, [_release("Best Of", "Bajm", 2018, ["A", "B", "C"])])
@@ -219,6 +219,8 @@ def test_the_playlist_ends_up_holding_the_whole_set(dialog, monkeypatch, toc, fa
 
     assert len(fake_worker[0].playlist_paths) == 3
     assert len(fake_worker[1].playlist_paths) == 6
+    fake_worker[1].finish_successfully()
+    assert len(dialog.result_paths) == 6
 
 
 def test_the_metadata_handed_on_covers_every_disc(dialog, monkeypatch, toc, fake_worker):
@@ -235,19 +237,22 @@ def test_the_metadata_handed_on_covers_every_disc(dialog, monkeypatch, toc, fake
     assert titles == ["A", "B", "C", "D", "E", "F"]
 
 
-def test_the_first_disc_is_not_tidied_away_by_the_second(dialog, monkeypatch, toc, fake_worker):
-    """clean_stale_rip_folders keeps only the folder about to be written --
-    run again for disc two, with both discs sharing that folder, it has
-    nothing to remove, but running it at all is a risk not worth taking."""
-    cleaned: list = []
-    monkeypatch.setattr(
-        module.cdrip, "clean_stale_rip_folders", lambda root, keep=None: cleaned.append(keep)
-    )
+def test_the_first_disc_is_not_tidied_away_by_the_second(dialog, monkeypatch, toc, tmp_path, fake_worker):
+    """This app used to clean up "stale" rip folders before each new disc
+    of a set -- removed outright (not just fixed) after it swept up a real
+    user's permanently organized albums elsewhere in this same shared
+    folder, since a folder of nothing but .flac files looks exactly like a
+    stale rip either way. Nothing here may delete anything any more, so
+    disc one's own files must still be there once disc two starts."""
+    assert not hasattr(cdrip, "clean_stale_rip_folders"), "this must not come back"
     _read(dialog, monkeypatch, toc, [_release("Best Of", "Bajm", 2018, ["A", "B", "C"])])
     _answer(monkeypatch, module.QMessageBox.StandardButton.Ok)
     dialog._start()
+    disc_one_folder = dialog.build_plan().folder
+    disc_one_folder.mkdir(parents=True, exist_ok=True)
+    (disc_one_folder / "01 - A.flac").write_bytes(b"disc one, track one")
     fake_worker[0].finish_successfully()
     _answer(monkeypatch, module.QMessageBox.StandardButton.Cancel)
     dialog._start()
 
-    assert len(cleaned) == 1, "only before the first disc of the set"
+    assert (disc_one_folder / "01 - A.flac").read_bytes() == b"disc one, track one"

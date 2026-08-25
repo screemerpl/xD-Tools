@@ -41,6 +41,17 @@ def test_the_stylesheet_and_the_palette_agree_on_the_accent_colour(qt_app):
     assert highlight.name() == theme._ACCENT
 
 
+def test_highlighted_text_contrasts_with_the_now_darker_accent(qt_app):
+    """The old KDE-Breeze accent was light enough for black selected-text
+    to read fine on it; the current Discord-Blurple accent is a deep
+    indigo, dark enough that it needs light text instead. Checked as
+    "light" rather than pinning the exact colour, so a later shade tweak
+    within the same family doesn't break this."""
+    theme.apply_theme(qt_app)
+    highlighted_text = qt_app.palette().color(QPalette.ColorRole.HighlightedText)
+    assert highlighted_text.lightness() > 128
+
+
 def test_the_stylesheet_never_sets_a_blanket_widget_background(qt_app):
     """Regression guard for the canvas-protection reasoning in theme.py's
     own module docstring: a bare `QWidget { background-color: ... }` (or

@@ -121,6 +121,26 @@ def test_zoom_toolbar_actions_all_have_a_non_null_icon(qt_app):
         assert not action.icon().isNull(), f'"{label}" action has no icon'
 
 
+def test_the_zoom_toolbar_is_icon_only(qt_app):
+    """Reported directly: like the Tools panel and the two Regenerate
+    buttons, this toolbar's visible text moved into each action's tooltip
+    instead. Every action's tooltip must still say something -- a QAction's
+    tooltip defaults to its own text unless overridden, so this is really
+    checking that default was never lost."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QToolBar
+
+    from mdtools.app_window import MainWindow
+
+    win = MainWindow(show_startup_dialog=False)
+    zoom_toolbar = next(tb for tb in win.findChildren(QToolBar) if tb.windowTitle() == "Zoom")
+
+    assert zoom_toolbar.toolButtonStyle() == Qt.ToolButtonStyle.ToolButtonIconOnly
+    for action in zoom_toolbar.actions():
+        if action.text():
+            assert action.toolTip(), f'"{action.text()}" action has no tooltip'
+
+
 def test_brightness_contrast_sliders_only_show_while_grayscale_is_on(qt_app):
     from mdtools.app_window import MainWindow
 

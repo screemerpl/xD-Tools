@@ -45,8 +45,10 @@ class PageKind:
     rather than a change everywhere.
 
     `template_kind` is which family of templates fits this page, matching
-    DiscTemplate.kind / CoverTemplate.kind. Several pages can share one:
-    a CD's front insert and its case back are both "cover" shapes.
+    DiscTemplate.kind / CoverTemplate.kind. Several pages can share the
+    same *shape* (a rectangle, optionally folded) without sharing a kind --
+    a CD's front insert and its case back are both rectangles, but a page
+    kind is what's offered *where*, not just what's structurally possible.
     """
 
     key: str
@@ -56,7 +58,14 @@ class PageKind:
 PAGE_KINDS: dict[str, PageKind] = {
     PAGE_DISC: PageKind(PAGE_DISC, "disc"),
     PAGE_COVER: PageKind(PAGE_COVER, "cover"),
-    PAGE_BACK: PageKind(PAGE_BACK, "cover"),
+    # Its own family, not "cover": a tray card and a slim-case insert are
+    # both plain folded rectangles (same CoverTemplate dataclass), but they
+    # go into different places in the case -- offering one where the other
+    # belongs is exactly what let a slim-case insert be picked as a case
+    # back (and vice versa) in the Template Manager, the startup/New
+    # Project dialog and Templates > Add Page..., all three of which just
+    # read this mapping rather than knowing about pages by name.
+    PAGE_BACK: PageKind(PAGE_BACK, "case_back"),
     # Their own family, not "cover": a J-card and a shell sticker are both
     # rectangles, and offering one where the other belongs is how a
     # cassette project ended up able to hold three J-cards.

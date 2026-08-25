@@ -3,6 +3,7 @@ from __future__ import annotations
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QFont, QPen
 from PySide6.QtWidgets import (
+    QCheckBox,
     QColorDialog,
     QDoubleSpinBox,
     QFontDialog,
@@ -16,7 +17,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mdtools.canvas.items import get_item_scale, set_item_scale
+from mdtools.canvas.items import (
+    get_item_scale,
+    get_text_glow,
+    get_text_shadow,
+    set_item_scale,
+    set_text_glow,
+    set_text_shadow,
+)
 from mdtools.canvas.scene import DEFAULT_RECT_FILL_HEX
 from mdtools.commands import PropertyEditCommand
 from mdtools.constants import px_to_mm, mm_to_px
@@ -187,6 +195,14 @@ class PropertiesPanel(QWidget):
         color_row_layout.addWidget(self.probe_btn)
         self.form.addRow(self.tr("Color"), self.color_row)
 
+        self.shadow_check = QCheckBox()
+        self.shadow_check.toggled.connect(self._apply_shadow)
+        self.form.addRow(self.tr("Shadow"), self.shadow_check)
+
+        self.glow_check = QCheckBox()
+        self.glow_check.toggled.connect(self._apply_glow)
+        self.form.addRow(self.tr("Glow"), self.glow_check)
+
         self.reset_btn = QPushButton(self.tr("Reset to Default"))
         self.reset_btn.clicked.connect(self._reset_to_default)
         self.form.addRow(self.reset_btn)
@@ -223,10 +239,14 @@ class PropertiesPanel(QWidget):
             self.form.setRowVisible(self.font_size_spin, is_text)
             self.form.setRowVisible(self.font_btn, is_text)
             self.form.setRowVisible(self.color_row, is_text or is_fillable)
+            self.form.setRowVisible(self.shadow_check, is_text)
+            self.form.setRowVisible(self.glow_check, is_text)
 
             if is_text:
                 self.text_edit.setPlainText(item.toPlainText())
                 self.font_size_spin.setValue(item.font().pointSizeF())
+                self.shadow_check.setChecked(get_text_shadow(item))
+                self.glow_check.setChecked(get_text_glow(item))
         finally:
             self._updating = False
 
@@ -323,6 +343,22 @@ class PropertiesPanel(QWidget):
             after = color.name()
             _set_fill_color(self._item, after)
             self._push("fill_color", _set_fill_color, before, after, self.tr("Change Fill Color"))
+
+    def _apply_shadow(self) -> None:
+        if self._updating or self._item is None or not isinstance(self._item, QGraphicsTextItem):
+            return
+        before = get_text_shadow(self._item)
+        after = self.shadow_check.isChecked()
+        set_text_shadow(self._item, after)
+        self._push("shadow", set_text_shadow, before, after, self.tr("Toggle Shadow"))
+
+    def _apply_glow(self) -> None:
+        if self._updating or self._item is None or not isinstance(self._item, QGraphicsTextItem):
+            return
+        before = get_text_glow(self._item)
+        after = self.glow_check.isChecked()
+        set_text_glow(self._item, after)
+        self._push("glow", set_text_glow, before, after, self.tr("Toggle Glow"))
 
     def _emit_text_style_changed(self) -> None:
         """The user just set a text item's font/size/color explicitly --

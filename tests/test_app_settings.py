@@ -112,6 +112,43 @@ def test_the_credentials_are_not_hardcoded_anywhere_in_the_source_tree():
     assert offenders == [], f"an api_hash-shaped literal is committed in: {offenders}"
 
 
+def test_audio_output_device_is_empty_by_default():
+    """Empty means "the OS default", both for a fresh install and for
+    audio_engine.resolve_output_device()'s own fallback."""
+    assert app_settings.audio_output_device() == ""
+
+
+def test_audio_output_device_round_trips():
+    app_settings.set_audio_output_device("Speakers (Realtek(R) Audio)")
+
+    assert app_settings.audio_output_device() == "Speakers (Realtek(R) Audio)"
+
+
+def test_tape_audio_output_device_is_empty_by_default():
+    assert app_settings.tape_audio_output_device() == ""
+
+
+def test_tape_audio_output_device_round_trips_independently_of_the_md_one():
+    """A MiniDisc deck typically wants a digital output and a cassette
+    deck an analogue one -- two different settings, not one shared."""
+    app_settings.set_audio_output_device("SPDIF Out (Realtek)")
+    app_settings.set_tape_audio_output_device("Line Out (Realtek)")
+
+    assert app_settings.audio_output_device() == "SPDIF Out (Realtek)"
+    assert app_settings.tape_audio_output_device() == "Line Out (Realtek)"
+
+
+def test_recording_gain_defaults_to_minus_5_db():
+    assert app_settings.recording_gain_db() == -5.0
+    assert app_settings.recording_gain_db() == app_settings.DEFAULT_RECORDING_GAIN_DB
+
+
+def test_recording_gain_round_trips():
+    app_settings.set_recording_gain_db(-3.5)
+
+    assert app_settings.recording_gain_db() == -3.5
+
+
 def test_telegram_bot_username_and_phone_are_empty_by_default():
     assert app_settings.telegram_bot_username() == ""
     assert app_settings.telegram_phone() == ""
@@ -129,16 +166,13 @@ def test_telegram_settings_round_trip():
     assert app_settings.telegram_phone() == "+1 555 0100"
 
 
-def test_the_download_folder_falls_back_to_a_temp_subfolder():
-    app_settings.set_telegram_download_folder("")
-    assert app_settings.telegram_download_folder() == app_settings.default_telegram_download_folder()
-    assert "MDTools Telegram Downloads" in app_settings.telegram_download_folder()
+def test_last_regenerate_font_family_is_none_before_anything_is_chosen():
+    assert app_settings.last_regenerate_font_family() is None
 
 
-def test_the_download_folder_setting_round_trips(tmp_path):
-    folder = str(tmp_path / "downloads")
-    app_settings.set_telegram_download_folder(folder)
-    assert app_settings.telegram_download_folder() == folder
+def test_last_regenerate_font_family_round_trips():
+    app_settings.set_last_regenerate_font_family("Courier New")
+    assert app_settings.last_regenerate_font_family() == "Courier New"
 
 
 def test_the_session_path_is_derived_not_stored_and_lives_beside_settings_ini():

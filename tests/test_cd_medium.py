@@ -151,26 +151,31 @@ def test_the_unprompted_fallback_project_is_still_a_minidisc_one(qt_app):
     assert win.project.pages[PAGE_DISC].template.medium == MEDIUM_MD
 
 
-# -- Templates > Change Template for This Page... ------------------------
+# -- the toolbar's Template dropdown --------------------------------------
 
 
-def test_changing_a_pages_template_offers_only_this_projects_medium(qt_app, monkeypatch):
-    from PySide6.QtWidgets import QInputDialog
+def test_changing_a_pages_template_offers_only_this_projects_medium(qt_app):
+    """Exercised through the toolbar's Template dropdown rather than the
+    retired Templates > "Change Template for This Page..." menu action --
+    same underlying filtering (_template_choices_for_current_page()),
+    reached a different way now.
 
+    A real CD disc template is applied first (matching how NewDesignDialog
+    actually builds a CD project) so the page's own current template is
+    itself one of the offered choices -- just poking `.medium` alone would
+    leave the disc page on its original MiniDisc template, which
+    _refresh_template_combo() then has to show as an *extra* entry beyond
+    the medium-filtered list (see the "still shows as the current choice"
+    test in test_page_template_dropdown.py) rather than the single-CD-
+    template list this test is actually about."""
     win = MainWindow(show_startup_dialog=False)
     win.project.medium = MEDIUM_CD
+    cd_disc_template = next(t for t in registry.load_templates()["disc"] if t.medium == MEDIUM_CD)
+    win.apply_template(PAGE_DISC, cd_disc_template)
 
-    offered: list[list[str]] = []
+    offered = [win.template_combo.itemData(i) for i in range(win.template_combo.count())]
 
-    def fake_get_item(parent, title, label, names, current, editable):
-        offered.append(list(names))
-        return "", False  # cancel: this test is about what was on offer
-
-    monkeypatch.setattr(QInputDialog, "getItem", fake_get_item)
-    win._change_page_template()
-
-    assert offered, "the picker was never shown"
-    assert offered[0] == ["CD Disc Label (Standard Hub)"]
+    assert offered == ["CD Disc Label (Standard Hub)"]
 
 
 def test_automatic_layout_refuses_a_cd_project_instead_of_rebuilding_it_as_a_minidisc(qt_app, monkeypatch):

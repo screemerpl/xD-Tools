@@ -9,33 +9,33 @@ J-card, a CD's ring label and case inserts, or a cassette's inlay card and a
 sticker for each side -- exporting standards-compliant SVG (cut lines) and
 PNG (print artwork) for use with Cricut Design Space and a regular printer.
 
-**Record and title** -- with an MDRem infrared adapter, record an album
-straight from foobar2000 with a track mark at every song, write the disc and
-track titles onto the MiniDisc itself, lay out both labels from the album's
-own artwork, and use the software remote to drive the deck.
+**Record and title** -- with an MDRem infrared adapter, record an album from
+a CD or a folder of files, with a track mark at every song, write the disc
+and track titles onto the MiniDisc itself, lay out both labels from the
+album's own artwork, and use the software remote to drive the deck. xD-Tools
+decodes and plays the audio itself (no external player involved).
 
 **Record from a CD** -- pick an optical drive, and xD-Tools extracts the disc
-to FLAC with the bundled cdparanoia and flac, identifies it on MusicBrainz
-from its table of contents, loads the tracks into foobar2000 in disc order,
-and hands over to the same recording flow.
+to FLAC with the bundled cdparanoia, identifies it on MusicBrainz from its
+table of contents, and hands the ripped files over to the same recording
+flow, in disc order.
 
 **Record from a folder** -- point xD-Tools at an album you already have on
-disk, in any format foobar2000 plays, and it loads those files into the
-playlist in filename order and records them the same way.
+disk and it reads those files' own tags directly, in filename order, and
+records them the same way.
 
-**Burn an audio CD** -- point it at a folder or at foobar2000's playlist and
-it writes a Red Book CD-R with the bundled cdrecord, disc-at-once, with
-CD-Text titles. Anything that is not already 44.1 kHz / 16-bit stereo (a
-hi-res download, say) is resampled by the bundled SoX on the way, and the
-plan says so per track before the disc is committed -- a CD-R cannot be
-edited afterwards.
+**Burn an audio CD** -- point it at a folder of files and it writes a Red
+Book CD-R with the bundled cdrecord, disc-at-once, with CD-Text titles.
+Anything that is not already 44.1 kHz / 16-bit stereo (a hi-res download,
+say) is resampled by xD-Tools' own audio engine on the way, and the plan
+says so per track before the disc is committed -- a CD-R cannot be edited
+afterwards.
 
 **Record a cassette** -- pick the tape you have (C46 to C100) and xD-Tools
 works out where the album is turned over, balancing the two sides rather
 than filling the first. It records ten seconds of silence past the leader,
-plays exactly that side's tracks -- telling foobar2000 to stop at the break
-rather than catching it afterwards -- and then says, in as many words, to
-stop the deck and turn the cassette over. The deck itself stays yours to
+plays exactly that side's tracks, and then says, in as many words, to stop
+the deck and turn the cassette over. The deck itself stays yours to
 operate: xD-Tools presses nothing.
 
 **Mixtapes too** -- a disc or playlist whose tracks are by different artists
@@ -90,7 +90,8 @@ src/mdtools/
   app_window.py           main window: page switcher, menus, docks, wiring
   project.py              Project / ProjectMetadata / Track dataclasses
   mdrem.py                MDRem infrared adapter: serial protocol, upload plan
-  foobar.py               foobar2000 over its Beefweb REST API, plus its command line
+  audio_engine.py         FLAC decode/encode, resampling, dithering, playback (soundfile/soxr/sounddevice)
+  tracks.py               track list + metadata from files' own tags (no external player)
   cdrip.py                audio CD: drives, table of contents, extraction to FLAC
   musicbrainz.py          identifying a CD from its table of contents
   audio_folder.py         which files in a folder are the album, and in what order
@@ -111,9 +112,9 @@ src/mdtools/
     layers_panel.py         list + select + reorder + delete items
     new_design_dialog.py     disc+cover template pickers for File > New
     metadata_dialog.py       album/artist/year/track-list editor
-    record_dialog.py         record from foobar2000 onto the deck, then title it
-    cd_rip_dialog.py         rip a CD into foobar2000's playlist, then record it
-    folder_record_dialog.py  load a folder of audio files into that playlist instead
+    record_dialog.py         record onto the deck (own playback engine), then title it
+    cd_rip_dialog.py         rip a CD to FLAC, then hand the files to record_dialog
+    folder_record_dialog.py  read a folder of audio files' own tags instead
   io/
     svg_export.py           exports just the cut/fold shapes as physically-accurate SVG
     png_export.py           exports print artwork as PNG, clipped to the template outline
@@ -254,29 +255,22 @@ Worth knowing before you use it:
 - Aim the adapter at the deck's remote sensor and leave it undisturbed for
   the whole upload.
 
-### Recording a whole album from foobar2000
+### How a recording works
 
-**Recording > Record to MiniDisc from foobar2000...** does the whole job in
-one go: it arms the deck, plays the album out of foobar2000 over S/PDIF,
-watches it to the end, then writes the titles.
+Both **Record CD to MiniDisc...** and **Record Folder to MiniDisc...** end
+in the same recording window, once the files are ready (ripped, or read
+off disk -- see the two sections below). xD-Tools decodes and plays those
+files itself, with no external player involved:
 
-You need foobar2000 running with the **Beefweb Remote Control**
-(`foo_beefweb`) component enabled -- that is how xD-Tools reads the playlist
-and knows which track is playing. Its address is configurable in
-**Window > Settings...** if you moved it off the default port.
-
-Load the album in foobar2000, connect its S/PDIF output to the deck, then:
-
-1. xD-Tools shows the playlist, its total time, and warns if it won't fit on
-   an 80-minute disc in SP mode.
-2. It sets foobar to play straight through once (no shuffle, no repeat) and
-   tells the deck to start recording.
+1. xD-Tools shows the track list, its total time, and warns if it won't fit
+   on an 80-minute disc in SP mode.
+2. It tells the deck to start recording.
 3. **It asks you to confirm the deck really is in record-pause** -- there is
    no way for it to check, and getting this wrong wastes the whole album.
 4. Recording runs; you can follow which track is going down and how much is
-   left. Stopping stops both foobar and the deck.
-5. When the album ends it offers to write the titles, taken from the
-   playlist itself rather than from an online lookup -- that is exactly what
+   left. Stopping stops both playback and the deck.
+5. When the album ends it offers to write the titles, taken from the track
+   list itself rather than from an online lookup -- that is exactly what
    went onto the disc, in that order.
 6. The album, artist, year and track list become the project's metadata,
    its cover art is looked up, and **the disc label lays itself out**: the
@@ -291,11 +285,13 @@ Two caveats:
   on the deck.** Left to itself the deck starts a new track when the sound
   drops to silence and comes back, which silently merges any two songs that
   run into each other. xD-Tools instead sends a track mark at the exact
-  moment foobar changes track. Running both at once is what causes trouble:
-  each marks a slightly different spot and you get a sliver of a track in
-  between.
+  sample playback crosses into the next track. Running both at once is what
+  causes trouble: each marks a slightly different spot and you get a sliver
+  of a track in between.
 - **Set the recording mode (SP/LP2) on the deck yourself.** xD-Tools has no
   reliable way to read or change it.
+- **Which sound card output plays the audio, and how loud**, are both set
+  in **Window > Settings...** ("Audio output device" and "Recording gain").
 
 ### An album across several discs
 
@@ -306,11 +302,11 @@ asking -- its titles, then eject, then a prompt for the next blank. Each disc
 is titled `Album [1/2]`, `Album [2/2]`, and its tracks are numbered from one,
 which is how the deck numbers them anyway.
 
-Where the album is cut comes from the files when they say so: the playlist is
-put into disc-then-track order as the window opens (a two-disc set dropped
-into foobar2000 as one folder arrives interleaved, because both discs number
-their tracks from one), foobar2000's own playlist is reordered to match, and
-the splits are placed where the disc numbers say. Otherwise the album is
+Where the album is cut comes from the files when they say so: the track
+list is put into disc-then-track order as the window opens (a two-disc set
+dropped into one folder arrives interleaved, because both discs number
+their tracks from one), and the splits are placed where the disc numbers
+say. Otherwise the album is
 divided as evenly as its running order allows, into the fewest discs that
 fit. **Move Up/Down**, **Start Disc Here** and **Split Automatically** adjust
 any of it by hand.
@@ -324,36 +320,31 @@ from.
 ### Recording an album from a folder of files
 
 **Recording > Record Folder to MiniDisc...** records an album that is already
-on disk. Browse to the folder, and xD-Tools loads those files into foobar2000
-and hands over to the recording above -- the same arming, track marks and
-titling.
+on disk. Browse to the folder, and xD-Tools reads those files' own tags
+directly and hands over to the recording above -- the same arming, track
+marks and titling.
 
-- **Which files**: anything foobar2000 plays (FLAC, MP3, M4A, OGG, Opus,
-  WAV, ...). Artwork, cue sheets and logs are ignored.
+- **Which files**: FLAC, MP3, M4A, OGG, Opus, WAV, and the other common
+  lossless/lossy formats. Artwork, cue sheets and logs are ignored.
 - **What order**: the filenames, compared so `10` follows `9` rather than
   `1`. A folder that holds tracks *is* the album and its subfolders are left
   alone; only a folder with no audio directly in it is looked inside, which
   is what puts a two-disc album kept as `CD1`/`CD2` in disc order.
-- **Where the titles come from**: the files' own tags, read by foobar2000
-  rather than by xD-Tools -- it is the better tag reader of the two and has
-  to read them anyway to play them. A file with no title tag is recorded
-  under its filename.
+- **Where the titles come from**: the files' own tags, read directly with
+  `mutagen`. A file with no title tag is recorded under its filename.
 - **The album and artist** start out guessed from the folder's name
   (`Artist - Album (Year)`), are replaced by the tags as soon as the tracks
   load, and are replaced again by anything you type over them. That is the
   only way a correction reaches the disc: nothing here writes to your files.
 
-Loading a folder **empties foobar2000's current playlist**, exactly as
-recording a CD does.
+### Filling in metadata from a folder
 
-### Filling in metadata from foobar2000
-
-You don't have to be recording to use foobar2000 as a metadata source.
-**Metadata... > Load from foobar2000** fills in the album, artist,
-year and the whole track list from whatever is in foobar's current playlist,
-then looks up the cover art for it. Handy when you ripped a CD and just want
-a label for it -- the tags on the actual files beat a search, and the track
-order is guaranteed to be the one you have.
+You don't have to be recording to use a folder as a metadata source.
+**Metadata... > Import from Folder...** fills in the album, artist,
+year and the whole track list from a folder's own tags, then looks up the
+cover art for it. Handy when you ripped a CD and just want a label for it --
+the tags on the actual files beat a search, and the track order is
+guaranteed to be the one you have.
 
 **If the cover that comes back is the wrong one, click it.** The preview in
 the Metadata dialog is a button: it opens a file picker so you can point at
@@ -389,13 +380,22 @@ restyle or delete them like anything else.
 
 ### Changing a template on an existing project
 
-**Templates > Change Template for This Page...** switches the page you're on
-to a different template -- previously only possible when creating a project.
+The **Template** dropdown on the toolbar, next to the page selector, lists
+every template available for the page you're on -- previously only possible
+when creating a project. Picking one of your own (built with **Save as
+Template...** or added in the Template Manager) switches the page onto it
+right away; picking a built-in one asks first, offering **Empty Template** or,
+where the page's automatic layout actually has a generator for that exact
+template, **Generated from Metadata**.
 
-**It clears the page**: every layer on it is removed and the undo history is
-reset, so it asks for confirmation first. The other page and the project's
-metadata are left alone. A disc page then starts again the way a new one
-does, with the "▲ INSERT THIS END" triangle and label ready to reposition.
+**Either way it clears the page**: every layer on it is removed and the undo
+history is reset, so a built-in choice asks for confirmation first. The other
+page and the project's metadata are left alone. A disc page started empty
+then begins again the way a new one does, with the "▲ INSERT THIS END"
+triangle and label ready to reposition.
+
+Adding or removing an optional page (a CD project's case back) is the **+**/
+**-** pair right beside the page selector.
 
 ## Setup
 

@@ -44,7 +44,7 @@ def _menu_titles(window: MainWindow) -> list[str]:
 
 def _entries(window: MainWindow) -> list[str]:
     """Every action text in the Recording menu, separators dropped."""
-    menu = window.record_action.parent()
+    menu = window.record_cd_action.parent()
     return [action.text() for action in menu.actions() if not action.isSeparator()]
 
 
@@ -57,24 +57,32 @@ def test_the_menu_is_called_recording(qt_app):
     assert "&Project" not in titles
 
 
-def test_it_holds_the_three_sources_a_recording_can_come_from(qt_app):
-    """A CD, a folder of files, and whatever foobar2000 already has open.
-    All three end in the same recording."""
+def test_it_holds_the_two_sources_a_recording_can_come_from(qt_app):
+    """A CD, and a folder of files. Both end in the same recording."""
     entries = _entries(_window())
     assert "Record CD to MiniDisc..." in entries
     assert "Record Folder to MiniDisc..." in entries
-    assert "Record to MiniDisc from foobar2000..." in entries
 
 
 def test_the_metadata_editor_is_no_longer_in_it(qt_app):
     assert not any("Metadata" in entry for entry in _entries(_window()))
 
 
-def test_erasing_stays_here_rather_than_going_homeless(qt_app):
-    """Not recording, strictly -- but it is what you do to a disc you are
-    about to record over, through the same deck and the same adapter, and a
-    menu of its own for one entry would be worse."""
-    assert "Erase MiniDisc..." in _entries(_window())
+def test_erasing_moved_to_a_button_on_the_minidisc_record_dialog(qt_app):
+    """No longer a standalone menu entry reachable independent of any open
+    project -- see test_record_dialog.py's own erase_btn tests. Erasing the
+    wrong disc is most likely to come up right before recording onto it."""
+    assert "Erase MiniDisc..." not in _entries(_window())
+
+
+def test_the_telegram_download_entries_moved_in_from_experimental(qt_app):
+    """Neither needs a live chat session -- both just act on whatever has
+    already accumulated in the one shared audio folder, which is why they
+    are named for what they act on ("Audio Folder"), not for Telegram in
+    particular."""
+    entries = _entries(_window())
+    assert "Sort Audio Folder into Albums..." in entries
+    assert any(entry.startswith("Record from Audio Folder") for entry in entries)
 
 
 # --- the editor's new home --------------------------------------------
@@ -196,6 +204,7 @@ def test_the_folders_metadata_is_carried_into_the_recording(qt_app, isolated_set
 
     class _Accepted:
         result_metadata = captured
+        result_paths = ["01.flac"]
 
         def __init__(self, *args, **kwargs):
             pass
@@ -208,7 +217,7 @@ def test_the_folders_metadata_is_carried_into_the_recording(qt_app, isolated_set
     class _FakeRecord:
         result_metadata = None
 
-        def __init__(self, port, url, parent=None, metadata=None):
+        def __init__(self, port, paths, parent=None, metadata=None):
             handed.append(metadata)
 
         def exec(self):
@@ -234,6 +243,7 @@ def test_a_given_initial_folder_is_preseeded_via_set_folder(qt_app, isolated_set
 
     class _FakeFolderDialog:
         result_metadata = None
+        result_paths = ["01.flac"]
 
         def __init__(self, *args, **kwargs):
             pass
@@ -247,7 +257,7 @@ def test_a_given_initial_folder_is_preseeded_via_set_folder(qt_app, isolated_set
     class _FakeRecord:
         result_metadata = None
 
-        def __init__(self, port, url, parent=None, metadata=None):
+        def __init__(self, port, paths, parent=None, metadata=None):
             pass
 
         def exec(self):

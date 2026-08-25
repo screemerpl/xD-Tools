@@ -73,6 +73,7 @@ class TemplateManagerDialog(QDialog):
             ("disc", self.tr("Disc label")),
             ("cover", self.tr("Cover or insert")),
             ("label", self.tr("Shell label")),
+            ("case_back", self.tr("Case back")),
         ):
             add_menu.addAction(label, lambda checked=False, k=kind: self._add_template(k))
         self.add_btn.setMenu(add_menu)
@@ -125,6 +126,7 @@ class TemplateManagerDialog(QDialog):
             ("disc", self.tr("Disc: {name}")),
             ("cover", self.tr("Cover: {name}")),
             ("label", self.tr("Label: {name}")),
+            ("case_back", self.tr("Case Back: {name}")),
         ):
             for template in self.templates[kind]:
                 if wanted is not None and getattr(template, "medium", MEDIUM_MD) != wanted:
@@ -156,6 +158,10 @@ class TemplateManagerDialog(QDialog):
             # registry.KINDS for why that distinction is worth having.
             template = CoverTemplate(
                 name=self.tr("New Label"), width_mm=90.0, height_mm=46.0, medium=medium, kind="label"
+            )
+        elif kind == "case_back":
+            template = CoverTemplate(
+                name=self.tr("New Case Back"), width_mm=151.0, height_mm=117.5, medium=medium, kind="case_back"
             )
         else:
             template = CoverTemplate(name=self.tr("New Cover"), width_mm=100.0, height_mm=60.0, medium=medium)
@@ -418,6 +424,7 @@ class TemplateManagerDialog(QDialog):
         label = {
             "disc": self.tr("Disc: {name}"),
             "label": self.tr("Label: {name}"),
+            "case_back": self.tr("Case Back: {name}"),
         }.get(kind, self.tr("Cover: {name}"))
         self.list_widget.item(row).setText(label.format(name=name) + suffix)
 

@@ -1,4 +1,4 @@
-from mdtools import app_settings
+from mdtools import app_settings, audio_engine
 from mdtools.app_window import MainWindow
 from mdtools.panels.settings_dialog import SettingsDialog
 
@@ -104,11 +104,9 @@ def test_window_menu_settings_action_opens_the_dialog(qt_app, monkeypatch):
 
 def test_cd_rows_seed_from_settings_and_save_on_ok(qt_app, tmp_path):
     app_settings.set_cd_rip_folder(str(tmp_path / "rips"))
-    app_settings.set_foobar_exe(str(tmp_path / "foobar2000.exe"))
 
     dialog = SettingsDialog()
     assert dialog.cd_rip_folder_edit.text() == str(tmp_path / "rips")
-    assert dialog.foobar_exe_edit.text() == str(tmp_path / "foobar2000.exe")
 
     dialog.cd_rip_folder_edit.setText(str(tmp_path / "elsewhere"))
     dialog._on_accept()
@@ -116,10 +114,10 @@ def test_cd_rows_seed_from_settings_and_save_on_ok(qt_app, tmp_path):
     assert app_settings.cd_rip_folder() == str(tmp_path / "elsewhere")
 
 
-def test_the_rip_folder_falls_back_to_a_temp_subfolder(qt_app):
+def test_the_rip_folder_falls_back_to_the_shared_audio_folder(qt_app):
     app_settings.set_cd_rip_folder("")
     assert app_settings.cd_rip_folder() == app_settings.default_cd_rip_folder()
-    assert "MDTools CD Rip" in app_settings.cd_rip_folder()
+    assert "Audio" in app_settings.cd_rip_folder()
 
 
 def test_restore_defaults_puts_the_rip_folder_back(qt_app, tmp_path):
@@ -129,17 +127,6 @@ def test_restore_defaults_puts_the_rip_folder_back(qt_app, tmp_path):
     dialog._restore_defaults()
 
     assert dialog.cd_rip_folder_edit.text() == app_settings.default_cd_rip_folder()
-
-
-def test_the_foobar_program_field_is_prefilled_by_detection_when_unset(qt_app, monkeypatch):
-    """A first run should not have to be told where foobar2000 is when the
-    installer already registered it."""
-    from mdtools.panels import settings_dialog as module
-
-    app_settings.set_foobar_exe("")
-    monkeypatch.setattr(module.foobar, "find_foobar_exe", lambda: r"C:\fb2k\foobar2000.exe")
-
-    assert SettingsDialog().foobar_exe_edit.text() == r"C:\fb2k\foobar2000.exe"
 
 
 # --- the CD rip folder ------------------------------------------------
@@ -176,6 +163,173 @@ def test_a_folder_that_cannot_be_created_warns_but_keeps_the_setting(qt_app, tmp
 
     assert warned
     assert app_settings.cd_rip_folder() == str(blocked / "underneath")
+
+
+# --- audio output device -----------------------------------------------
+
+
+def _fake_devices(monkeypatch, *names):
+    devices = [
+        audio_engine.OutputDevice(index=i, name=name, max_output_channels=2, default_samplerate=44100.0)
+        for i, name in enumerate(names)
+    ]
+    monkeypatch.setattr(audio_engine, "list_output_devices", lambda: devices)
+
+
+def test_the_device_combo_always_offers_system_default_first(qt_app, monkeypatch):
+    _fake_devices(monkeypatch, "Speakers (Realtek)")
+
+    dialog = SettingsDialog()
+
+    assert dialog.audio_device_combo.itemText(0) == "System default"
+    assert dialog.audio_device_combo.itemData(0) == ""
+
+
+def test_choosing_a_device_and_accepting_saves_its_name(qt_app, monkeypatch):
+    _fake_devices(monkeypatch, "Speakers (Realtek)", "Headset Earphone (Jabra)")
+    app_settings.set_audio_output_device("")
+
+    dialog = SettingsDialog()
+    index = dialog.audio_device_combo.findData("Headset Earphone (Jabra)")
+    dialog.audio_device_combo.setCurrentIndex(index)
+    dialog._on_accept()
+
+    assert app_settings.audio_output_device() == "Headset Earphone (Jabra)"
+
+
+def test_a_saved_device_that_is_no_longer_plugged_in_still_shows_up(qt_app, monkeypatch):
+    """Same rule the MDRem port combo already follows: a saved choice must
+    survive opening this dialog even when its device isn't there right
+    now -- silently falling back to whatever else is plugged in would be
+    worse than showing it as disconnected."""
+    _fake_devices(monkeypatch, "Speakers (Realtek)")
+    app_settings.set_audio_output_device("Some USB DAC")
+
+    dialog = SettingsDialog()
+
+    assert dialog._selected_audio_device(dialog.audio_device_combo) == "Some USB DAC"
+    assert "not connected" in dialog.audio_device_combo.currentText()
+
+
+def test_restore_defaults_resets_the_device_to_system_default(qt_app, monkeypatch):
+    _fake_devices(monkeypatch, "Speakers (Realtek)")
+    app_settings.set_audio_output_device("Speakers (Realtek)")
+    dialog = SettingsDialog()
+
+    dialog._restore_defaults()
+
+    assert dialog._selected_audio_device(dialog.audio_device_combo) == ""
+
+
+def test_refresh_button_re_lists_devices_without_losing_the_saved_choice(qt_app, monkeypatch):
+    _fake_devices(monkeypatch, "Speakers (Realtek)")
+    app_settings.set_audio_output_device("Speakers (Realtek)")
+    dialog = SettingsDialog()
+
+    _fake_devices(monkeypatch, "Speakers (Realtek)", "New USB Interface")
+    dialog._populate_audio_devices(dialog.audio_device_combo, dialog._selected_audio_device(dialog.audio_device_combo))
+
+    assert dialog.audio_device_combo.findData("New USB Interface") >= 0
+    assert dialog._selected_audio_device(dialog.audio_device_combo) == "Speakers (Realtek)"
+
+
+# --- the cassette gets its own, independent device setting ----------------
+
+
+def test_the_cassette_device_combo_is_independent_of_the_minidisc_one(qt_app, monkeypatch):
+    """Explicit request: a MiniDisc deck typically wants a digital
+    (S/PDIF) output and a cassette deck an analogue line output, which are
+    routinely two different physical interfaces."""
+    _fake_devices(monkeypatch, "SPDIF Out (Realtek)", "Line Out (Realtek)")
+    app_settings.set_audio_output_device("SPDIF Out (Realtek)")
+    app_settings.set_tape_audio_output_device("Line Out (Realtek)")
+
+    dialog = SettingsDialog()
+
+    assert dialog._selected_audio_device(dialog.audio_device_combo) == "SPDIF Out (Realtek)"
+    assert dialog._selected_audio_device(dialog.tape_audio_device_combo) == "Line Out (Realtek)"
+
+
+def test_accepting_saves_both_devices_separately(qt_app, monkeypatch):
+    _fake_devices(monkeypatch, "SPDIF Out (Realtek)", "Line Out (Realtek)")
+    dialog = SettingsDialog()
+    dialog.audio_device_combo.setCurrentIndex(dialog.audio_device_combo.findData("SPDIF Out (Realtek)"))
+    dialog.tape_audio_device_combo.setCurrentIndex(
+        dialog.tape_audio_device_combo.findData("Line Out (Realtek)")
+    )
+
+    dialog._on_accept()
+
+    assert app_settings.audio_output_device() == "SPDIF Out (Realtek)"
+    assert app_settings.tape_audio_output_device() == "Line Out (Realtek)"
+
+
+def test_restore_defaults_resets_both_devices(qt_app, monkeypatch):
+    _fake_devices(monkeypatch, "SPDIF Out (Realtek)", "Line Out (Realtek)")
+    app_settings.set_audio_output_device("SPDIF Out (Realtek)")
+    app_settings.set_tape_audio_output_device("Line Out (Realtek)")
+    dialog = SettingsDialog()
+
+    dialog._restore_defaults()
+
+    assert dialog._selected_audio_device(dialog.audio_device_combo) == ""
+    assert dialog._selected_audio_device(dialog.tape_audio_device_combo) == ""
+
+
+def test_a_missing_sounddevice_backend_leaves_only_system_default(qt_app, monkeypatch):
+    """audio_engine.list_output_devices() raises when sounddevice/PortAudio
+    isn't available at all -- this dialog must degrade to just the default
+    option rather than failing to open."""
+    monkeypatch.setattr(
+        audio_engine,
+        "list_output_devices",
+        lambda: (_ for _ in ()).throw(audio_engine.AudioEngineError("no backend")),
+    )
+
+    dialog = SettingsDialog()
+
+    assert dialog.audio_device_combo.count() == 1
+    assert dialog.audio_device_combo.itemText(0) == "System default"
+
+
+# --- recording gain -------------------------------------------------------
+
+
+def test_the_gain_spinner_seeds_from_the_saved_setting(qt_app, monkeypatch):
+    _fake_devices(monkeypatch)
+    app_settings.set_recording_gain_db(-8.0)
+
+    dialog = SettingsDialog()
+
+    assert dialog.recording_gain_spin.value() == -8.0
+
+
+def test_the_gain_defaults_to_minus_5_db_for_a_fresh_install(qt_app, monkeypatch):
+    _fake_devices(monkeypatch)
+
+    dialog = SettingsDialog()
+
+    assert dialog.recording_gain_spin.value() == -5.0
+
+
+def test_changing_the_gain_and_accepting_saves_it(qt_app, monkeypatch):
+    _fake_devices(monkeypatch)
+    dialog = SettingsDialog()
+    dialog.recording_gain_spin.setValue(-2.0)
+
+    dialog._on_accept()
+
+    assert app_settings.recording_gain_db() == -2.0
+
+
+def test_restore_defaults_resets_the_gain_too(qt_app, monkeypatch):
+    _fake_devices(monkeypatch)
+    app_settings.set_recording_gain_db(-12.0)
+    dialog = SettingsDialog()
+
+    dialog._restore_defaults()
+
+    assert dialog.recording_gain_spin.value() == app_settings.DEFAULT_RECORDING_GAIN_DB
 
 
 def test_browsing_creates_the_folder_first_so_the_picker_opens_in_it(qt_app, tmp_path, monkeypatch):

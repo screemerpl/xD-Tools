@@ -13,6 +13,7 @@ import pytest
 from PIL import Image
 
 from mdtools.app_window import TAPE_JCARD_TEMPLATE, TAPE_LABEL_TEMPLATE, MainWindow
+from mdtools.io.project_io import load_project, save_project
 from mdtools.panels.new_design_dialog import NewDesignDialog
 from mdtools.project import (
     MEDIUM_MD,
@@ -126,6 +127,25 @@ def test_the_suggested_filename_says_which_machine_it_is_for(qt_app):
     assert window._suggested_project_name().endswith("-MC")
 
 
+# -- saving and loading it ------------------------------------------------
+
+
+def test_a_saved_cassette_project_loads_back_without_a_disc_page(qt_app, tmp_path):
+    """Reported directly: a saved cassette project refused to reopen,
+    complaining about a missing 'disc' page -- load_project() used to
+    require one unconditionally, but a cassette project never has one (see
+    test_a_cassette_has_a_j_card_and_a_label_per_side_and_no_disc above)."""
+    window = _tape_window()
+    window.project.metadata = _metadata()
+    path = tmp_path / "cassette.mdproj"
+
+    save_project(window.project, path)
+    reloaded = load_project(path)
+
+    assert reloaded.medium == MEDIUM_TAPE
+    assert set(reloaded.pages) == {PAGE_COVER, PAGE_SIDE_A, PAGE_SIDE_B}
+
+
 # -- laying it out -------------------------------------------------------
 
 
@@ -171,21 +191,20 @@ def test_the_pages_a_cassette_lays_out_include_no_disc(qt_app):
 
 
 def test_every_recording_source_is_offered_for_a_cassette_without_an_adapter(qt_app, monkeypatch):
-    """A cassette deck is driven by hand, so none of the three sources
-    needs the infrared adapter -- and a CD rip is a CD rip whichever
-    machine it ends up on."""
+    """A cassette deck is driven by hand, so neither source needs the
+    infrared adapter -- and a CD rip is a CD rip whichever machine it ends
+    up on."""
     from mdtools import app_settings
 
     monkeypatch.setattr(app_settings, "mdrem_enabled", lambda: False)
     window = _tape_window()
     window._sync_mdrem_actions()
 
-    for action in (window.record_cd_action, window.record_folder_action, window.record_action):
+    for action in (window.record_cd_action, window.record_folder_action):
         assert action.isVisible(), action.text()
         assert "Cassette" in action.text()
     assert window.telegram_record_action.isVisible()
     # the deck's own keys still need the adapter, and a cassette has none
-    assert not window.erase_disc_action.isVisible()
     assert not window.remote_action.isVisible()
 
 
@@ -197,7 +216,7 @@ def test_the_same_entries_still_say_minidisc_on_a_minidisc_project(qt_app, monke
     window._sync_mdrem_actions()
 
     assert "MiniDisc" in window.record_cd_action.text()
-    assert "Cassette" not in window.record_action.text()
+    assert "Cassette" not in window.record_folder_action.text()
 
 
 def test_a_cassette_project_records_through_the_cassette_dialog(qt_app, monkeypatch):
@@ -223,7 +242,7 @@ def test_a_cassette_project_records_through_the_cassette_dialog(qt_app, monkeypa
     )
     window = _tape_window()
 
-    window._run_record_dialog("", metadata=_metadata())
+    window._run_record_dialog("", ["a.flac"], metadata=_metadata())
 
     assert opened.get("ran") is True
     assert opened["kwargs"]["metadata"] is not None, "a folder's own corrections have to reach the labels"
