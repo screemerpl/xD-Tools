@@ -532,6 +532,10 @@ class AudioPlayer:
         self._position_in_current = 0
         self._on_track_boundary: Callable[[int], None] | None = None
         self._on_finished: Callable[[], None] | None = None
+        # Guards on_finished() firing more than once per play() -- see
+        # _callback()'s own comment for why this is load-bearing, not
+        # just tidy.
+        self._finished_called = False
 
     @property
     def samplerate(self) -> int:
@@ -571,6 +575,7 @@ class AudioPlayer:
         self._position_in_current = 0
         self._on_track_boundary = on_track_boundary
         self._on_finished = on_finished
+        self._finished_called = False
         self._stream = sd.OutputStream(
             samplerate=self._samplerate,
             channels=self._channels,
@@ -604,7 +609,19 @@ class AudioPlayer:
         while written < frames:
             if self._queue_index >= len(self._queue):
                 outdata[written:] = 0
-                if self._on_finished is not None:
+                # PortAudio keeps calling this callback continuously for as
+                # long as the stream stays open -- nothing here stops the
+                # stream once the queue empties, so without this guard,
+                # *every subsequent callback* (every ~10-20ms, indefinitely)
+                # would call on_finished() again. Real report: a MiniDisc
+                # recording's "Upload Tracklist" window reopening
+                # repeatedly in a loop -- record_dialog.py's
+                # _on_disc_finished() (queued, cross-thread, via
+                # PlaybackBridge) has no idea any of this is happening and
+                # simply reacts every time it's told the disc finished,
+                # each time scheduling another titling dialog.
+                if self._on_finished is not None and not self._finished_called:
+                    self._finished_called = True
                     self._on_finished()
                 return
             current = self._queue[self._queue_index]

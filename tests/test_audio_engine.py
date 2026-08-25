@@ -480,6 +480,50 @@ def test_play_streams_one_buffer_then_reports_finished(fake_sd):
     assert finished == [True]
 
 
+def test_on_finished_fires_only_once_even_though_the_callback_keeps_running(fake_sd):
+    """Real report: a MiniDisc recording's "Upload Tracklist" window kept
+    reopening in a loop after the album finished. Root cause: PortAudio
+    keeps calling this callback continuously for as long as the stream
+    stays open, and nothing here ever stops the stream once the queue
+    empties -- so a caller that reacts to on_finished (record_dialog.py's
+    _on_disc_finished, via PlaybackBridge) used to get told the disc
+    finished once per audio callback, forever, each one independently
+    scheduling its own titling dialog."""
+    finished = []
+    player = audio_engine.AudioPlayer(device=None, samplerate=44100, channels=2)
+    track = np.full(10, 0.5, dtype=np.float32)
+
+    player.play([track], on_finished=lambda: finished.append(True))
+    stream = _FakeOutputStream.instances[-1]
+
+    _pull(stream, 10)  # exhausts the track
+    _pull(stream, 5)  # queue now empty -- finished fires once, here
+    _pull(stream, 5)  # PortAudio keeps calling; must not fire again
+    _pull(stream, 5)
+    _pull(stream, 5)
+
+    assert finished == [True]
+
+
+def test_a_second_play_call_can_report_finished_again(fake_sd):
+    """The guard is per play(), not a permanent one-shot latch -- a second
+    recording through the same AudioPlayer instance must still report its
+    own completion."""
+    finished = []
+    player = audio_engine.AudioPlayer(device=None, samplerate=44100, channels=2)
+    track = np.full(10, 0.5, dtype=np.float32)
+
+    player.play([track], on_finished=lambda: finished.append("first"))
+    _pull(_FakeOutputStream.instances[-1], 10)
+    _pull(_FakeOutputStream.instances[-1], 5)
+    assert finished == ["first"]
+
+    player.play([track], on_finished=lambda: finished.append("second"))
+    _pull(_FakeOutputStream.instances[-1], 10)
+    _pull(_FakeOutputStream.instances[-1], 5)
+    assert finished == ["first", "second"]
+
+
 def test_play_fires_track_boundary_at_the_exact_sample(fake_sd):
     boundaries = []
     player = audio_engine.AudioPlayer(device=None, samplerate=44100, channels=2)
