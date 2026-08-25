@@ -66,6 +66,7 @@ from PySide6.QtWidgets import (
 from mdtools import app_settings, audio_engine, embedded_cover, mixtape_cover, tape, tracks
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
 from mdtools.panels.playback_bridge import PlaybackBridge
+from mdtools.panels.preview_player import PreviewPlayerBar
 from mdtools.project import ProjectMetadata, Track
 
 POLL_MS = 250
@@ -150,7 +151,13 @@ class TapeRecordDialog(QDialog):
             [self.tr("Side"), self.tr("#"), self.tr("Title"), self.tr("Artist"), self.tr("Length")]
         )
         self.tree.setRootIsDecorated(False)
+        self.tree.currentItemChanged.connect(lambda *_: self._refresh_preview())
         layout.addWidget(self.tree)
+
+        self.preview_bar = PreviewPlayerBar()
+        self.preview_bar.prev_requested.connect(lambda: self._step_preview(-1))
+        self.preview_bar.next_requested.connect(lambda: self._step_preview(1))
+        layout.addWidget(self.preview_bar)
 
         self.fit_label = QLabel()
         self.fit_label.setWordWrap(True)
@@ -309,6 +316,20 @@ class TapeRecordDialog(QDialog):
             return None
         return self._plan.sides[self._side]
 
+    def _selected_row(self) -> int:
+        item = self.tree.currentItem()
+        return self.tree.indexOfTopLevelItem(item) if item is not None else -1
+
+    def _refresh_preview(self) -> None:
+        row = self._selected_row()
+        path = Path(self._items[row].path) if 0 <= row < len(self._items) and self._items[row].path else None
+        self.preview_bar.set_current(path, has_prev=row > 0, has_next=0 <= row < len(self._items) - 1)
+
+    def _step_preview(self, delta: int) -> None:
+        row = self._selected_row() + delta
+        if 0 <= row < self.tree.topLevelItemCount():
+            self.tree.setCurrentItem(self.tree.topLevelItem(row))
+
     def _side_bounds(self) -> tuple[int, int]:
         """The item indices this side covers, as [first, last]."""
         boundary = len(self._plan.sides[0].tracks) if self._plan else 0
@@ -348,6 +369,7 @@ class TapeRecordDialog(QDialog):
             self._finish()
             return
 
+        self.preview_bar.stop()
         if self._player is None:
             self._player = audio_engine.AudioPlayer(
                 device=audio_engine.resolve_output_device(app_settings.tape_audio_output_device()),
@@ -588,6 +610,7 @@ class TapeRecordDialog(QDialog):
         There is no second end to stop from here -- the deck will happily go
         on recording silence onto the rest of the side, and only the person
         in front of it can prevent that."""
+        self.preview_bar.stop()
         if self._recording:
             self._timer.stop()
             self._countdown.stop()

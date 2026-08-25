@@ -299,3 +299,45 @@ def test_stopping_mid_recording_stops_playback(qt_app, monkeypatch):
     dialog.reject()
 
     assert dialog._player.stopped
+
+
+# --- the audition preview bar (#18) -----------------------------------------
+
+
+def test_selecting_a_track_enables_the_preview_bar_with_correct_prev_next(qt_app, monkeypatch):
+    dialog = _dialog(_items(4, seconds=300), monkeypatch)
+
+    dialog.tree.setCurrentItem(dialog.tree.topLevelItem(0))
+    assert dialog.preview_bar.play_btn.isEnabled()
+    assert not dialog.preview_bar.prev_btn.isEnabled()
+    assert dialog.preview_bar.next_btn.isEnabled()
+
+    dialog.tree.setCurrentItem(dialog.tree.topLevelItem(3))
+    assert dialog.preview_bar.prev_btn.isEnabled()
+    assert not dialog.preview_bar.next_btn.isEnabled()
+
+
+def test_starting_a_side_stops_any_playing_preview(qt_app, monkeypatch):
+    monkeypatch.setattr(tape_module.audio_engine, "load_for_preview", lambda path: ([0.0] * 10, 44100))
+    dialog = _dialog(_items(4, seconds=300), monkeypatch)
+    dialog.tree.setCurrentItem(dialog.tree.topLevelItem(0))
+    dialog.preview_bar._on_play_pause_clicked()
+    preview_player_instance = dialog.preview_bar._player
+    assert preview_player_instance is not None
+
+    dialog._on_start_clicked()
+
+    assert preview_player_instance.stopped
+
+
+def test_rejecting_the_dialog_stops_any_playing_preview(qt_app, monkeypatch):
+    monkeypatch.setattr(tape_module.audio_engine, "load_for_preview", lambda path: ([0.0] * 10, 44100))
+    dialog = _dialog(_items(4, seconds=300), monkeypatch)
+    dialog.tree.setCurrentItem(dialog.tree.topLevelItem(0))
+    dialog.preview_bar._on_play_pause_clicked()
+    preview_player_instance = dialog.preview_bar._player
+    assert preview_player_instance is not None
+
+    dialog.reject()
+
+    assert preview_player_instance.stopped

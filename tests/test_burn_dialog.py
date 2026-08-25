@@ -11,10 +11,35 @@ from pathlib import Path
 import pytest
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
-from mdtools import app_settings, cdburn
+from mdtools import app_settings, audio_engine, cdburn
 from mdtools.app_window import MainWindow
 from mdtools.panels.burn_dialog import COL_ARTIST, COL_STATUS, COL_TITLE, BurnDialog, _BurnWorker
 from mdtools.project import MEDIUM_CD, MEDIUM_MD
+
+
+class _FakePreviewPlayer:
+    """Stands in for audio_engine.AudioPlayer, for the preview bar's own
+    use -- not the burn worker's, which never touches AudioPlayer at all
+    (it decodes and hands the result straight to cdrecord)."""
+
+    def __init__(self, device=None, gain_db=0.0, samplerate=44100, channels=2):
+        self.stopped = False
+        self.on_finished = None
+
+    def play(self, buffers, on_track_boundary=None, on_finished=None):
+        self.on_finished = on_finished
+
+    def pause(self):
+        pass
+
+    def resume(self):
+        pass
+
+    def seek(self, seconds):
+        pass
+
+    def stop(self):
+        self.stopped = True
 
 
 def _write_wav(path, *, seconds=10.0, rate=44100, channels=2):
@@ -177,6 +202,40 @@ def test_a_simulated_run_is_not_described_as_writing_a_disc(qt_app, tmp_path, bu
     dialog._start()
 
     assert asked and "Nothing will be written" in asked[0]
+
+
+# -- the audition preview bar (#18) ---------------------------------------
+
+
+def test_selecting_a_track_enables_the_preview_bar_with_correct_prev_next(qt_app, tmp_path, burnable):
+    dialog = BurnDialog(_sources(tmp_path, 3), album="Album", artist="Artist")
+
+    dialog.table.setCurrentCell(0, 0)
+    assert dialog.preview_bar.play_btn.isEnabled()
+    assert not dialog.preview_bar.prev_btn.isEnabled()
+    assert dialog.preview_bar.next_btn.isEnabled()
+
+    dialog.table.setCurrentCell(2, 0)
+    assert dialog.preview_bar.prev_btn.isEnabled()
+    assert not dialog.preview_bar.next_btn.isEnabled()
+
+
+def test_starting_the_burn_stops_any_playing_preview(qt_app, tmp_path, burnable, monkeypatch):
+    monkeypatch.setattr(audio_engine, "AudioPlayer", _FakePreviewPlayer)
+    monkeypatch.setattr(QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Ok)
+    dialog = BurnDialog(_sources(tmp_path, 2), album="Album", artist="Artist")
+    # _burn_current_disc() spins up the real worker/scratch-folder machinery
+    # -- out of scope here, which is only checking that preview_bar.stop()
+    # is reached once the confirmation is accepted.
+    monkeypatch.setattr(dialog, "_burn_current_disc", lambda: None)
+    dialog.table.setCurrentCell(0, 0)
+    dialog.preview_bar._on_play_pause_clicked()
+    preview_player_instance = dialog.preview_bar._player
+    assert preview_player_instance is not None
+
+    dialog._start()
+
+    assert preview_player_instance.stopped
 
 
 # -- the worker ----------------------------------------------------------
