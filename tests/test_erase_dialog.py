@@ -42,14 +42,22 @@ class _FakeClient:
         self.closed = True
 
 
-def _wire(monkeypatch, *, confirm=True, fail_on=None):
+def _wire(monkeypatch, *, confirm=True, fail_on=None, sleeps=None):
     """Fakes the adapter and the single up-front confirmation -- there is
-    nothing else modal left in this dialog to fake."""
+    nothing else modal left in this dialog to fake. Also stubs out the
+    pause between keys (real IR pacing, not something a test should wait
+    through) -- pass `sleeps` to record how many/how long instead of just
+    swallowing them."""
     client = _FakeClient("COM7", fail_on)
     monkeypatch.setattr(module.mdrem, "MDRemClient", lambda port: client)
 
     ok = QMessageBox.StandardButton.Ok if confirm else QMessageBox.StandardButton.Cancel
     monkeypatch.setattr(module.QMessageBox, "warning", staticmethod(lambda *a, **k: ok))
+
+    if sleeps is None:
+        monkeypatch.setattr(module.time, "sleep", lambda seconds: None)
+    else:
+        monkeypatch.setattr(module.time, "sleep", lambda seconds: sleeps.append(seconds))
     return client
 
 
@@ -74,6 +82,20 @@ def test_the_full_sequence_goes_out_in_order_with_nothing_asked_in_between(qt_ap
     assert client.sent == ["SEND STOP", "SEND ERASE", "SEND ENTER", "SEND ENTER", "SEND EJECT"]
     assert dialog.erased is True
     assert client.closed
+
+
+def test_a_pause_separates_every_key_but_none_precedes_the_first_one(qt_app, monkeypatch):
+    """Reported directly: sent back to back with no gap, the deck doesn't
+    reliably keep up. One pause between each of the five keys -- four gaps
+    for five keys -- and no wasted pause before Stop, which has nothing
+    before it to wait on."""
+    sleeps: list[float] = []
+    _wire(monkeypatch, sleeps=sleeps)
+    dialog = EraseDiscDialog("COM7")
+
+    dialog._erase()
+
+    assert sleeps == [module._KEY_GAP_S] * 4
 
 
 def test_a_failure_partway_stops_the_sequence_and_reports_it(qt_app, monkeypatch):

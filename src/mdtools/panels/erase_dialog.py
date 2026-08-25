@@ -33,6 +33,8 @@ a wrong code would not have done.
 
 from __future__ import annotations
 
+import time
+
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -55,6 +57,15 @@ _EJECT_KEY = "SEND EJECT"
 # docstring for why this is a fixed, blind sequence rather than an
 # interactive one.
 _ERASE_SEQUENCE = (_PREPARE_KEY, _ERASE_KEY, _CONFIRM_KEY, _CONFIRM_KEY, _EJECT_KEY)
+
+# Sent back to back with no gap, the deck doesn't reliably keep up --
+# reported directly ("erase disc sequence is beamed with IR to quick"). One
+# IR frame per key isn't the deck's own bottleneck here; it's the deck
+# actually registering and acting on one key (STOP settling into stop mode,
+# ERASE opening its confirmation menu, ...) before the next one arrives.
+# Same reasoning mdrem.py's own MIN_CHARACTER_GAP_S already applies to
+# typing a title character by character.
+_KEY_GAP_S = 0.25
 
 
 class EraseDiscDialog(QDialog):
@@ -121,7 +132,9 @@ class EraseDiscDialog(QDialog):
             return
 
         self.erase_btn.setEnabled(False)
-        for command in _ERASE_SEQUENCE:
+        for index, command in enumerate(_ERASE_SEQUENCE):
+            if index > 0:
+                time.sleep(_KEY_GAP_S)
             if not self._send(command):
                 # _send already reported why, via _fail.
                 return
