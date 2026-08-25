@@ -212,6 +212,22 @@ def test_exports_start_in_the_printing_folder(qt_app, fake_home, monkeypatch, tm
     assert seen == [str(user_paths.printing_dir())]
 
 
+def test_exports_suggest_the_same_name_save_as_would(qt_app, fake_home, monkeypatch):
+    """Same base name as Save As uses for the project itself ("Artist -
+    Album (Year) -MD"), just the export's own extension -- so the cut/print
+    set for an album is named to match its own .mdproj at a glance."""
+    saves = _capture(monkeypatch, QFileDialog, "getSaveFileName")
+    window = MainWindow(show_startup_dialog=False)
+    window.project.metadata = ProjectMetadata(album="Album", artist="Artist", year=1999, tracks=[Track("A")])
+
+    window._export_svg()
+    window._export_png()
+
+    expected = str(user_paths.printing_dir() / "Artist - Album (1999) -MD.svg")
+    expected_png = str(user_paths.printing_dir() / "Artist - Album (1999) -MD.png")
+    assert saves == [expected, expected_png]
+
+
 def test_the_album_folder_picker_starts_in_music(qt_app, fake_home, monkeypatch):
     """Record Folder's own picker. It is not reachable from MainWindow the
     way the others are -- it lives on its dialog -- so the blanket guard

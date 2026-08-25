@@ -942,7 +942,9 @@ def _capture_telegram(out: Path, code: str) -> None:
         (download_folder / track).write_bytes(b"")
     app_settings.set_experimental_features_enabled(True)
     app_settings.set_telegram_bot_username("@my_music_bot")
-    app_settings.set_telegram_download_folder(str(download_folder))
+    # Telegram downloads now land in the same folder as CD rips (merged
+    # settings) -- see app_settings.cd_rip_folder().
+    app_settings.set_cd_rip_folder(str(download_folder))
 
     save(ExperimentalSettingsDialog(), out / "experimental-settings.png")
     save(TelegramLoginDialog("0", "0"), out / "telegram-login.png")

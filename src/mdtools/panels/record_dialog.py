@@ -11,7 +11,12 @@ The sequence, and why each step is where it is:
      order, so the deck is already recording when the first note arrives
   4. play the album through xD-Tools' own AudioPlayer (audio_engine.py)
      until it reports the queue finished
-  5. stop the deck, then hand off to the normal Upload Tracklist dialog
+  5. stop the deck, then write the titles and eject unattended -- no
+     confirmation in between, the same reasoning the multi-disc flow
+     below already applies per-disc: nobody sits through a whole album,
+     so a question between the music ending and the titles going out
+     would leave the deck holding an untitled disc until somebody came
+     back (see _title_single_disc)
 
 This dialog used to drive foobar2000 over Beefweb, polling its now-playing
 index every 250ms to decide when a track changed and when the album
@@ -78,6 +83,7 @@ from PySide6.QtWidgets import (
 
 from mdtools import app_settings, audio_engine, embedded_cover, mdrem, mixtape_cover, multidisc, tracks
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
+from mdtools.panels.erase_dialog import EraseDiscDialog
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
 from mdtools.panels.playback_bridge import PlaybackBridge
 from mdtools.project import ProjectMetadata, Track
@@ -306,6 +312,9 @@ class RecordDialog(QDialog):
         layout.addWidget(self.status_label)
 
         self.buttons = QDialogButtonBox()
+        self.erase_btn = QPushButton(self.tr("Erase MiniDisc..."))
+        self.erase_btn.clicked.connect(self._erase_disc)
+        self.buttons.addButton(self.erase_btn, QDialogButtonBox.ButtonRole.ActionRole)
         self.start_btn = QPushButton(self.tr("Start Recording"))
         self.start_btn.clicked.connect(self._start)
         self.buttons.addButton(self.start_btn, QDialogButtonBox.ButtonRole.AcceptRole)
@@ -642,6 +651,7 @@ class RecordDialog(QDialog):
 
         self._disc = 0
         self.start_btn.setEnabled(False)
+        self.erase_btn.setEnabled(False)
         self.mark_check.setEnabled(False)
         self._set_fields_editable(False)
         self.close_btn.setText(self.tr("Stop"))
@@ -841,8 +851,13 @@ class RecordDialog(QDialog):
         if not self._multi():
             self.close_btn.setText(self.tr("Close"))
             self.mark_check.setEnabled(True)
-            self.status_label.setText(self.tr("Recording finished. The titles can be written now."))
-            self._offer_titling()
+            self.status_label.setText(
+                self.tr("Recording finished. Writing titles now -- leave the adapter pointing at the deck.")
+            )
+            # Two seconds, so the deck has finished writing its TOC after
+            # STOP and will take the titling keys -- same reasoning as the
+            # multi-disc wait just below.
+            QTimer.singleShot(TITLING_DELAY_MS, self._title_single_disc)
             return
 
         self.status_label.setText(
@@ -853,6 +868,29 @@ class RecordDialog(QDialog):
         # Two seconds, so the deck has finished writing its TOC after STOP
         # and will take the titling keys.
         QTimer.singleShot(TITLING_DELAY_MS, self._title_current_disc)
+
+    def _title_single_disc(self) -> None:
+        """Writes the album's titles and ejects, unattended -- nobody sits
+        through a whole recording, so a confirmation between the music
+        ending and the titles going out would leave the deck holding an
+        untitled disc until somebody came back. Same reasoning
+        _title_current_disc() already applies per-disc on a multi-disc
+        run; this is that same treatment for the ordinary, single-disc
+        case, which used to ask twice (write titles now? then eject?)."""
+        metadata = self.result_metadata or tracks.metadata_from_playlist(self._items)
+        # A disc that was just recorded has no titles to erase, and erasing
+        # is roughly half the total time.
+        dialog = MDRemUploadDialog(metadata, self._port, self, clear_default=False, unattended=True)
+        dialog.exec()
+        if dialog.succeeded:
+            self.status_label.setText(self.tr("Recording finished. Titles written and the disc ejected."))
+        else:
+            self.status_label.setText(
+                self.tr(
+                    "Recording finished, but the titles could not be written. The disc itself is fine -- "
+                    "the titles can be written again from Tools > Metadata..."
+                )
+            )
 
     def _title_current_disc(self) -> None:
         """Writes this disc's titles, ejects it, and asks for the next --
@@ -989,21 +1027,16 @@ class RecordDialog(QDialog):
             result.append(Track(title=title, time_seconds=item.length_seconds or None, artist=artist))
         return result
 
-    def _offer_titling(self) -> None:
-        answer = QMessageBox.question(
-            self,
-            self.tr("Record to MiniDisc"),
-            self.tr("Write the album and track titles onto the disc now?"),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if answer != QMessageBox.StandardButton.Yes:
-            return
-        # Whatever _capture_metadata settled on, so an album name corrected
-        # before the recording is the one written onto the disc.
-        metadata = self.result_metadata or tracks.metadata_from_playlist(self._items)
-        # A disc that was just recorded has no titles to erase, and erasing
-        # is roughly half the total time.
-        MDRemUploadDialog(metadata, self._port, self, clear_default=False).exec()
+    def _erase_disc(self) -> None:
+        """Erase MiniDisc... -- clears whatever disc is currently in the
+        deck. Used to be a standalone Recording menu entry, reachable
+        whether or not this dialog was even open; moved here since erasing
+        the wrong disc is most likely to come up right before recording
+        onto it. Reuses this dialog's own port rather than resolving a
+        fresh one -- it is already known, and there is only ever one deck
+        to erase. Disabled for the duration of an actual recording (see
+        _start/_fail), so it can't be reached while the deck is busy."""
+        EraseDiscDialog(self._port, self).exec()
 
     # --- helpers ------------------------------------------------------
 
@@ -1035,6 +1068,7 @@ class RecordDialog(QDialog):
         self.status_label.setText(message)
         self.close_btn.setText(self.tr("Close"))
         self.start_btn.setEnabled(True)
+        self.erase_btn.setEnabled(True)
         self.mark_check.setEnabled(True)
         self._set_fields_editable(True)
 

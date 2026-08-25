@@ -1,12 +1,14 @@
 """The Recording menu shows what applies to the project in front of you.
 
-A MiniDisc project has no use for "Erase MiniDisc"/"Remote Control" or the
-deck at all -- and a CD project needs no MDRem adapter for its recording
-entries, since those dispatch straight to burning instead. This is a
-deliberate change of principle rather than tidying: erasing, the remote and
-the record entries all act on whatever disc is physically in the deck,
-which has nothing to do with which label is open -- and that independence
-was itself deliberate once. It loses to a menu that matches the project.
+A MiniDisc project has no use for "Remote Control" or the deck at all --
+and a CD project needs no MDRem adapter for its recording entries, since
+those dispatch straight to burning instead. This is a deliberate change of
+principle rather than tidying: the remote and the record entries all act
+on whatever disc is physically in the deck, which has nothing to do with
+which label is open -- and that independence was itself deliberate once.
+It loses to a menu that matches the project. (Erase MiniDisc moved from a
+menu entry with the same gating into a button on the MiniDisc record
+dialog itself -- see test_erase_dialog.py.)
 
 There used to be a separate "Burn Audio CD from ..." action beside the
 folder record entry; that collapsed into one "Record" entry per source
@@ -32,7 +34,6 @@ def _visible(win) -> dict[str, bool]:
     return {
         "record_cd": win.record_cd_action.isVisible(),
         "record_folder": win.record_folder_action.isVisible(),
-        "erase": win.erase_disc_action.isVisible(),
         "remote": win.remote_action.isVisible(),
     }
 
@@ -42,7 +43,7 @@ def test_a_minidisc_project_is_not_offered_the_cd_only_entries(window):
     window._sync_mdrem_actions()
 
     state = _visible(window)
-    assert state["record_cd"] and state["record_folder"] and state["erase"] and state["remote"]
+    assert state["record_cd"] and state["record_folder"] and state["remote"]
 
 
 def test_a_cd_project_is_still_offered_record_folder(window):
@@ -53,7 +54,7 @@ def test_a_cd_project_is_still_offered_record_folder(window):
 
     state = _visible(window)
     assert state["record_folder"]
-    assert not any(state[name] for name in ("record_cd", "erase", "remote"))
+    assert not any(state[name] for name in ("record_cd", "remote"))
 
 
 def test_record_folder_does_not_disappear_with_the_adapter_on_a_cd_project(window, monkeypatch):

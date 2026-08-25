@@ -23,7 +23,17 @@ from PySide6.QtWidgets import (
     QToolBar,
 )
 
-from mdtools import album_sort, app_settings, cover_filters, gallery, i18n, mixtape_cover, recent_projects, user_paths
+from mdtools import (
+    album_sort,
+    app_settings,
+    cdrip,
+    cover_filters,
+    gallery,
+    i18n,
+    mixtape_cover,
+    recent_projects,
+    user_paths,
+)
 from mdtools.auto_layout import (
     build_sticker_label,
     place_cover_on_label,
@@ -48,9 +58,8 @@ from mdtools.panels.add_page_dialog import AddPageDialog
 from mdtools.panels.asset_gallery_dialog import AssetGalleryDialog
 from mdtools.panels.cd_rip_dialog import CdRipDialog
 from mdtools.panels.cover_filter_dialog import CoverFilterDialog
-from mdtools.panels.erase_dialog import EraseDiscDialog
 from mdtools.panels.experimental_settings_dialog import ExperimentalSettingsDialog
-from mdtools.audio_folder import album_from_folder
+from mdtools.audio_folder import album_from_folder, list_audio_files
 from mdtools.cd_layout import CdLayoutError, build_case_back, build_disc_label, build_front_insert, build_insert
 from mdtools import tape
 from mdtools.tape_layout import TapeLayoutError, build_side_label
@@ -462,23 +471,29 @@ class MainWindow(QMainWindow):
         self.record_folder_action = recording_menu.addAction(
             self.tr("Record Folder to MiniDisc..."), self._record_folder
         )
-        recording_menu.addSeparator()
-        # Erasing is not recording, but it is what you do to a disc you are
-        # about to record over, and it is the same deck and the same
-        # adapter -- keeping it here beats a menu of its own for one entry.
-        self.erase_disc_action = recording_menu.addAction(
-            self.tr("Erase MiniDisc..."), self._erase_disc
+        # Moved here from Experimental -- neither needs a live chat session
+        # at all, both just act on whatever has already accumulated in the
+        # one configured audio folder (shared by CD ripping and Telegram
+        # bot downloads -- see app_settings.cd_rip_folder() -- so these are
+        # named for what they act on, not for one particular source of it;
+        # see telegram_chat_dialog.py's own note on why that folder is no
+        # longer a fresh one per session). Sorting is medium-agnostic (no
+        # _sync_mdrem_actions() gating); recording collapses onto whichever
+        # medium the open project is for, the same "just Record" shape the
+        # entries above follow.
+        self.telegram_sort_action = recording_menu.addAction(
+            self.tr("Sort Audio Folder into Albums..."), self._sort_telegram_downloads
         )
-        # The software remote used to be reachable only from the startup
-        # screen (closing the current project just to press a transport key
-        # was the only way to it) -- reported directly. Same "not recording,
-        # same deck/adapter" reasoning as Erase just above.
-        self.remote_action = recording_menu.addAction(
-            self.tr("Remote Control..."), self._open_remote_control
+        self.telegram_record_action = recording_menu.addAction(
+            self.tr("Record from Audio Folder..."), self._record_from_telegram_downloads
         )
         # _sync_mdrem_actions() is deliberately *not* called here: it also
-        # gates two entries in the Experimental menu, which is built
-        # further down. It runs once both menus exist.
+        # touches the Experimental menu, which is built further down. It
+        # runs once both menus exist. Erasing moved out of this menu
+        # entirely -- it's a button on the MiniDisc record dialog now (see
+        # record_dialog.py's own _erase_disc), reached right before
+        # recording onto the disc it clears, which is when it actually
+        # comes up. The remote moved to the Window menu, below.
 
         # Changing a page's template, and adding/removing a page, both moved
         # to the page toolbar -- the Template dropdown next to the page
@@ -513,29 +528,26 @@ class MainWindow(QMainWindow):
         self.telegram_chat_action = self.experimental_menu.addAction(
             self.tr("Download Album from Telegram Bot..."), self._open_telegram_bot_chat
         )
-        # Neither of these needs a live chat session at all -- both just act
-        # on whatever has already accumulated in the one configured
-        # download folder (see telegram_chat_dialog.py's own note on why
-        # that folder is no longer a fresh one per session). Not gated
-        # behind the Telegram-session check telegram_chat_action uses,
-        # since sorting/recording what's already on disk needs no bot
-        # connection either.
-        self.experimental_menu.addAction(
-            self.tr("Sort Telegram Downloads into Album Folders..."), self._sort_telegram_downloads
-        )
-        # Recording and burning collapsed into this one entry -- it
-        # dispatches to whichever the open project's medium calls for (see
-        # _record_from_telegram_downloads -> _record_folder_dialog), the
-        # same "just Record" shape the Recording menu's own entries follow.
-        self.telegram_record_action = self.experimental_menu.addAction(
-            self.tr("Record from Telegram Downloads..."), self._record_from_telegram_downloads
-        )
+        # "Sort Audio Folder into Albums..." and "Record from Audio
+        # Folder..." moved to the Recording menu -- see the comment
+        # there. This menu now holds only what actually needs the
+        # experimental-features flag: signing in, and starting a chat.
         self._sync_experimental_menu()
-        # Both menus exist now, so the adapter/medium gating can run.
-        self._sync_mdrem_actions()
 
         window_menu = self.menuBar().addMenu(self.tr("&Window"))
         window_menu.addAction(self.tr("Settings..."), self._show_settings)
+        # The software remote used to live in the Recording menu, next to
+        # Erase -- moved here since, like Erase, it drives the deck
+        # directly and has nothing to do with which label is being
+        # designed (it used to be reachable only from the startup screen,
+        # closing whatever project was open just to press a transport key,
+        # which is what put it in Recording in the first place).
+        self.remote_action = window_menu.addAction(
+            self.tr("Remote Control..."), self._open_remote_control
+        )
+        # Every menu _sync_mdrem_actions() touches (Recording, Window's own
+        # Remote entry) now exists, so the adapter/medium gating can run.
+        self._sync_mdrem_actions()
 
         help_menu = self.menuBar().addMenu(self.tr("&Help"))
         self._build_language_menu(help_menu)
@@ -1266,7 +1278,15 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             QMessageBox.critical(self, self.tr("Import Metadata"), self.tr("Could not read project:\n{error}").format(error=exc))
             return
-        self.project.metadata = other.metadata
+        # Opened for review rather than applied outright, same "the user
+        # sees what they're accepting" shape as every other MetadataDialog
+        # entry point -- an import someone changes their mind about should
+        # be as cancellable as a hand edit is.
+        dialog = MetadataDialog(other.metadata, self, medium=self.project.medium)
+        if dialog.exec() != MetadataDialog.DialogCode.Accepted or dialog.result_metadata is None:
+            return
+        self.project.metadata = dialog.result_metadata
+        self._mark_dirty()
         self.statusBar().showMessage(self.tr("Imported metadata from {path}").format(path=path), 5000)
 
     def _open_project(self) -> None:
@@ -1361,7 +1381,7 @@ class MainWindow(QMainWindow):
         if self.project is None:
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, self.tr("Export Cut SVG"), self._export_start_path(), self.tr("SVG (*.svg)")
+            self, self.tr("Export Cut SVG"), self._export_start_path("svg"), self.tr("SVG (*.svg)")
         )
         if not path:
             return
@@ -1373,7 +1393,7 @@ class MainWindow(QMainWindow):
         if self.project is None:
             return
         path, _ = QFileDialog.getSaveFileName(
-            self, self.tr("Export Print PNG"), self._export_start_path(), self.tr("PNG (*.png)")
+            self, self.tr("Export Print PNG"), self._export_start_path("png"), self.tr("PNG (*.png)")
         )
         if not path:
             return
@@ -1420,7 +1440,7 @@ class MainWindow(QMainWindow):
         self._sync_grayscale_controls()
 
         path, _ = QFileDialog.getSaveFileName(
-            self, self.tr("Export Print PNG (Grayscale)"), self._export_start_path(), self.tr("PNG (*.png)")
+            self, self.tr("Export Print PNG (Grayscale)"), self._export_start_path("png"), self.tr("PNG (*.png)")
         )
         if not path:
             return
@@ -1532,18 +1552,18 @@ class MainWindow(QMainWindow):
             self.tr("Record Folder to {medium}...").format(medium=self._recording_target_name())
         )
         self.record_folder_action.setVisible(for_tape or for_cd or (adapter and for_md))
-        # Erasing and the remote are nothing but adapter keypresses, so
-        # without one there is not even a partial operation to offer.
-        self.erase_disc_action.setVisible(adapter and for_md)
+        # The remote is nothing but adapter keypresses, so without one
+        # there is not even a partial operation to offer. Erasing followed
+        # the same rule while it lived here; now that it's a button on the
+        # MiniDisc record dialog, that dialog is simply never reachable
+        # without the adapter in the first place, so there's nothing left
+        # to gate.
         self.remote_action.setVisible(adapter and for_md)
 
-        # The Experimental menu's hand-off is the same operation reached
-        # from a different place, so it follows exactly the same rule --
-        # reported as not changing with the medium. "Download Album from
-        # Telegram Bot..." and "Sort Telegram Downloads..." are untouched:
-        # downloading and tidying files belong to neither medium.
+        # "Sort Audio Folder into Albums..." stays visible regardless of
+        # medium or adapter -- tidying files on disk belongs to neither.
         self.telegram_record_action.setText(
-            self.tr("Record from Telegram Downloads to {medium}...").format(
+            self.tr("Record from Audio Folder to {medium}...").format(
                 medium=self._recording_target_name()
             )
         )
@@ -1919,7 +1939,7 @@ class MainWindow(QMainWindow):
             app_settings.telegram_api_id(),
             app_settings.telegram_api_hash(),
             app_settings.telegram_bot_username(),
-            Path(app_settings.telegram_download_folder()),
+            Path(app_settings.cd_rip_folder()),
             self,
         )
         dialog.start_connecting()
@@ -1930,33 +1950,49 @@ class MainWindow(QMainWindow):
             self._record_folder_dialog(Path(dialog.downloaded_folder))
 
     def _sort_telegram_downloads(self) -> None:
-        """Experimental > Sort Telegram Downloads into Album Folders... --
-        the same operation TelegramChatDialog's own "Sort into Album
-        Folders" button runs, but reachable without opening a chat at all.
+        """Recording > Sort Audio Folder into Albums... -- the same
+        operation TelegramChatDialog's own "Sort into Album Folders"
+        button runs, but reachable without opening a chat at all.
 
-        Acts on the one configured download folder directly (created on
-        demand, same "created at the moment it's actually needed" rule as
+        Acts on the CD rip folder directly (created on demand, same
+        "created at the moment it's actually needed" rule as
         cdrip.ensure_folder()/user_paths.projects_dir() -- there's nothing
         to sort in a folder that doesn't exist yet, but no reason to fail
-        over that either), not a browsed folder: since downloads no longer
-        land in a fresh per-session subfolder (see telegram_chat_dialog.py),
-        this is the one place everything accumulates, and sort_folder()
-        already groups by ALBUM tag alone with no session bookkeeping
-        needed."""
-        root = Path(app_settings.telegram_download_folder())
+        over that either), not a browsed folder: Telegram downloads land in
+        this same folder (app_settings.cd_rip_folder() -- merged with the
+        old, separate telegram_download_folder() setting, since a
+        downloaded album and a CD rip are both just audio on their way
+        into the same recording flow) and no longer in a fresh per-session
+        subfolder (see telegram_chat_dialog.py), so this is the one place
+        everything accumulates, and sort_folder() already groups by ALBUM
+        tag alone with no session bookkeeping needed."""
+        root = Path(app_settings.cd_rip_folder())
         root.mkdir(parents=True, exist_ok=True)
         folders = album_sort.sort_folder(root)
         if not folders:
-            # Two genuinely different reasons for "nothing moved", and saying
-            # "only one album" for both is what made this confusing to read
-            # in the already-sorted case (reported in those terms: "pokazuje
-            # ze nie ma nic do sortowania bo dwa juz sa posortowane"). A
-            # single unmoved album is still loose at this point, so asking
-            # the folder afterwards tells the two apart unambiguously.
+            # Three genuinely different reasons for "nothing moved", and
+            # collapsing any two of them into one message is what made this
+            # confusing to read: "already sorted" was previously also shown
+            # for a folder with nothing in it at all, which is not sorted,
+            # it is just empty (reported directly, about the sibling
+            # "Record from Audio Folder..." action making the same mistake
+            # -- silently proceeding rather than saying so). A single
+            # unmoved album is still loose at this point, so checking the
+            # folder afterwards tells all three apart unambiguously.
+            # "burn" (cdrip.RESERVED_SCRATCH_DIRNAMES) is CD burning's own
+            # scratch subfolder -- excluded here so a folder holding only
+            # that still reads as empty, not as "already sorted". (Ripping
+            # has no scratch folder of its own -- ripped files land
+            # directly in this shared folder and stay there.)
+            has_real_content = any(
+                child.name not in cdrip.RESERVED_SCRATCH_DIRNAMES for child in root.iterdir()
+            )
             if album_sort.loose_audio_files(root):
                 message = self.tr("These tracks all belong to one album -- there is nothing to separate.")
-            else:
+            elif has_real_content:
                 message = self.tr("Everything is already sorted into album folders.")
+            else:
+                message = self.tr("There is nothing to sort -- the audio folder is empty.")
             QMessageBox.information(self, self.tr("Sort into Album Folders"), message)
             return
         QMessageBox.information(
@@ -1966,9 +2002,11 @@ class MainWindow(QMainWindow):
         )
 
     def _record_from_telegram_downloads(self) -> None:
-        """Experimental > Record from Telegram Downloads... -- records
-        whatever has already been downloaded through the Telegram bot chat,
-        without opening the bot chat itself.
+        """Recording > Record from Audio Folder... -- records whatever has
+        already been downloaded through the Telegram bot chat (or ripped
+        from a CD, or dropped in by hand -- this acts on the whole shared
+        audio folder, not just Telegram's own contribution to it), without
+        opening the bot chat itself.
 
         Sorts first (silently, same reasoning as
         TelegramChatDialog._on_continue_clicked()'s own auto-sort fix: a
@@ -1976,10 +2014,24 @@ class MainWindow(QMainWindow):
         would otherwise be handed to pick_album_folder() as if it were a
         single album, mixing every downloaded album's tracks into one
         recording), then asks which album only when there's genuinely more
-        than one to choose from."""
+        than one to choose from.
+
+        Reported directly: an empty audio folder used to open
+        FolderRecordDialog anyway, which then showed its own "no audio
+        files" status with the Record button disabled -- a dialog to
+        dismiss for what is really a one-line "there's nothing here" --
+        rather than saying so up front and stopping."""
         folder = self._pick_telegram_album()
-        if folder is not None:
-            self._record_folder_dialog(folder)
+        if folder is None:
+            return
+        if not list_audio_files(folder):
+            QMessageBox.information(
+                self,
+                self.tr("Record from Audio Folder"),
+                self.tr("There is nothing to record -- the audio folder is empty."),
+            )
+            return
+        self._record_folder_dialog(folder)
 
     def _pick_telegram_album(self) -> Path | None:
         """Which downloaded album to act on, sorted first.
@@ -1992,7 +2044,7 @@ class MainWindow(QMainWindow):
         together. Asking which album only happens when there is genuinely
         more than one.
         """
-        root = Path(app_settings.telegram_download_folder())
+        root = Path(app_settings.cd_rip_folder())
         root.mkdir(parents=True, exist_ok=True)
         album_sort.sort_folder(root)
         folder, ok = pick_album_folder(self, root)
@@ -2063,12 +2115,20 @@ class MainWindow(QMainWindow):
         box.addButton(self.tr("Later"), QMessageBox.ButtonRole.RejectRole)
         box.exec()
         if box.clickedButton() is restart_btn:
-            # _restart_app() quits this instance via QApplication.quit(),
-            # which never runs closeEvent()/its own unsaved-changes guard --
-            # without this check, restarting silently discarded whatever
-            # hadn't been saved yet.
+            # QApplication.quit() asks every top-level window to close
+            # first (respecting closeEvent), so without this check,
+            # restarting would silently discard whatever hadn't been
+            # saved yet -- closeEvent()'s own guard runs, but only after
+            # the new process has already been launched.
             if not self._may_discard_changes():
                 return
+            # closeEvent() (which quit() below triggers) treats an
+            # ordinary close as "go back to the startup screen", not "exit"
+            # -- exactly like File > Exit, this has to say otherwise first,
+            # or the old instance ends up sitting on the startup screen
+            # instead of actually closing. Reported directly: the old
+            # window stayed open after "Restart Now".
+            self._quitting = True
             self._restart_app()
 
     @staticmethod
@@ -2262,28 +2322,16 @@ class MainWindow(QMainWindow):
         self.project.metadata = dialog.result_metadata
         self._mark_dirty()
 
-    def _erase_disc(self) -> None:
-        """Recording > Erase MiniDisc... -- clears the disc in the deck.
-
-        Deliberately not tied to the open project: it acts on whatever is
-        physically in the deck, which has nothing to do with which label is
-        being designed. Same backstop as the other MDRem entries, since the
-        whole operation is adapter keypresses."""
-        if not app_settings.mdrem_enabled():
-            return
-        port = resolve_port(self)
-        if port is None:
-            return
-        EraseDiscDialog(port, self).exec()
-
     def _open_remote_control(self) -> None:
-        """Recording > Remote Control... -- the same software remote the
+        """Window > Remote Control... -- the same software remote the
         startup screen's own Remote button opens, now reachable without
         having to close whatever project is currently open first.
 
-        Deliberately not tied to the open project, same as Erase MiniDisc
-        just above: it drives the deck directly and has nothing to do with
-        which label is being designed."""
+        Deliberately not tied to the open project: it drives the deck
+        directly and has nothing to do with which label is being
+        designed. (Erase MiniDisc used to sit right beside this for the
+        same reason -- it's a button on the MiniDisc record dialog now,
+        see record_dialog.py's own _erase_disc.)"""
         port = resolve_port(self)
         if port is None:
             return
@@ -2458,13 +2506,24 @@ class MainWindow(QMainWindow):
         metadata.cover_art = data
         save_downloaded_cover(chosen.artist_name, chosen.collection_name, data)
 
-    def _export_start_path(self) -> str:
-        """Exports land beside the project they came from, or in the
-        projects folder if it has never been saved -- the SVG that cuts a
-        design and the PNG that prints it are the same job as the .mdproj,
-        and the set is only findable at cutting time if they stayed
-        together."""
-        return user_paths.export_start_path(self.current_project_path)
+    def _export_start_path(self, extension: str = "") -> str:
+        """Every export lands in XDProjects/printing (see
+        user_paths.export_start_path's own docstring), suggested under the
+        same name Save As would use for this project -- "Artist - Album
+        (Year) -MD"/"-CD", the medium suffix `_suggested_project_name()`
+        already adds -- so the cut/print set for an album is named to
+        match its own .mdproj at a glance. `_paged_export_path()` then
+        appends which page it is (-disc/-cover/...) on top of that. Empty
+        metadata suggests no filename at all, same as Save As.
+
+        `extension` left blank means "just the folder, no suggested
+        filename at all" -- what PrintDialog wants as a start_dir, since it
+        names its own sheets itself."""
+        if not extension:
+            return user_paths.export_start_path(self.current_project_path)
+        name = self._suggested_project_name()
+        filename = f"{name}.{extension}" if name else ""
+        return user_paths.export_start_path(self.current_project_path, filename)
 
     def _template_named(self, kind: str, name: str):
         from mdtools.templates import registry

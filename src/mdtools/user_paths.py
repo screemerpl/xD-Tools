@@ -95,19 +95,20 @@ def printing_dir() -> Path:
 
 
 def audio_dir() -> Path:
-    """XDProjects/Audio -- shared by CD ripping and Telegram bot downloads,
-    both of which produce audio files destined for the same recording flow.
-    Keeping them under the projects folder rather than a system temp
-    directory means they survive a reboot and are where a user would look
-    for them.
+    """XDProjects/Audio -- shared by CD ripping and Telegram bot downloads
+    (a single setting, app_settings.cd_rip_folder() -- the two used to be
+    separately configurable and were merged, since both just produce audio
+    files destined for the same recording flow). Keeping them under the
+    projects folder rather than a system temp directory means they survive
+    a reboot and are where a user would look for them.
 
     Deliberately *not* created here, unlike projects_dir()/printing_dir():
-    this is read every time app_settings computes the default CD rip/
-    Telegram download folder, including just from opening a settings
-    dialog, and creating a folder on disk as a side effect of merely asking
-    what its default location would be is a step too eager. The actual
-    ripping/downloading code (cdrip.ensure_folder(),
-    ExperimentalSettingsDialog._create_download_folder()) creates it at the
+    this is read every time app_settings computes the default CD rip
+    folder, including just from opening a settings dialog, and creating a
+    folder on disk as a side effect of merely asking what its default
+    location would be is a step too eager. The actual ripping/downloading
+    code (cdrip.ensure_folder(), and the Telegram-side callers that
+    `root.mkdir(parents=True, exist_ok=True)` directly) creates it at the
     point it is genuinely about to be used, the same "created on demand"
     rule as everywhere else in this app."""
     return documents_dir() / PROJECTS_FOLDER_NAME / "Audio"

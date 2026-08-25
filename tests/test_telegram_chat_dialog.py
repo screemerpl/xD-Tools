@@ -163,6 +163,22 @@ class _BusyWorker:
 # --- plain construction must stay inert ---------------------------------
 
 
+def test_enter_in_the_message_field_sends_rather_than_triggering_record(qt_app, tmp_path):
+    """Reported directly: pressing Enter while typing a chat message opened
+    the "Choose Album" picker instead of sending the message. Qt falls
+    back to the first enabled AcceptRole button in the QDialogButtonBox
+    (Record Downloaded Albums...) once focus leaves whatever held it
+    initially, unless Send is explicitly made the dialog's default and the
+    others are excluded from autoDefault."""
+    dialog = TelegramChatDialog("123456", "hash", "@my_bot", tmp_path)
+    try:
+        assert dialog.send_btn.isDefault()
+        assert dialog.continue_btn.autoDefault() is False
+        assert dialog.close_btn.autoDefault() is False
+    finally:
+        dialog.close()
+
+
 def test_plain_construction_starts_no_worker(qt_app, tmp_path):
     """The regression this whole file is built around -- see the module
     docstring. Deliberately does *not* mock the client factory: if this

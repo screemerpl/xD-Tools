@@ -542,32 +542,16 @@ def test_both_tools_are_bundled_and_actually_run():
 
 
 # --- housekeeping -----------------------------------------------------
-
-
-def test_stale_rip_folders_are_removed_except_the_one_in_use(tmp_path):
-    old = tmp_path / "Old Artist - Old Album"
-    old.mkdir()
-    (old / "01 - x.flac").write_bytes(b"")
-    keep = tmp_path / "New Artist - New Album"
-    keep.mkdir()
-
-    removed = cdrip.clean_stale_rip_folders(tmp_path, keep=keep)
-
-    assert removed == [old]
-    assert not old.exists()
-    assert keep.exists()
-
-
-def test_a_folder_holding_anything_but_rip_output_is_left_alone(tmp_path):
-    """The rip folder is user-configurable, so it can be pointed somewhere
-    that also holds something else. A recursive delete has no business
-    guessing."""
-    theirs = tmp_path / "Holiday Photos"
-    theirs.mkdir()
-    (theirs / "beach.jpg").write_bytes(b"")
-
-    assert cdrip.clean_stale_rip_folders(tmp_path) == []
-    assert (theirs / "beach.jpg").exists()
+#
+# clean_stale_rip_folders() used to live here and delete anything that
+# looked like leftover rip output before a new rip started. Removed
+# outright, not just fixed: it once `shutil.rmtree()`'d a real user's
+# permanently organized albums because a folder of nothing but .flac
+# files looks exactly like a stale rip either way, and there is no
+# reliable way to tell them apart by content alone. Explicit instruction:
+# nothing in this app may ever delete a file from the shared audio folder
+# on its own -- see test_cd_rip_dialog.py's own
+# test_starting_a_rip_never_deletes_anything_in_the_shared_folder.
 
 
 # --- making the rip folder --------------------------------------------

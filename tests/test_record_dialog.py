@@ -74,6 +74,46 @@ def _png() -> bytes:
     return bytes(buffer.data())
 
 
+class _NoTimer:
+    """Stands in for QTimer once the dialog has already built its own.
+
+    QTimer.singleShot's real delay would either race a real event loop or
+    never fire within a synchronous test at all, so this records the call
+    instead and lets a test invoke the deferred callback itself."""
+
+    scheduled: list[tuple[int, object]] = []
+
+    @staticmethod
+    def singleShot(ms, callback):
+        _NoTimer.scheduled.append((ms, callback))
+
+    # Also stands in for an *instance*, since a test that puts it in place
+    # before the dialog is built gets asked for the progress timer too.
+    # Nothing here needs to tick: every test drives the callbacks itself.
+    def __init__(self, *args, **kwargs):
+        self.timeout = _NoTimer._Connectable()
+
+    class _Connectable:
+        def connect(self, *args, **kwargs):
+            pass
+
+    def setInterval(self, *args, **kwargs):
+        pass
+
+    def start(self, *args, **kwargs):
+        pass
+
+    def stop(self, *args, **kwargs):
+        pass
+
+
+@pytest.fixture(autouse=True)
+def no_timers():
+    _NoTimer.scheduled = []
+    yield
+    _NoTimer.scheduled = []
+
+
 @pytest.fixture(autouse=True)
 def no_cover_lookup(monkeypatch):
     """The dialog looks a cover up as soon as the tracks load, so every
@@ -216,12 +256,79 @@ def test_progress_follows_the_position_within_the_whole_album(qt_app, monkeypatc
 def test_the_album_ending_stops_the_deck(qt_app, monkeypatch, no_hardware):
     dialog = _dialog(_items(3), monkeypatch)
     dialog._recording = True
-    monkeypatch.setattr(record_module.QMessageBox, "question", lambda *a, **k: record_module.QMessageBox.StandardButton.No)
 
+    # Titling is deferred to a real QTimer.singleShot (see
+    # _title_single_disc), which never fires within this synchronous test
+    # -- exactly what lets this test check the deck-stopping half alone.
     dialog._on_disc_finished()
 
     assert not dialog._recording
     assert "SEND STOP" in no_hardware
+
+
+def test_titling_after_a_single_disc_writes_and_ejects_unattended_with_no_questions_asked(
+    qt_app, monkeypatch, no_hardware, no_lookup
+):
+    """Used to ask twice (write titles now? then eject?) -- now matches the
+    multi-disc flow's own "nobody is here to ask" reasoning: nobody sits
+    through a whole album, so a question between the music ending and the
+    titles going out would leave the deck holding an untitled disc."""
+    made: list = []
+
+    class _FakeUpload:
+        def __init__(self, metadata, port, parent=None, clear_default=True, unattended=False):
+            made.append((metadata, clear_default, unattended))
+            self.succeeded = True
+
+        def exec(self):
+            return 0
+
+    monkeypatch.setattr(record_module, "MDRemUploadDialog", _FakeUpload)
+    monkeypatch.setattr(record_module, "QTimer", _NoTimer)
+    monkeypatch.setattr(
+        record_module.QMessageBox,
+        "question",
+        lambda *a, **k: pytest.fail("nothing may be asked once the disc has finished recording"),
+    )
+    dialog = _dialog(_items(3), monkeypatch)
+    dialog._recording = True
+    dialog._current_local_index = len(dialog._items) - 1
+
+    dialog._on_disc_finished()
+    assert len(_NoTimer.scheduled) == 1
+    ms, callback = _NoTimer.scheduled[0]
+    assert ms == record_module.TITLING_DELAY_MS
+    callback()
+
+    assert len(made) == 1
+    _metadata, clear_default, unattended = made[0]
+    assert clear_default is False
+    assert unattended is True
+    assert "ejected" in dialog.status_label.text()
+
+
+def test_a_failed_single_disc_titling_says_so_without_pretending_it_worked(
+    qt_app, monkeypatch, no_hardware, no_lookup
+):
+    class _FakeUpload:
+        def __init__(self, metadata, port, parent=None, clear_default=True, unattended=False):
+            self.succeeded = False
+
+        def exec(self):
+            return 0
+
+    monkeypatch.setattr(record_module, "MDRemUploadDialog", _FakeUpload)
+    monkeypatch.setattr(record_module, "QTimer", _NoTimer)
+    dialog = _dialog(_items(3), monkeypatch)
+    dialog._recording = True
+    dialog._current_local_index = len(dialog._items) - 1
+
+    dialog._on_disc_finished()
+    _ms, callback = _NoTimer.scheduled[0]
+    callback()
+
+    assert "could not be written" in dialog.status_label.text()
+    assert "Metadata" in dialog.status_label.text()
 
 
 # --- adopting what was recorded --------------------------------------------
@@ -235,11 +342,11 @@ def no_lookup(no_cover_lookup):
 
 
 def _finish_recording(dialog, monkeypatch) -> None:
+    """Only exercises the metadata-capturing half of _on_disc_finished --
+    titling itself is deferred to a real QTimer.singleShot (see
+    _title_single_disc), which never fires within this synchronous call."""
     dialog._recording = True
     dialog._current_local_index = len(dialog._items) - 1
-    monkeypatch.setattr(
-        record_module.QMessageBox, "question", lambda *a, **k: record_module.QMessageBox.StandardButton.No
-    )
     dialog._on_disc_finished()
 
 
@@ -381,21 +488,20 @@ def test_without_any_the_tracks_are_still_the_source(qt_app, monkeypatch, no_har
 
 
 def test_the_titles_written_onto_the_disc_are_the_ones_on_screen(qt_app, monkeypatch, no_hardware, no_lookup):
-    """_offer_titling used to rebuild the metadata from the tracks all over
-    again, which would have thrown away every edit made here."""
+    """_title_single_disc used to rebuild the metadata from the tracks all
+    over again, which would have thrown away every edit made here."""
     uploaded: list = []
 
     class _FakeUpload:
-        def __init__(self, metadata, port, parent=None, clear_default=True):
+        def __init__(self, metadata, port, parent=None, clear_default=True, unattended=False):
             uploaded.append(metadata)
+            self.succeeded = True
 
         def exec(self):
             return 0
 
     monkeypatch.setattr(record_module, "MDRemUploadDialog", _FakeUpload)
-    monkeypatch.setattr(
-        record_module.QMessageBox, "question", lambda *a, **k: record_module.QMessageBox.StandardButton.Yes
-    )
+    monkeypatch.setattr(record_module, "QTimer", _NoTimer)
     dialog = _dialog(_items(3), monkeypatch)
     dialog.album_edit.setText("Posluchaj")
     dialog.artist_edit.setText("Kult")
@@ -404,6 +510,10 @@ def test_the_titles_written_onto_the_disc_are_the_ones_on_screen(qt_app, monkeyp
     dialog._current_local_index = len(dialog._items) - 1
 
     dialog._on_disc_finished()
+    assert len(_NoTimer.scheduled) == 1
+    ms, callback = _NoTimer.scheduled[0]
+    assert ms == record_module.TITLING_DELAY_MS
+    callback()
 
     assert uploaded == [dialog.result_metadata]
     assert (uploaded[0].album, uploaded[0].artist) == ("Posluchaj", "Kult")
@@ -472,6 +582,27 @@ def test_the_track_list_is_frozen_once_recording_starts(qt_app, monkeypatch, no_
     assert not dialog.tree.isEnabled()
     assert not dialog.album_edit.isEnabled()
     assert not dialog.cover_label.isEnabled()
+    assert not dialog.erase_btn.isEnabled(), "erasing while this dialog is recording would erase the disc mid-write"
+
+
+def test_erase_button_opens_erase_dialog_with_this_dialogs_own_port(qt_app, monkeypatch, no_hardware):
+    """Moved here from a standalone Recording menu entry -- reuses the port
+    this dialog already has rather than resolving a fresh one."""
+    dialog = _dialog(_items(3), monkeypatch)
+    opened: list = []
+
+    class _FakeErase:
+        def __init__(self, port, parent=None):
+            opened.append((port, parent))
+
+        def exec(self):
+            return 0
+
+    monkeypatch.setattr(record_module, "EraseDiscDialog", _FakeErase)
+
+    dialog.erase_btn.click()
+
+    assert opened == [("COM_TEST", dialog)]
 
 
 def test_decode_progress_updates_the_status_label(qt_app, monkeypatch, no_hardware, no_lookup, fake_player):

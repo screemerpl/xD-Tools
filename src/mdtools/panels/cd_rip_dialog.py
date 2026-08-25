@@ -522,13 +522,13 @@ class CdRipDialog(QDialog):
 
         plan = self.build_plan()
         self.result_metadata = self.build_metadata()
-        # Previous rips go now, not at the end of this one: the files stay
-        # around for as long as the user might still replay or record them.
-        # Only ever before the *first* disc of a set, though -- the second
-        # disc's rip would otherwise be tidying away the first disc's files
-        # as it went, since they share a folder.
-        if self._disc == 1:
-            cdrip.clean_stale_rip_folders(plan.folder.parent, keep=plan.folder)
+        # Nothing here ever deletes a previous rip -- explicit instruction:
+        # this folder is shared with permanently-organized albums (Telegram
+        # downloads, "Sort Audio Folder into Albums..."), and a folder of
+        # nothing but .flac files looks exactly like a stale rip whether it
+        # is one or not (see cdrip.py's own history for the real incident
+        # this cost). Ripped files simply accumulate; nothing here cleans
+        # up after itself.
         try:
             cdrip.ensure_folder(plan.folder)
         except cdrip.CdRipError as exc:

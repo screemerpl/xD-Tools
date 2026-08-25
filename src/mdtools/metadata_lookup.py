@@ -74,12 +74,16 @@ class ArtistCandidate:
     picture_url: str | None
 
 
-def search_albums(artist: str, album: str) -> list[AlbumCandidate]:
+def search_albums(artist: str, album: str = "") -> list[AlbumCandidate]:
     """Candidates ranked best-match-first (see _match_score) -- ties (e.g.
     a single sharing its title with the album) are broken in favor of
     whichever has more tracks, since a single/remix/EP reliably has far
-    fewer than a full album."""
-    query = urllib.parse.urlencode({"term": f"{artist} {album}", "entity": "album", "limit": 25})
+    fewer than a full album.
+
+    `album` is optional -- some albums genuinely have no name (or the user
+    hasn't typed one in yet), and there's no reason a search needs to wait
+    on it when the artist alone can already narrow things down."""
+    query = urllib.parse.urlencode({"term": f"{artist} {album}".strip(), "entity": "album", "limit": 25})
     data = _get_json(f"{SEARCH_URL}?{query}")
 
     candidates = [

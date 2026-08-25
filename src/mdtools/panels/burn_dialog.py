@@ -782,7 +782,7 @@ class BurnDialog(QDialog):
         # A folder per disc: track numbering restarts on each, so one shared
         # folder would leave a longer previous disc's scratch WAVs sitting
         # beside a shorter one's.
-        work_dir = Path(app_settings.cd_rip_folder()) / "burn"
+        work_dir = Path(app_settings.cd_rip_folder()) / cdrip.BURN_SCRATCH_DIRNAME
         if several:
             work_dir = work_dir / f"disc{self._disc + 1}"
         try:

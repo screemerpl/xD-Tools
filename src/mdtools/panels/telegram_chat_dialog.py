@@ -59,7 +59,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mdtools import album_sort, app_settings, i18n, telegram_bot
+from mdtools import album_sort, app_settings, cdrip, i18n, telegram_bot
 from mdtools import translate as mdtools_translate
 
 # Inline photo previews are scaled down to this width if wider -- large
@@ -118,7 +118,14 @@ def pick_album_folder(parent, root: Path) -> tuple[Path, bool]:
     notes already prescribe for a translatable string in a plain
     module-level function -- see project.py's metadata_menu_entries() and
     layers_panel.py's module-level _label_for()."""
-    subfolders = sorted(p for p in root.iterdir() if p.is_dir())
+    # "burn" is cdrip.py's own reserved scratch subfolder name
+    # (RESERVED_SCRATCH_DIRNAMES) -- CD burning works there, never in this
+    # folder directly. Excluded here so it never shows up as if it were
+    # something to record. (Ripping has no scratch folder of its own --
+    # ripped files land directly in this shared folder and stay there.)
+    subfolders = sorted(
+        p for p in root.iterdir() if p.is_dir() and p.name not in cdrip.RESERVED_SCRATCH_DIRNAMES
+    )
     if len(subfolders) <= 1:
         return root, True
     names = [p.name for p in subfolders]
@@ -642,6 +649,12 @@ class TelegramChatDialog(QDialog):
         send_row.addWidget(self.message_edit, 1)
         self.send_btn = QPushButton(self.tr("Send"))
         self.send_btn.setEnabled(False)
+        # Without this, Qt falls back to the first enabled AcceptRole
+        # button in the QDialogButtonBox below the moment focus leaves
+        # whatever held it initially -- which made pressing Enter in this
+        # field also fire "Record Downloaded Albums...", opening the album
+        # picker. Reported directly.
+        self.send_btn.setDefault(True)
         self.send_btn.clicked.connect(self._on_send)
         send_row.addWidget(self.send_btn)
         layout.addLayout(send_row)
@@ -664,9 +677,11 @@ class TelegramChatDialog(QDialog):
         self.buttons = QDialogButtonBox()
         self.continue_btn = QPushButton(self.tr("Record Downloaded Albums..."))
         self.continue_btn.setEnabled(False)
+        self.continue_btn.setAutoDefault(False)
         self.continue_btn.clicked.connect(self._on_continue_clicked)
         self.buttons.addButton(self.continue_btn, QDialogButtonBox.ButtonRole.AcceptRole)
         self.close_btn = QPushButton(self.tr("Close"))
+        self.close_btn.setAutoDefault(False)
         self.close_btn.clicked.connect(self.reject)
         self.buttons.addButton(self.close_btn, QDialogButtonBox.ButtonRole.RejectRole)
         layout.addWidget(self.buttons)

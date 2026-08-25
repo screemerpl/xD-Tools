@@ -3,9 +3,10 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QEvent, Qt, Signal
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
+    QAbstractItemDelegate,
     QApplication,
     QDialog,
     QDialogButtonBox,
@@ -20,12 +21,13 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSpinBox,
+    QStyledItemDelegate,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
 )
 
-from mdtools import app_settings, audio_folder, user_paths
+from mdtools import app_settings, audio_folder, embedded_cover, user_paths
 from mdtools.gallery import downloaded_covers_dir, save_downloaded_cover
 from mdtools.metadata_lookup import (
     AlbumCandidate,
@@ -50,6 +52,61 @@ _INVALID_FILENAME_CHARS = re.compile(r'[<>:"/\\|?*]')
 
 def _sanitize_filename(text: str) -> str:
     return _INVALID_FILENAME_CHARS.sub("_", text).strip() or "cover"
+
+
+class _TitleColumnDelegate(QStyledItemDelegate):
+    """Enter, while typing a track title, commits it and moves straight to
+    the next row's title cell, opening it for editing -- appending a fresh
+    row past the last one -- so a whole track list can be typed with no
+    mouse at all.
+
+    This has to intercept the key event itself, on the editor, rather than
+    reacting to `QTableWidget.closeEditor()` after the fact: Qt's own
+    default handling closes an editor on Enter with `EndEditHint
+    .SubmitModelCache` -- and, confirmed directly, that is the *exact
+    same* hint a plain click on a different cell produces. There is no way
+    to tell "the user pressed Enter" from "the user clicked elsewhere"
+    once `closeEditor()` has already been called with that hint, so this
+    has to happen earlier, in the delegate's own `eventFilter` on the
+    editor widget -- which Qt calls before its default Enter/Tab/Escape
+    handling ever runs. Returning True here consumes the key, so the base
+    class's own SubmitModelCache path never fires for it."""
+
+    def __init__(self, table: "_TrackTable", parent=None):
+        super().__init__(parent)
+        self._table = table
+
+    def eventFilter(self, editor, event) -> bool:
+        if event.type() == QEvent.Type.KeyPress and event.key() in (
+            Qt.Key.Key_Return,
+            Qt.Key.Key_Enter,
+        ):
+            self.commitData.emit(editor)
+            self.closeEditor.emit(editor, QAbstractItemDelegate.EndEditHint.NoHint)
+            self._table.advance_after_title_entry()
+            return True
+        return super().eventFilter(editor, event)
+
+
+class _TrackTable(QTableWidget):
+    """Plain QTableWidget, plus the Title column's own delegate above."""
+
+    def __init__(self, parent=None):
+        super().__init__(0, 3, parent)
+        self.setItemDelegateForColumn(TITLE_COL, _TitleColumnDelegate(self, self))
+
+    def advance_after_title_entry(self) -> None:
+        row = self.currentRow()
+        if row == self.rowCount() - 1:
+            # Already the last row -- nothing to move to, so make one.
+            row += 1
+            self.insertRow(row)
+            for col in (TITLE_COL, ARTIST_COL, TIME_COL):
+                self.setItem(row, col, QTableWidgetItem(""))
+        else:
+            row += 1
+        self.setCurrentCell(row, TITLE_COL)
+        self.editItem(self.item(row, TITLE_COL))
 
 
 class MetadataDialog(QDialog):
@@ -112,7 +169,7 @@ class MetadataDialog(QDialog):
 
         layout.addWidget(QLabel(self.tr("Tracks:")))
 
-        self.table = QTableWidget(0, 3)
+        self.table = _TrackTable()
         self.table.setHorizontalHeaderLabels(
             [self.tr("Title"), self.tr("Artist (only on a compilation)"), self.tr("Time (mm:ss, optional)")]
         )
@@ -156,21 +213,23 @@ class MetadataDialog(QDialog):
     def _lookup_tracks(self) -> None:
         artist = self.artist_edit.text().strip()
         album = self.album_edit.text().strip()
-        if not artist or not album:
-            QMessageBox.information(
-                self, self.tr("Lookup Track List"), self.tr("Fill in Album title and Artist first.")
-            )
+        if not artist:
+            QMessageBox.information(self, self.tr("Lookup Track List"), self.tr("Fill in Artist first."))
             return
 
+        # Album is optional -- some albums genuinely have no name, and
+        # there's no reason to make the user wait on typing one in before
+        # the artist alone can already narrow the search down.
         candidates = self._run_lookup(lambda: search_albums(artist, album))
         if candidates is None:
             return  # error already shown
         if not candidates:
-            QMessageBox.warning(
-                self,
-                self.tr("Lookup Track List"),
-                self.tr('No album matching "{album}" by "{artist}" was found.').format(album=album, artist=artist),
+            message = (
+                self.tr('No album matching "{album}" by "{artist}" was found.').format(album=album, artist=artist)
+                if album
+                else self.tr('No album by "{artist}" was found.').format(artist=artist)
             )
+            QMessageBox.warning(self, self.tr("Lookup Track List"), message)
             return
 
         chosen = candidates[0]
@@ -254,29 +313,53 @@ class MetadataDialog(QDialog):
         for track in metadata.tracks:
             self._append_row(track.title, format_time(track.time_seconds), track.artist)
 
-        self._fetch_cover_for(metadata.album, metadata.artist, len(metadata.tracks), metadata.year)
+        paths = audio_folder.list_audio_files(folder)
+        self._fetch_cover_for(metadata.album, metadata.artist, len(metadata.tracks), metadata.year, paths)
 
-    def _fetch_cover_for(self, album: str, artist: str, track_count: int, year: int | None) -> None:
+    def _fetch_cover_for(
+        self, album: str, artist: str, track_count: int, year: int | None, paths: list[Path] = ()
+    ) -> None:
         """Cover art (and a year, if the tags had none) for fields that were
         filled in from somewhere other than the iTunes picker. Silent on
         failure, like every other artwork fetch here -- the track list, which
-        is what the user actually asked for, has already arrived."""
+        is what the user actually asked for, has already arrived.
+
+        Clears whatever cover is currently showing *before* searching for
+        the new one -- reported directly: importing a second folder that
+        happens to have no findable cover left the first import's cover on
+        screen, which then silently rode along into this album's own
+        metadata. A folder import replaces the cover the same way it
+        replaces the track list, empty-handed included.
+
+        `paths` -- the folder's own audio files, when there's a folder to
+        fall back to -- is what makes this the *last resort* the module
+        docstring for embedded_cover.py describes: a search result is only
+        a guess at this release, where the sleeve embedded in the files
+        themselves is certainly the right one, just usually smaller/
+        rougher, which is why it only runs once the search has already
+        come up empty (including on a network failure, not only a genuine
+        no-match)."""
+        self.cover_label.set_cover(None)
         if not album and not artist:
             return
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
             data, chosen = find_cover(artist, album, track_count)
         except MetadataLookupError:
-            return
+            data, chosen = None, None
         finally:
             QApplication.restoreOverrideCursor()
 
         if chosen is not None and year is None and chosen.year:
             self.year_spin.setValue(chosen.year)
-        if data is None or chosen is None:
+        if data is None and paths:
+            data = embedded_cover.cover_from_files(paths)
+            chosen = None
+        if data is None:
             return
         self.cover_label.set_cover(data)
-        save_downloaded_cover(chosen.artist_name, chosen.collection_name, data)
+        if chosen is not None:
+            save_downloaded_cover(chosen.artist_name, chosen.collection_name, data)
 
     def _fetch_and_save_cover(self, candidate: AlbumCandidate) -> None:
         """Cover art is a bonus on top of the track/year lookup -- a

@@ -53,6 +53,18 @@ def _album_folder(tmp_path: Path, *tracks: dict[str, str]) -> Path:
     return folder
 
 
+def _add_embedded_picture(path: Path, data: bytes = b"embedded-cover-bytes") -> None:
+    import mutagen.flac
+
+    picture = mutagen.flac.Picture()
+    picture.type = 3  # front cover
+    picture.mime = "image/png"
+    picture.data = data
+    audio = mutagen.flac.FLAC(str(path))
+    audio.add_picture(picture)
+    audio.save()
+
+
 @pytest.fixture
 def quiet_dialogs(monkeypatch):
     """A real QMessageBox.exec blocks forever offscreen -- see the standing
@@ -182,6 +194,70 @@ def test_a_failed_cover_lookup_still_keeps_the_track_list(qt_app, monkeypatch, t
     dialog._load_from_folder()
 
     assert dialog.table.rowCount() == 2
+    assert dialog._cover_art is None
+
+
+def test_no_itunes_match_falls_back_to_a_files_own_embedded_cover(qt_app, monkeypatch, tmp_path, quiet_dialogs, no_cover):
+    """Reported directly: importing from a folder only ever checked
+    iTunes, never the sleeve embedded in the files themselves -- the same
+    last-resort fallback FolderRecordDialog._fetch_cover already has."""
+    folder = _album_folder(
+        tmp_path,
+        {"TITLE": "Prequel", "ARTIST": "Falling In Reverse", "ALBUM": "Popular Monster"},
+    )
+    _add_embedded_picture(folder / "01.flac", b"the-actual-embedded-sleeve")
+    _pick(monkeypatch, folder)
+    dialog = MetadataDialog(ProjectMetadata())
+
+    dialog._load_from_folder()
+
+    assert dialog._cover_art == b"the-actual-embedded-sleeve"
+
+
+def test_a_network_failure_also_falls_back_to_the_embedded_cover(qt_app, monkeypatch, tmp_path, quiet_dialogs):
+    """The old code returned outright on MetadataLookupError, before ever
+    reaching the embedded-cover fallback -- a network hiccup shouldn't
+    cost the fallback any more than an honest no-match does."""
+    folder = _album_folder(
+        tmp_path,
+        {"TITLE": "Prequel", "ARTIST": "Falling In Reverse", "ALBUM": "Popular Monster"},
+    )
+    _add_embedded_picture(folder / "01.flac", b"the-actual-embedded-sleeve")
+    _pick(monkeypatch, folder)
+
+    def boom(*args, **kwargs):
+        raise MetadataLookupError("no network")
+
+    monkeypatch.setattr(metadata_module, "find_cover", boom)
+    dialog = MetadataDialog(ProjectMetadata())
+
+    dialog._load_from_folder()
+
+    assert dialog._cover_art == b"the-actual-embedded-sleeve"
+
+
+def test_a_second_import_with_no_cover_clears_the_first_imports_cover(
+    qt_app, monkeypatch, tmp_path, quiet_dialogs, no_cover
+):
+    """Reported directly: importing a second folder that happens to have
+    no findable cover (neither iTunes nor an embedded one) left the first
+    import's cover on screen, which then silently rode along into this
+    album's own metadata."""
+    with_cover = _album_folder(tmp_path, {"TITLE": "A", "ARTIST": "Artist One", "ALBUM": "Album One"})
+    _add_embedded_picture(with_cover / "01.flac", b"first-albums-cover")
+    without_cover = tmp_path / "album2"
+    without_cover.mkdir()
+    _make_tagged_flac(without_cover / "01.flac", {"TITLE": "B", "ARTIST": "Artist Two", "ALBUM": "Album Two"})
+
+    dialog = MetadataDialog(ProjectMetadata())
+
+    _pick(monkeypatch, with_cover)
+    dialog._load_from_folder()
+    assert dialog._cover_art == b"first-albums-cover"
+
+    _pick(monkeypatch, without_cover)
+    dialog._load_from_folder()
+
     assert dialog._cover_art is None
 
 

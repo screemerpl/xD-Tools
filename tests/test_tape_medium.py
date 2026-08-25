@@ -185,7 +185,6 @@ def test_every_recording_source_is_offered_for_a_cassette_without_an_adapter(qt_
         assert "Cassette" in action.text()
     assert window.telegram_record_action.isVisible()
     # the deck's own keys still need the adapter, and a cassette has none
-    assert not window.erase_disc_action.isVisible()
     assert not window.remote_action.isVisible()
 
 

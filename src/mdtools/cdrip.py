@@ -666,28 +666,21 @@ def encode_track(task: RipTask, *, keep_wav: bool = False) -> None:
 
 # --- housekeeping -----------------------------------------------------
 
-_RIP_SUFFIXES = {".flac", ".wav", ".log"}
-
-
-def clean_stale_rip_folders(root: Path, keep: Path | None = None) -> list[Path]:
-    """Removes previous rips, leaving the one about to be used alone.
-
-    Old rips are cleared at the *start* of a new one rather than at the end
-    of the last, because the files stay in foobar2000's playlist for as long
-    as the user might want to play them again -- deleting them the moment a
-    recording finished would pull them out from under it.
-
-    Only folders holding nothing but rip output are touched. The rip folder
-    is configurable, so it can be pointed at somewhere that also holds
-    something else, and a recursive delete has no business guessing."""
-    removed = []
-    if not root.is_dir():
-        return removed
-    for child in sorted(root.iterdir()):
-        if not child.is_dir() or (keep is not None and child == keep):
-            continue
-        if any(item.is_dir() or item.suffix.lower() not in _RIP_SUFFIXES for item in child.iterdir()):
-            continue
-        shutil.rmtree(child, ignore_errors=True)
-        removed.append(child)
-    return removed
+# Burning's own scratch work happens in a dedicated subfolder of the
+# shared audio folder (app_settings.cd_rip_folder()) -- burn_dialog.py's
+# "burn" work_dir, unrelated to ripping. Reserved here so callers listing
+# the shared folder's own subfolders (picking an "album" to sort/record)
+# can filter it out rather than offering scratch space as if it were one.
+#
+# Ripping deliberately has **no** scratch folder or automatic cleanup of
+# its own any more, and must not grow one back: a folder of nothing but
+# .flac files (permanently-organized albums included) looks identical to
+# "stale rip output" by content alone, and this codebase already
+# `shutil.rmtree()`'d a real user's downloaded albums once by trying to
+# clean up what it guessed was an old rip in this same shared folder.
+# Ripped files are written directly into app_settings.cd_rip_folder() (via
+# rip_folder_name()) and simply accumulate there forever -- explicit
+# instruction: nothing in this app may ever delete anything from that
+# folder on its own.
+BURN_SCRATCH_DIRNAME = "burn"
+RESERVED_SCRATCH_DIRNAMES = {BURN_SCRATCH_DIRNAME}

@@ -102,6 +102,36 @@ def test_clicking_restart_now_calls_restart_app(qt_app, isolated_settings, monke
     assert restarted == [1]
 
 
+def test_restart_now_marks_the_window_quitting_so_it_does_not_return_to_the_startup_screen(
+    qt_app, isolated_settings, monkeypatch
+):
+    """QApplication.quit() (inside _restart_app) asks every top-level
+    window to close first, respecting closeEvent -- which treats a plain
+    close as "go back to the startup screen" unless _quitting is set, the
+    same flag File > Exit already uses. Reported directly: without this,
+    the old instance ended up sitting on the startup screen instead of
+    actually closing after "Restart Now"."""
+    from mdtools import app_window as app_window_module
+
+    def fake_exec(self):
+        self._clicked = self.buttons()[0]  # "Restart Now"
+        return 0
+
+    def fake_clicked_button(self):
+        return self._clicked
+
+    monkeypatch.setattr(app_window_module.QMessageBox, "exec", fake_exec)
+    monkeypatch.setattr(app_window_module.QMessageBox, "clickedButton", fake_clicked_button)
+    monkeypatch.setattr(app_window_module.MainWindow, "_restart_app", staticmethod(lambda: None))
+
+    win = MainWindow(show_startup_dialog=False)
+    assert win._quitting is False
+
+    win._on_language_selected("pl")
+
+    assert win._quitting is True
+
+
 def test_restart_now_does_not_discard_unsaved_changes(qt_app, isolated_settings, monkeypatch):
     """_restart_app() quits via QApplication.quit(), which bypasses
     closeEvent()'s own unsaved-changes guard entirely -- restarting for a

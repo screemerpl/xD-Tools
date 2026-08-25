@@ -21,15 +21,27 @@ def test_lookup_button_appears_above_the_year_field(qt_app):
     assert positions["artist"] < positions["lookup"] < positions["year"]
 
 
-def test_lookup_without_album_or_artist_shows_a_message_and_does_nothing(qt_app, monkeypatch):
+def test_lookup_without_an_artist_shows_a_message_and_does_nothing(qt_app, monkeypatch):
     monkeypatch.setattr(metadata_dialog_module.QMessageBox, "information", lambda *a, **k: None)
     called = []
     monkeypatch.setattr(metadata_dialog_module, "search_albums", lambda *a, **k: called.append(1))
 
-    dialog = MetadataDialog(ProjectMetadata(album="", artist="Someone"))
+    dialog = MetadataDialog(ProjectMetadata(album="Some Album", artist=""))
     dialog._lookup_tracks()
 
     assert called == []
+
+
+def test_lookup_works_with_only_an_artist_typed_in(qt_app, monkeypatch):
+    """Some albums genuinely have no name -- the search shouldn't wait on
+    one when the artist alone is already enough to narrow it down."""
+    called = []
+    monkeypatch.setattr(metadata_dialog_module, "search_albums", lambda artist, album="": called.append((artist, album)))
+
+    dialog = MetadataDialog(ProjectMetadata(album="", artist="Someone"))
+    dialog._lookup_tracks()
+
+    assert called == [("Someone", "")]
 
 
 def test_no_matching_album_shows_a_warning(qt_app, monkeypatch):
@@ -44,6 +56,21 @@ def test_no_matching_album_shows_a_warning(qt_app, monkeypatch):
 
     assert len(warnings) == 1
     assert "Nothing" in warnings[0] and "Nobody" in warnings[0]
+
+
+def test_no_matching_album_by_artist_alone_says_so_without_an_empty_album_name(qt_app, monkeypatch):
+    warnings = []
+    monkeypatch.setattr(
+        metadata_dialog_module.QMessageBox, "warning", lambda self, title, text: warnings.append(text)
+    )
+    monkeypatch.setattr(metadata_dialog_module, "search_albums", lambda artist, album="": [])
+
+    dialog = MetadataDialog(ProjectMetadata(album="", artist="Nobody"))
+    dialog._lookup_tracks()
+
+    assert len(warnings) == 1
+    assert "Nobody" in warnings[0]
+    assert '""' not in warnings[0]
 
 
 def test_a_single_candidate_is_used_without_prompting(qt_app, monkeypatch):

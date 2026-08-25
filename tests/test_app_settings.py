@@ -152,18 +152,6 @@ def test_telegram_settings_round_trip():
     assert app_settings.telegram_phone() == "+1 555 0100"
 
 
-def test_the_download_folder_falls_back_to_the_shared_audio_folder():
-    app_settings.set_telegram_download_folder("")
-    assert app_settings.telegram_download_folder() == app_settings.default_telegram_download_folder()
-    assert "Audio" in app_settings.telegram_download_folder()
-
-
-def test_the_download_folder_setting_round_trips(tmp_path):
-    folder = str(tmp_path / "downloads")
-    app_settings.set_telegram_download_folder(folder)
-    assert app_settings.telegram_download_folder() == folder
-
-
 def test_last_regenerate_font_family_is_none_before_anything_is_chosen():
     assert app_settings.last_regenerate_font_family() is None
 

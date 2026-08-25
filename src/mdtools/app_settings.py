@@ -24,7 +24,7 @@ from mdtools import user_paths
 # before it became user-configurable. Used until the user opens Window >
 # Settings... and changes something, and as the reset target there.
 DEFAULT_SCREEN_DPI = 96.0
-DEFAULT_EXPORT_DPI = 300.0
+DEFAULT_EXPORT_DPI = 144.0  # Cricut Design Space's own requirement
 DEFAULT_BAKE_DPI = DEFAULT_EXPORT_DPI * 3
 
 # xD-Tools' own Telegram API credentials are **injected at build time, never
@@ -45,7 +45,6 @@ _MUSIC_FOLDER_KEY = "music_folder"
 _TELEGRAM_API_ID_KEY = "telegram_api_id"
 _TELEGRAM_API_HASH_KEY = "telegram_api_hash"
 _TELEGRAM_BOT_USERNAME_KEY = "telegram_bot_username"
-_TELEGRAM_DOWNLOAD_FOLDER_KEY = "telegram_download_folder"
 _TELEGRAM_PHONE_KEY = "telegram_phone"
 _REGENERATE_FONT_FAMILY_KEY = "regenerate_font_family"
 _AUDIO_OUTPUT_DEVICE_KEY = "audio_output_device"
@@ -357,21 +356,6 @@ def telegram_bot_username() -> str:
 
 def set_telegram_bot_username(value: str) -> None:
     _settings().setValue(_TELEGRAM_BOT_USERNAME_KEY, str(value).strip())
-
-
-def default_telegram_download_folder() -> str:
-    """XDProjects/Audio by default -- the same shared folder
-    default_cd_rip_folder() points at, since a downloaded album and a CD
-    rip are both audio on their way into the same recording flow."""
-    return str(user_paths.audio_dir())
-
-
-def telegram_download_folder() -> str:
-    return str(_settings().value(_TELEGRAM_DOWNLOAD_FOLDER_KEY, "") or default_telegram_download_folder())
-
-
-def set_telegram_download_folder(value: str) -> None:
-    _settings().setValue(_TELEGRAM_DOWNLOAD_FOLDER_KEY, str(value).strip())
 
 
 def telegram_session_path() -> Path:

@@ -237,19 +237,22 @@ def test_the_metadata_handed_on_covers_every_disc(dialog, monkeypatch, toc, fake
     assert titles == ["A", "B", "C", "D", "E", "F"]
 
 
-def test_the_first_disc_is_not_tidied_away_by_the_second(dialog, monkeypatch, toc, fake_worker):
-    """clean_stale_rip_folders keeps only the folder about to be written --
-    run again for disc two, with both discs sharing that folder, it has
-    nothing to remove, but running it at all is a risk not worth taking."""
-    cleaned: list = []
-    monkeypatch.setattr(
-        module.cdrip, "clean_stale_rip_folders", lambda root, keep=None: cleaned.append(keep)
-    )
+def test_the_first_disc_is_not_tidied_away_by_the_second(dialog, monkeypatch, toc, tmp_path, fake_worker):
+    """This app used to clean up "stale" rip folders before each new disc
+    of a set -- removed outright (not just fixed) after it swept up a real
+    user's permanently organized albums elsewhere in this same shared
+    folder, since a folder of nothing but .flac files looks exactly like a
+    stale rip either way. Nothing here may delete anything any more, so
+    disc one's own files must still be there once disc two starts."""
+    assert not hasattr(cdrip, "clean_stale_rip_folders"), "this must not come back"
     _read(dialog, monkeypatch, toc, [_release("Best Of", "Bajm", 2018, ["A", "B", "C"])])
     _answer(monkeypatch, module.QMessageBox.StandardButton.Ok)
     dialog._start()
+    disc_one_folder = dialog.build_plan().folder
+    disc_one_folder.mkdir(parents=True, exist_ok=True)
+    (disc_one_folder / "01 - A.flac").write_bytes(b"disc one, track one")
     fake_worker[0].finish_successfully()
     _answer(monkeypatch, module.QMessageBox.StandardButton.Cancel)
     dialog._start()
 
-    assert len(cleaned) == 1, "only before the first disc of the set"
+    assert (disc_one_folder / "01 - A.flac").read_bytes() == b"disc one, track one"

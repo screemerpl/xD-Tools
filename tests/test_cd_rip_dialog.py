@@ -200,7 +200,33 @@ def test_the_plan_uses_the_titles_as_edited_in_the_tree(dialog, monkeypatch, toc
 
     assert plan.tasks[1].title == "In Bloom"
     assert plan.tasks[1].tags["TITLE"] == "In Bloom"
+    # Written directly into the shared audio folder, flat, exactly like
+    # every other album already living there -- explicit instruction:
+    # ripping gets no scratch subfolder of its own.
     assert plan.folder == tmp_path / "rips" / "Nirvana - Nevermind"
+
+
+def test_starting_a_rip_never_deletes_anything_in_the_shared_folder(dialog, monkeypatch, toc, tmp_path):
+    """This app used to clean up "stale" rip folders before starting a new
+    one -- and briefly, while the CD-rip and Telegram-download folder
+    settings were merged, that swept up a real user's permanently
+    organized albums along with it, because a folder of nothing but .flac
+    files looks exactly like a stale rip either way. The fix was not to
+    isolate the cleanup, it was to remove it: nothing in this app may ever
+    delete a file from the shared audio folder on its own."""
+    shared_root = tmp_path / "rips"
+    permanent_album = shared_root / "Falling In Reverse - Popular Monster"
+    permanent_album.mkdir(parents=True)
+    (permanent_album / "01.flac").write_bytes(b"real audio, not scratch")
+    assert not hasattr(cdrip, "clean_stale_rip_folders"), "this must not come back"
+
+    _read(dialog, monkeypatch, toc, [_release("Nevermind", "Nirvana", 1991, ["A", "B", "C"])])
+    monkeypatch.setattr(module._RipWorker, "start", lambda self: None)
+
+    dialog._start()
+
+    assert permanent_album.is_dir()
+    assert (permanent_album / "01.flac").read_bytes() == b"real audio, not scratch"
 
 
 def test_a_blank_year_is_left_out_rather_than_written_as_zero(dialog, monkeypatch, toc):
