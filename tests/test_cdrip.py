@@ -212,6 +212,30 @@ def test_folder_name_survives_a_title_windows_would_mangle():
     assert cdrip.rip_folder_name("", "") == "Unknown Artist - Unknown Album"
 
 
+def test_folder_name_survives_a_musicbrainz_style_unicode_hyphen():
+    """Real report: a MusicBrainz artist name carrying U+2010 HYPHEN (not
+    the plain ASCII "-") produced a folder Python's own Unicode-clean
+    path APIs created correctly, but cd-paranoia.exe -- a narrow-API
+    mingw binary that decodes its own argv through the process's ANSI
+    codepage, not UTF-8 -- could not represent on this machine's codepage
+    (cp1250), and failed to open its output file inside the very folder
+    that had just been created: two different byte sequences for what
+    was meant to be the same folder. sanitize_filename() must
+    transliterate to plain ASCII so a folder name survives that
+    conversion on any machine's codepage, not just the one this broke on."""
+    artist = "blink" + chr(0x2010) + "182"
+
+    name = cdrip.rip_folder_name(artist, "Greatest Hits")
+
+    assert name.isascii()
+    assert name == "blink-182 - Greatest Hits"
+
+
+def test_sanitize_filename_transliterates_non_ascii_punctuation():
+    assert cdrip.sanitize_filename("Zażółć gęślą jaźń").isascii()
+    assert cdrip.sanitize_filename("Motörhead").isascii()  # o-umlaut
+
+
 def test_expected_wav_bytes_is_the_toc_length_in_cdda_sectors():
     plan = cdrip.build_rip_plan(_toc(), Path("/rips/x"), [])
     assert plan.tasks[0].expected_wav_bytes == 44 + 22617 * 2352
@@ -410,6 +434,43 @@ def test_a_failed_rip_keeps_its_log_and_reports_what_is_in_it(monkeypatch, tmp_p
         cdrip.rip_track("D:", task, popen=fake_popen, sleep=lambda _: None)
 
     assert [p.name for p in tmp_path.glob("*.log")] == ["01 - A Song.log"]
+
+
+def test_a_blocked_output_file_gets_a_security_software_hint(monkeypatch, tmp_path):
+    """Real report: cd-paranoia refused to open its own output file with
+    "No such file or directory" in a folder rip_track had just created
+    successfully moments earlier -- the signature of security software
+    (Windows' Controlled Folder Access, an antivirus) silently blocking the
+    bundled, unsigned cd-paranoia.exe specifically. cdparanoia's own wording
+    must still come through, with the hint appended, not replacing it."""
+    monkeypatch.setattr(cdrip, "cdparanoia_path", lambda: "cd-paranoia")
+    task = _one_task(tmp_path)
+
+    class _Failing:
+        returncode = None
+
+        def __init__(self, log):
+            self._log = log
+            self._polled = False
+
+        def poll(self):
+            if not self._polled:
+                self._polled = True
+                return None
+            self._log.write(
+                f"Cannot open specified output file {task.wav_path}: No such file or directory\n"
+            )
+            self._log.flush()
+            self.returncode = 1
+            return 1
+
+    def fake_popen(command, stderr=None, **kwargs):
+        return _Failing(stderr)
+
+    with pytest.raises(cdrip.CdRipError, match="Controlled Folder Access") as excinfo:
+        cdrip.rip_track("D:", task, popen=fake_popen, sleep=lambda _: None)
+
+    assert "Cannot open specified output file" in str(excinfo.value)
 
 
 def test_rip_command_asks_for_stderr_progress_and_a_wav():

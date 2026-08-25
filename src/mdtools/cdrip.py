@@ -53,6 +53,8 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from mdtools.mdrem import transliterate
+
 # A CDDA sector is 1/75th of a second of 16-bit stereo 44.1kHz audio.
 SECTOR_BYTES = 2352
 SECTORS_PER_SECOND = 75
@@ -425,8 +427,23 @@ def sanitize_filename(text: str) -> str:
     """Same job as gallery._sanitize_filename, kept separate because this
     one also has to survive a trailing dot or space -- Windows silently
     drops those from a directory name, which would make the folder we
-    create and the folder we then write into two different places."""
-    cleaned = _INVALID_FILENAME_CHARS.sub("_", text).strip(" .")
+    create and the folder we then write into two different places.
+
+    Transliterated to ASCII first (mdrem.transliterate(), the same
+    conversion a disc/track title already goes through before being
+    written to a MiniDisc). Real report: a MusicBrainz artist name
+    carrying a Unicode HYPHEN (U+2010, not the plain ASCII "-") produced
+    a folder Python's own (Unicode-clean) path APIs created correctly,
+    but cd-paranoia.exe -- a narrow-API mingw binary, which decodes its
+    own argv through the process's *ANSI codepage*, not UTF-8 -- could
+    not represent that character on this machine's codepage (cp1250) and
+    failed to open its output file inside the very folder that had just
+    been created, with "No such file or directory": two different byte
+    sequences for what was meant to be the same folder. A folder name has
+    to survive that conversion on every machine's own codepage, not just
+    the one this was diagnosed on, so this goes all the way to ASCII
+    rather than trying to allow whatever one codepage happens to cover."""
+    cleaned = _INVALID_FILENAME_CHARS.sub("_", transliterate(text).text).strip(" .")
     return cleaned or "Unknown"
 
 
@@ -614,7 +631,27 @@ def rip_track(
     if process.returncode != 0:
         # The log is deliberately left behind on failure: it holds
         # cdparanoia's per-sector account of what went wrong.
-        raise CdRipError(_first_useful_line(tail) or f"cd-paranoia failed on track {task.number}")
+        complaint = _first_useful_line(tail) or f"cd-paranoia failed on track {task.number}"
+        # Real report: cd-paranoia's own "Cannot open specified output
+        # file" for a path whose parent folder mkdir() (just above) did
+        # not complain about -- and this was not a one-off: it kept
+        # failing on retry even once the folder plainly already existed,
+        # while other albums (other folders, same parent) ripped fine.
+        # That combination is not fully explained yet (a per-folder
+        # permission/ACL problem and a security-software block naming that
+        # one path are both still open candidates) -- surfaced as a hint
+        # pointing at where to look, not a confident diagnosis, since one
+        # guessed at wrongly already. Only fires for the one cdparanoia
+        # complaint that actually implies a folder-access problem, and
+        # keeps the tool's own original wording alongside it either way.
+        if "cannot open specified output file" in complaint.lower():
+            complaint += (
+                " -- cd-paranoia (bundled, unsigned) could not write into this specific folder. "
+                "Check the folder's own permissions, and whether security software (e.g. Windows' "
+                "Controlled Folder Access) is blocking cd-paranoia.exe from it specifically -- or "
+                "try a rip folder outside Documents in Window > Settings..."
+            )
+        raise CdRipError(complaint)
 
     actual = task.wav_path.stat().st_size if task.wav_path.exists() else 0
     if actual < task.expected_wav_bytes:

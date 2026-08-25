@@ -38,6 +38,20 @@ def test_typographic_punctuation_becomes_its_ascii_equivalent():
     assert mdrem.transliterate("Don’t Look Back — “Live”").text == 'Don\'t Look Back - "Live"'
 
 
+def test_every_unicode_dash_variant_becomes_a_plain_hyphen():
+    """None of these has an NFKD decomposition to "-" (confirmed
+    directly: U+2010 HYPHEN's own decomposition is itself), so without an
+    explicit map entry each one used to fall through to `dropped` --
+    real report: a MusicBrainz artist name using U+2010 for "blink-182"
+    reached cdrip.py's own sanitize_filename() (which reuses this
+    function) and broke a CD rip."""
+    dashes = [chr(cp) for cp in (0x2010, 0x2011, 0x2012, 0x2013, 0x2014, 0x2212)]
+    for dash in dashes:
+        result = mdrem.transliterate(f"blink{dash}182")
+        assert result.text == "blink-182", f"U+{ord(dash):04X} did not become a hyphen"
+        assert not result.is_lossy
+
+
 def test_characters_with_no_equivalent_are_reported_not_silently_dropped():
     result = mdrem.transliterate("日本語 title")
     assert result.text == "title"
