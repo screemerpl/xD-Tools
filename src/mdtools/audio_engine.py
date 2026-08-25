@@ -303,6 +303,41 @@ def dither_to_16bit(
     return np.clip(y, -32768, 32767).astype(np.int16)
 
 
+def _resample_and_dither_to_int16(samples: np.ndarray, source_rate: int, target_rate: int) -> np.ndarray:
+    """The shared core of resample_and_dither_to_red_book() and
+    load_for_recording(): soxr for the rate, dither_to_16bit()'s verified
+    noise-shaped dither for the bit depth. Mono is duplicated to two
+    identical channels *before* dithering, not after -- each channel then
+    gets its own independent dither noise (correlated noise between two
+    channels would colour the stereo image); duplicating afterward would
+    hand both output channels the exact same dither pattern instead."""
+    resampled = resample(samples, source_rate, target_rate)
+    if resampled.shape[1] == 1:
+        resampled = np.repeat(resampled, RED_BOOK_CHANNELS, axis=1)
+    rng = np.random.default_rng()
+    channels_16 = [dither_to_16bit(resampled[:, c], rng=rng) for c in range(resampled.shape[1])]
+    return np.stack(channels_16, axis=-1)
+
+
+def _read_for_dithering(path: Path) -> tuple[np.ndarray, int]:
+    """float64 samples plus their own rate, with the >2-channel guard
+    every caller of _resample_and_dither_to_int16 needs -- shared so the
+    guard can't drift between resample_and_dither_to_red_book() and
+    load_for_recording()."""
+    try:
+        samples, rate = sf.read(str(path), dtype="float64", always_2d=True)
+    except Exception as exc:
+        raise AudioEngineError(f"{path.name} could not be read: {exc}") from exc
+    if samples.shape[1] > RED_BOOK_CHANNELS:
+        # Enforced here too, not just left to the caller's own dispatch
+        # logic -- a >2-channel source silently proceeding would produce
+        # the wrong channel count instead of a clear error.
+        raise AudioEngineError(
+            f"{path.name} has {samples.shape[1]} channels; only mono and stereo are supported here"
+        )
+    return samples, rate
+
+
 def resample_and_dither_to_red_book(source: Path | str, destination: Path | str) -> None:
     """A FLAC or WAV source, at any sample rate/bit depth, mono or
     stereo, to a Red Book (44.1kHz/16-bit/stereo) PCM WAV -- decode.py's
@@ -324,31 +359,34 @@ def resample_and_dither_to_red_book(source: Path | str, destination: Path | str)
     own dispatch logic."""
     _require_soundfile()
     source, destination = Path(source), Path(destination)
-
-    try:
-        samples, rate = sf.read(str(source), dtype="float64", always_2d=True)
-    except Exception as exc:
-        raise AudioEngineError(f"{source.name} could not be read: {exc}") from exc
-    if samples.shape[1] > RED_BOOK_CHANNELS:
-        # Enforced here too, not just left to the caller's own dispatch
-        # logic -- a >2-channel source silently proceeding would produce
-        # a WAV with the wrong channel count instead of a clear error.
-        raise AudioEngineError(
-            f"{source.name} has {samples.shape[1]} channels; only mono and stereo are supported here"
-        )
-
-    resampled = resample(samples, rate, RED_BOOK_RATE)
-    if resampled.shape[1] == 1:
-        resampled = np.repeat(resampled, RED_BOOK_CHANNELS, axis=1)
-
-    rng = np.random.default_rng()
-    channels_16 = [dither_to_16bit(resampled[:, c], rng=rng) for c in range(resampled.shape[1])]
-    interleaved = np.stack(channels_16, axis=-1)
-
+    samples, rate = _read_for_dithering(source)
+    interleaved = _resample_and_dither_to_int16(samples, rate, RED_BOOK_RATE)
     try:
         sf.write(str(destination), interleaved, RED_BOOK_RATE, subtype="PCM_16")
     except Exception as exc:
         raise AudioEngineError(f"{destination.name} could not be written: {exc}") from exc
+
+
+def load_for_preview(path: Path | str) -> tuple[np.ndarray, int]:
+    """One decoded float32 buffer plus its own native sample rate --
+    for auditioning a single track before recording/burning, through the
+    OS default output (see AudioPlayer's own docstring on the "preview
+    sink" idea). Deliberately does **not** resample, unlike
+    load_for_playback(): this is "listen to the source file as it is",
+    not "prepare it for a specific recording sink"."""
+    _require_soundfile()
+    path = Path(path)
+    try:
+        samples, rate = sf.read(str(path), dtype="float32", always_2d=True)
+    except Exception as exc:
+        raise AudioEngineError(f"{path.name} could not be read: {exc}") from exc
+    if samples.shape[1] > RED_BOOK_CHANNELS:
+        raise AudioEngineError(
+            f"{path.name} has {samples.shape[1]} channels; only mono and stereo are supported here"
+        )
+    if samples.shape[1] == 1:
+        samples = samples[:, 0]
+    return samples, rate
 
 
 def load_for_playback(
@@ -358,17 +396,21 @@ def load_for_playback(
     on_progress: Callable[[int, int, Path], None] | None = None,
 ) -> list[np.ndarray]:
     """One decoded, resampled float32 buffer per path, ready for
-    `AudioPlayer.play()` -- the recording dialogs' replacement for handing
-    files to foobar2000's own playlist.
+    `AudioPlayer.play()` -- cassette recording's own source (an analogue
+    line-out into a deck's own ADC, where this app's own bit depth is not
+    the last word anyway) and a preview/audition sink. **Not** what a
+    MiniDisc recording uses any more -- see `load_for_recording()`, a
+    sibling of this function for exactly that case, where the deck's
+    digital S/PDIF input *does* need this app's own properly-dithered
+    16-bit signal, not an undithered float32 buffer truncated by
+    whatever is downstream.
 
-    No dithering: that exists for the file that actually gets *written* to
-    a CD, not for what is monitored/sent out to a deck over S/PDIF, so this
-    is just decode + resample, at `AudioPlayer`'s own float32 domain
-    throughout (`resample_and_dither_to_red_book()`'s int16 quantising
-    step is deliberately skipped here). Mono is left mono -- `AudioPlayer`
-    already duplicates a mono buffer to every output channel itself
-    (`_as_stereo()`), so doing it twice here would be redundant, not
-    wrong, but redundant.
+    No dithering here: decode + resample only, at `AudioPlayer`'s own
+    float32 domain throughout (`resample_and_dither_to_red_book()`'s
+    int16 quantising step is deliberately skipped). Mono is left mono --
+    `AudioPlayer` already duplicates a mono buffer to every output
+    channel itself (`_as_stereo()`), so doing it twice here would be
+    redundant, not wrong, but redundant.
 
     `on_progress`, if given, is called as `(index, total, path)` right
     before each file is decoded (`index` is 1-based) -- decoding a whole
@@ -397,6 +439,47 @@ def load_for_playback(
             samples = samples[:, 0]
         resampled = resample(samples, rate, samplerate).astype(np.float32)
         buffers.append(resampled)
+    return buffers
+
+
+def load_for_recording(
+    paths: list[Path | str],
+    *,
+    samplerate: int = RED_BOOK_RATE,
+    on_progress: Callable[[int, int, Path], None] | None = None,
+) -> list[np.ndarray]:
+    """Like `load_for_playback()`, but for a MiniDisc recording's own
+    S/PDIF feed, which -- unlike a preview, and unlike cassette's own
+    analogue line-out -- carries exactly Red Book PCM into the deck's
+    digital input. A plain float32 buffer handed to the OS mixer/driver
+    would still get truncated to whatever bit depth that feed actually
+    is somewhere downstream; without this, that truncation happens with
+    no noise shaping at all, which is a worse result than doing it
+    properly, not merely an equivalent one -- `resample_and_dither_to_
+    red_book()`'s own dither exists for exactly this reason on the CD-R
+    side, and a MiniDisc's own digital input deserves the same treatment.
+
+    Reuses `_resample_and_dither_to_int16()`, the same core
+    `resample_and_dither_to_red_book()` writes to a CD-R with (soxr for
+    the rate, `dither_to_16bit()`'s verified noise-shaped dither for the
+    bit depth, mono duplicated to stereo *before* dithering so each
+    channel gets independent dither noise). Returned as float32 in
+    [-1, 1] -- the domain `AudioPlayer.play()` already expects -- but
+    every sample only ever lands on one of 65536 discrete levels, so any
+    further float32->int16 conversion downstream is lossless, not another
+    undithered rounding stacked on top of this one.
+
+    `on_progress`, same contract as `load_for_playback()`'s own."""
+    _require_soundfile()
+    buffers = []
+    total = len(paths)
+    for index, path in enumerate(paths, start=1):
+        path = Path(path)
+        if on_progress is not None:
+            on_progress(index, total, path)
+        samples, rate = _read_for_dithering(path)
+        interleaved = _resample_and_dither_to_int16(samples, rate, samplerate)
+        buffers.append((interleaved.astype(np.float32)) / 32768.0)
     return buffers
 
 
@@ -591,6 +674,38 @@ class AudioPlayer:
             self._stream.close()
             self._stream = None
         self._queue = []
+
+    def pause(self) -> None:
+        """Stops the stream without discarding the queue or position --
+        unlike stop(), which is a hard reset. A real PortAudio stream
+        supports being stopped and later restarted without reopening, so
+        resume() just starts the same stream again. A no-op if nothing is
+        currently playing."""
+        if self._stream is not None:
+            self._stream.stop()
+
+    def resume(self) -> None:
+        """Restarts a stream previously paused via pause(). A no-op if
+        play() was never called."""
+        if self._stream is not None:
+            self._stream.start()
+
+    def seek(self, seconds: float) -> None:
+        """Jumps to `seconds` within the *current* buffer in the queue --
+        the only case a caller actually needs (a single-track preview
+        player's scrub bar), not an arbitrary cross-buffer seek. Clamped
+        to the buffer's own length.
+
+        This write races harmlessly against the audio callback thread's
+        own reads/writes of `_position_in_current` -- the same
+        "display-only, no lock" contract `position_seconds` already
+        documents. Worst case is a moment of stale position, never
+        corrupted state (Python's GIL makes the assignment itself
+        atomic)."""
+        if self._queue_index >= len(self._queue):
+            return
+        frame = max(0, int(seconds * self._samplerate))
+        self._position_in_current = min(frame, len(self._queue[self._queue_index]))
 
     def _as_stereo(self, data: np.ndarray) -> np.ndarray:
         data = np.asarray(data, dtype=np.float32)

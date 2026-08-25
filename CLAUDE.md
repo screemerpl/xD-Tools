@@ -262,8 +262,14 @@ slider variant pads).
 
 **Neither foobar2000 nor SoX is a dependency any more.** Recording (MD,
 cassette, CD rip, folder record, Telegram hand-off) now plays through
-`audio_engine.AudioPlayer` directly — decodes via `load_for_playback()`,
-fires `on_track_boundary`/`on_finished` from the realtime audio callback
+`audio_engine.AudioPlayer` directly — decodes via `load_for_playback()`
+(cassette, whose analogue line-out doesn't need this app's own bit-depth
+quantising) or **`load_for_recording()`** (MD, whose digital S/PDIF input
+needs exactly Red Book PCM the same as a CD-R burn — resampled *and*
+noise-shape-dithered to 16-bit via the same `_resample_and_dither_to_
+int16()` core `resample_and_dither_to_red_book()` uses, not left as an
+undithered float32 buffer for some downstream driver to truncate badly).
+Fires `on_track_boundary`/`on_finished` from the realtime audio callback
 (sample-accurate, not poll-bounded). `tracks.py` replaced the metadata half
 of the old `foobar.py` (deleted): `PlaylistItem`, `sort_by_disc_and_track`,
 `disc_breaks`, `metadata_from_playlist`, all pure-Python/mutagen, no

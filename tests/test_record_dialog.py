@@ -591,7 +591,7 @@ def test_the_track_list_is_frozen_once_recording_starts(qt_app, monkeypatch, no_
     # before the deliberate lead-in -- these items carry no real paths, so
     # without this the decode itself would fail and _fail() would undo the
     # very freeze this test is checking.
-    monkeypatch.setattr(record_module.audio_engine, "load_for_playback", lambda paths, **kwargs: [])
+    monkeypatch.setattr(record_module.audio_engine, "load_for_recording", lambda paths, **kwargs: [])
 
     dialog._start()
 
@@ -684,3 +684,41 @@ def test_a_cover_inside_the_albums_own_files_is_the_last_resort(qt_app, monkeypa
 
     assert dialog.cover_label.data == _png()
     assert seen == ["/music/1.flac", "/music/2.flac", "/music/3.flac"]
+
+
+# --- the audition preview bar (#18) -----------------------------------------
+
+
+def test_selecting_a_track_enables_the_preview_bar_with_correct_prev_next(qt_app, monkeypatch):
+    dialog = _dialog(_items(3), monkeypatch)
+
+    dialog.tree.setCurrentItem(dialog.tree.topLevelItem(0))
+    assert dialog.preview_bar.play_btn.isEnabled()
+    assert not dialog.preview_bar.prev_btn.isEnabled()
+    assert dialog.preview_bar.next_btn.isEnabled()
+
+    dialog.tree.setCurrentItem(dialog.tree.topLevelItem(2))
+    assert dialog.preview_bar.prev_btn.isEnabled()
+    assert not dialog.preview_bar.next_btn.isEnabled()
+
+
+def test_starting_the_recording_stops_any_playing_preview(qt_app, monkeypatch, no_hardware, fake_player):
+    """No preview stream should be left open once the real recording's own
+    AudioPlayer takes over the recording sink."""
+    dialog = _dialog(_items(3), monkeypatch)
+    monkeypatch.setattr(
+        record_module.QMessageBox, "warning", lambda *a, **k: record_module.QMessageBox.StandardButton.Ok
+    )
+    monkeypatch.setattr(
+        record_module.QMessageBox, "question", lambda *a, **k: record_module.QMessageBox.StandardButton.Yes
+    )
+    monkeypatch.setattr(record_module.audio_engine, "load_for_recording", lambda paths, **kwargs: [])
+    monkeypatch.setattr(record_module.audio_engine, "load_for_preview", lambda path: ([0.0] * 10, 44100))
+    dialog.tree.setCurrentItem(dialog.tree.topLevelItem(0))
+    dialog.preview_bar._on_play_pause_clicked()
+    preview_player_instance = dialog.preview_bar._player
+    assert preview_player_instance is not None
+
+    dialog._start()
+
+    assert preview_player_instance.stopped

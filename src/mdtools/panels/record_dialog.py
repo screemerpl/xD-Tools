@@ -86,6 +86,7 @@ from mdtools.panels.cover_preview import CoverPreview, fetch_into
 from mdtools.panels.erase_dialog import EraseDiscDialog
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
 from mdtools.panels.playback_bridge import PlaybackBridge
+from mdtools.panels.preview_player import PreviewPlayerBar
 from mdtools.project import ProjectMetadata, Track
 
 # An MD holds 80 minutes in SP. The deck also has MDLP (LP2/LP4) for 160/320,
@@ -209,6 +210,7 @@ class RecordDialog(QDialog):
         self.tree.setRootIsDecorated(False)
         self.tree.setColumnHidden(COL_DISC, True)  # nothing to say until there is more than one
         self.tree.currentItemChanged.connect(lambda *_: self._refresh_split_button())
+        self.tree.currentItemChanged.connect(lambda *_: self._refresh_preview())
 
         self.up_btn = QPushButton(self.tr("Move Up"))
         self.up_btn.clicked.connect(lambda: self._move_selected(-1))
@@ -239,6 +241,11 @@ class RecordDialog(QDialog):
         table_row.addWidget(self.tree, 1)
         table_row.addLayout(side)
         layout.addLayout(table_row)
+
+        self.preview_bar = PreviewPlayerBar()
+        self.preview_bar.prev_requested.connect(lambda: self._step_preview(-1))
+        self.preview_bar.next_requested.connect(lambda: self._step_preview(1))
+        layout.addWidget(self.preview_bar)
 
         hint = QLabel(
             self.tr(
@@ -585,6 +592,16 @@ class RecordDialog(QDialog):
         item = self.tree.currentItem()
         return self.tree.indexOfTopLevelItem(item) if item is not None else -1
 
+    def _refresh_preview(self) -> None:
+        row = self._selected_row()
+        path = Path(self._items[row].path) if 0 <= row < len(self._items) and self._items[row].path else None
+        self.preview_bar.set_current(path, has_prev=row > 0, has_next=0 <= row < len(self._items) - 1)
+
+    def _step_preview(self, delta: int) -> None:
+        row = self._selected_row() + delta
+        if 0 <= row < self.tree.topLevelItemCount():
+            self.tree.setCurrentItem(self.tree.topLevelItem(row))
+
     def _on_multi_toggled(self, _checked: bool) -> None:
         self._recompute_plan()
 
@@ -644,6 +661,7 @@ class RecordDialog(QDialog):
             return
         if not self._confirm_overwrite():
             return
+        self.preview_bar.stop()
         self._player = audio_engine.AudioPlayer(
             device=audio_engine.resolve_output_device(app_settings.audio_output_device()),
             gain_db=app_settings.recording_gain_db(),
@@ -667,16 +685,20 @@ class RecordDialog(QDialog):
         self._recording = True
         self._current_local_index = 0
         self.progress.setValue(0)
-        # Decoded and resampled *before* the pause is released -- otherwise
-        # the deck sits running into silence for however long that takes
-        # (several seconds, for a whole disc's worth of tracks) instead of
-        # just the deliberate LEAD_IN_MS below. _report_decode_progress
-        # keeps the status label moving meanwhile, so this doesn't read as
-        # the dialog having hung.
+        # Decoded, resampled and dithered *before* the pause is released --
+        # otherwise the deck sits running into silence for however long
+        # that takes (several seconds, for a whole disc's worth of tracks)
+        # instead of just the deliberate LEAD_IN_MS below.
+        # _report_decode_progress keeps the status label moving meanwhile,
+        # so this doesn't read as the dialog having hung. Dithered via
+        # load_for_recording(), not load_for_playback() -- the deck's own
+        # digital S/PDIF input takes exactly Red Book PCM, the same as a
+        # CD-R burn (see audio_engine.load_for_recording()'s own
+        # docstring).
         first, last = self._disc_bounds()
         paths = [Path(item.path) for item in self._items[first : last + 1]]
         try:
-            buffers = audio_engine.load_for_playback(
+            buffers = audio_engine.load_for_recording(
                 paths, samplerate=self._player.samplerate, on_progress=self._report_decode_progress
             )
         except audio_engine.AudioEngineError as exc:
@@ -759,7 +781,7 @@ class RecordDialog(QDialog):
         self._timer.start()
 
     def _report_decode_progress(self, index: int, total: int, path: Path) -> None:
-        """`load_for_playback`'s own callback, called synchronously from
+        """`load_for_recording`'s own callback, called synchronously from
         inside its decode loop -- decoding a whole disc up front (see
         _begin_disc) can take a few real seconds, and processEvents() is
         what actually lets the label repaint mid-loop, since nothing else
@@ -1076,6 +1098,7 @@ class RecordDialog(QDialog):
         """Stopping mid-recording has to stop both ends -- leaving the deck
         recording silence after playback has stopped would append a long
         empty track to the disc."""
+        self.preview_bar.stop()
         if self._recording:
             self._timer.stop()
             self._recording = False

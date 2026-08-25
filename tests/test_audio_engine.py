@@ -553,6 +553,78 @@ def test_stop_closes_the_stream_and_clears_the_queue(fake_sd):
     assert not stream.started
 
 
+def test_pause_stops_the_stream_without_clearing_the_queue(fake_sd):
+    player = audio_engine.AudioPlayer(device=None, samplerate=44100, channels=2)
+    player.play([np.zeros(10, dtype=np.float32)])
+    stream = _FakeOutputStream.instances[-1]
+
+    player.pause()
+
+    assert not stream.started
+    assert not stream.closed
+    assert player.queue_index == 0  # nothing reset, just stopped
+
+
+def test_resume_restarts_the_same_stream(fake_sd):
+    player = audio_engine.AudioPlayer(device=None, samplerate=44100, channels=2)
+    player.play([np.zeros(10, dtype=np.float32)])
+    stream = _FakeOutputStream.instances[-1]
+
+    player.pause()
+    player.resume()
+
+    assert stream.started
+    assert stream is _FakeOutputStream.instances[-1]  # same stream, not reopened
+
+
+def test_pause_and_resume_are_no_ops_before_any_play(fake_sd):
+    player = audio_engine.AudioPlayer(device=None, samplerate=44100, channels=2)
+
+    player.pause()
+    player.resume()  # neither should raise
+
+
+def test_seek_moves_the_position_within_the_current_buffer(fake_sd):
+    player = audio_engine.AudioPlayer(device=None, samplerate=44100, channels=2)
+    player.play([np.zeros(2 * 44100, dtype=np.float32)])  # 2s long
+
+    player.seek(1.0)
+
+    assert player.position_seconds == pytest.approx(1.0)
+
+
+def test_seek_is_clamped_to_the_buffer_length(fake_sd):
+    player = audio_engine.AudioPlayer(device=None, samplerate=44100, channels=2)
+    player.play([np.zeros(10, dtype=np.float32)])  # ~0.000227s long
+
+    player.seek(1000.0)
+
+    # clamped to the end of the buffer, not left at whatever "1000 seconds
+    # in" would otherwise compute to
+    assert player.position_seconds == pytest.approx(10 / 44100)
+
+    # pulling more frames from an already-exhausted buffer must not crash --
+    # it is exactly the ordinary "track finished" path
+    stream = _FakeOutputStream.instances[-1]
+    out = _pull(stream, 5)
+    assert out.shape[0] == 5
+
+
+def test_seek_is_clamped_at_zero(fake_sd):
+    player = audio_engine.AudioPlayer(device=None, samplerate=44100, channels=2)
+    player.play([np.zeros(10, dtype=np.float32)])
+
+    player.seek(-5.0)
+
+    assert player.position_seconds == 0.0
+
+
+def test_seek_before_any_play_does_nothing(fake_sd):
+    player = audio_engine.AudioPlayer(device=None, samplerate=44100, channels=2)
+
+    player.seek(1.0)  # must not raise -- queue is empty
+
+
 def test_recording_and_preview_sinks_are_independent_players(fake_sd):
     """Confirms the API shape the settings/device-picker design leans on:
     a "recording sink" pinned to an explicit device and a "preview sink"
@@ -659,3 +731,108 @@ def test_load_for_playback_refuses_surround(tmp_path):
 
     with pytest.raises(audio_engine.AudioEngineError):
         audio_engine.load_for_playback([src])
+
+
+# --- load_for_preview: decode at native rate, no resampling, for auditioning ---
+
+
+def test_load_for_preview_does_not_resample(tmp_path):
+    """The whole point versus load_for_playback(): this is "listen to the
+    source file as it is", not "prepare it for a specific recording
+    sink"."""
+    samples = np.zeros((4800, 2), dtype=np.float32)
+    src = tmp_path / "hires.wav"
+    sf.write(src, samples, 48000, subtype="PCM_16")
+
+    buffer, rate = audio_engine.load_for_preview(src)
+
+    assert rate == 48000
+    assert buffer.shape[0] == 4800
+
+
+def test_load_for_preview_leaves_mono_mono(tmp_path):
+    samples = np.zeros(100, dtype=np.float32)
+    src = tmp_path / "mono.wav"
+    sf.write(src, samples, 44100, subtype="PCM_16")
+
+    buffer, _rate = audio_engine.load_for_preview(src)
+
+    assert buffer.ndim == 1
+
+
+def test_load_for_preview_refuses_surround(tmp_path):
+    samples = np.zeros((100, 6), dtype=np.float32)
+    src = tmp_path / "surround.wav"
+    sf.write(src, samples, 44100, subtype="PCM_16")
+
+    with pytest.raises(audio_engine.AudioEngineError):
+        audio_engine.load_for_preview(src)
+
+
+# --- load_for_recording: decode + resample + dither, for a MiniDisc's own
+# digital S/PDIF feed (unlike load_for_playback, which skips dithering) ----
+
+
+def test_load_for_recording_resamples_to_the_target_rate(tmp_path):
+    samples = np.zeros((4800, 2), dtype=np.float32)
+    src = tmp_path / "hires.wav"
+    sf.write(src, samples, 48000, subtype="PCM_16")
+
+    buffers = audio_engine.load_for_recording([src], samplerate=44100)
+
+    assert len(buffers) == 1
+    assert buffers[0].dtype == np.float32
+    assert buffers[0].shape[0] == pytest.approx(4410, abs=2)
+
+
+def test_load_for_recording_quantises_to_65536_discrete_levels(tmp_path):
+    """The whole point versus load_for_playback(): the returned float32
+    values are not an arbitrary continuous signal -- they only ever land
+    on one of exactly 65536 discrete int16 levels, the same levels the
+    file would be burned to a CD-R with, so a later float32->int16
+    conversion anywhere downstream is lossless, not another undithered
+    rounding stacked on top of this one."""
+    rng = np.random.default_rng(0)
+    samples = (rng.random((4410, 2)) * 2 - 1).astype(np.float64)
+    src = tmp_path / "src.wav"
+    sf.write(src, samples, 44100, subtype="PCM_24")
+
+    buffers = audio_engine.load_for_recording([src], samplerate=44100)
+
+    as_int16 = np.round(buffers[0] * 32768.0)
+    assert np.array_equal(as_int16, buffers[0] * 32768.0)  # already integral
+
+
+def test_load_for_recording_duplicates_mono_to_stereo_before_dithering(tmp_path):
+    """Unlike load_for_playback() (which deliberately leaves mono mono,
+    relying on AudioPlayer's own duplication at play time), this must
+    duplicate *before* dithering -- see resample_and_dither_to_red_book's
+    own docstring on why the order matters."""
+    samples = np.full((44100,), 0.5, dtype=np.float64)
+    src = tmp_path / "mono.wav"
+    sf.write(src, samples, 44100, subtype="PCM_24")
+
+    buffers = audio_engine.load_for_recording([src], samplerate=44100)
+
+    assert buffers[0].ndim == 2
+    assert buffers[0].shape[1] == 2
+
+
+def test_load_for_recording_refuses_surround(tmp_path):
+    samples = np.zeros((100, 6), dtype=np.float32)
+    src = tmp_path / "surround.wav"
+    sf.write(src, samples, 44100, subtype="PCM_16")
+
+    with pytest.raises(audio_engine.AudioEngineError):
+        audio_engine.load_for_recording([src])
+
+
+def test_load_for_recording_reports_progress_like_load_for_playback(tmp_path):
+    samples = np.zeros((100, 2), dtype=np.float32)
+    src = tmp_path / "a.wav"
+    sf.write(src, samples, 44100, subtype="PCM_16")
+    seen = []
+
+    audio_engine.load_for_recording([src], on_progress=lambda i, t, p: seen.append((i, t, p)))
+
+    assert seen == [(1, 1, src)]

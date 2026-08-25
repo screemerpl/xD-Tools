@@ -558,7 +558,7 @@ def test_begin_disc_only_loads_this_discs_own_tracks(qt_app, monkeypatch, no_har
     monkeypatch.setattr(record_module.QMessageBox, "question", _answer_affirmatively)
     monkeypatch.setattr(
         record_module.audio_engine,
-        "load_for_playback",
+        "load_for_recording",
         lambda paths, **kwargs: [f"buffer-for-{p}" for p in paths],
     )
 
@@ -596,7 +596,7 @@ def test_the_pause_is_not_released_until_decoding_finishes(qt_app, monkeypatch, 
         no_hardware.append("DECODE")
         return [f"buffer-for-{p}" for p in paths]
 
-    monkeypatch.setattr(record_module.audio_engine, "load_for_playback", _fake_load)
+    monkeypatch.setattr(record_module.audio_engine, "load_for_recording", _fake_load)
 
     dialog._begin_disc()
 
