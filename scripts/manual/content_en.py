@@ -27,9 +27,9 @@ BOOK = [
                 "**Design** the labels: a MiniDisc's sticker and J-card, a CD's ring label and case "
                 "inserts, or a cassette's inlay card and a sticker for each side - and export them "
                 "ready to print and cut.",
-                "**Record** a whole album from foobar2000 onto a MiniDisc, with a proper track mark at "
-                "every song.",
-                "**Burn** an audio CD-R from a folder or from foobar2000's playlist, with CD-Text titles.",
+                "**Record** a whole album onto a MiniDisc, from a CD or a folder of files, with a proper "
+                "track mark at every song.",
+                "**Burn** an audio CD-R from a folder of files, with CD-Text titles.",
                 "**Record a cassette** side by side, with the album split where it fits and the deck "
                 "left to you - xD-Tools says what to press.",
                 "**Title** a MiniDisc: write the album name and every track name onto the disc itself, "
@@ -56,9 +56,9 @@ BOOK = [
                                                "or a steady hand with scissors."],
                     ["Titling a disc", "An MDRem adapter on a USB port, and a Sony MiniDisc deck it can be "
                                        "aimed at."],
-                    ["Recording an album", "The above, plus foobar2000 with the Beefweb component, and a "
-                                           "digital (S/PDIF) cable from the computer to the deck - or an "
-                                           "analogue one, at a real cost in quality."],
+                    ["Recording an album", "The above, plus a digital (S/PDIF) cable from the computer to "
+                                           "the deck - or an analogue one, at a real cost in quality. No "
+                                           "other software: xD-Tools plays the album itself."],
                 ],
             }},
             {"note": "Everything in this manual was worked out against a **Sony MDS-JE480**. Other Sony "
@@ -288,11 +288,12 @@ BOOK = [
                 "**Lookup Track List...** searches the iTunes catalogue for the album and artist you "
                 "typed, and fills in the track list, the year and the cover art. If more than one release "
                 "matches you are asked which.",
-                "**Load from foobar2000** takes everything from whatever is loaded in foobar's current "
-                "playlist, then looks up cover art for it.",
+                "**Import from Folder...** reads an album folder's own tags - the same tag-reading a "
+                "recording uses - and fills in the artist, album, year and track list from them, then "
+                "looks up cover art for it.",
             ]},
-            {"tip": "**Load from foobar2000 is usually the better source.** Those are the actual files you "
-                    "are about to record, with their actual tags, in the actual order - a search can "
+            {"tip": "**Import from Folder... is usually the better source.** Those are the actual files "
+                    "you are about to record, with their actual tags, in the actual order - a search can "
                     "return a different edition with a different track order."},
             {"h2": "Cover art"},
             {"p": "A fetched cover is saved in two places: with the project, so it is still there next "
@@ -467,16 +468,24 @@ BOOK = [
             {"h2": "Turning it on in xD-Tools"},
             {"p": "**Window > Settings...**, tick **Enable MDRem IR remote adapter**, and choose the "
                   "serial port."},
-            {"fig": ("settings", "Window > Settings. The foobar2000 address is separate from the adapter.")},
+            {"fig": ("settings", "Window > Settings. The audio output devices are separate from the "
+                                 "adapter - recording needs a device, not the infrared connection.")},
             {"p": "**Detect** asks every serial port on the machine whether an MDRem answers on it. It has "
                   "to work that way: the board reports the USB ID `2E8A:0003`, which is also its own "
                   "bootloader's and other Waveshare boards', so the only reliable identification is the "
                   "device replying to a `PING`."},
             {"p": "Three things appear once the checkbox is ticked: **Upload Tracklist** in the "
-                  "Metadata dialog, **Remote...** on the startup screen, and the whole **Recording** "
-                  "menu - all three ways of recording a disc, Remote Control... and Erase MiniDisc..."},
-            {"note": "The foobar2000 address on the same page is deliberately *not* tied to the checkbox - "
-                     "reading a playlist needs foobar2000, not the infrared adapter."},
+                  "Metadata dialog, **Remote...** on the Window menu, and the MiniDisc-specific entries "
+                  "in **Recording** - Record CD/Folder to MiniDisc and Erase MiniDisc, both of which "
+                  "need the adapter to arm the deck."},
+            {"note": "**MiniDisc audio output device** and **Cassette audio output device**, on the same "
+                     "page, are deliberately *not* tied to the checkbox - a cassette needs an output "
+                     "device whether or not the adapter is enabled, since nothing about recording onto "
+                     "one goes through MDRem at all. Each keeps its own choice, because a digital S/PDIF "
+                     "feed for one deck and an analogue line-out for the other are routinely different "
+                     "physical outputs. **Recording gain** (default -5 dB) backs the output level off a "
+                     "little before it leaves the computer, so a hot digital source has no chance to clip "
+                     "on the way in; it does not affect the audition player below."},
         ],
     },
     # ------------------------------------------------------------------
@@ -484,9 +493,9 @@ BOOK = [
         "title": "The software remote",
         "blocks": [
             {"p": "The software remote is a stand-in for the deck's own remote control, laid out the way a "
-                  "physical one is. It opens from either **Remote...** on the startup screen or "
-                  "**Recording > Remote Control...** - the second exists because reaching for the remote "
-                  "should not mean closing the project you are working on."},
+                  "physical one is. It opens from either **Remote...** on the startup screen or **Window "
+                  "> Remote Control...** - the second exists because reaching for the remote should not "
+                  "mean closing the project you are working on."},
             {"fig": ("remote", "The remote window. The status line reports what was sent, not what happened.")},
             {"table": {
                 "head": ["Group", "Keys"],
@@ -610,26 +619,26 @@ BOOK = [
     },
     # ------------------------------------------------------------------
     {
-        "title": "Recording an album from foobar2000",
+        "title": "Recording an album to MiniDisc",
         "blocks": [
-            {"p": "**Recording > Record to MiniDisc from foobar2000...** does the whole job in one go: it "
-                  "arms the deck, plays the album out of foobar2000, watches it to the end, writes the "
-                  "titles, and lays out both labels from the album's own artwork."},
-            {"note": "**This needs the MDRem adapter, and the menu entry only appears once it is enabled "
-                     "in Window > Settings...** The adapter is what puts the deck into record and what "
-                     "marks the tracks. Without one, recording means pressing record on the deck yourself "
-                     "and letting its own LEVEL-SYNC decide where the tracks begin - xD-Tools has no part "
-                     "in that."},
+            {"p": "Recording to MiniDisc is one shared window reached from three different starting "
+                  "points - **Record CD to MiniDisc...**, **Record Folder to MiniDisc...**, and Telegram's "
+                  "**Record from Audio Folder...** (its own chapter) - depending on where the tracks come "
+                  "from. This chapter covers what happens once you are in it, whichever door got you "
+                  "there: it arms the deck, plays the album through xD-Tools' own audio engine, watches "
+                  "it to the end, writes the titles, and lays out both labels from the album's own "
+                  "artwork."},
+            {"note": "**This needs the MDRem adapter, and the entries only appear once it is enabled in "
+                     "Window > Settings...** The adapter is what puts the deck into record and what marks "
+                     "the tracks. Without one, recording means pressing record on the deck yourself and "
+                     "letting its own LEVEL-SYNC decide where the tracks begin - xD-Tools has no part in "
+                     "that."},
             {"h2": "Setting up"},
             {"ol": [
-                "Install the **Beefweb Remote Control** component (`foo_beefweb`) in foobar2000. That is "
-                "how xD-Tools reads the playlist and follows what is playing. Its default address, "
-                "`http://localhost:8880`, is what xD-Tools expects; change it in Window > Settings... if "
-                "you moved it.",
                 "Connect the computer's **S/PDIF** output - optical or coaxial - to the deck's digital "
                 "input. This carries the audio; the USB link carries only commands.",
-                "Set foobar2000's output to **44.1 kHz, 16-bit, stereo** - see below.",
-                "Load the album into foobar2000's current playlist, in the order you want it on the disc.",
+                "Choose that output in **Window > Settings... > MiniDisc audio output device** - see the "
+                "MDRem chapter. Nothing needs configuring on the source files themselves.",
                 "Put a blank or erasable disc in the deck, tab closed, and set the recording mode (SP or "
                 "LP2) **on the deck** - xD-Tools cannot read or change it.",
                 "Turn **LEVEL-SYNC off** on the deck. See below.",
@@ -637,13 +646,12 @@ BOOK = [
             ]},
             {"h2": "The format going into the deck"},
             {"p": "A MiniDisc is 44.1 kHz, 16-bit stereo, and the deck's digital input expects to be fed "
-                  "that. Hand it a 96 kHz or 24-bit stream - which is what a modern player happily outputs "
-                  "if the files are high-resolution and nothing is told to convert them - and the deck may "
-                  "simply refuse it, or drop out partway. It cannot tell xD-Tools that it has, either."},
-            {"p": "So convert on the computer, where it is free to get right: install foobar2000's "
-                  "**Resampler (SoX)** component, add it to the DSP chain and set it to **44100 Hz**, and "
-                  "set the output device to **16-bit stereo**. Files already at 44.1/16 pass through "
-                  "untouched, so this costs nothing on an ordinary CD rip and saves the awkward case."},
+                  "exactly that. xD-Tools converts every file automatically, whatever its own rate or bit "
+                  "depth - a 96 kHz or 24-bit download included - so there is nothing to set up on the "
+                  "source side. The conversion is not a plain truncation either: it resamples with the "
+                  "same high-quality resampler the CD-R burn path uses, and dithers the result down to 16 "
+                  "bits with a noise-shaped dither, rather than leaving that rounding to whatever happens "
+                  "to be downstream of the sound card."},
             {"h2": "Analogue instead, if you have to"},
             {"p": "The deck's **analogue** line inputs work too, and xD-Tools drives the recording exactly "
                   "the same way - it presses the deck's keys, which does not depend on how the audio "
@@ -663,13 +671,19 @@ BOOK = [
             {"p": "Fill in the **Artist** column only when the tracks are by different performers. On "
                   "an ordinary album it stays empty; on a compilation it is what tells xD-Tools the "
                   "disc is one."},
+            {"h2": "Listening before you commit"},
+            {"p": "Select a track and the small transport bar under the list lets you **Play/Pause** it "
+                  "through the computer's own default output - not the recording sink above, so it works "
+                  "even when that is a digital feed with nothing else listening on it. Drag the slider to "
+                  "check a particular passage, and **Prev/Next** step through the album without going "
+                  "back to the list. It is there to catch a wrong file or a bad edit before forty minutes "
+                  "goes down onto the disc, not to audition the whole album end to end."},
             {"h2": "What happens"},
             {"ol": [
                 "xD-Tools shows the playlist and its total time, and warns if it will not fit on an "
                 "80-minute disc in SP.",
-                "It sets foobar to play straight through once - no shuffle, no repeat - so the disc "
-                "cannot end up in a different order than the titles, and sets foobar's own volume to "
-                "-5 dB to leave the deck some headroom.",
+                "It decodes, resamples and dithers the whole disc up front - see above - applying the "
+                "**Recording gain** setting to leave the deck some headroom.",
                 "It tells the deck to start recording, then **asks you to confirm the deck really is in "
                 "record-pause**. It cannot check, and getting this wrong means playing a whole album into "
                 "a deck that is not recording and finding out forty minutes later.",
@@ -692,8 +706,9 @@ BOOK = [
             {"p": "That fails on any album where one song runs into the next. Two songs with no gap "
                   "between them are recorded as one long track, and no amount of editing afterwards makes "
                   "that pleasant."},
-            {"p": "So xD-Tools sends a track mark itself, at the exact moment foobar changes track - that "
-                  "is the **Mark tracks through the adapter** checkbox, and it should stay ticked."},
+            {"p": "So xD-Tools sends a track mark itself, at the exact sample its own player crosses from "
+                  "one track's audio into the next - that is the **Mark tracks through the adapter** "
+                  "checkbox, and it should stay ticked."},
             {"warn": "**Turn LEVEL-SYNC off on the deck when you use it.** Running both marks the same "
                      "boundary twice, a fraction of a second apart, and leaves a sliver of a track "
                      "stranded between them. They fight; they do not co-operate."},
@@ -728,9 +743,8 @@ BOOK = [
             {"h2": "Where the album is cut, and in what order"},
             {"p": "xD-Tools puts the playlist into the album's own order as the window opens: by disc "
                   "number first, then by track number, both read from the files themselves. A "
-                  "two-disc set dropped into foobar2000 as one folder arrives interleaved, because both "
-                  "discs number their tracks from one - this is what puts it right, and foobar2000's own "
-                  "playlist is reordered to match, since that is what actually gets played."},
+                  "two-disc set kept as one folder arrives interleaved, because both discs number their "
+                  "tracks from one - this is what puts it right before anything plays."},
             {"p": "If the files say how many discs there are, the splits are placed where they say and "
                   "the option is ticked for you. Otherwise the album is divided as evenly as its running "
                   "order allows, into the fewest discs that fit."},
@@ -746,18 +760,23 @@ BOOK = [
     {
         "title": "Recording a CD",
         "blocks": [
-            {"p": "**Recording > Record CD to MiniDisc...** copies an audio CD onto a MiniDisc. It reads "
-                  "the disc, works out what album it is, extracts every track to a file, loads those "
-                  "files into foobar2000 in the right order, and then hands over to the recording you "
-                  "already know - the same arming, the same track marks, the same titling."},
-            {"note": "**This needs the MDRem adapter too**, and the menu entry only appears once it is "
-                     "enabled. Reading a CD does not need it, but this entry does not stop at reading "
-                     "one: it goes straight on to record what it read."},
+            {"p": "**Recording > Record CD to {medium}...** copies an audio CD, then records what it "
+                  "copied - onto a MiniDisc or a cassette, whichever the open project is for. It reads "
+                  "the disc, works out what album it is, extracts every track to a file, and once ripping "
+                  "finishes asks whether to **Record Now** or **Just Metadata** - the second brings the "
+                  "album's title and track list into the project without recording anything, for whoever "
+                  "wants the label right without a deck to hand right now. Recording Now hands the ripped "
+                  "files straight to the recording window you already know from the previous chapter - "
+                  "the same arming, the same track marks, the same titling."},
+            {"note": "**Recording needs the MDRem adapter**, and the entry only appears once it is "
+                     "enabled - reading a CD does not need it, but choosing Record Now does. **Just "
+                     "Metadata never needs the adapter at all**, which is why the entry stays available "
+                     "on a cassette project too, adapter or not."},
             {"h2": "Why it copies the disc first"},
-            {"p": "foobar2000 can play a CD directly, and letting it do so would be simpler. But then "
-                  "the disc is being read in real time, during the recording, with nothing to fall back "
-                  "on - a drive stumbling over a scratch at minute 31 puts that stumble on the "
-                  "MiniDisc, and a MiniDisc recording is not something you can patch afterwards."},
+            {"p": "A drive can play a CD directly, and letting a recording read it in real time would be "
+                  "simpler. But then a scratch stumbled over at minute 31 lands directly on the MiniDisc, "
+                  "with nothing to fall back on - and a MiniDisc recording is not something you can patch "
+                  "afterwards."},
             {"p": "Copying first moves every read error to a point where it costs a re-read and nothing "
                   "else. xD-Tools uses **cdparanoia** for this, built precisely to keep working at a "
                   "damaged disc until it gets the audio right, and **flac** to store the result. Both "
@@ -774,8 +793,8 @@ BOOK = [
                 "**Release**; the track titles and the cover art change with it.",
                 "Correct anything wrong. The titles are editable, and they are what gets written into "
                 "the files and later onto the MiniDisc.",
-                "Press **Rip and Record**. When the copy finishes, the recording window opens by "
-                "itself.",
+                "Press **Rip and Record**, then choose **Record Now** or **Just Metadata** once the copy "
+                "finishes.",
             ]},
             {"note": "A disc that is not in MusicBrainz - anything home-burned, and plenty of obscure "
                      "releases - simply comes back with numbered placeholder titles for you to type "
@@ -799,20 +818,17 @@ BOOK = [
             {"note": "An album with a guest feature on one track is **not** a compilation, and is not "
                      "treated as one. The test is whether most tracks belong to the same artist, not "
                      "whether the credits vary at all."},
-            {"p": "The same applies when recording from foobar2000: a playlist of unrelated tracks is "
-                  "recognised the same way, with the same result."},
+            {"p": "The same applies to a folder of files recorded directly (\"Recording a folder of "
+                  "files\"): a folder of unrelated tracks is recognised the same way, with the same "
+                  "result."},
             {"h2": "Where the copied files go"},
-            {"p": "Into your temporary folder by default, under `xD-Tools CD Rip`, one folder per album. "
-                  "It is created if it is not there, so a folder you have only typed into Settings and "
-                  "never made is not a problem. "
-                  "They are raw material for a recording rather than a music collection - one album is "
-                  "a few hundred megabytes - and Window > Settings... can point that somewhere else."},
-            {"p": "They are **not** deleted when the recording finishes, because foobar2000 still has "
-                  "them in its playlist and you may want to play them again. The previous copy is "
-                  "cleared out when you start the next one."},
-            {"warn": "Loading the copied tracks into foobar2000 **empties its current playlist**. "
-                     "Anything you had queued up there is gone, so move it elsewhere first if you want "
-                     "to keep it."},
+            {"p": "Into **Documents\\XDProjects\\Audio** by default, one folder per album - the same "
+                  "folder Telegram bot downloads land in (its own chapter), since both are raw material "
+                  "for a recording rather than a music collection. It is created if it is not there, and "
+                  "**Window > Settings... > CD rip folder** can point it somewhere else."},
+            {"p": "Ripped files are **never deleted automatically**, by this or anything else in "
+                  "xD-Tools - not when a recording finishes, not to make room for a later rip. What "
+                  "accumulates there is yours to clear out by hand, whenever and however you like."},
             {"h2": "A set of several CDs"},
             {"p": "**Rip several discs as one album** copies a boxed set as one album rather than as "
                   "two unrelated ones. Each disc is read, identified and ripped on its own, and xD-Tools "
@@ -826,8 +842,7 @@ BOOK = [
                 "Every file is tagged with the disc it came from, and carries that number in its name. "
                 "That is what lets everything afterwards - the playlist, a recording, a burn - put the "
                 "set back in its own order.",
-                "When you stop adding discs, foobar2000's playlist holds the whole set, and the "
-                "recording that follows records all of it.",
+                "When you stop adding discs, the recording that follows records the whole set at once.",
             ]},
             {"note": "You can stop after any disc: the question offers to carry on or to record what has "
                      "been ripped so far."},
@@ -836,10 +851,11 @@ BOOK = [
     {
         "title": "Burning an audio CD",
         "blocks": [
-            {"p": "Recording > **Burn Audio CD from Folder...** or **from foobar2000...** writes a real "
-                  "Red Book audio CD-R - the kind any CD player will play - from files you already have. "
-                  "No infrared adapter is involved: this is the drive's job, so these two entries stay "
-                  "available even with MDRem switched off."},
+            {"p": "On a CD project, **Recording > Record Folder to CD...** - the same entry \"Recording a "
+                  "folder of files\" covers for MiniDisc and cassette - writes a real Red Book audio CD-R "
+                  "instead: the kind any CD player will play, from a folder of files you already have. No "
+                  "infrared adapter is involved: this is the drive's job, so it stays available even with "
+                  "MDRem switched off."},
             {"fig": ("burn", "The burn window: what will be written, and what it will be called.")},
             {"h2": "What the window shows"},
             {"p": "The album's name, artist and year, an editable title and artist per track, and a cover "
@@ -848,6 +864,10 @@ BOOK = [
                   "CD-Text and into the project you design the label from."},
             {"p": "The line under the track list gives the album's length against what the disc holds. "
                   "The **Status** column is the part worth reading before you press anything."},
+            {"p": "Select a track and the transport bar under the list plays it through the computer's "
+                  "own default output, with a seek slider and Prev/Next - the same audition player the "
+                  "MiniDisc and cassette recording windows have, worth a listen before a disc that "
+                  "cannot be rewritten gets committed."},
             {"h2": "Why a track can refuse to be burned"},
             {"p": "A CD holds 44.1 kHz, 16-bit, stereo audio and nothing else. Two Red Book rules can stop "
                   "a burn outright, and the window says so per track rather than letting you find out on "
@@ -858,8 +878,8 @@ BOOK = [
             ]},
             {"note": "A file that is merely at the wrong rate is not a refusal. A 48 kHz / 24-bit download "
                      "- which is what most of them are - says \"will be converted to 44100 Hz / 16-bit\" and "
-                     "is resampled on the way to the disc by the bundled SoX. The conversion happens in a "
-                     "scratch folder; your own files are never touched."},
+                     "is resampled and dithered on the way to the disc by xD-Tools' own audio engine. The "
+                     "conversion happens in a scratch folder; your own files are never touched."},
             {"h2": "Titles on the disc: CD-Text"},
             {"p": "The album and track names are written onto the CD as CD-Text, which players that "
                   "support it will show. It carries plain ASCII, so accented letters lose their marks the "
@@ -887,7 +907,7 @@ BOOK = [
                 "A CD writer. It is found by asking cdrecord, not by guessing - if the **Burner** box is "
                 "empty, check the drive is connected and press **Refresh**.",
                 "A blank CD-R. A disc that already holds something cannot take a fresh burn.",
-                "Nothing else: cdrecord and SoX are bundled on Windows.",
+                "Nothing else: cdrecord is bundled on Windows, and the resampling is xD-Tools' own.",
             ]},
             {"h2": "An album that takes more than one disc"},
             {"p": "**Burn across several discs** writes a long album onto as many CD-Rs as it needs. "
@@ -915,34 +935,35 @@ BOOK = [
     {
         "title": "Recording a folder of files",
         "blocks": [
-            {"p": "**Recording > Record Folder to MiniDisc...** records an album you already have on "
-                  "disk. Point it at the folder it is in, and xD-Tools loads those files into foobar2000 "
-                  "in the right order and hands over to the recording you already know - the same "
-                  "arming, the same track marks, the same titling."},
-            {"note": "**This needs the MDRem adapter too**, and the entry only appears once it is "
-                     "enabled. Loading a folder does not need one; going on to record what was loaded "
-                     "does."},
-            {"fig": ("folder-record", "The folder read, and what foobar2000 made of its tags.")},
+            {"p": "**Recording > Record Folder to {medium}...** records an album you already have on "
+                  "disk - onto a MiniDisc, a cassette, or a CD-R, whichever the open project is for. "
+                  "Point it at the folder it is in and xD-Tools reads the files' own tags directly, then "
+                  "hands over to the recording flow you already know from the previous chapters - the "
+                  "same arming, the same track marks, the same titling (or, on a CD project, straight to "
+                  "burning)."},
+            {"note": "**Recording needs the MDRem adapter on a MiniDisc project**, and the entry only "
+                     "appears once it is enabled. Reading a folder does not need one; a cassette or a "
+                     "CD-R needs no adapter at all, on this entry or any other."},
+            {"fig": ("folder-record", "The folder read, and what xD-Tools made of the files' own tags.")},
             {"h2": "Step by step"},
             {"ol": [
-                "Press **Browse...** and choose the folder the album is in. It is loaded into "
-                "foobar2000 straight away - choosing it is the decision, so there is nothing further "
-                "to confirm. FLAC, MP3 and everything else foobar2000 plays are recognised; anything "
-                "that is not audio - artwork, a cue sheet, a log - is ignored.",
+                "Press **Browse...** and choose the folder the album is in. Its files are read "
+                "immediately - choosing the folder is the decision, so there is nothing further to "
+                "confirm. FLAC and WAV are recognised; anything that is not one of those - artwork, a "
+                "cue sheet, a log - is ignored.",
                 "Check the order. It comes from the filenames, compared so that `10` follows `9` "
                 "rather than `1`. If it is wrong, the filenames are what to fix.",
                 "Check the album and artist. They are guessed from the folder's own name to start "
                 "with, and whatever the files are tagged with replaces that guess as soon as the "
-                "tracks are loaded. Type over either if both are wrong.",
-                "Look at what came back: the titles foobar read out of the files, and the cover "
-                "art - searched for first, and taken from inside the FLAC files themselves if the "
-                "search found nothing good.",
-                "Press **Record**. It only becomes available once foobar has actually taken the "
-                "tracks.",
+                "tracks are read. Type over either if both are wrong.",
+                "Look at what came back: the titles read out of each file's own tags, and the cover "
+                "art - searched for first, and taken from inside a FLAC file itself if the search "
+                "found nothing good.",
+                "Press **Record**.",
             ]},
             {"h2": "Where the titles come from"},
-            {"p": "From the files - read by foobar2000 rather than by xD-Tools, which is the better tag "
-                  "reader of the two and has to read them anyway in order to play them. A file with no "
+            {"p": "From the files' own tags, read directly - the same reader a recording itself uses to "
+                  "decode them, so nothing here can disagree with what actually plays. A file with no "
                   "title tag is recorded under its filename: the honest answer, and usually a usable "
                   "one."},
             {"p": "The album and artist shown in this window are what gets written onto the disc and "
@@ -953,22 +974,24 @@ BOOK = [
                   "scans or bonus directory does not join the running order. Only when the folder "
                   "itself holds no audio at all does xD-Tools look inside, which is what makes a "
                   "two-disc album kept as `CD1` and `CD2` come out in disc order."},
-            {"warn": "Loading a folder **empties foobar2000's current playlist**, exactly as recording "
-                     "a CD does. Move anything you had queued up there elsewhere first."},
         ],
     },
     # ------------------------------------------------------------------
     {
         "title": "Recording a cassette",
         "blocks": [
-            {"p": "**Recording > Record to Cassette from foobar2000...** records an album onto a "
-                  "compact cassette, one side at a time. It is the odd one out among the recording "
-                  "flows, and in a way that decides everything about it: **the deck is yours to "
-                  "operate**. There is no adapter for a tape deck and no cable that presses its "
-                  "buttons, so xD-Tools plays the right tracks at the right moment and tells you, in "
-                  "as many words, what to press and when."},
-            {"note": "This needs **no MDRem adapter** - only foobar2000. The entry appears whenever the "
-                     "open project is a cassette one, whether or not the adapter is switched on."},
+            {"p": "**Record CD to Cassette...**, **Record Folder to Cassette...** and Telegram's "
+                  "**Record from Audio Folder...** - the same three entry points the MiniDisc chapter "
+                  "covers - lead here instead on a cassette project, and record an album onto a compact "
+                  "cassette one side at a time. It is the odd one out among the recording flows, and in "
+                  "a way that decides everything about it: **the deck is yours to operate**. There is no "
+                  "adapter for a tape deck and no cable that presses its buttons, so xD-Tools plays the "
+                  "right tracks at the right moment and tells you, in as many words, what to press and "
+                  "when."},
+            {"note": "This needs **no MDRem adapter at all** - just an output device chosen in Window > "
+                     "Settings... > Cassette audio output device (its own setting, independent of "
+                     "MiniDisc's). The entries appear whenever the open project is a cassette one, "
+                     "whether or not the adapter is switched on."},
             {"fig": ("tape-record", "The split, the tape it was worked out for, and the instruction "
                                     "waiting to be acted on.")},
             {"h2": "Choosing the tape"},
@@ -1001,19 +1024,31 @@ BOOK = [
             {"ol": [
                 "Check the album, the artist, the year and the cover - they are what the labels will "
                 "be printed from, and they freeze the moment recording starts.",
-                "Put the cassette in, wound to the start of the side, and put the deck into record. "
-                "Set its input to whatever foobar2000 is feeding it, and set its level.",
-                "Press the button. That click is the only confirmation there is that the deck is "
-                "really rolling - nothing here can see it.",
-                "Ten seconds of silence run down while the leader passes.",
-                "The side plays. foobar2000 is told to stop when the side's last track ends, rather "
-                "than being caught afterwards - which is what keeps the first second of the next "
-                "track off the end of the side.",
-                "Stop the deck, take the cassette out and turn it over, put it back into record, and "
-                "press the button again for side B.",
+                "Put the cassette in, wound to the start of the side. Press **RECORD and PAUSE "
+                "together** - record-pause, armed but not yet moving - set its input to the line "
+                "xD-Tools' own recording is fed through, and set the level.",
+                "Press the button below the track list. xD-Tools decodes the whole side up front, "
+                "with a status line to show it is working rather than stuck.",
+                "A dialog tells you to **release Pause now** - the deck should start rolling. That "
+                "click is the only confirmation there is that it really did - nothing here can see "
+                "it - and it is also the moment the ten seconds of silence below start counting from, "
+                "so releasing Pause promptly is what keeps the silence and the leader tape lined up.",
+                "Ten seconds of silence run down while the leader passes, then the side plays. "
+                "xD-Tools' own player stops the instant the side's last track ends, rather than being "
+                "caught afterwards - which is what keeps the first second of the next side off the "
+                "end of this one.",
+                "Stop the deck, take the cassette out and turn it over, press **RECORD and PAUSE** "
+                "again, and press the button for side B - the same release-Pause dialog waits for you "
+                "there too.",
             ]},
-            {"tip": "**Stop** stops foobar2000 and says so - it cannot stop the deck, which will "
-                    "happily go on recording silence. That is the one thing only you can do."},
+            {"tip": "**Stop** stops xD-Tools' own playback and says so - it cannot stop the deck, which "
+                    "will happily go on recording silence. That is the one thing only you can do."},
+            {"h2": "Listening before you commit"},
+            {"p": "The same audition player the MiniDisc and CD-burn windows have sits under the track "
+                  "list here too: select a track, **Play/Pause** it through the computer's own default "
+                  "output, drag the slider to check a passage, **Prev/Next** to step through the album. "
+                  "A cassette side cannot be edited afterwards any more than a MiniDisc recording can, "
+                  "so it is worth a listen first."},
             {"h2": "The audio path"},
             {"p": "Out of the computer and into the deck's line inputs, as an ordinary analogue "
                   "recording. Nothing in this window depends on how it gets there: the deck's input "
@@ -1047,26 +1082,22 @@ BOOK = [
     {
         "title": "Erasing a disc",
         "blocks": [
-            {"p": "**Recording > Erase MiniDisc...** clears the disc in the deck. It works on whatever is "
-                  "physically loaded, so it does not care which project is open, or whether one is."},
+            {"p": "**Erase MiniDisc...**, a button on the MiniDisc recording window rather than its own "
+                  "menu entry, clears the disc in the deck - erasing the wrong disc is most likely to "
+                  "come up right before recording onto it, which is where the button now lives."},
             {"warn": "There is no undo, and xD-Tools cannot see the result. Make sure the disc in the "
                      "deck is the one you mean, and that its write-protect tab is closed."},
-            {"h2": "Why it asks what you can see"},
-            {"p": "This is the one operation where xD-Tools does not know what its own command does. The "
-                  "**Erase** key is recognised by the deck as a write command - that much was confirmed "
-                  "- but which editing menu it opens was never established, because the write keys "
-                  "could only be tested safely on a protected disc, where the deck answers every one of "
-                  "them with the same complaint."},
-            {"p": "Rather than guess with your recording, xD-Tools sends Erase and then asks what the "
-                  "deck's display says. If it is showing something like **All Erase?**, press **Send "
-                  "Enter** and watch the display - the window stays open, so you can press it again. "
-                  "Some decks want it more than once, and there is no way for xD-Tools to find that "
-                  "out: the deck never answers back. Press **Done** when the disc is blank, or "
-                  "**Nothing Happened** to back the deck out of whatever menu it is sitting in."},
-            {"fig": ("erase", "It sends the command, then asks what the deck is showing.")},
-            {"note": "As with titling, an erase lives in the deck's memory until the disc is ejected. "
-                     "xD-Tools offers to eject afterwards - take it, or the disc keeps its old contents "
-                     "should the deck lose power."},
+            {"h2": "A fixed sequence, behind one confirmation"},
+            {"p": "**Erase Disc** sends **Stop, Erase, Enter, Enter, Eject** over infrared, each key "
+                  "paced a quarter-second behind the last so the deck has time to actually act on one "
+                  "before the next arrives, with nothing further asked once you confirm. This exact "
+                  "sequence - two Enters, then an unconditional Eject - is what was confirmed to work on "
+                  "one real deck; xD-Tools cannot read the display to check how many a different model "
+                  "wants, so if yours needs something else, erase it from its own front panel instead."},
+            {"fig": ("erase", "One confirmation, then the sequence runs on its own.")},
+            {"note": "As with titling, an erase lives in the deck's memory until the disc is ejected - "
+                     "which is why Eject is the last key in the sequence rather than a separate step to "
+                     "remember."},
         ],
     },
     # ------------------------------------------------------------------
@@ -1089,13 +1120,11 @@ BOOK = [
                   "Nothing behind it runs while it is off."},
             {"fig": ("experimental-settings", "Experimental > Experimental Settings. Experimental features "
                                              "keep their own settings window."),},
-            {"p": "**Experimental > Experimental Settings...** is where the bot lives. Two fields matter:"},
-            {"ul": [
-                "**Bot username** - the bot you want to talk to, `@something`.",
-                "**Download folder** - where files land. It defaults to a folder under your system "
-                "temporary directory, on the grounds that a download is raw material for a recording "
-                "rather than a music library. Point it anywhere you like.",
-            ]},
+            {"p": "**Experimental > Experimental Settings...** is where the bot lives. **Bot username** is "
+                  "the bot you want to talk to, `@something`. Downloaded files land in **Window > "
+                  "Settings... > CD rip folder** - the same folder a CD rip uses, since both are raw "
+                  "material for a recording rather than a music library; there is no separate Telegram "
+                  "folder setting any more."},
             {"note": "There is no API ID or API Hash to fill in. xD-Tools carries its own, so signing in is "
                      "the only step. If a build ever ships without them it says so plainly instead of "
                      "failing to connect."},
@@ -1111,6 +1140,8 @@ BOOK = [
             {"warn": "The sign-in is saved locally, in `telegram.session` next to xD-Tools' own settings. "
                      "That file is equivalent to being logged in to your account: it is not encrypted, and "
                      "it is not something to copy onto another machine or send to anyone."},
+            {"p": "**Sign out**, next to Sign in, deletes that saved session, so the same Experimental "
+                  "Settings window is also where to leave the account you signed in with."},
             {"h2": "The conversation"},
             {"p": "**Experimental > Download Album from Telegram Bot...** opens a plain chat. It appears "
                   "only once a sign-in has been saved."},
@@ -1124,13 +1155,20 @@ BOOK = [
                   "translation can be wrong and an exact command or filename is better read as sent. And a "
                   "bot that edits its own message to build a menu, rather than sending a new one each time, "
                   "is followed correctly: the message changes in place, as it does on your phone."},
+            {"p": "A **photo the bot sends** - cover art, a screenshot, anything that is not a downloadable "
+                  "file attachment - can be clicked once it has finished loading, to save it to disk. "
+                  "Nothing about it joins the download queue below; this is for a one-off image, not an "
+                  "album's worth of files."},
             {"h2": "The download queue"},
             {"p": "Files never appear in the conversation - they go to the **queue on the right**, which is "
                   "the only place a file's name, size, progress and speed are shown. A whole album arriving "
                   "as twenty attachments would otherwise bury the conversation under twenty near-identical "
                   "rows."},
             {"p": "Downloading starts by itself, and at most three files download at once. A failed one "
-                  "gets a **Retry** button rather than disappearing."},
+                  "gets a **Retry** button rather than disappearing. A summary line above the queue keeps a "
+                  "running total while several files are in flight - how many are done, queued and "
+                  "downloading, the overall percentage, and the combined speed - so the state of a "
+                  "twenty-file album is one line to glance at rather than twenty rows to add up."},
             {"h2": "From download to disc"},
             {"p": "Files from every session pile up in the one download folder, so several albums end up "
                   "side by side. **Sort into Album Folders** separates them: one subfolder per album, named "
@@ -1139,13 +1177,15 @@ BOOK = [
                      "or anything else already in that folder, is left exactly where it is."},
             {"p": "**Record Downloaded Albums...** then goes to the recording flow. It sorts first, so you "
                   "cannot accidentally record two albums onto one disc, and asks which album if there is "
-                  "more than one. From there it is the ordinary Record Folder to MiniDisc window described "
-                  "two chapters ago - which is also why this needs the MDRem adapter, even though "
-                  "downloading does not."},
+                  "more than one. From there it is the ordinary recording window \"Recording a folder of "
+                  "files\" describes - which is also why this needs the MDRem adapter on a MiniDisc "
+                  "project, even though downloading does not."},
             {"p": "**Open Download Folder** opens it in your file manager, for a look before recording."},
-            {"p": "Both operations are also on the menu without opening the chat at all, for files "
-                  "downloaded earlier: **Sort Telegram Downloads into Album Folders...** and **Record from "
-                  "Telegram Downloads...**"},
+            {"p": "Both operations are also on the **Recording** menu without opening the chat at all, for "
+                  "files downloaded earlier: **Sort Audio Folder into Albums...** and **Record from Audio "
+                  "Folder...** - named for the one folder they act on (the same one a CD rip fills) rather "
+                  "than for Telegram specifically, since a folder recorded this way need not have come "
+                  "from the bot at all."},
             {"tip": "Both buttons go quiet while anything is still downloading - sorting or recording "
                     "half-written files would be worse than waiting."},
         ],
@@ -1184,12 +1224,14 @@ BOOK = [
                   "first - it puts the deck in a known state instead of assuming one."},
             {"h2": "Nothing was saved to the disc"},
             {"p": "Titles live in the deck's memory until the disc is ejected. Eject it."},
-            {"h2": "foobar2000 cannot be reached"},
-            {"ul": [
-                "foobar2000 is running.",
-                "The **Beefweb Remote Control** component is installed *and enabled*.",
-                "The address in Window > Settings... matches Beefweb's port.",
-            ]},
+            {"h2": "No sound, recording or previewing"},
+            {"p": "**Recording**: check **Window > Settings...** has the right device chosen for the "
+                  "medium you are recording to - MiniDisc and cassette each keep their own, and a device "
+                  "that has since been unplugged shows as **(not connected)** rather than being silently "
+                  "swapped for another one. **Previewing**: the audition player always plays through "
+                  "whatever the operating system currently considers its own default output, regardless "
+                  "of the recording device setting above - check that is the speakers or headphones you "
+                  "expect."},
             {"h2": "The printed label is the wrong size"},
             {"p": "Check the printer is not scaling to fit - it must print at 100%. If the canvas itself "
                   "looks the wrong physical size on screen, that is **Screen DPI** in Window > "

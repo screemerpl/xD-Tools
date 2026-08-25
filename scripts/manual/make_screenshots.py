@@ -10,8 +10,9 @@ Two things it deliberately does NOT touch:
   AppConfigLocation to a throwaway folder, so enabling the adapter and
   pinning a port here can't leak into the real settings.ini, and no
   screenshot can expose a real recent-project path.
-- The serial port and foobar2000. Every dialog that would open hardware or
-  make an HTTP call gets a stand-in (see _FakeDeck/_FakeFoobar) -- the real
+- The serial port, the CD drive, and real audio files. Every dialog that
+  would open hardware or decode/tag-read a real file gets a stand-in (see
+  _FakeDeck and the other _install_*_stand_ins() functions) -- the real
   ones may well be busy recording a disc while this runs.
 
 Output: doc/img/<lang>/<name>.png, plus the two language-independent
@@ -176,7 +177,7 @@ def demo_cover_bytes() -> bytes:
     return bytes(data.data())
 
 
-# --- stand-ins for hardware and foobar2000 ---------------------------------
+# --- stand-ins for hardware and real files ----------------------------------
 
 
 class _FakeDeck:
@@ -310,50 +311,64 @@ def _install_cover_filter_stand_in() -> None:
 
 
 def _demo_playlist_items():
-    from mdtools import foobar
+    """One `tracks.PlaylistItem` per demo track -- what every recording
+    dialog now reads (`tracks.playlist_items_from_paths()`, real mutagen
+    tag reads) once foobar2000 stopped being involved at all. Stood in for
+    the same way the deck and the CD drive are: real tag reads on a folder
+    of throwaway files would work too (see _demo_album_folder()), but
+    fabricating the items directly is simpler wherever the dialog accepts
+    them without touching a real file."""
+    from mdtools import tracks
 
     return [
-        foobar.PlaylistItem(
+        tracks.PlaylistItem(
             track_number=str(index),
             title=title,
             album_artist=DEMO_ARTIST,
             album=DEMO_ALBUM,
             date=str(DEMO_YEAR),
             length_seconds=length,
+            artist="",
+            path=f"{index:02d} {title}.flac",
         )
         for index, (title, length) in enumerate(DEMO_TRACKS, start=1)
     ]
 
 
+def _demo_paths() -> list[str]:
+    """A non-empty `paths` argument for RecordDialog/TapeRecordDialog --
+    never actually opened, since _install_recording_stand_ins() replaces
+    the tag read those constructors would otherwise do with it. Only its
+    truthiness and its length matter to them."""
+    return [f"{index:02d} {title}.flac" for index, (title, _length) in enumerate(DEMO_TRACKS, start=1)]
+
+
 def _install_folder_stand_in() -> None:
     """Makes choosing a folder land straight in the loaded state.
 
-    Picking a folder now hands it to foobar2000 on a worker thread, which
-    this script has no real foobar for -- and a figure does not want a
-    thread in it anyway. Replacing the load with the result it would have
-    produced gives the dialog exactly the state a reader sees, including
-    the Record button being enabled."""
+    set_folder() now reads real tags directly (fast, local, no thread) --
+    but a figure does not want to depend on this script's own throwaway
+    files actually carrying valid audio/tags. Replacing the load with the
+    result it would have produced gives the dialog exactly the state a
+    reader sees, including the Record button being enabled."""
     from mdtools.panels.folder_record_dialog import FolderRecordDialog
 
     FolderRecordDialog._load = lambda self: self._on_loaded(_demo_playlist_items())
 
 
-def _make_fake_foobar():
-    from mdtools import foobar
+def _install_recording_stand_ins() -> None:
+    """RecordDialog and TapeRecordDialog both read a folder's tags
+    directly at construction time now (`tracks.playlist_items_from_paths()`,
+    the same real mutagen call folder_record_dialog.py makes) -- stood in
+    per module, same reasoning as _install_cover_stand_in()'s own note on
+    why: each module did its own `from mdtools import tracks`, so patching
+    the shared `tracks` module once would work too, but patching each
+    caller's own name is what the rest of this script already does."""
+    from mdtools.panels import record_dialog, tape_record_dialog
 
     items = _demo_playlist_items()
-
-    class _FakeFoobar:
-        def __init__(self, base_url: str = "", timeout: float = 0.0):
-            pass
-
-        def current_playlist(self):
-            return foobar.Playlist(id="p1", title=f"{DEMO_ARTIST} - {DEMO_ALBUM}", item_count=len(items), is_current=True)
-
-        def playlist_items(self, playlist_id: str, offset: int = 0, count: int = 0):
-            return items
-
-    return _FakeFoobar
+    record_dialog.tracks.playlist_items_from_paths = lambda paths: items
+    tape_record_dialog.tracks.playlist_items_from_paths = lambda paths: items
 
 
 # --- diagrams --------------------------------------------------------------
@@ -565,7 +580,7 @@ def draw_ir_circuit(path: Path) -> None:
 SIGNAL_CHAIN_STRINGS = {
     "en": {
         "pc": "PC - xD-Tools",
-        "pc_sub": "foobar2000 + Beefweb",
+        "pc_sub": "built-in audio engine",
         "adapter": "MDRem adapter",
         "adapter_sub": "RP2040, virtual COM port",
         "deck": "MiniDisc deck",
@@ -576,7 +591,7 @@ SIGNAL_CHAIN_STRINGS = {
     },
     "pl": {
         "pc": "Komputer - xD-Tools",
-        "pc_sub": "foobar2000 + Beefweb",
+        "pc_sub": "wbudowany silnik audio",
         "adapter": "Przystawka MDRem",
         "adapter_sub": "RP2040, wirtualny port COM",
         "deck": "Magnetofon MD",
@@ -587,7 +602,7 @@ SIGNAL_CHAIN_STRINGS = {
     },
     "ja": {
         "pc": "PC - xD-Tools",
-        "pc_sub": "foobar2000 + Beefweb",
+        "pc_sub": "内蔵オーディオエンジン",
         "adapter": "MDRem アダプター",
         "adapter_sub": "RP2040 / 仮想COMポート",
         "deck": "MDデッキ",
@@ -605,9 +620,11 @@ SIGNAL_CHAIN_STRINGS = {
 def _demo_album_folder() -> Path:
     """A throwaway folder of empty files for the Record Folder screenshot.
 
-    Empty is enough: that dialog only ever lists filenames and asks foobar
-    (stood in for here) what the tags say, so it never opens one. Under the
-    temp folder rather than anywhere the reader might have real music."""
+    Empty is enough: `_install_folder_stand_in()` replaces the tag read
+    (`FolderRecordDialog._load`) with fabricated items instead of letting
+    it open these for real, so only their names and count matter -- the
+    same reasoning `_demo_playlist_items()` documents. Under the temp
+    folder rather than anywhere the reader might have real music."""
     folder = Path(tempfile.gettempdir()) / "xD-Tools Manual" / f"{DEMO_ARTIST} - {DEMO_ALBUM} ({DEMO_YEAR})"
     folder.mkdir(parents=True, exist_ok=True)
     for index, (title, _length) in enumerate(DEMO_TRACKS, start=1):
@@ -651,6 +668,13 @@ def capture_language(app, code: str) -> None:
 
     app_settings.set_mdrem_enabled(True)
     app_settings.set_mdrem_port("COM7")
+    # The field is a plain QLineEdit that shows its full text, unlike the
+    # startup screen's recent-project list (basenames only) -- so unlike
+    # that one, an unset CD rip folder would show this machine's real
+    # username (tempfile.gettempdir() and Path.home() both carry it too,
+    # so neither is a safe source here). Set once, early, since
+    # _capture_telegram() only overrides it much later in this function.
+    app_settings.set_cd_rip_folder(r"C:\Users\Reader\Documents\XDProjects\Audio")
 
     out = OUT_DIR / code
     metadata = demo_metadata()
@@ -702,7 +726,7 @@ def capture_language(app, code: str) -> None:
     # -- a CD project: the ring label, the folded insert, and the burn
     _capture_cd(out, code, metadata)
 
-    # -- everything MDRem, with the hardware and foobar2000 stood in for
+    # -- everything MDRem, with the hardware stood in for
     # Both remote modes: extended is a mode nobody can see without ticking
     # the box, which is exactly why the manual shows it.
     app_settings.set_mdrem_extended_remote(False)
@@ -711,10 +735,10 @@ def capture_language(app, code: str) -> None:
     save(RemoteDialog("COM7"), out / "remote-extended.png")
     app_settings.set_mdrem_extended_remote(False)
     save(MDRemUploadDialog(metadata, "COM7"), out / "upload.png", settle_ms=400)
-    save(RecordDialog("COM7", "http://localhost:8880"), out / "record.png", settle_ms=400)
+    save(RecordDialog("COM7", _demo_paths()), out / "record.png", settle_ms=400)
 
     # -- reading a CD, with the drive and MusicBrainz stood in for
-    rip = CdRipDialog("http://localhost:8880")
+    rip = CdRipDialog()
     rip.show()
     settle(200)
     rip._read_disc()
@@ -722,7 +746,7 @@ def capture_language(app, code: str) -> None:
     close_quietly(rip)
 
     # -- recording a folder of files, with a throwaway album on disk
-    folder = FolderRecordDialog("http://localhost:8880")
+    folder = FolderRecordDialog()
     folder.show()
     settle(200)
     folder.set_folder(_demo_album_folder())  # which loads it, see the stand-in
@@ -740,8 +764,9 @@ def capture_language(app, code: str) -> None:
 # --- the experimental Telegram feature ------------------------------------
 #
 # **Nothing here contacts Telegram**, which is the same rule the rest of this
-# script follows for the serial port, foobar2000 and the cover lookup -- but
-# it needs no stand-in object to achieve it. Both dialogs are inert until an
+# script follows for the serial port, real audio files and the cover lookup
+# -- but it needs no stand-in object to achieve it. Both dialogs are inert
+# until an
 # explicit action starts their worker (TelegramChatDialog.start_connecting(),
 # and TelegramLoginDialog only on "Send code"), so plain construction opens no
 # socket at all. The chat transcript is then filled by handing synthetic
@@ -921,7 +946,7 @@ def _capture_tape(out: Path, code: str, metadata) -> None:
     close_quietly(window)
     _KEEP_ALIVE.append(window)
 
-    record = TapeRecordDialog("http://localhost:8880")
+    record = TapeRecordDialog(_demo_paths())
     save(record, out / "tape-record.png", settle_ms=400)
     close_quietly(record)
 
@@ -998,7 +1023,7 @@ def main() -> int:
     # in a throwaway folder instead of the user's real configuration.
     QStandardPaths.setTestModeEnabled(True)
 
-    from mdtools import foobar, mdrem, theme
+    from mdtools import mdrem, theme
     from mdtools.templates import registry
 
     # Matches main.py exactly -- otherwise these screenshots would keep
@@ -1010,12 +1035,12 @@ def main() -> int:
 
     mdrem.MDRemClient = _FakeDeck
     mdrem.list_ports = _fake_ports
-    foobar.FoobarClient = _make_fake_foobar()
     _install_cd_stand_ins()
     _install_burner_stand_ins()
     _install_cover_stand_in()
     _install_cover_filter_stand_in()
     _install_folder_stand_in()
+    _install_recording_stand_ins()
 
     draw_ir_circuit(OUT_DIR / "ir-circuit.png")
     for code in ("en", "pl", "ja"):

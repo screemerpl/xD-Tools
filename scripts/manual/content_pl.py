@@ -31,10 +31,9 @@ BOOK = [
             {"ul": [
                 "**Projektowanie** etykiet: naklejki na MiniDisc i wkładki J-card albo pierścienia na "
                 "płytę CD i wkładki do pudełka slim — wraz z eksportem gotowym do druku i cięcia.",
-                "**Nagrywanie** całego albumu z foobar2000 na MiniDisc, ze znacznikiem przy każdym "
-                "utworze.",
-                "**Wypalanie** płyty audio CD-R z folderu albo z playlisty foobara, razem z tytułami "
-                "w CD-Text.",
+                "**Nagrywanie** całego albumu na MiniDisc — z płyty CD albo z folderu plików — ze "
+                "znacznikiem przy każdym utworze.",
+                "**Wypalanie** płyty audio CD-R z folderu plików, razem z tytułami w CD-Text.",
                 "**Nadawanie tytułów** MiniDiscowi: zapisanie nazwy albumu i wszystkich utworów na samej "
                 "płycie, tak żeby pokazywał je wyświetlacz magnetofonu.",
                 "**Sterowanie magnetofonem** z programowego pilota — transport, numery ścieżek, tryby "
@@ -60,9 +59,9 @@ BOOK = [
                                              "ręka i nożyczki."],
                     ["Nadawanie tytułów", "Przystawka MDRem w porcie USB i magnetofon MiniDisc Sony, w "
                                           "który da się nią wycelować."],
-                    ["Nagrywanie albumu", "Powyższe oraz foobar2000 z komponentem Beefweb i kabel "
-                                          "cyfrowy (S/PDIF) z komputera do magnetofonu — albo analogowy, "
-                                          "realnym kosztem jakości."],
+                    ["Nagrywanie albumu", "Powyższe oraz kabel cyfrowy (S/PDIF) z komputera do "
+                                          "magnetofonu — albo analogowy, realnym kosztem jakości. Nic "
+                                          "poza samym xD-Tools: album odtwarza sam program."],
                 ],
             }},
             {"note": "Wszystko w tej instrukcji zostało ustalone na **Sony MDS-JE480**. Inne magnetofony "
@@ -286,11 +285,12 @@ BOOK = [
                 "**Wyszukaj listę utworów...** przeszukuje katalog iTunes po wpisanym albumie i "
                 "wykonawcy, po czym uzupełnia listę utworów, rok i okładkę. Jeżeli pasuje więcej niż "
                 "jedno wydanie, program pyta które.",
-                "**Wczytaj z foobar2000** bierze wszystko z bieżącej playlisty foobara, a potem szuka do "
-                "tego okładki.",
+                "**Importuj z folderu...** czyta własne tagi z folderu albumu — tym samym mechanizmem, "
+                "co samo nagrywanie — i na ich podstawie uzupełnia wykonawcę, album, rok i listę "
+                "utworów, a potem szuka do tego okładki.",
             ]},
-            {"tip": "**Wczytaj z foobar2000 to zwykle lepsze źródło.** To są te konkretne pliki, które "
-                    "zaraz nagrasz, z ich własnymi tagami i w ich własnej kolejności — wyszukiwanie może "
+            {"tip": "**Import z folderu to zwykle lepsze źródło.** To są te konkretne pliki, które zaraz "
+                    "nagrasz, z ich własnymi tagami i w ich własnej kolejności — wyszukiwanie może "
                     "zwrócić inne wydanie z inną kolejnością utworów."},
             {"h2": "Okładka"},
             {"p": "Pobrana okładka zapisuje się w dwóch miejscach: w projekcie, żeby była tam przy "
@@ -467,16 +467,26 @@ BOOK = [
             {"h2": "Włączenie w xD-Tools"},
             {"p": "**Okno > Ustawienia...**, zaznacz **Włącz przystawkę MDRem (pilot na podczerwień)** i "
                   "wybierz port szeregowy."},
-            {"fig": ("settings", "Okno > Ustawienia. Adres foobar2000 jest niezależny od przystawki.")},
+            {"fig": ("settings", "Okno > Ustawienia. Urządzenia wyjścia audio są niezależne od "
+                                 "przystawki — do nagrywania potrzeba urządzenia, nie łącza na "
+                                 "podczerwień.")},
             {"p": "**Wykryj** pyta każdy port szeregowy w komputerze, czy odpowiada na nim MDRem. Musi tak "
                   "działać: płytka zgłasza identyfikator USB `2E8A:0003`, ten sam co jej własny bootloader "
                   "i inne płytki Waveshare, więc jedyną pewną identyfikacją jest odpowiedź urządzenia na "
                   "`PING`."},
             {"p": "Po zaznaczeniu pola pojawiają się trzy rzeczy: **Wyślij listę utworów** w oknie "
-                  "Metadane..., **Pilot...** na ekranie powitalnym oraz całe menu **Nagrywanie** — "
-                  "wszystkie trzy sposoby nagrania płyty, Pilot... i Skasuj MiniDisc..."},
-            {"note": "Adres foobar2000 na tej samej stronie celowo *nie* jest powiązany z tym polem — do "
-                     "czytania playlisty potrzebny jest foobar2000, a nie przystawka na podczerwień."},
+                  "Metadane..., **Pilot...** w menu Okno oraz właściwe MiniDiscowi pozycje menu "
+                  "**Nagrywanie** — Nagraj CD/folder na MiniDisc i Skasuj MiniDisc..., bo obie potrzebują "
+                  "przystawki, żeby uzbroić magnetofon."},
+            {"note": "**Urządzenie wyjścia audio dla MiniDisc** i **Urządzenie wyjścia audio dla "
+                     "kasety**, na tej samej stronie, celowo *nie* są powiązane z tym polem — kaseta "
+                     "potrzebuje urządzenia wyjściowego niezależnie od tego, czy przystawka jest "
+                     "włączona, bo nagrywanie na nią w ogóle nie przechodzi przez MDRem. Każde z nich "
+                     "pamięta swój własny wybór, bo cyfrowe wyjście S/PDIF do jednego magnetofonu i "
+                     "analogowe wyjście liniowe do drugiego to zwykle dwa różne fizyczne gniazda. "
+                     "**Wzmocnienie nagrywania** (domyślnie -5 dB) trochę ścisza sygnał, zanim opuści "
+                     "komputer, żeby głośne źródło cyfrowe nie miało szans na przesterowanie po drodze — "
+                     "na odsłuch poniżej nie wpływa."},
         ],
     },
     # ------------------------------------------------------------------
@@ -484,9 +494,9 @@ BOOK = [
         "title": "Programowy pilot",
         "blocks": [
             {"p": "Programowy pilot to zamiennik pilota magnetofonu, ułożony tak jak ten fizyczny. Otwiera "
-                  "się go z **Pilot...** na ekranie powitalnym albo z **Nagrywanie > Pilot...** — to "
-                  "drugie istnieje dlatego, że sięgnięcie po pilota nie powinno wymagać zamykania "
-                  "otwartego projektu."},
+                  "się go z **Pilot...** na ekranie powitalnym albo z **Okno > Pilot...** — to drugie "
+                  "istnieje dlatego, że sięgnięcie po pilota nie powinno wymagać zamykania otwartego "
+                  "projektu."},
             {"fig": ("remote", "Okno pilota. Linia stanu mówi, co wysłano, a nie co się stało.")},
             {"table": {
                 "head": ["Grupa", "Klawisze"],
@@ -613,41 +623,38 @@ BOOK = [
     },
     # ------------------------------------------------------------------
     {
-        "title": "Nagrywanie albumu z foobar2000",
+        "title": "Nagrywanie albumu na MiniDisc",
         "blocks": [
-            {"p": "**Nagrywanie > Nagraj na MiniDisc z foobar2000...** robi całą robotę za jednym razem: "
-                  "uzbraja magnetofon, odtwarza album z foobar2000, pilnuje go do końca, zapisuje tytuły "
-                  "i układa obie etykiety z okładki albumu."},
-            {"note": "**To wymaga przystawki MDRem, a pozycja w menu pojawia się dopiero po jej włączeniu "
-                     "w Okno > Ustawienia...** To przystawka wprowadza magnetofon w nagrywanie i to ona "
-                     "stawia znaczniki ścieżek. Bez niej nagrywanie oznacza samodzielne wciśnięcie "
-                     "Record na magnetofonie i pozostawienie podziału na ścieżki jego własnemu "
-                     "LEVEL-SYNC — xD-Tools nie ma w tym udziału."},
+            {"p": "Nagrywanie na MiniDisc to jedno wspólne okno, do którego prowadzą trzy różne drzwi — "
+                  "**Nagraj CD na MiniDisc...**, **Nagraj folder na MiniDisc...** oraz telegramowe "
+                  "**Nagraj z folderu audio...** (osobny rozdział) — zależnie od tego, skąd wzięły się "
+                  "ścieżki. Ten rozdział opisuje, co dzieje się dalej, którymi drzwiami by się nie "
+                  "weszło: magnetofon zostaje uzbrojony, album odtwarza własny silnik audio xD-Tools, "
+                  "program pilnuje go do końca, zapisuje tytuły i układa obie etykiety z okładki albumu."},
+            {"note": "**To wymaga przystawki MDRem, a pozycje w menu pojawiają się dopiero po jej "
+                     "włączeniu w Okno > Ustawienia...** To przystawka wprowadza magnetofon w nagrywanie "
+                     "i to ona stawia znaczniki ścieżek. Bez niej nagrywanie oznacza samodzielne "
+                     "wciśnięcie Record na magnetofonie i pozostawienie podziału na ścieżki jego "
+                     "własnemu LEVEL-SYNC — xD-Tools nie ma w tym udziału."},
             {"h2": "Przygotowanie"},
             {"ol": [
-                "Zainstaluj w foobar2000 komponent **Beefweb Remote Control** (`foo_beefweb`). Tak "
-                "xD-Tools czyta playlistę i śledzi, co gra. Domyślny adres `http://localhost:8880` jest "
-                "tym, czego xD-Tools oczekuje; zmień go w Okno > Ustawienia..., jeżeli go przestawiłeś.",
                 "Połącz wyjście **S/PDIF** komputera — optyczne albo koncentryczne — z wejściem cyfrowym "
                 "magnetofonu. To ono niesie dźwięk; USB niesie wyłącznie komendy.",
-                "Ustaw wyjście foobara na **44,1 kHz, 16 bitów, stereo** — patrz niżej.",
-                "Wczytaj album do bieżącej playlisty foobara, w kolejności, jaką chcesz mieć na płycie.",
+                "Wybierz to wyjście w **Okno > Ustawienia... > Urządzenie wyjścia audio dla MiniDisc** — "
+                "patrz rozdział o MDRem. Same pliki źródłowe nie wymagają żadnej konfiguracji.",
                 "Włóż czystą albo kasowalną płytę z zamkniętym suwakiem i ustaw tryb nagrywania (SP albo "
                 "LP2) **na magnetofonie** — xD-Tools nie potrafi go odczytać ani zmienić.",
                 "**Wyłącz LEVEL-SYNC** na magnetofonie. Patrz niżej.",
                 "Wyceluj przystawkę w czujnik magnetofonu i zostaw ją tak.",
             ]},
             {"h2": "Format wchodzący do magnetofonu"},
-            {"p": "MiniDisc to 44,1 kHz, 16 bitów, stereo, i wejście cyfrowe magnetofonu oczekuje, że tym "
-                  "właśnie zostanie nakarmione. Podaj mu strumień 96 kHz albo 24-bitowy — a to właśnie "
-                  "wystawi współczesny odtwarzacz, jeśli pliki są wysokiej rozdzielczości i nikt nie każe "
-                  "ich przekonwertować — i magnetofon może go po prostu odrzucić albo wypaść w trakcie. "
-                  "I też nie ma jak powiedzieć o tym xD-Tools."},
-            {"p": "Konwertuj więc na komputerze, gdzie można to zrobić dobrze bez kosztów: zainstaluj w "
-                  "foobar2000 komponent **Resampler (SoX)**, dodaj go do łańcucha DSP i ustaw na "
-                  "**44100 Hz**, a wyjście na **16 bitów stereo**. Pliki już w 44,1/16 przechodzą "
-                  "nietknięte, więc przy zwykłym zripowanym CD nic to nie kosztuje, a ratuje ten "
-                  "niewygodny przypadek."},
+            {"p": "MiniDisc to 44,1 kHz, 16 bitów, stereo, i wejście cyfrowe magnetofonu oczekuje, że "
+                  "dokładnie tym zostanie nakarmione. xD-Tools konwertuje każdy plik automatycznie, "
+                  "niezależnie od jego własnej częstotliwości czy głębi bitowej — łącznie z pobranym "
+                  "plikiem 96 kHz albo 24-bitowym — więc po stronie źródła nie trzeba nic ustawiać. To "
+                  "też nie jest zwykłe obcięcie do 16 bitów: resampling idzie tym samym resamplerem, co "
+                  "przy wypalaniu CD-R, a dogranie do 16 bitów odbywa się przez dither z kształtowaniem "
+                  "szumu — zamiast zostawiać to zaokrąglenie czemuś, co akurat siedzi za kartą dźwiękową."},
             {"h2": "Analogowo, jeśli trzeba"},
             {"p": "Wejścia **analogowe** magnetofonu też działają, a xD-Tools prowadzi nagranie dokładnie "
                   "tak samo — naciska klawisze magnetofonu, co nie zależy od tego, jak dochodzi dźwięk. "
@@ -667,13 +674,20 @@ BOOK = [
             {"p": "Kolumnę **Wykonawca** wypełniaj tylko wtedy, gdy utwory są różnych artystów. Na "
                   "zwykłym albumie zostaje pusta; przy składance to właśnie ona mówi xD-Tools, że "
                   "płyta nią jest."},
+            {"h2": "Odsłuch przed nagraniem"},
+            {"p": "Zaznacz ścieżkę, a mały pasek transportu pod listą pozwala ją **odtworzyć/zatrzymać** "
+                  "przez domyślne wyjście dźwięku komputera — nie przez wyjście do nagrywania powyżej, "
+                  "więc działa nawet wtedy, gdy to drugie jest cyfrowym łączem, którego nikt inny nie "
+                  "słucha. Suwak pozwala sprawdzić konkretny fragment, a **Wstecz/Dalej** przechodzą "
+                  "między utworami bez wracania do listy. To narzędzie do złapania złego pliku albo "
+                  "kiepskiej edycji, zanim czterdzieści minut trafi na płytę — nie do odsłuchania całego "
+                  "albumu od deski do deski."},
             {"h2": "Co się dzieje"},
             {"ol": [
                 "xD-Tools pokazuje playlistę i jej łączny czas, i ostrzega, jeśli nie zmieści się na "
                 "80-minutowej płycie w SP.",
-                "Ustawia foobara na odtworzenie wszystkiego raz, po kolei — bez losowania i powtarzania — "
-                "żeby płyta nie skończyła w innej kolejności niż tytuły, oraz ustawia głośność foobara "
-                "na -5 dB, żeby zostawić magnetofonowi zapas.",
+                "Dekoduje, resampluje i ditheruje całą płytę z góry — patrz wyżej — stosując ustawienie "
+                "**Wzmocnienie nagrywania**, żeby zostawić magnetofonowi zapas.",
                 "Każe magnetofonowi zacząć nagrywanie, po czym **prosi o potwierdzenie, że magnetofon "
                 "naprawdę jest w pauzie nagrywania**. Nie może tego sprawdzić, a pomyłka oznacza "
                 "odegranie całego albumu do magnetofonu, który nie nagrywa, i odkrycie tego czterdzieści "
@@ -697,8 +711,9 @@ BOOK = [
             {"p": "To zawodzi na każdym albumie, w którym jeden utwór przechodzi w drugi. Dwa utwory bez "
                   "przerwy między nimi nagrają się jako jedna długa ścieżka i żadna późniejsza edycja "
                   "tego nie naprawi po dobroci."},
-            {"p": "Dlatego xD-Tools sam wysyła znacznik dokładnie w chwili, gdy foobar zmienia utwór — to "
-                  "pole **Znaczniki ścieżek przez przystawkę** i powinno zostać zaznaczone."},
+            {"p": "Dlatego xD-Tools sam wysyła znacznik dokładnie w tej próbce, w której własny odtwarzacz "
+                  "przechodzi z jednej ścieżki w drugą — to pole **Znaczniki ścieżek przez przystawkę** "
+                  "i powinno zostać zaznaczone."},
             {"warn": "**Wyłącz wtedy LEVEL-SYNC na magnetofonie.** Jedno i drugie naraz oznacza tę samą "
                      "granicę dwa razy, o ułamek sekundy obok siebie, i zostawia między nimi szczątkową "
                      "ścieżkę. One się kłócą, a nie uzupełniają."},
@@ -732,9 +747,8 @@ BOOK = [
             {"h2": "Gdzie album jest cięty i w jakiej kolejności"},
             {"p": "xD-Tools układa playlistę we własnej kolejności albumu już przy otwarciu okna: "
                   "najpierw numer płyty, potem numer ścieżki, jedno i drugie prosto z plików. Komplet "
-                  "dwupłytowy wrzucony do foobara2000 jako jeden folder przychodzi przeplatany, bo obie "
-                  "płyty numerują ścieżki od jedynki - to właśnie prostuje, a playlista w foobarze jest "
-                  "przestawiana pod to, bo to ona jest odtwarzana."},
+                  "dwupłytowy trzymany jako jeden folder przychodzi przeplatany, bo obie płyty numerują "
+                  "ścieżki od jedynki — to właśnie prostuje, zanim cokolwiek zacznie grać."},
             {"p": "Jeżeli pliki mówią, ile jest płyt, podziały stają tam, gdzie one wskazują, a opcja "
                   "zaznacza się sama. W przeciwnym razie album dzieli się możliwie równo, na najmniejszą "
                   "liczbę płyt, która wystarczy."},
@@ -750,19 +764,23 @@ BOOK = [
     {
         "title": "Nagrywanie z płyty CD",
         "blocks": [
-            {"p": "**Nagrywanie > Nagraj CD na MiniDisc...** przegrywa płytę audio CD na MiniDisc. "
-                  "Odczytuje płytę, ustala, co to za album, zgrywa każdą ścieżkę do pliku, ładuje te "
-                  "pliki do foobar2000 we właściwej kolejności i przekazuje sterowanie nagrywaniu, "
-                  "które już znasz - to samo uzbrajanie, te same znaczniki ścieżek, to samo nadawanie "
-                  "tytułów."},
-            {"note": "**To również wymaga przystawki MDRem**, a pozycja w menu pojawia się dopiero po "
-                     "jej włączeniu. Sam odczyt płyty przystawki nie potrzebuje, ale ta pozycja nie "
-                     "kończy się na odczycie: przechodzi od razu do nagrywania tego, co odczytała."},
+            {"p": "**Nagrywanie > Nagraj CD na {medium}...** najpierw zgrywa płytę audio CD, a potem "
+                  "nagrywa to, co zgrała - na MiniDisc albo na kasetę, zależnie od tego, do czego jest "
+                  "otwarty projekt. Odczytuje płytę, ustala, co to za album, zgrywa każdą ścieżkę do "
+                  "pliku, a po zakończeniu zgrywania pyta, czy **Nagraj teraz**, czy **Tylko metadane** "
+                  "- ta druga opcja wprowadza tytuł albumu i listę utworów do projektu bez nagrywania "
+                  "czegokolwiek, dla kogoś, kto chce mieć właściwą etykietę, choć akurat nie ma pod ręką "
+                  "magnetofonu. Nagraj teraz przekazuje zgrane pliki wprost do okna nagrywania, które "
+                  "już znasz z poprzedniego rozdziału - to samo uzbrajanie, te same znaczniki ścieżek, "
+                  "to samo nadawanie tytułów."},
+            {"note": "**Nagrywanie wymaga przystawki MDRem**, a pozycja w menu pojawia się dopiero po "
+                     "jej włączeniu - sam odczyt płyty przystawki nie potrzebuje, ale wybór Nagraj teraz "
+                     "już tak. **Tylko metadane nigdy nie potrzebuje przystawki**, dlatego ta pozycja "
+                     "zostaje dostępna także w projekcie kasety, z przystawką czy bez."},
             {"h2": "Dlaczego najpierw kopia"},
-            {"p": "foobar2000 potrafi odtwarzać płytę CD bezpośrednio i tak byłoby prościej. Wtedy "
-                  "jednak płyta jest czytana na żywo, w trakcie nagrywania, bez żadnego zabezpieczenia "
-                  "- napęd potykający się o rysę w 31. minucie zapisze to potknięcie na MiniDisc, a "
-                  "nagrania na MiniDisc nie da się potem załatać."},
+            {"p": "Napęd potrafi odtwarzać płytę CD bezpośrednio, a pozwolenie mu na to byłoby "
+                  "prostsze. Wtedy jednak rysa napotkana w 31. minucie ląduje wprost na MiniDysku, bez "
+                  "żadnego zabezpieczenia - a nagrania na MiniDisc nie da się potem załatać."},
             {"p": "Wcześniejsza kopia przenosi każdy błąd odczytu w miejsce, gdzie kosztuje tylko "
                   "ponowną próbę. xD-Tools używa do tego **cdparanoi**, zbudowanej właśnie po to, by "
                   "męczyć uszkodzoną płytę aż do poprawnego odczytu, oraz **flac** do zapisu wyniku. "
@@ -779,8 +797,8 @@ BOOK = [
                 "tytuły ścieżek i okładka zmienią się razem z nim.",
                 "Popraw to, co się nie zgadza. Tytuły są edytowalne i to one trafiają do plików, a "
                 "później na MiniDisc.",
-                "Naciśnij **Zgraj i nagraj**. Po zakończeniu kopiowania okno nagrywania otworzy się "
-                "samo.",
+                "Naciśnij **Zgraj i nagraj**, a po zakończeniu kopiowania wybierz **Nagraj teraz** albo "
+                "**Tylko metadane**.",
             ]},
             {"note": "Płyta, której nie ma w MusicBrainz - każda nagrana samodzielnie i sporo mniej "
                      "znanych wydań - wraca po prostu z numerowanymi tytułami zastępczymi do "
@@ -804,20 +822,18 @@ BOOK = [
             {"note": "Album z gościnnym udziałem w jednym utworze **nie jest** składanką i nie jest tak "
                      "traktowany. Sprawdzane jest to, czy większość utworów należy do tego samego "
                      "wykonawcy, a nie to, czy podpisy się w ogóle różnią."},
-            {"p": "To samo dotyczy nagrywania z foobar2000: playlista złożona z niepowiązanych utworów "
-                  "jest rozpoznawana tak samo i z tym samym skutkiem."},
+            {"p": "To samo dotyczy folderu nagrywanego bezpośrednio (rozdział „Nagrywanie z folderu "
+                  "plików”): folder złożony z niepowiązanych utworów jest rozpoznawany tak samo i z "
+                  "tym samym skutkiem."},
             {"h2": "Gdzie trafiają zgrane pliki"},
-            {"p": "Domyślnie do folderu tymczasowego, do `xD-Tools CD Rip`, po jednym folderze na album. "
-                  "Jeśli go nie ma, zostanie utworzony, więc folder tylko wpisany w Ustawieniach i nigdy "
-                  "nie założony nie jest problemem. To półprodukt do nagrania, a nie kolekcja muzyki - "
-                  "jeden album to kilkaset megabajtów - a Okno > Ustawienia... pozwala wskazać inne "
+            {"p": "Domyślnie do **Dokumenty\\XDProjects\\Audio**, po jednym folderze na album - tego "
+                  "samego, do którego trafiają pliki pobrane botem Telegrama (własny rozdział), bo oba "
+                  "to półprodukt do nagrania, a nie kolekcja muzyki. Jeśli folderu nie ma, zostanie "
+                  "utworzony, a **Okno > Ustawienia... > Folder zgrywania CD** pozwala wskazać inne "
                   "miejsce."},
-            {"p": "**Nie** są kasowane po zakończeniu nagrywania, bo foobar2000 wciąż ma je na "
-                  "playliście i możesz chcieć ich posłuchać ponownie. Poprzednia kopia znika w chwili "
-                  "rozpoczęcia następnej."},
-            {"warn": "Załadowanie zgranych ścieżek do foobar2000 **czyści jego bieżącą playlistę**. To, "
-                     "co miałeś tam przygotowane, przepadnie - przenieś to wcześniej gdzie indziej, "
-                     "jeśli chcesz zachować."},
+            {"p": "Zgrane pliki **nigdy nie są kasowane automatycznie** — ani przez to okno, ani przez "
+                  "nic innego w xD-Tools — nie po zakończeniu nagrywania, nie po to, by zrobić miejsce "
+                  "na kolejne zgranie. To, co się tam nazbiera, sprzątasz sam, kiedy i jak chcesz."},
             {"h2": "Wydanie na kilku płytach CD"},
             {"p": "**Zgraj kilka płyt jako jeden album** przenosi komplet jako jeden album, a nie jako "
                   "dwa niezwiązane. Każda płyta jest osobno odczytywana, identyfikowana i zgrywana, po "
@@ -831,8 +847,8 @@ BOOK = [
                 "Każdy plik dostaje tag z numerem swojej płyty i numer ten w nazwie. To dzięki temu "
                 "wszystko dalej - playlista, nagrywanie, wypalanie - potrafi ułożyć komplet po jego "
                 "własnemu.",
-                "Kiedy przestaniesz dokładać płyty, playlista foobara2000 trzyma cały komplet, a "
-                "nagranie po niej obejmuje całość.",
+                "Kiedy przestaniesz dokładać płyty, następujące po tym nagranie obejmuje od razu cały "
+                "komplet.",
             ]},
             {"note": "Możesz zakończyć po dowolnej płycie: pytanie proponuje kontynuować albo nagrać to, "
                      "co zostało już zgrane."},
@@ -841,10 +857,12 @@ BOOK = [
     {
         "title": "Wypalanie płyty audio CD",
         "blocks": [
-            {"p": "Nagrywanie > **Wypal płytę audio CD z folderu...** albo **z foobar2000...** zapisuje "
-                  "prawdziwą płytę audio CD-R w standardzie Red Book — taką, jaką odtworzy każdy "
-                  "odtwarzacz CD — z plików, które już masz. Podczerwień nie bierze w tym udziału: to "
-                  "robota napędu, więc te dwie pozycje zostają dostępne nawet przy wyłączonym MDRem."},
+            {"p": "W projekcie CD **Nagrywanie > Nagraj folder na CD...** — ta sama pozycja, którą "
+                  "rozdział „Nagrywanie z folderu plików” opisuje dla MiniDisc i kasety — zapisuje "
+                  "zamiast tego prawdziwą płytę audio CD-R w standardzie Red Book: taką, jaką odtworzy "
+                  "każdy odtwarzacz CD, z folderu plików, które już masz. Podczerwień nie bierze w tym "
+                  "udziału: to robota napędu, więc ta pozycja zostaje dostępna nawet przy wyłączonym "
+                  "MDRem."},
             {"fig": ("burn", "Okno wypalania: co zostanie zapisane i jak będzie się nazywać.")},
             {"h2": "Co pokazuje okno"},
             {"p": "Nazwę albumu, wykonawcę i rok, edytowalny tytuł i wykonawcę przy każdej ścieżce oraz "
@@ -853,6 +871,10 @@ BOOK = [
                   "zarówno jako CD-Text, jak i do projektu, z którego zaprojektujesz etykietę."},
             {"p": "Linia pod listą podaje długość albumu wobec pojemności płyty. Kolumna **Status** to "
                   "ta część, którą warto przeczytać, zanim cokolwiek naciśniesz."},
+            {"p": "Zaznacz ścieżkę, a pasek transportu pod listą odtworzy ją przez domyślne wyjście "
+                  "dźwięku komputera, z suwakiem i przyciskami Wstecz/Dalej — ten sam odsłuch, co w "
+                  "oknach nagrywania na MiniDisc i kasetę. Warto go użyć, zanim płyta, której nie da "
+                  "się już poprawić, zostanie zapisana."},
             {"h2": "Dlaczego ścieżka może zostać odrzucona"},
             {"p": "Płyta CD przyjmuje wyłącznie dźwięk 44,1 kHz, 16-bitowy, stereo. Dwie reguły Red "
                   "Booka mogą zatrzymać wypalanie i okno mówi o nich przy konkretnej ścieżce, zamiast "
@@ -863,8 +885,9 @@ BOOK = [
             ]},
             {"note": "Plik o innej częstotliwości to nie jest odmowa. Pobrany album 48 kHz / 24 bity — "
                      "czyli to, czym zwykle jest — dostaje wpis „zostanie przekonwertowane na 44100 Hz / "
-                     "16 bitów” i po drodze na płytę przechodzi przez dołączony SoX. Konwersja idzie do "
-                     "folderu roboczego; Twoje własne pliki nie są ruszane."},
+                     "16 bitów” i po drodze na płytę zostaje przeresamplowany i zditherowany przez "
+                     "własny silnik audio xD-Tools. Konwersja idzie do folderu roboczego; Twoje własne "
+                     "pliki nie są ruszane."},
             {"h2": "Tytuły na płycie: CD-Text"},
             {"p": "Nazwa albumu i nazwy ścieżek są zapisywane na płycie jako CD-Text, który pokażą "
                   "odtwarzacze go obsługujące. Niesie czyste ASCII, więc polskie znaki tracą ogonki tak "
@@ -892,7 +915,8 @@ BOOK = [
                 "Nagrywarki CD. Jest wykrywana przez zapytanie cdrecorda, nie zgadywana — jeśli pole "
                 "**Nagrywarka** jest puste, sprawdź podłączenie napędu i naciśnij **Odśwież**.",
                 "Czystej płyty CD-R. Płyta, na której już coś jest, nie przyjmie nowego zapisu.",
-                "Niczego więcej: cdrecord i SoX są dołączone w wersji na Windows.",
+                "Niczego więcej: cdrecord jest dołączony w wersji na Windows, a resampling to własny "
+                "silnik xD-Tools.",
             ]},
             {"h2": "Album, który nie mieści się na jednej płycie"},
             {"p": "**Wypal na kilka płyt** zapisuje długi album na tylu krążkach CD-R, ilu potrzeba. "
@@ -920,34 +944,36 @@ BOOK = [
     {
         "title": "Nagrywanie z folderu",
         "blocks": [
-            {"p": "**Nagrywanie > Nagraj folder na MiniDisc...** nagrywa album, który masz już na "
-                  "dysku. Wskaż folder, w którym leży, a xD-Tools wczyta te pliki do foobar2000 we "
-                  "właściwej kolejności i przekaże sterowanie nagrywaniu, które już znasz — to samo "
-                  "uzbrajanie, te same znaczniki utworów, to samo nadawanie tytułów."},
-            {"note": "**To także wymaga przystawki MDRem** — pozycja pojawia się dopiero po jej "
-                     "włączeniu. Samo wczytanie folderu jej nie potrzebuje, ale nagranie tego, co "
-                     "wczytane, już tak."},
-            {"fig": ("folder-record", "Odczytany folder i to, co foobar2000 wyczytał ze znaczników.")},
+            {"p": "**Nagrywanie > Nagraj folder na {medium}...** nagrywa album, który masz już na "
+                  "dysku — na MiniDisc, na kasetę, na CD-R, zależnie od tego, do czego jest otwarty "
+                  "projekt. Wskaż folder, w którym leży, a xD-Tools odczyta znaczniki wprost z plików i "
+                  "przekaże sterowanie do okna nagrywania, które już znasz z poprzednich rozdziałów — to "
+                  "samo uzbrajanie, te same znaczniki utworów, to samo nadawanie tytułów (albo, w "
+                  "projekcie CD, od razu wypalanie)."},
+            {"note": "**Nagrywanie w projekcie MiniDisc wymaga przystawki MDRem** — pozycja pojawia się "
+                     "dopiero po jej włączeniu. Samo wczytanie folderu jej nie potrzebuje; kaseta i "
+                     "CD-R nie potrzebują jej wcale, ani tu, ani nigdzie indziej."},
+            {"fig": ("folder-record", "Odczytany folder i to, co xD-Tools wyczytał wprost ze znaczników "
+                                      "plików.")},
             {"h2": "Krok po kroku"},
             {"ol": [
-                "Naciśnij **Przeglądaj...** i wskaż folder z albumem. Zostanie od razu wczytany do "
-                "foobar2000 — wybór folderu jest decyzją, więc nie ma czego dodatkowo potwierdzać. "
-                "FLAC, MP3 i wszystko inne, co odtwarza foobar2000, zostanie rozpoznane; co nie jest "
-                "dźwiękiem — okładki, plik cue, log — jest pomijane.",
+                "Naciśnij **Przeglądaj...** i wskaż folder z albumem. Jego pliki są odczytywane od "
+                "razu — wybór folderu jest decyzją, więc nie ma czego dodatkowo potwierdzać. FLAC i "
+                "WAV zostaną rozpoznane; co nie jest jednym z nich — okładki, plik cue, log — jest "
+                "pomijane.",
                 "Sprawdź kolejność. Bierze się z nazw plików, porównywanych tak, że `10` idzie po "
                 "`9`, a nie po `1`. Jeśli jest zła, poprawiać trzeba nazwy plików.",
                 "Sprawdź album i wykonawcę. Na początek są zgadywane z nazwy samego folderu, a to, co "
-                "jest w znacznikach plików, zastępuje ten domysł, gdy tylko ścieżki zostaną wczytane. "
+                "jest w znacznikach plików, zastępuje ten domysł, gdy tylko ścieżki zostaną odczytane. "
                 "Jeżeli jedno i drugie jest nie tak, po prostu wpisz swoje.",
-                "Obejrzyj, co wyszło: tytuły odczytane przez foobar2000 z plików oraz okładkę — "
+                "Obejrzyj, co wyszło: tytuły odczytane wprost ze znaczników plików oraz okładkę — "
                 "najpierw szukaną w sieci, a gdy nic sensownego nie znajdzie, braną z wnętrza "
-                "samych plików FLAC.",
-                "Naciśnij **Nagraj**. Przycisk zapala się dopiero wtedy, gdy foobar rzeczywiście "
-                "ścieżki przyjmie.",
+                "samego pliku FLAC.",
+                "Naciśnij **Nagraj**.",
             ]},
             {"h2": "Skąd biorą się tytuły"},
-            {"p": "Z plików — odczytanych przez foobar2000, a nie przez xD-Tools: z tych dwóch to on "
-                  "lepiej czyta znaczniki, a i tak musi je odczytać, żeby cokolwiek zagrać. Plik bez "
+            {"p": "Wprost ze znaczników plików — tym samym czytnikiem, którym nagrywanie potem je "
+                  "dekoduje, więc nic tutaj nie może rozjechać się z tym, co realnie zagra. Plik bez "
                   "znacznika tytułu zostanie nagrany pod nazwą swojego pliku. To uczciwa odpowiedź i "
                   "zwykle wystarczająca."},
             {"p": "Album i wykonawca widoczni w tym oknie trafią na płytę i na etykietę, więc poprawkę "
@@ -958,23 +984,23 @@ BOOK = [
                   "katalog ze skanami czy bonusami nie dołącza do listy. Dopiero gdy w samym folderze "
                   "nie ma żadnego dźwięku, xD-Tools zagląda głębiej — i dzięki temu album dwupłytowy "
                   "trzymany jako `CD1` i `CD2` wychodzi w kolejności płyt."},
-            {"warn": "Wczytanie folderu **czyści bieżącą playlistę foobar2000**, dokładnie tak samo "
-                     "jak nagrywanie z CD. Jeśli miałeś tam coś przygotowane, przenieś to wcześniej "
-                     "gdzie indziej."},
         ],
     },
     # ------------------------------------------------------------------
     {
         "title": "Nagrywanie kasety",
         "blocks": [
-            {"p": "**Nagrywanie > Nagraj na kasetę z foobara2000...** nagrywa album na kasetę "
-                  "magnetofonową, strona po stronie. To wyjątek wśród sposobów nagrywania — i wyjątek, "
-                  "który przesądza o wszystkim: **magnetofon obsługujesz ty**. Do magnetofonu nie ma "
-                  "adaptera ani kabla, który wciskałby klawisze, więc xD-Tools odtwarza właściwe utwory "
-                  "we właściwym momencie i mówi wprost, co i kiedy nacisnąć."},
-            {"note": "Do tego **nie jest potrzebny adapter MDRem** — wystarczy foobar2000. Pozycja jest "
-                     "widoczna zawsze, gdy otwarty projekt jest kasetowy, niezależnie od tego, czy "
-                     "adapter jest włączony."},
+            {"p": "**Nagraj CD na kasetę...**, **Nagraj folder na kasetę...** i telegramowe **Nagraj z "
+                  "folderu audio...** — te same trzy drzwi, co w rozdziale o MiniDysku — w projekcie "
+                  "kasetowym prowadzą tutaj i nagrywają album na kasetę magnetofonową, strona po "
+                  "stronie. To wyjątek wśród sposobów nagrywania — i wyjątek, który przesądza o "
+                  "wszystkim: **magnetofon obsługujesz ty**. Do magnetofonu nie ma adaptera ani kabla, "
+                  "który wciskałby klawisze, więc xD-Tools odtwarza właściwe utwory we właściwym "
+                  "momencie i mówi wprost, co i kiedy nacisnąć."},
+            {"note": "Do tego **nie jest potrzebny żaden adapter MDRem** — wystarczy urządzenie "
+                     "wybrane w Okno > Ustawienia... > Urządzenie wyjścia audio dla kasety (własne, "
+                     "niezależne od tego dla MiniDisc). Pozycje są widoczne zawsze, gdy otwarty projekt "
+                     "jest kasetowy, niezależnie od tego, czy adapter jest włączony."},
             {"fig": ("tape-record", "Podział, kaseta, pod którą go policzono, i czekająca instrukcja.")},
             {"h2": "Wybór kasety"},
             {"p": "Podana długość dotyczy obu stron razem: C60 to trzydzieści minut na stronę, nie "
@@ -1005,20 +1031,32 @@ BOOK = [
             {"ol": [
                 "Sprawdź album, wykonawcę, rok i okładkę — to z nich zostaną wydrukowane etykiety, i "
                 "zostają zamrożone z chwilą rozpoczęcia nagrywania.",
-                "Włóż kasetę przewiniętą na początek strony i włącz w magnetofonie nagrywanie. Ustaw "
-                "jego wejście na to, z którego idzie sygnał, i ustaw poziom.",
-                "Naciśnij przycisk. To kliknięcie jest jedynym potwierdzeniem, że magnetofon naprawdę "
-                "nagrywa — nic tutaj tego nie widzi.",
-                "Odlicza dziesięć sekund ciszy, w czasie których przechodzi rozbiegówka.",
-                "Strona się odtwarza. foobar2000 dostaje polecenie zatrzymania się po ostatnim utworze "
-                "tej strony, zamiast być zatrzymywanym po fakcie — dzięki temu pierwsza sekunda "
-                "następnego utworu nie trafia na koniec strony.",
-                "Zatrzymaj magnetofon, wyjmij kasetę i odwróć ją, włącz nagrywanie ponownie i naciśnij "
-                "przycisk dla strony B.",
+                "Włóż kasetę przewiniętą na początek strony. Naciśnij razem **RECORD i PAUSE** — pauzę "
+                "nagrywania, magnetofon uzbrojony, ale jeszcze nieruszający się — ustaw jego wejście na "
+                "linię, którą karmi go xD-Tools, i ustaw poziom.",
+                "Naciśnij przycisk pod listą utworów. xD-Tools dekoduje z góry całą stronę, z linijką "
+                "statusu pokazującą, że pracuje, a nie że się zawiesił.",
+                "Okno mówi, żeby **zwolnić teraz Pauzę** — magnetofon powinien zacząć się kręcić. To "
+                "kliknięcie jest jedynym potwierdzeniem, że naprawdę ruszył — nic tutaj tego nie widzi "
+                "— i to też moment, od którego liczy się dziesięć sekund ciszy poniżej, więc szybkie "
+                "zwolnienie Pauzy to właśnie to, co utrzymuje ciszę i rozbiegówkę w zgodzie.",
+                "Odlicza dziesięć sekund ciszy, w czasie których przechodzi rozbiegówka, a potem gra "
+                "strona. Własny odtwarzacz xD-Tools zatrzymuje się dokładnie w chwili, gdy kończy się "
+                "ostatni utwór tej strony, zamiast być złapanym po fakcie — dzięki temu pierwsza "
+                "sekunda kolejnej strony nie trafia na koniec tej.",
+                "Zatrzymaj magnetofon, wyjmij kasetę i odwróć ją, naciśnij ponownie **RECORD i PAUSE** "
+                "i naciśnij przycisk dla strony B — to samo okno z prośbą o zwolnienie Pauzy czeka i "
+                "tam.",
             ]},
-            {"tip": "**Zatrzymaj** zatrzymuje foobara2000 i mówi o tym — magnetofonu zatrzymać nie "
-                    "może, a ten spokojnie nagrywałby dalej ciszę. To jedyna rzecz, którą możesz "
-                    "zrobić tylko ty."},
+            {"tip": "**Zatrzymaj** zatrzymuje własne odtwarzanie xD-Tools i mówi o tym — magnetofonu "
+                    "zatrzymać nie może, a ten spokojnie nagrywałby dalej ciszę. To jedyna rzecz, którą "
+                    "możesz zrobić tylko ty."},
+            {"h2": "Odsłuch przed nagraniem"},
+            {"p": "Ten sam odsłuch, co w oknach MiniDisc i wypalania CD, siedzi pod listą utworów też "
+                  "tutaj: zaznacz ścieżkę, **odtwórz/zatrzymaj** ją przez domyślne wyjście dźwięku "
+                  "komputera, przeciągnij suwak, żeby sprawdzić fragment, **Wstecz/Dalej**, żeby "
+                  "przejść przez album. Strony kasety nie da się potem poprawić tak samo, jak nagrania "
+                  "na MiniDisc — warto więc jej posłuchać wcześniej."},
             {"h2": "Droga dźwięku"},
             {"p": "Z komputera na wejścia liniowe magnetofonu, zwyczajnie analogowo. Nic w tym oknie "
                   "nie zależy od tego, jak dźwięk tam dociera: przełącznik wejść, poziom nagrywania i "
@@ -1051,29 +1089,26 @@ BOOK = [
     {
         "title": "Kasowanie płyty",
         "blocks": [
-            {"p": "**Nagrywanie > Skasuj MiniDisc...** czyści płytę w magnetofonie. Działa na tym, co "
-                  "fizycznie jest w środku, więc nie ma znaczenia, który projekt jest otwarty ani czy "
-                  "w ogóle jakiś jest."},
+            {"p": "**Skasuj MiniDisc...**, przycisk w oknie nagrywania na MiniDisc, a nie osobna "
+                  "pozycja menu, czyści płytę w magnetofonie — skasowanie niewłaściwej płyty najczęściej "
+                  "wychodzi na jaw tuż przed nagraniem na nią, więc tam właśnie ten przycisk teraz "
+                  "mieszka."},
             {"warn": "Nie da się tego cofnąć, a xD-Tools nie widzi wyniku. Upewnij się, że w "
                      "magnetofonie jest ta płyta, o którą Ci chodzi, i że jej suwak zabezpieczający "
                      "jest zamknięty."},
-            {"h2": "Dlaczego pyta, co widzisz"},
-            {"p": "To jedyna operacja, przy której xD-Tools nie wie, co robi jego własna komenda. "
-                  "Klawisz **Erase** jest rozpoznawany przez magnetofon jako polecenie zapisu - tyle "
-                  "udało się potwierdzić - ale nie ustalono, które menu edycji otwiera, bo klawisze "
-                  "zapisu dało się bezpiecznie testować tylko na płycie zabezpieczonej, gdzie "
-                  "magnetofon odpowiada na każdy z nich tym samym komunikatem."},
-            {"p": "Zamiast zgadywać Twoim nagraniem, xD-Tools wysyła Erase i pyta, co pokazuje "
-                  "wyświetlacz. Jeśli widzisz pytanie w rodzaju **All Erase?**, naciśnij **Wyślij "
-                  "Enter** i patrz na wyświetlacz — okienko zostaje otwarte, więc można nacisnąć "
-                  "jeszcze raz. Niektóre magnetofony chcą tego kilka razy, a xD-Tools nie ma jak tego "
-                  "sprawdzić: magnetofon nigdy nie odpowiada. Naciśnij **Gotowe**, gdy płyta jest już "
-                  "pusta, albo **Nic się nie stało**, żeby wycofać magnetofon z menu, w którym "
-                  "akurat stoi."},
-            {"fig": ("erase", "Wysyła komendę, a potem pyta, co pokazuje magnetofon.")},
+            {"h2": "Stała sekwencja, za jednym potwierdzeniem"},
+            {"p": "**Skasuj płytę** wysyła przez podczerwień **Stop, Erase, Enter, Enter, Eject**, "
+                  "każdy klawisz z ćwierćsekundowym odstępem od poprzedniego, żeby magnetofon zdążył "
+                  "faktycznie zareagować, zanim przyjdzie następny — bez dalszych pytań po Twoim "
+                  "jednym potwierdzeniu. Ta dokładna sekwencja — dwa Entery, a potem bezwarunkowe "
+                  "Eject — jest tym, co potwierdzono jako działające na jednym rzeczywistym "
+                  "magnetofonie; xD-Tools nie potrafi odczytać wyświetlacza, żeby sprawdzić, ilu chce "
+                  "inny model, więc jeśli Twój potrzebuje czegoś innego, skasuj płytę bezpośrednio z "
+                  "jego panelu."},
+            {"fig": ("erase", "Jedno potwierdzenie, a potem sekwencja leci sama.")},
             {"note": "Tak jak przy tytułach, skasowanie żyje w pamięci magnetofonu do chwili "
-                     "wysunięcia płyty. xD-Tools proponuje potem wysunięcie - skorzystaj, bo inaczej "
-                     "przy zaniku zasilania płyta zachowa starą zawartość."},
+                     "wysunięcia płyty — dlatego Eject jest ostatnim klawiszem sekwencji, a nie "
+                     "osobnym krokiem do zapamiętania."},
         ],
     },
     # ------------------------------------------------------------------
@@ -1096,13 +1131,11 @@ BOOK = [
                   "wyłączone, nic za nim nie działa."},
             {"fig": ("experimental-settings", "Eksperymentalne > Ustawienia eksperymentalne. Funkcje "
                                              "eksperymentalne mają własne okno ustawień."),},
-            {"p": "**Eksperymentalne > Ustawienia eksperymentalne...** to miejsce bota. Liczą się dwa pola:"},
-            {"ul": [
-                "**Nazwa użytkownika bota** — bot, z którym chcesz rozmawiać, `@coś`.",
-                "**Folder pobierania** — gdzie trafiają pliki. Domyślnie folder w katalogu tymczasowym "
-                "systemu, z założenia, że pobranie jest materiałem do nagrania, a nie kolekcją muzyki. "
-                "Można go ustawić gdziekolwiek.",
-            ]},
+            {"p": "**Eksperymentalne > Ustawienia eksperymentalne...** to miejsce bota. **Nazwa "
+                  "użytkownika bota** to bot, z którym chcesz rozmawiać, `@coś`. Pobrane pliki trafiają "
+                  "do **Okno > Ustawienia... > Folder zgrywania CD** — tego samego folderu, którego "
+                  "używa zgrywanie CD, bo oba są półproduktem do nagrania, a nie kolekcją muzyki; "
+                  "osobnego ustawienia folderu dla Telegrama już nie ma."},
             {"note": "Nie ma tu żadnego API ID ani API Hash do wpisania. xD-Tools nosi własne, więc "
                      "jedynym krokiem jest zalogowanie. Gdyby jakaś wersja programu została zbudowana bez "
                      "nich, powie to wprost, zamiast nie umieć się połączyć."},
@@ -1119,6 +1152,9 @@ BOOK = [
                      "xD-Tools. Ten plik jest równoważny byciu zalogowanym na Twoje konto: nie jest "
                      "zaszyfrowany i nie jest czymś, co należy kopiować na inny komputer albo komukolwiek "
                      "wysyłać."},
+            {"p": "**Wyloguj**, obok Zaloguj, kasuje ten zapisany sesyjny plik — to samo okno Ustawień "
+                  "eksperymentalnych jest więc też miejscem, gdzie wylogować się z konta, na które się "
+                  "zalogowałeś."},
             {"h2": "Rozmowa"},
             {"p": "**Eksperymentalne > Pobierz album z bota Telegram...** otwiera zwykły czat. Pojawia się "
                   "dopiero wtedy, gdy zalogowanie zostało zapisane."},
@@ -1132,13 +1168,20 @@ BOOK = [
                   "komendę czy nazwę pliku lepiej czytać tak, jak przyszła. A bot, który buduje menu, "
                   "podmieniając własną wiadomość zamiast wysyłać nową, jest obsługiwany poprawnie: "
                   "wiadomość zmienia się na miejscu, tak jak na telefonie."},
+            {"p": "**Zdjęcie przysłane przez bota** — okładka, zrzut ekranu, cokolwiek, co nie jest "
+                  "plikiem do pobrania — można kliknąć po załadowaniu, żeby zapisać je na dysk. Nic z "
+                  "tego nie trafia do kolejki pobierań poniżej — to jest dla pojedynczego obrazka, nie "
+                  "dla całego albumu plików."},
             {"h2": "Kolejka pobierań"},
             {"p": "Pliki nigdy nie pojawiają się w rozmowie — idą do **kolejki po prawej**, która jest "
                   "jedynym miejscem, gdzie widać nazwę pliku, rozmiar, postęp i prędkość. Cały album "
                   "przychodzący jako dwadzieścia załączników zasypałby inaczej rozmowę dwudziestoma niemal "
                   "identycznymi wierszami."},
             {"p": "Pobieranie startuje samo, a naraz pobierają się najwyżej trzy pliki. Ten, który się nie "
-                  "udał, dostaje przycisk **Ponów**, a nie znika."},
+                  "udał, dostaje przycisk **Ponów**, a nie znika. Linijka podsumowania nad kolejką trzyma "
+                  "bieżący bilans, gdy kilka plików leci naraz — ile gotowych, w kolejce i pobieranych, "
+                  "łączny procent i sumaryczna prędkość — więc stan dwudziestoplikowego albumu to jedna "
+                  "linijka do rzucenia okiem, a nie dwadzieścia wierszy do zsumowania w głowie."},
             {"h2": "Od pobrania do płyty"},
             {"p": "Pliki ze wszystkich sesji zbierają się w jednym folderze pobierań, więc kilka albumów "
                   "leży obok siebie. **Posortuj na foldery albumów** je rozdziela: jeden podfolder na album, "
@@ -1148,11 +1191,15 @@ BOOK = [
                      "gdzie było."},
             {"p": "**Nagraj pobrane albumy...** przechodzi dalej do nagrywania. Najpierw sortuje, żeby "
                   "nie dało się przypadkiem nagrać dwóch albumów na jednej płycie, i pyta który album, "
-                  "jeśli jest więcej niż jeden. Dalej jest to zwykłe okno Nagrywania z folderu opisane dwa "
-                  "rozdziały wcześniej — dlatego to wymaga przystawki MDRem, choć samo pobieranie nie."},
+                  "jeśli jest więcej niż jeden. Dalej jest to zwykłe okno nagrywania opisane w rozdziale "
+                  "„Nagrywanie z folderu” — dlatego w projekcie MiniDisc to wymaga przystawki MDRem, choć "
+                  "samo pobieranie nie."},
             {"p": "**Otwórz folder pobierania** otwiera go w menedżerze plików, żeby zajrzeć przed nagraniem."},
-            {"p": "Obie operacje są też w menu, bez otwierania czatu, dla plików pobranych wcześniej: "
-                  "**Posortuj pobrane pliki z Telegrama na foldery albumów...** i **Nagraj z pobranych plików Telegrama...**"},
+            {"p": "Obie operacje są też w menu **Nagrywanie**, bez otwierania czatu, dla plików "
+                  "pobranych wcześniej: **Posortuj folder audio na albumy...** i **Nagraj z folderu "
+                  "audio...** — nazwane od folderu, na którym działają (tego samego, co przy zgrywaniu "
+                  "CD), a nie od Telegrama konkretnie, bo folder nagrywany w ten sposób wcale nie musi "
+                  "pochodzić z bota."},
             {"tip": "Oba przyciski milkną, dopóki cokolwiek się pobiera — sortowanie albo nagrywanie "
                     "niedopisanych plików byłoby gorsze niż poczekanie."},
         ],
@@ -1191,12 +1238,14 @@ BOOK = [
                   "**Stop** — doprowadza magnetofon do znanego stanu, zamiast go zakładać."},
             {"h2": "Nic nie zapisało się na płycie"},
             {"p": "Tytuły żyją w pamięci magnetofonu aż do wysunięcia płyty. Wysuń ją."},
-            {"h2": "Nie można połączyć się z foobar2000"},
-            {"ul": [
-                "foobar2000 jest uruchomiony.",
-                "Komponent **Beefweb Remote Control** jest zainstalowany *i włączony*.",
-                "Adres w Okno > Ustawienia... zgadza się z portem Beefweb.",
-            ]},
+            {"h2": "Brak dźwięku przy nagrywaniu albo odsłuchu"},
+            {"p": "**Nagrywanie**: sprawdź, czy **Okno > Ustawienia...** ma wybrane właściwe urządzenie "
+                  "dla nośnika, na który nagrywasz — MiniDisc i kaseta mają osobne, a urządzenie, które "
+                  "zostało od tamtej pory odłączone, pokazuje się jako **(niepodłączone)** zamiast po "
+                  "cichu zamienić się na inne. **Odsłuch**: pasek odsłuchu zawsze odtwarza przez to, co "
+                  "system operacyjny aktualnie uznaje za swoje domyślne wyjście, niezależnie od "
+                  "ustawienia urządzenia do nagrywania powyżej — sprawdź, czy to właśnie głośniki albo "
+                  "słuchawki, których się spodziewasz."},
             {"h2": "Wydrukowana etykieta ma zły rozmiar"},
             {"p": "Sprawdź, czy drukarka nie skaluje do strony — musi drukować w 100%. Jeżeli to sam "
                   "obszar roboczy wygląda na ekranie na zły rozmiar fizyczny, odpowiada za to **DPI "
