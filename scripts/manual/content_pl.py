@@ -24,10 +24,10 @@ BOOK = [
     {
         "title": "Czym to jest",
         "blocks": [
-            {"p": "xD-Tools to komputerowy warsztat do starych nośników muzyki: MiniDisc, CD-R i "
-                  "kasety magnetofonowej. (Za x podstaw M albo C — zaczęło się jako żart, a wyszło z "
-                  "tego opis). Zaczęło się od projektanta etykiet, a wyrosło z tego kilka narzędzi "
-                  "dzielących jeden plik projektu:"},
+            {"p": "xD-Tools to komputerowy warsztat do pracy ze starymi nośnikami muzyki: MiniDiskiem, "
+                  "CD-R i kasetą magnetofonową. (X zastępuje M albo C — zaczęło się jako żart, a wyszło "
+                  "z tego całkiem trafny opis). Zaczęło się od projektowania etykiet, a wyrosło z tego "
+                  "kilka narzędzi współdzielących jeden plik projektu:"},
             {"ul": [
                 "**Projektowanie** etykiet: naklejki na MiniDisc i wkładki J-card albo pierścienia na "
                 "płytę CD i wkładki do pudełka slim — wraz z eksportem gotowym do druku i cięcia.",
@@ -125,7 +125,7 @@ BOOK = [
             {"p": "Żeby wyjść z xD-Tools na dobre, użyj **Plik > Zakończ** albo anuluj ekran powitalny, "
                   "kiedy się pojawi."},
             {"h2": "Gdzie zapisywane są projekty"},
-            {"p": "Przy pierwszym zapisie xD-Tools proponuje **Dokumenty\\MiniDiscProjects** i nazwę pliku "
+            {"p": "Przy pierwszym zapisie xD-Tools proponuje **Dokumenty\\XDProjects** i nazwę pliku "
                   "zbudowaną z samego albumu - `Skillet - Unleashed (2016).mdproj`. To ten sam napis, "
                   "który dostaje magnetofon, więc plik na komputerze i tytuł na płycie się zgadzają."},
             {"p": "Pozostałe okna plików też startują w sensownym miejscu: **Dodaj obraz...** i okładka "
