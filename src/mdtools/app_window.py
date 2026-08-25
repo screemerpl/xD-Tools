@@ -1524,11 +1524,13 @@ class MainWindow(QMainWindow):
         for_md = medium in (None, MEDIUM_MD)
         for_cd = medium in (None, MEDIUM_CD)
 
-        # Ripping a CD needs no adapter, but this entry does not stop at
-        # ripping -- it goes straight on to record what it ripped, which
-        # does. Splitting a rip-only entry out of it would be inventing a
-        # feature nobody asked for. Same for reading a folder's own tags:
-        # on its own it is not a feature anyone asked for.
+        # Ripping a CD needs no adapter -- and, since it now offers "Just
+        # Metadata" as well as "Record Now" (see _offer_recording_the_rip),
+        # it no longer strictly needs one to be useful at all. Only the
+        # "Record Now" half of it does; that is resolved and checked at the
+        # point it is actually chosen, not here. Same for reading a
+        # folder's own tags: on its own it is not a feature anyone asked
+        # for, so it stays adapter-gated below.
         # A cassette deck is driven by the person in front of it, so a
         # cassette project needs no adapter for either of these -- the two
         # sources are the same two either way, and only the machine at
@@ -1536,11 +1538,13 @@ class MainWindow(QMainWindow):
         # that rename themselves, not two sets where one is always hidden.
         for_tape = medium == MEDIUM_TAPE
         # "Record CD to..." has no burning twin (there is no "burn a CD
-        # from a CD rip" flow), so it keeps the adapter-only rule.
+        # from a CD rip" flow) -- but it no longer needs the adapter-only
+        # rule that used to justify mentioning that, since ripping alone
+        # (see above) is offered regardless.
         self.record_cd_action.setText(
             self.tr("Record CD to {medium}...").format(medium=self._recording_target_name())
         )
-        self.record_cd_action.setVisible(for_tape or (adapter and for_md))
+        self.record_cd_action.setVisible(for_tape or for_md)
         # Record Folder... dispatches to burning internally when the open
         # project is a CD one (see _record_folder_dialog) -- collapsing
         # what used to be a separate "Burn Audio CD from ..." action beside
@@ -2181,18 +2185,25 @@ class MainWindow(QMainWindow):
         return resolve_port(self)
 
     def _record_cd(self) -> None:
-        """Recording > Record CD to MiniDisc... -- rips the disc to tagged
-        FLAC files, then records those files exactly as the entry below
-        does.
+        """Recording > Record CD to {medium}... -- rips the disc to tagged
+        FLAC files, then asks whether to record those files now or just
+        bring the disc's metadata into the project.
 
-        The port is resolved before the rip rather than after it: the rip is
-        the expensive half, and discovering there is no adapter to record
-        through is worth finding out beforehand."""
-        port = self._resolve_recording_port()
-        if port is None:
-            return
+        Ripping needs no adapter at all -- only recording does -- so the
+        port is resolved *after* a successful rip, and only once the user
+        has actually said they want to record, rather than up front the
+        way it used to be. Explicit request: a rip should be usable
+        entirely on its own, ending with nothing more than the album's
+        metadata landing in the project, for whoever wants the label right
+        without recording right now (no adapter at hand, or no disc to
+        record onto yet)."""
         rip = CdRipDialog(self, medium=self._recording_medium())
         if rip.exec() != QDialog.DialogCode.Accepted:
+            return
+        if not self._offer_recording_the_rip(rip.result_metadata):
+            return
+        port = self._resolve_recording_port()
+        if port is None:
             return
         # The rip's own metadata goes forward. Its titles are the ones it
         # wrote into the files, so they say the same thing the files
@@ -2200,6 +2211,43 @@ class MainWindow(QMainWindow):
         # user picked) while identifying the disc, which a tag does not
         # carry.
         self._run_record_dialog(port, rip.result_paths, metadata=rip.result_metadata)
+
+    def _offer_recording_the_rip(self, metadata: ProjectMetadata) -> bool:
+        """Record this now, or just take its metadata? Returns True for
+        "record now" (the caller resolves a port and hands off to
+        RecordDialog next); for "just metadata" this applies it to the
+        project itself and returns False, since there is nothing left for
+        the caller to do. Cancelling leaves the rip exactly as it finished
+        -- the files stay on disk, the project is untouched."""
+        box = QMessageBox(
+            QMessageBox.Icon.Question,
+            self.tr("Record CD"),
+            self.tr(
+                "The disc has been ripped.\n\nRecord it now, or just bring its title and track list into "
+                "the project?"
+            ),
+            parent=self,
+        )
+        record_btn = box.addButton(self.tr("Record Now"), QMessageBox.ButtonRole.AcceptRole)
+        metadata_btn = box.addButton(self.tr("Just Metadata"), QMessageBox.ButtonRole.ActionRole)
+        box.addButton(self.tr("Cancel"), QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() is record_btn:
+            return True
+        if box.clickedButton() is metadata_btn:
+            self._apply_metadata_to_project(metadata)
+        return False
+
+    def _apply_metadata_to_project(self, metadata: ProjectMetadata) -> None:
+        """Adopts `metadata` onto the open project directly -- no second
+        review dialog, unlike _import_metadata(): this already went
+        through the user's own edits in CdRipDialog before it was
+        accepted, the same "the dialog's own Accept is the review" shape
+        BurnDialog's own result_metadata hand-off already follows."""
+        if self.project is None:
+            return
+        self.project.metadata = metadata
+        self._mark_dirty()
 
     def _record_folder(self) -> None:
         """Recording > Record Folder to MiniDisc... -- the plain menu entry,

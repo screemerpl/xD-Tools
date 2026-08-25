@@ -69,11 +69,17 @@ def test_record_folder_does_not_disappear_with_the_adapter_on_a_cd_project(windo
 
 
 def test_without_an_adapter_a_minidisc_project_keeps_only_what_works(window, monkeypatch):
+    """Record CD is the one exception now: ripping needs no adapter at
+    all, and offers "Just Metadata" as well as "Record Now" (see
+    _offer_recording_the_rip), so it stays visible even without one."""
     monkeypatch.setattr(app_settings, "mdrem_enabled", lambda: False)
     window.project.medium = MEDIUM_MD
     window._sync_mdrem_actions()
 
-    assert not any(_visible(window).values())
+    state = _visible(window)
+    assert state["record_cd"]
+    assert not state["record_folder"]
+    assert not state["remote"]
 
 
 def test_with_no_project_nothing_is_hidden_for_the_medium(window):
