@@ -45,7 +45,14 @@ list, since there is no sleeve to look up.
 
 ## Manual
 
-A full user manual lives in [`doc/`](doc/), as a PDF in each of the three
+The same manual is also on the
+**[GitHub Wiki](https://github.com/screemerpl/xD-Tools/wiki)**, one page per
+chapter, English only -- start at
+[Getting started](https://github.com/screemerpl/xD-Tools/wiki/02-Getting-started)
+or jump straight to
+[Troubleshooting](https://github.com/screemerpl/xD-Tools/wiki/18-Troubleshooting).
+
+A full user manual also lives in [`doc/`](doc/), as a PDF in each of the three
 languages the app itself speaks:
 [English](doc/xD-Tools-Manual-EN.pdf),
 [Polski](doc/xD-Tools-Manual-PL.pdf),
@@ -422,3 +429,7 @@ scripts\build_windows.ps1   # -> dist\xD-Tools\xD-Tools.exe
 ```bash
 scripts/build_linux.sh      # -> dist/xD-Tools/xD-Tools
 ```
+
+## License
+
+GPL-3.0-or-later -- see [`LICENSE`](LICENSE).
