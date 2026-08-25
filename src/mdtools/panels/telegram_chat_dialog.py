@@ -59,7 +59,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from mdtools import album_sort, app_settings, cdrip, i18n, telegram_bot
+from mdtools import album_sort, app_settings, cdrip, i18n, telegram_bot, user_paths
 from mdtools import translate as mdtools_translate
 
 # Inline photo previews are scaled down to this width if wider -- large
@@ -72,6 +72,22 @@ _PHOTO_MAX_WIDTH = 320
 # arriving as a burst of file messages used to start every one of them
 # immediately, with no limit at all.
 _MAX_CONCURRENT_DOWNLOADS = 3
+
+
+def _guess_image_extension(data: bytes) -> str:
+    """A Telegram "photo" carries no filename at all (see ChatMessage.
+    is_photo's own docstring), so there is no extension to reuse the way a
+    real file attachment's own name already provides one -- sniffed from
+    the bytes' own magic number instead of trusting a guess. Telegram
+    photos are JPEG almost universally, which is also the fallback for
+    anything unrecognised."""
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return ".png"
+    if data.startswith(b"GIF87a") or data.startswith(b"GIF89a"):
+        return ".gif"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return ".webp"
+    return ".jpg"
 
 # A progress callback fires often; recomputing speed on every single call
 # makes it noisy (dividing a tiny byte delta by a tiny time delta). Only
@@ -368,6 +384,21 @@ class _ChatWorker(QThread):
             self._loop.call_soon_threadsafe(self._cancel_event.set)
 
 
+class _ClickableImageLabel(QLabel):
+    """A photo preview that is also the button for saving it -- same
+    press-then-release-inside-the-label pattern as cover_preview.py's own
+    CoverPreview, reused here rather than duplicated by accident: a press
+    that wanders off the label before letting go is how anyone cancels a
+    misclick, on either widget."""
+
+    clicked = Signal()
+
+    def mouseReleaseEvent(self, event) -> None:
+        if event.button() == Qt.MouseButton.LeftButton and self.rect().contains(event.position().toPoint()):
+            self.clicked.emit()
+        super().mouseReleaseEvent(event)
+
+
 class _MessageWidget(QWidget):
     """One row in the transcript -- plain text, an inline photo preview,
     and/or a row of inline buttons. Not a chat-bubble look, matching this
@@ -381,6 +412,7 @@ class _MessageWidget(QWidget):
     _on_file_message() routes it to the queue instead of here."""
 
     button_clicked = Signal(int, int, int)  # message_id, row, col
+    photo_save_requested = Signal(int)  # message_id
 
     def __init__(self, message: telegram_bot.ChatMessage, bot_name: str, parent=None):
         super().__init__(parent)
@@ -411,10 +443,15 @@ class _MessageWidget(QWidget):
 
         # A Telegram "photo" has no filename (see ChatMessage.is_photo's
         # own docstring) -- shown inline here, not routed to the download
-        # queue the way a real file attachment is.
-        self.photo_label: QLabel | None = None
+        # queue the way a real file attachment is. The bytes behind the
+        # preview are kept on the widget (set_photo()) so clicking it to
+        # save doesn't have to re-download anything already on screen.
+        self.photo_label: _ClickableImageLabel | None = None
+        self._photo_bytes: bytes | None = None
         if message.is_photo:
-            self.photo_label = QLabel(self.tr("Loading image..."))
+            self.photo_label = _ClickableImageLabel(self.tr("Loading image..."))
+            self.photo_label.setToolTip(self.tr("Click to save this image"))
+            self.photo_label.clicked.connect(lambda: self.photo_save_requested.emit(self.message_id))
             layout.addWidget(self.photo_label)
 
         for row_index, row in enumerate(message.buttons):
@@ -435,6 +472,7 @@ class _MessageWidget(QWidget):
         if not pixmap.loadFromData(data):
             self.photo_label.setText(self.tr("Could not display image"))
             return
+        self._photo_bytes = data
         if pixmap.width() > _PHOTO_MAX_WIDTH:
             pixmap = pixmap.scaledToWidth(_PHOTO_MAX_WIDTH, Qt.TransformationMode.SmoothTransformation)
         self.photo_label.setPixmap(pixmap)
@@ -797,6 +835,7 @@ class TelegramChatDialog(QDialog):
 
         widget = _MessageWidget(message, self._bot_name)
         widget.button_clicked.connect(self._on_button_clicked)
+        widget.photo_save_requested.connect(self._on_photo_save_requested)
         self._message_widgets[message.id] = widget
         self._transcript_layout.insertWidget(index, widget)
         # No explicit scroll call here -- the rangeChanged connection set up
@@ -849,6 +888,26 @@ class TelegramChatDialog(QDialog):
 
     def _on_click_failed(self, message: str) -> None:
         self.status_label.setText(self.tr("Could not do that: {error}").format(error=message))
+
+    def _on_photo_save_requested(self, message_id: int) -> None:
+        """Saves a photo already shown inline in the transcript -- the
+        bytes are already on the widget (set when the preview finished
+        loading), so this never re-downloads anything. A project's own
+        cover art lives inside the .mdproj once chosen; this is only for
+        keeping a picture the bot sent before it has a project to belong
+        to at all, hence a folder of its own (user_paths.artwork_dir())
+        rather than reusing gallery.downloaded_covers_dir()."""
+        widget = self._message_widgets.get(message_id)
+        if widget is None or widget._photo_bytes is None:
+            return
+        data = widget._photo_bytes
+        path = user_paths.artwork_dir() / f"telegram-photo-{message_id}{_guess_image_extension(data)}"
+        try:
+            path.write_bytes(data)
+        except OSError as exc:
+            self.status_label.setText(self.tr("Could not save image: {error}").format(error=exc))
+            return
+        self.status_label.setText(self.tr("Saved image to {path}").format(path=str(path)))
 
     # --- downloading ---------------------------------------------------
 

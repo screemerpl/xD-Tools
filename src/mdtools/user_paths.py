@@ -94,6 +94,23 @@ def printing_dir() -> Path:
     return folder
 
 
+def artwork_dir() -> Path:
+    """XDProjects/artwork, created if it is not there yet.
+
+    Where an image saved out of the Telegram bot chat (a cover the bot
+    sent, say) lands -- a project's own cover art already lives inside the
+    .mdproj itself once chosen there, so this is only for a picture worth
+    keeping *before* it has a project to belong to. Same "created on
+    demand, at the point it's genuinely about to be used" rule as
+    printing_dir()."""
+    folder = projects_dir() / "artwork"
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return projects_dir()
+    return folder
+
+
 def audio_dir() -> Path:
     """XDProjects/Audio -- shared by CD ripping and Telegram bot downloads
     (a single setting, app_settings.cd_rip_folder() -- the two used to be

@@ -409,6 +409,92 @@ def test_end_to_end_a_bad_image_shows_a_fallback_message(qt_app, monkeypatch, tm
         _shutdown(dialog)
 
 
+# --- saving a photo out of the transcript (#8) ------------------------------
+
+
+def test_clicking_a_loaded_photo_saves_it_to_the_artwork_folder(qt_app, monkeypatch, tmp_path):
+    """The bytes behind the inline preview are already on the widget by the
+    time it can be clicked at all -- saving must not re-download anything,
+    only write out what's already there."""
+    artwork_dir = tmp_path / "artwork"
+
+    def _fake_artwork_dir():
+        # Mirrors the real user_paths.artwork_dir()'s own contract: it
+        # creates the folder on demand, the caller never has to.
+        artwork_dir.mkdir(parents=True, exist_ok=True)
+        return artwork_dir
+
+    monkeypatch.setattr(module.user_paths, "artwork_dir", _fake_artwork_dir)
+    fake = FakeTelethonClient(authorized=True)
+    dialog = _dialog(monkeypatch, tmp_path, fake)
+    try:
+        _pump_until(lambda: dialog._session_folder is not None)
+
+        raw = FakeMessage(photo=True, file=FakeFile(None, len(_TINY_PNG)), content=_TINY_PNG)
+        _deliver(dialog, fake, raw)
+        widget = dialog._message_widgets[raw.id]
+        _pump_until(lambda: not widget.photo_label.pixmap().isNull())
+
+        widget.photo_label.clicked.emit()
+
+        saved = list(artwork_dir.iterdir())
+        assert len(saved) == 1
+        assert saved[0].read_bytes() == _TINY_PNG
+        assert saved[0].suffix == ".png"
+        assert str(saved[0]) in dialog.status_label.text()
+    finally:
+        _shutdown(dialog)
+
+
+def test_clicking_a_photo_that_has_not_finished_loading_does_nothing(qt_app, monkeypatch, tmp_path):
+    """Deliberately built by hand rather than through the full async
+    worker + _deliver() pipeline -- _deliver()'s own pump loop drains
+    Qt's whole pending event queue on every iteration, so by the time it
+    returns, a fake (near-instant) photo download has usually *already*
+    arrived too, making the "not loaded yet" moment impossible to land on
+    reliably through that path. A bare widget with no set_photo() call at
+    all is the actual state under test: still just "Loading image...",
+    with nothing yet on self._photo_bytes."""
+    artwork_dir = tmp_path / "artwork"
+    monkeypatch.setattr(module.user_paths, "artwork_dir", lambda: artwork_dir)
+    dialog = TelegramChatDialog("123456", "hash", "@my_bot", tmp_path)
+    message = module.telegram_bot.ChatMessage(id=1, outgoing=False, text="", is_photo=True)
+    widget = module._MessageWidget(message, "my_bot")
+    dialog._message_widgets[message.id] = widget
+    assert widget._photo_bytes is None
+
+    dialog._on_photo_save_requested(message.id)
+
+    assert not artwork_dir.exists()
+
+
+def test_a_bad_image_cannot_be_saved_since_nothing_was_ever_kept(qt_app, monkeypatch, tmp_path):
+    artwork_dir = tmp_path / "artwork"
+
+    def _fake_artwork_dir():
+        # Mirrors the real user_paths.artwork_dir()'s own contract: it
+        # creates the folder on demand, the caller never has to.
+        artwork_dir.mkdir(parents=True, exist_ok=True)
+        return artwork_dir
+
+    monkeypatch.setattr(module.user_paths, "artwork_dir", _fake_artwork_dir)
+    fake = FakeTelethonClient(authorized=True)
+    dialog = _dialog(monkeypatch, tmp_path, fake)
+    try:
+        _pump_until(lambda: dialog._session_folder is not None)
+
+        raw = FakeMessage(photo=True, file=FakeFile(None, 5), content=b"not-an-image")
+        _deliver(dialog, fake, raw)
+        widget = dialog._message_widgets[raw.id]
+        _pump_until(lambda: widget.photo_label.text() != "Loading image...")
+
+        dialog._on_photo_save_requested(raw.id)
+
+        assert not artwork_dir.exists()
+    finally:
+        _shutdown(dialog)
+
+
 def test_end_to_end_an_incoming_message_gets_translated(qt_app, monkeypatch, tmp_path):
     fake = FakeTelethonClient(authorized=True)
     dialog = _dialog(monkeypatch, tmp_path, fake)
