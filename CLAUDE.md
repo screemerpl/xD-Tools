@@ -130,7 +130,7 @@ src/mdtools/
     burn_dialog.py              Recording > Burn Audio CD: the plan, the verdicts, and cdrecord behind a worker
     erase_dialog.py             Erase MiniDisc button (on the record dialog): fixed sequence behind one confirm
     telegram_login_dialog.py    signing in as a user account, over a worker with a live asyncio loop
-    telegram_chat_dialog.py     the bot conversation, its download queue + summary, and the hand-off to recording
+    telegram_chat_dialog.py     the bot conversation, its download queue + summary (mirrored into the main window's bar), Hide, and the hand-off to recording
     about_dialog.py             Help > About xD-Tools
   io/
     svg_export.py               exports just the cut/fold shapes as physically-accurate SVG
@@ -700,8 +700,12 @@ then usable mid-operation, `_guard_no_concurrent_operation()` refuses
 both a second operation *and* closing the main window while one runs —
 quitting out from under a live worker thread is the silent
 `QThread`-destroyed process abort. **Only one recording/rip/burn/upload
-may ever be in flight**; `MainWindow._active_recording_dialog` is set for
-a dialog's whole modal lifetime and is what both guards read.
+may ever be in flight**; `MainWindow._active_recording_dialog` is what
+both guards read, and it means "an operation that owns the MDRem port /
+drive / progress bar is in flight" — *not* merely "one of these dialogs
+is open". That distinction is load-bearing: `MetadataDialog` is open far
+longer than it is uploading, and while it wrongly counted as in-flight
+it refused its own Upload Tracklist (see above).
 `TelegramChatDialog` shares this same guard even though a chat session
 touches none of those physical resources — what it *does* share with the
 other six is the one bottom progress bar itself, which only one dialog
@@ -818,9 +822,29 @@ own `.name`, never by a combo's display text, in any test touching it.
 - **Run only the tests relevant to what you just changed while working;
   save the full suite for the end of the task** — it's an integration
   gate, not a progress check.
+- `scratchpad/` in the repo root is the user's own build/test logs. It is
+  untracked and *not* in `.gitignore`, so it shows up as untracked
+  forever — never `git add -A`/`git add .`, stage files by name.
 - The user runs the real app and reports back concrete, specific
   symptoms — reproduce them exactly rather than generalizing away from
   the specifics.
+- **One reported symptom can have several independent causes; fixing the
+  first one found and shipping is how a bug gets reported twice.** "The
+  progress bar disappears" turned out to be three separate defects
+  (visibility tied to the wrong signal, a signal connected after the
+  emission it needed, and no ownership of the bar at all), and chasing
+  the third surfaced a fourth, unreported one. After a fix, ask what
+  *else* could produce the same symptom before calling it done.
+- **Measure a perceptual/geometric change instead of eyeballing it.** A
+  complaint like "the filters are too strong" invites lowering a
+  constant, which here would have left the actual defect (strength
+  varying with the source image's resolution) untouched. Scoring the
+  output against the input across several input sizes is what exposed
+  it, and is cheap: a throwaway script in the scratchpad, not a test.
+  This applies to anything in `cover_filters.py`, `grayscale.py`,
+  `palette.py` or the `*_layout.py` modules, where "tuned by eye"
+  constants are common and a plausible-looking number can hide a
+  structural bug.
 - **Physical/geometric specs often arrive in fragments across multiple
   messages, and a later correction can invalidate the *entire* previous
   reading, not just one number.** Don't build adjacent features on an
