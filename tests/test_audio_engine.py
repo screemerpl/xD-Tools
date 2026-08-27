@@ -164,7 +164,13 @@ def test_a_mono_source_is_duplicated_to_stereo(tmp_path):
 
     data, _ = sf.read(str(out), dtype="int16")
     assert data.ndim == 2 and data.shape[1] == 2
-    assert np.max(np.abs(data[:, 0].astype(int) - data[:, 1].astype(int))) <= 4
+    # Measured, not guessed: the worst-case gap over 44100 samples of two
+    # independent noise-shaped dithers came out 4 or 5 across repeated
+    # runs, so the original <= 4 failed roughly one run in five -- a real,
+    # intermittent full-suite failure with nothing wrong underneath it.
+    # The point of the assertion is "nearly identical, not correlated",
+    # which a handful of LSBs still says.
+    assert np.max(np.abs(data[:, 0].astype(int) - data[:, 1].astype(int))) <= 8
 
 
 def test_a_surround_source_is_refused_rather_than_silently_folded(tmp_path):

@@ -94,6 +94,130 @@ def test_pressing_refresh_does_not_re_enable_reading_when_tools_are_missing(qt_a
     assert dialog.read_btn.isEnabled() is False
 
 
+# --- Read Disc waits for a disc ---------------------------------------
+#
+# Explicit request: the button must not be live until there is actually a
+# disc in the selected drive. `has_media` is Windows' own answer for that
+# drive (see cdrip.list_drives) -- "something is in there", never "an
+# audio CD is in there", which only reading the TOC can settle.
+
+
+def test_an_empty_drive_leaves_read_disc_off_and_says_what_is_missing(qt_app, monkeypatch):
+    monkeypatch.setattr(module.cdrip, "list_drives", lambda: [cdrip.CdDrive("D:", "", False)])
+    monkeypatch.setattr(module.cdrip, "missing_tools", lambda: [])
+
+    dialog = CdRipDialog()
+
+    assert dialog.read_btn.isEnabled() is False
+    assert "D:" in dialog.status_label.text()
+
+
+def test_a_loaded_drive_turns_read_disc_on(qt_app, monkeypatch):
+    monkeypatch.setattr(module.cdrip, "list_drives", lambda: [cdrip.CdDrive("D:", "NEVERMIND", True)])
+    monkeypatch.setattr(module.cdrip, "missing_tools", lambda: [])
+
+    dialog = CdRipDialog()
+
+    assert dialog.read_btn.isEnabled() is True
+
+
+def test_choosing_a_different_drive_re_answers_the_question(qt_app, monkeypatch):
+    """The dropdown decides which drive the button is about, so switching
+    to an empty one has to turn it off again."""
+    monkeypatch.setattr(
+        module.cdrip,
+        "list_drives",
+        lambda: [cdrip.CdDrive("D:", "NEVERMIND", True), cdrip.CdDrive("E:", "", False)],
+    )
+    monkeypatch.setattr(module.cdrip, "missing_tools", lambda: [])
+    dialog = CdRipDialog()
+    assert dialog.read_btn.isEnabled() is True, "precondition: D: holds a disc"
+
+    dialog.drive_combo.setCurrentIndex(dialog.drive_combo.findData("E:"))
+
+    assert dialog.read_btn.isEnabled() is False
+
+
+def test_a_disc_going_in_turns_the_button_on_without_pressing_refresh(qt_app, monkeypatch):
+    """The disc goes in *after* this window is open, which is the whole
+    reason the poll exists -- otherwise the button would sit there dead
+    until the user thought to press Refresh."""
+    loaded = [False]
+    monkeypatch.setattr(
+        module.cdrip, "list_drives", lambda: [cdrip.CdDrive("D:", "", loaded[0])]
+    )
+    monkeypatch.setattr(module.cdrip, "missing_tools", lambda: [])
+    dialog = CdRipDialog()
+    dialog.show()
+    assert dialog.read_btn.isEnabled() is False, "precondition: the drive is empty"
+
+    loaded[0] = True
+    dialog._poll_drives()
+
+    assert dialog.read_btn.isEnabled() is True
+    dialog.hide()
+
+
+def test_the_poll_leaves_everything_alone_while_nothing_changed(qt_app, monkeypatch):
+    """It must not reshuffle the dropdown under the user's hand, nor
+    overwrite what a read or a lookup last wrote on the status line."""
+    monkeypatch.setattr(module.cdrip, "list_drives", lambda: [cdrip.CdDrive("D:", "NEVERMIND", True)])
+    monkeypatch.setattr(module.cdrip, "missing_tools", lambda: [])
+    dialog = CdRipDialog()
+    dialog.show()
+    dialog.status_label.setText("Reading the disc...")
+
+    dialog._poll_drives()
+
+    assert dialog.status_label.text() == "Reading the disc..."
+    dialog.hide()
+
+
+def test_the_poll_keeps_the_drive_the_user_picked(qt_app, monkeypatch):
+    drives = [cdrip.CdDrive("D:", "", False), cdrip.CdDrive("E:", "", False)]
+    monkeypatch.setattr(module.cdrip, "list_drives", lambda: list(drives))
+    monkeypatch.setattr(module.cdrip, "missing_tools", lambda: [])
+    dialog = CdRipDialog()
+    dialog.show()
+    dialog.drive_combo.setCurrentIndex(dialog.drive_combo.findData("E:"))
+
+    drives[0] = cdrip.CdDrive("D:", "SOMETHING", True)  # a disc goes into the *other* drive
+    dialog._poll_drives()
+
+    assert dialog.selected_device() == "E:"
+    assert dialog.read_btn.isEnabled() is False
+    dialog.hide()
+
+
+def test_the_poll_does_nothing_while_a_rip_is_running(qt_app, monkeypatch):
+    """The drive is busy, and _set_running() has disabled the whole row
+    anyway."""
+    monkeypatch.setattr(module.cdrip, "list_drives", lambda: [cdrip.CdDrive("D:", "", False)])
+    monkeypatch.setattr(module.cdrip, "missing_tools", lambda: [])
+    dialog = CdRipDialog()
+    dialog.show()
+    dialog._worker = object()
+    monkeypatch.setattr(
+        module.cdrip, "list_drives", lambda: pytest.fail("must not ask a drive that is being read")
+    )
+
+    dialog._poll_drives()
+
+    dialog._worker = None
+    dialog.hide()
+
+
+def test_the_poll_is_not_running_before_the_window_is_shown(qt_app, monkeypatch):
+    """A dialog that is constructed but never shown has no business
+    spinning an optical drive every couple of seconds."""
+    monkeypatch.setattr(module.cdrip, "list_drives", lambda: [cdrip.CdDrive("D:", "", False)])
+    monkeypatch.setattr(module.cdrip, "missing_tools", lambda: [])
+
+    dialog = CdRipDialog()
+
+    assert dialog._drive_poll.isActive() is False
+
+
 def test_ripping_cannot_start_before_a_disc_has_been_read(dialog):
     assert dialog.start_btn.isEnabled() is False
 

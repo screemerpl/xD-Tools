@@ -16,6 +16,14 @@ other contributors, licensed under
 | bake.svg       | Clamp                 | 1f5dc     |
 | save.svg       | Floppy Disk           | 1f4be     |
 | zoom_out.svg   | Heavy Minus Sign      | 2796      |
+| new_project.svg | Page Facing Up       | 1f4c4     |
+| open_project.svg | Open File Folder    | 1f4c2     |
+| undo.svg       | Leftwards Arrow With Hook | 21a9 |
+| redo.svg       | Rightwards Arrow With Hook | 21aa |
+| copy.svg       | Bookmark Tabs         | 1f4d1     |
+| paste.svg      | Clipboard             | 1f4cb     |
+| delete.svg     | Wastebasket           | 1f5d1     |
+| print.svg      | Printer               | 1f5a8     |
 | zoom_in.svg    | Heavy Plus Sign       | 2795      |
 | zoom_reset.svg | Hundred Points        | 1f4af     |
 | zoom_fit.svg   | Triangular Ruler      | 1f4d0     |

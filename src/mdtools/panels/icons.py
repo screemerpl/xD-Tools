@@ -157,6 +157,64 @@ def bake_icon() -> QIcon:
     return _load_svg_icon("bake")
 
 
+def new_project_icon() -> QIcon:
+    """A page facing up, for File > New on the main toolbar."""
+    return _load_svg_icon("new_project")
+
+
+def open_project_icon() -> QIcon:
+    """An open file folder, for File > Open Project...."""
+    return _load_svg_icon("open_project")
+
+
+def save_project_icon() -> QIcon:
+    """A floppy disk, for File > Save.
+
+    The same glyph save_icon() already uses for "Save as Template...",
+    deliberately: a floppy means save wherever it appears, and giving the
+    main toolbar's Save a *different* icon to avoid the repetition would
+    be the confusing choice, not the clear one."""
+    return _load_svg_icon("save")
+
+
+def undo_icon() -> QIcon:
+    """A leftwards arrow with a hook, for Edit > Undo."""
+    return _load_svg_icon("undo")
+
+
+def redo_icon() -> QIcon:
+    """A rightwards arrow with a hook, for Edit > Redo."""
+    return _load_svg_icon("redo")
+
+
+def cut_icon() -> QIcon:
+    """Scissors, for Edit > Cut -- the same glyph crop_icon() uses for
+    Clip Layers. Scissors mean cut, and the two live in different places
+    (main toolbar vs the Tools panel), so sharing it reads as the
+    convention it is rather than as an ambiguity."""
+    return _load_svg_icon("crop")
+
+
+def copy_icon() -> QIcon:
+    """Bookmark tabs (a stack of pages), for Edit > Copy."""
+    return _load_svg_icon("copy")
+
+
+def paste_icon() -> QIcon:
+    """A clipboard, for Edit > Paste."""
+    return _load_svg_icon("paste")
+
+
+def delete_icon() -> QIcon:
+    """A wastebasket, for Edit > Delete."""
+    return _load_svg_icon("delete")
+
+
+def print_icon() -> QIcon:
+    """A printer, for File > Print...."""
+    return _load_svg_icon("print")
+
+
 def save_icon() -> QIcon:
     """A floppy disk, for Save as Template...."""
     return _load_svg_icon("save")

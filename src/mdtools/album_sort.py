@@ -45,7 +45,7 @@ values a group's tracks actually carry, which is what makes a single
 outlier credit lose to the rest of the album rather than fork it.
 
 **`sort_folder()` is the standalone sibling of `sort_downloads()`, for
-Experimental > "Sort Telegram Downloads into Album Folders..." -- sorting
+Source > "Sort Rip/Download Folder into Albums..." -- sorting
 a folder that was never part of a live chat (an old session, or one picked
 by hand).** There is no message arrival order to fall back on outside a
 chat, so it groups by ALBUM tag only; anything untagged lands together in
@@ -129,10 +129,85 @@ def has_album_subfolders(root: Path) -> bool:
     This is what decides whether the "a single album needs no folder of its
     own" rule below still applies -- see _create_folders_and_move(). Also
     read by the chat dialog to decide whether there is anything worth
-    recording, so it tolerates a folder that does not exist yet."""
+    recording, so it tolerates a folder that does not exist yet.
+
+    The app's own scratch subfolders don't count (cdrip.RESERVED_SCRATCH_
+    DIRNAMES: burning's work directory, and downloads' staging directory).
+    Neither is an album, and either one being mistaken for one would flip
+    the single-album rule for a folder that has never actually been
+    sorted -- the same filter pick_album_folder() and the "is this folder
+    empty?" checks already apply."""
     if not root.is_dir():
         return False
-    return any(p.is_dir() for p in root.iterdir())
+    return any(p.is_dir() and p.name not in cdrip.RESERVED_SCRATCH_DIRNAMES for p in root.iterdir())
+
+
+def staging_dir(root: Path) -> Path:
+    """Where a download is written while it is still arriving.
+
+    A file is only worth looking at once it is complete: its tags cannot
+    be read before then, and a half-written track sitting loose in the
+    shared folder is something the recording picker would offer and a
+    sort would file away as if it were finished. Created on demand, the
+    same rule as every other folder here."""
+    folder = root / cdrip.DOWNLOAD_STAGING_DIRNAME
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder
+
+
+def album_folder_for(root: Path, path: Path) -> Path:
+    """Which folder a finished download belongs in -- `root/Artist - Album`
+    when the file says what album it is from, `root` itself when it does
+    not.
+
+    The same tags, the same majority-artist naming and the same
+    sanitising a later sort would apply (read_album_tag/
+    _group_display_name/cdrip.sanitize_filename), so a file placed on
+    arrival and a file placed by "Sort Rip/Download Folder into
+    Albums..." land in exactly the same folder rather than in two
+    similarly-named ones.
+
+    Only FLAC files carry an answer here today (read_album_tag reads FLAC
+    tags alone) -- an MP3 or an Ogg goes to the root and waits for a sort,
+    exactly as it did before."""
+    artist, album = read_album_tag(path)
+    if not album:
+        return root
+    return root / cdrip.sanitize_filename(_group_display_name(album, [artist] if artist else []))
+
+
+def place_download(root: Path, path: Path) -> Path:
+    """Moves a finished download out of staging into where it belongs,
+    and says where that turned out to be.
+
+    Never overwrites: a name already taken gains a " (2)" (or 3, or 4).
+    Re-downloading a track therefore leaves two copies rather than
+    replacing one, which is the right way round for this codebase --
+    nothing here may destroy a file in the shared audio folder, and a
+    duplicate is visible and removable by hand while a clobbered file is
+    neither. In the ordinary retry path this never comes up anyway: a
+    failed download's leftovers stay in staging, where the retry
+    overwrites them, and only the finished file is ever placed.
+
+    Returns `path` untouched if it has already gone (a retry that raced
+    itself), rather than raising over work that is already done."""
+    if not path.exists():
+        return path
+    destination = album_folder_for(root, path)
+    destination.mkdir(parents=True, exist_ok=True)
+    target = _free_name(destination / path.name)
+    path.rename(target)
+    return target
+
+
+def _free_name(target: Path) -> Path:
+    if not target.exists():
+        return target
+    for suffix in range(2, 1000):
+        candidate = target.with_name(f"{target.stem} ({suffix}){target.suffix}")
+        if not candidate.exists():
+            return candidate
+    return target.with_name(f"{target.stem} ({target.stat().st_mtime_ns}){target.suffix}")
 
 
 def _create_folders_and_move(root: Path, groups: dict[str, list[Path]]) -> list[Path]:

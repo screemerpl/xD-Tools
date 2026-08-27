@@ -17,6 +17,23 @@ Two things it deliberately does NOT touch:
 
 Output: doc/img/<lang>/<name>.png, plus the two language-independent
 diagrams at doc/img/.
+
+    python scripts/manual/make_screenshots.py                 # everything
+    python scripts/manual/make_screenshots.py pl              # one language
+    python scripts/manual/make_screenshots.py --only cd-rip,settings
+    python scripts/manual/make_screenshots.py --list          # every name
+
+**Regenerate only what a change actually touched.** A full run is every
+figure three times over, and rewrites files whose contents did not change
+-- which then show up as noise in a diff nobody can read. `--only` names
+the figures to redo; every other file is left byte-for-byte alone.
+
+It also skips the work, not just the writing: FIGURE_GROUPS below says
+which figures each section of this script produces, and a section none of
+whose figures were asked for is not run at all. That grouping is the
+granularity on offer -- some windows are built once and photographed
+several times (the main window and its Print dialog, say), so those come
+back together or not at all.
 """
 
 from __future__ import annotations
@@ -45,6 +62,40 @@ from PySide6.QtGui import (  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 OUT_DIR = ROOT / "doc" / "img"
+
+# Every figure this script produces, by the section that produces it --
+# see the module docstring. A section is skipped outright when none of its
+# figures were asked for, so these groupings are what --only can actually
+# act on: figures that share one built window have to share a group.
+FIGURE_GROUPS: dict[str, tuple[str, ...]] = {
+    "diagrams": ("ir-circuit", "signal-chain"),
+    "startup": ("startup", "new-project"),
+    "main": ("main-disc", "main-jcard", "print"),
+    "dialogs": ("metadata", "settings", "templates", "about"),
+    "cd": ("cd-label", "cd-insert", "cd-back", "cd-print", "burn"),
+    "mdrem": ("remote", "remote-extended", "upload", "record"),
+    "rip": ("cd-rip",),
+    "folder": ("folder-record",),
+    "erase": ("erase",),
+    "tape": ("tape-jcard", "tape-label", "tape-print", "tape-record"),
+    "telegram": ("settings-telegram", "telegram-login", "telegram-chat"),
+}
+
+ALL_FIGURES = frozenset(name for names in FIGURE_GROUPS.values() for name in names)
+
+LANGUAGES = ("en", "pl", "ja")
+
+# Which figures this run is for. Every one of them unless --only said
+# otherwise.
+_WANTED: frozenset[str] = ALL_FIGURES
+
+
+def wanted(*names: str) -> bool:
+    return any(name in _WANTED for name in names)
+
+
+def group_wanted(group: str) -> bool:
+    return wanted(*FIGURE_GROUPS[group])
 
 # The demo album every screenshot shows. Invented on purpose: a real cover
 # would put someone else's artwork into a document meant to be shared, and
@@ -88,6 +139,15 @@ def save(widget, path: Path, settle_ms: int = 300, before_grab=None) -> None:
     to the window, above all -- has to happen there: called before show()
     it computes against a placeholder size and leaves the canvas at some
     arbitrary zoom, cropped."""
+    if path.stem not in ALL_FIGURES:
+        raise SystemExit(
+            f"{path.stem} is missing from FIGURE_GROUPS -- add it there, or --only can never name it"
+        )
+    if path.stem not in _WANTED:
+        # Belt and braces over the group check: a figure that shares a
+        # group with one that *was* asked for still keeps its old file.
+        close_quietly(widget)
+        return
     path.parent.mkdir(parents=True, exist_ok=True)
     widget.show()
     settle(settle_ms)
@@ -679,49 +739,54 @@ def capture_language(app, code: str) -> None:
     out = OUT_DIR / code
     metadata = demo_metadata()
 
-    draw_signal_chain(out / "signal-chain.png", SIGNAL_CHAIN_STRINGS[code])
+    if wanted("signal-chain"):
+        draw_signal_chain(out / "signal-chain.png", SIGNAL_CHAIN_STRINGS[code])
 
     # -- startup and new project
-    recent = [
-        str(Path.home() / "Documents" / "MiniDisc" / f"{DEMO_ALBUM}.mdproj"),
-        str(Path.home() / "Documents" / "MiniDisc" / "Popular Monster.mdproj"),
-    ]
-    save(StartupDialog(recent), out / "startup.png")
-    save(NewDesignDialog(), out / "new-project.png")
+    if group_wanted("startup"):
+        recent = [
+            str(Path.home() / "Documents" / "MiniDisc" / f"{DEMO_ALBUM}.mdproj"),
+            str(Path.home() / "Documents" / "MiniDisc" / "Popular Monster.mdproj"),
+        ]
+        save(StartupDialog(recent), out / "startup.png")
+        save(NewDesignDialog(), out / "new-project.png")
 
-    # -- the main window, with both pages laid out from the demo album
-    window = MainWindow(show_startup_dialog=False)
-    window.show()
-    settle(400)
-    window.project.metadata = metadata
-    window._auto_layout_project(metadata)
-    settle(500)
-    save(window, out / "main-disc.png", settle_ms=500, before_grab=window.view.fit_to_window)
+    # -- the main window, with both pages laid out from the demo album, and
+    # the Print dialog it opens -- one built window, three figures, which is
+    # why they are one group.
+    if group_wanted("main"):
+        window = MainWindow(show_startup_dialog=False)
+        window.show()
+        settle(400)
+        window.project.metadata = metadata
+        window._auto_layout_project(metadata)
+        settle(500)
+        save(window, out / "main-disc.png", settle_ms=500, before_grab=window.view.fit_to_window)
 
-    def show_jcard() -> None:
-        window.page_combo.setCurrentIndex(window.page_combo.findData(PAGE_COVER))
+        def show_jcard() -> None:
+            window.page_combo.setCurrentIndex(window.page_combo.findData(PAGE_COVER))
+            settle(200)
+            # A selected text layer, so the Properties panel shows its fields
+            # rather than the empty state every other screenshot catches.
+            scene = window.project.pages[PAGE_COVER]
+            texts = [item for item in scene.print_items() if hasattr(item, "toPlainText")]
+            if texts:
+                window._select_item(texts[-1])
+            window.view.fit_to_window()
+
+        save(window, out / "main-jcard.png", settle_ms=400, before_grab=show_jcard)
+
+        window.show()
         settle(200)
-        # A selected text layer, so the Properties panel shows its fields
-        # rather than the empty state every other screenshot catches.
-        scene = window.project.pages[PAGE_COVER]
-        texts = [item for item in scene.print_items() if hasattr(item, "toPlainText")]
-        if texts:
-            window._select_item(texts[-1])
-        window.view.fit_to_window()
-
-    save(window, out / "main-jcard.png", settle_ms=400, before_grab=show_jcard)
+        save(PrintDialog(window.project), out / "print.png", settle_ms=600)
+        close_quietly(window)
 
     # -- dialogs reached from the main window
-    save(MetadataDialog(metadata), out / "metadata.png")
-    save(SettingsDialog(), out / "settings.png")
-    save(TemplateManagerDialog(), out / "templates.png")
-
-    window.show()
-    settle(200)
-    save(PrintDialog(window.project), out / "print.png", settle_ms=600)
-    close_quietly(window)
-
-    save(AboutDialog(), out / "about.png")
+    if group_wanted("dialogs"):
+        save(MetadataDialog(metadata), out / "metadata.png")
+        save(SettingsDialog(), out / "settings.png")
+        save(TemplateManagerDialog(), out / "templates.png")
+        save(AboutDialog(), out / "about.png")
 
     # -- a CD project: the ring label, the folded insert, and the burn
     _capture_cd(out, code, metadata)
@@ -729,31 +794,35 @@ def capture_language(app, code: str) -> None:
     # -- everything MDRem, with the hardware stood in for
     # Both remote modes: extended is a mode nobody can see without ticking
     # the box, which is exactly why the manual shows it.
-    app_settings.set_mdrem_extended_remote(False)
-    save(RemoteDialog("COM7"), out / "remote.png")
-    app_settings.set_mdrem_extended_remote(True)
-    save(RemoteDialog("COM7"), out / "remote-extended.png")
-    app_settings.set_mdrem_extended_remote(False)
-    save(MDRemUploadDialog(metadata, "COM7"), out / "upload.png", settle_ms=400)
-    save(RecordDialog("COM7", _demo_paths()), out / "record.png", settle_ms=400)
+    if group_wanted("mdrem"):
+        app_settings.set_mdrem_extended_remote(False)
+        save(RemoteDialog("COM7"), out / "remote.png")
+        app_settings.set_mdrem_extended_remote(True)
+        save(RemoteDialog("COM7"), out / "remote-extended.png")
+        app_settings.set_mdrem_extended_remote(False)
+        save(MDRemUploadDialog(metadata, "COM7"), out / "upload.png", settle_ms=400)
+        save(RecordDialog("COM7", _demo_paths()), out / "record.png", settle_ms=400)
 
     # -- reading a CD, with the drive and MusicBrainz stood in for
-    rip = CdRipDialog()
-    rip.show()
-    settle(200)
-    rip._read_disc()
-    save(rip, out / "cd-rip.png", settle_ms=400)
-    close_quietly(rip)
+    if group_wanted("rip"):
+        rip = CdRipDialog()
+        rip.show()
+        settle(200)
+        rip._read_disc()
+        save(rip, out / "cd-rip.png", settle_ms=400)
+        close_quietly(rip)
 
     # -- recording a folder of files, with a throwaway album on disk
-    folder = FolderRecordDialog()
-    folder.show()
-    settle(200)
-    folder.set_folder(_demo_album_folder())  # which loads it, see the stand-in
-    save(folder, out / "folder-record.png", settle_ms=400)
-    close_quietly(folder)
+    if group_wanted("folder"):
+        folder = FolderRecordDialog()
+        folder.show()
+        settle(200)
+        folder.set_folder(_demo_album_folder())  # which loads it, see the stand-in
+        save(folder, out / "folder-record.png", settle_ms=400)
+        close_quietly(folder)
 
-    save(EraseDiscDialog("COM7"), out / "erase.png")
+    if group_wanted("erase"):
+        save(EraseDiscDialog("COM7"), out / "erase.png")
 
     # -- a cassette project: the inlay, a shell label, and the recording
     _capture_tape(out, code, metadata)
@@ -794,6 +863,8 @@ _KEEP_ALIVE: list = []
 
 
 def _capture_cd(out: Path, code: str, metadata) -> None:
+    if not group_wanted("cd"):
+        return
     """The CD half: a project on the CD templates with both pages laid out,
     and the burn dialog over a folder of files.
 
@@ -896,6 +967,8 @@ def _capture_cd(out: Path, code: str, metadata) -> None:
 
 
 def _capture_tape(out: Path, code: str, metadata) -> None:
+    if not group_wanted("tape"):
+        return
     """The cassette half: the inlay card, a shell label, and the recording.
 
     The recording window is shown at rest rather than mid-side: what it
@@ -952,8 +1025,10 @@ def _capture_tape(out: Path, code: str, metadata) -> None:
 
 
 def _capture_telegram(out: Path, code: str) -> None:
+    if not group_wanted("telegram"):
+        return
     from mdtools import app_settings, telegram_bot
-    from mdtools.panels.experimental_settings_dialog import ExperimentalSettingsDialog
+    from mdtools.panels.settings_dialog import GROUP_TELEGRAM, SettingsDialog
     from mdtools.panels.telegram_chat_dialog import TelegramChatDialog
     from mdtools.panels.telegram_login_dialog import TelegramLoginDialog
 
@@ -971,7 +1046,11 @@ def _capture_telegram(out: Path, code: str) -> None:
     # settings) -- see app_settings.cd_rip_folder().
     app_settings.set_cd_rip_folder(str(download_folder))
 
-    save(ExperimentalSettingsDialog(), out / "experimental-settings.png")
+    # The bot account is a group in the ordinary Settings window now, not a
+    # dialog of its own -- so the figure is Settings opened on that group.
+    settings = SettingsDialog()
+    settings.show_group(GROUP_TELEGRAM)
+    save(settings, out / "settings-telegram.png")
     save(TelegramLoginDialog("0", "0"), out / "telegram-login.png")
 
     greeting, reply = _TELEGRAM_CHAT[code]
@@ -1016,8 +1095,41 @@ def _capture_telegram(out: Path, code: str) -> None:
     close_quietly(chat)
 
 
+def _parse_args(argv: list[str]) -> tuple[tuple[str, ...], frozenset[str]]:
+    """(languages, figures). Positional arguments are language codes;
+    --only takes figure names, comma-separated or repeated."""
+    languages: list[str] = []
+    only: list[str] = []
+    rest = list(argv)
+    while rest:
+        argument = rest.pop(0)
+        if argument in ("--list", "-l"):
+            for group, names in FIGURE_GROUPS.items():
+                print(f"{group:10} {' '.join(names)}")
+            raise SystemExit(0)
+        if argument == "--only":
+            if not rest:
+                raise SystemExit("--only needs at least one figure name (see --list)")
+            only.extend(name.strip() for name in rest.pop(0).split(",") if name.strip())
+            continue
+        if argument.startswith("-"):
+            raise SystemExit(f"unknown option {argument}")
+        languages.append(argument)
+
+    for code in languages:
+        if code not in LANGUAGES:
+            raise SystemExit(f"unknown language {code} -- expected one of {', '.join(LANGUAGES)}")
+    unknown = sorted(set(only) - ALL_FIGURES)
+    if unknown:
+        raise SystemExit(f"unknown figure(s): {', '.join(unknown)} -- see --list")
+    return tuple(languages) or LANGUAGES, frozenset(only) if only else ALL_FIGURES
+
+
 def main() -> int:
-    app = QApplication(sys.argv)
+    global _WANTED
+
+    languages, _WANTED = _parse_args(sys.argv[1:])
+    app = QApplication([sys.argv[0]])
     app.setApplicationName("MDTools")
     # Everything this script writes through QSettings/QStandardPaths lands
     # in a throwaway folder instead of the user's real configuration.
@@ -1042,11 +1154,15 @@ def main() -> int:
     _install_folder_stand_in()
     _install_recording_stand_ins()
 
-    draw_ir_circuit(OUT_DIR / "ir-circuit.png")
-    for code in ("en", "pl", "ja"):
+    if wanted("ir-circuit"):
+        draw_ir_circuit(OUT_DIR / "ir-circuit.png")
+    for code in languages:
         capture_language(app, code)
 
-    print("\nDone.")
+    if _WANTED != ALL_FIGURES:
+        print(f"\nDone ({len(_WANTED)} figure(s) per language; everything else left alone).")
+    else:
+        print("\nDone.")
     return 0
 
 

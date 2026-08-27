@@ -13,7 +13,7 @@ TITLE = "xD-Tools"
 SUBTITLE = "Studio Retro Nośników — instrukcja obsługi"
 TITLE_NOTE = "Projektowanie etykiet, nagrywanie MiniDisców i kaset, wypalanie CD-R i nadawanie tytułów"
 COVER_CAPTION = "Co z czym rozmawia: komendy przez USB, klawisze przez podczerwień, dźwięk przez S/PDIF."
-VERSION_LINE = "Wersja 0.3.3"
+VERSION_LINE = "Wersja 0.3.4"
 AUTHOR_LINE = 'Artur "Screemer" Jakubowicz'
 DATE_LINE = "Sierpień 2026"
 TOC_TITLE = "Spis treści"
@@ -150,6 +150,12 @@ BOOK = [
                 "suwakami jasności i kontrastu obok. To tylko podgląd — obszar roboczy jest wtedy tylko "
                 "do odczytu — a to, co tu ustawisz, wykorzysta Eksportuj wydruk PNG (skala szarości).",
             ]},
+            {"p": "Nad obszarem roboczym są dwa paski narzędzi. Górny to zwykły rząd operacji na "
+                  "pliku i edycji, jaki ma każdy program — Nowy, Otwórz, Zapisz, Drukuj, Cofnij, Ponów, "
+                  "Wytnij, Kopiuj, Wklej i Usuń — a każdy przycisk to dokładnie to samo polecenie co "
+                  "pozycja menu o tej samej nazwie, z tym samym skrótem klawiszowym. Dolny należy do "
+                  "strony, którą masz przed sobą: która strona, który szablon, powiększenie i podgląd w "
+                  "skali szarości."},
             {"h2": "Trzy panele"},
             {"p": "**Narzędzia** (po lewej) dodaje rzeczy na stronę: tekst, wypełniony prostokąt, obraz z "
                   "pliku, obraz z wbudowanej galerii albo tekst wzięty wprost z metadanych projektu. Pod "
@@ -167,10 +173,15 @@ BOOK = [
                      "jako osobne okna."},
             {"h2": "Kiedy coś się nagrywa"},
             {"p": "Nagrywanie, zgrywanie, wypalanie i zapisywanie tytułów odbywa się w osobnym oknie - "
-                  "a każde z tych okien ma przycisk **Ukryj**. Po ukryciu praca trwa dalej: główne okno "
-                  "znów jest dostępne, a na dole, nad paskiem stanu, pojawia się pasek postępu. Pokazuje "
-                  "postęp całości, bieżący utwór (jeśli jest), przycisk **Zatrzymaj** oraz **Pokaż okno "
-                  "nagrywania**, który przywraca okno."},
+                  "a gdy takie okno pracuje, jego **przycisk zamknięcia (X)** chowa je, zamiast "
+                  "przerywać pracę. Praca trwa dalej: główne okno znów jest dostępne, a na dole, nad "
+                  "paskiem stanu, pojawia się pasek postępu. Pokazuje postęp całości, bieżący utwór "
+                  "(jeśli jest), przycisk **Zatrzymaj** oraz **Pokaż okno nagrywania**, który przywraca "
+                  "okno."},
+            {"note": "Gdy nic nie trwa, X zamyka okno tak jak wszędzie indziej. Od przerywania pracy "
+                     "jest **Zatrzymaj** — a przycisk obok niego nosi nazwę **Anuluj**, gdy coś trwa, i "
+                     "**Zamknij**, gdy nie, żeby ten, który porzuca pracę, nigdy nie wyglądał tak samo "
+                     "jak ten, który tylko zamyka skończone okno."},
             {"p": "Pasek zostaje tak długo, jak długo to okno jest otwarte - również po zakończeniu samej "
                   "pracy. To jedyna droga powrotu do ukrytego okna, więc znika dopiero razem z nim."},
             {"note": "Naraz może działać tylko jedna taka operacja. W trakcie jej trwania uruchomienie "
@@ -486,14 +497,19 @@ BOOK = [
             {"fig": ("settings", "Okno > Ustawienia. Urządzenia wyjścia audio są niezależne od "
                                  "przystawki — do nagrywania potrzeba urządzenia, nie łącza na "
                                  "podczerwień.")},
+            {"p": "Ustawienia to jedno okno z listą grup po lewej stronie. **Ogólne** to wszystko, co "
+                  "opisano tutaj; **Telegram** to konto bota (osobny rozdział). Niezależnie od tego, "
+                  "która grupa jest na ekranie, **OK** zapisuje je wszystkie."},
             {"p": "**Wykryj** pyta każdy port szeregowy w komputerze, czy odpowiada na nim MDRem. Musi tak "
                   "działać: płytka zgłasza identyfikator USB `2E8A:0003`, ten sam co jej własny bootloader "
                   "i inne płytki Waveshare, więc jedyną pewną identyfikacją jest odpowiedź urządzenia na "
                   "`PING`."},
             {"p": "Po zaznaczeniu pola pojawiają się trzy rzeczy: **Wyślij listę utworów** w oknie "
                   "Metadane..., **Pilot...** w menu Okno oraz właściwe MiniDiscowi pozycje menu "
-                  "**Nagrywanie** — Nagraj CD/folder na MiniDisc i Skasuj MiniDisc..., bo obie potrzebują "
-                  "przystawki, żeby uzbroić magnetofon."},
+                  "**Nagrywanie** — Nagraj folder na MiniDisc i Nagraj z folderu zgrywania/pobierania "
+                  "na MiniDisc, bo obie potrzebują przystawki, żeby uzbroić magnetofon. **Źródło > "
+                  "Zgraj płytę audio CD...** nie jest wśród nich: zgrywanie kończy się na plikach i w "
+                  "ogóle nie dotyka magnetofonu."},
             {"note": "**Urządzenie wyjścia audio dla MiniDisc** i **Urządzenie wyjścia audio dla "
                      "kasety**, na tej samej stronie, celowo *nie* są powiązane z tym polem — kaseta "
                      "potrzebuje urządzenia wyjściowego niezależnie od tego, czy przystawka jest "
@@ -641,11 +657,11 @@ BOOK = [
     {
         "title": "Nagrywanie albumu na MiniDisc",
         "blocks": [
-            {"p": "Nagrywanie na MiniDisc to jedno wspólne okno, do którego prowadzą trzy różne drzwi — "
-                  "**Nagraj CD na MiniDisc...**, **Nagraj folder na MiniDisc...** oraz telegramowe "
-                  "**Nagraj z folderu audio...** (osobny rozdział) — zależnie od tego, skąd wzięły się "
-                  "ścieżki. Ten rozdział opisuje, co dzieje się dalej, którymi drzwiami by się nie "
-                  "weszło: magnetofon zostaje uzbrojony, album odtwarza własny silnik audio xD-Tools, "
+            {"p": "Nagrywanie na MiniDisc to jedno wspólne okno, do którego prowadzą dwoje drzwi — "
+                  "**Nagraj folder na MiniDisc...**, gdy album sam wskazujesz, oraz **Nagraj z folderu "
+                  "zgrywania/pobierania na MiniDisc...**, gdy chodzi o to, co zostawiło w folderze "
+                  "audio zgrywanie płyty albo pobieranie z Telegrama. Ten rozdział opisuje, co dzieje "
+                  "się dalej, którymi drzwiami by się nie weszło: magnetofon zostaje uzbrojony, album odtwarza własny silnik audio xD-Tools, "
                   "program pilnuje go do końca, zapisuje tytuły i układa obie etykiety z okładki albumu."},
             {"note": "**To wymaga przystawki MDRem, a pozycje w menu pojawiają się dopiero po jej "
                      "włączeniu w Okno > Ustawienia...** To przystawka wprowadza magnetofon w nagrywanie "
@@ -778,21 +794,22 @@ BOOK = [
     },
     # ------------------------------------------------------------------
     {
-        "title": "Nagrywanie z płyty CD",
+        "title": "Zgrywanie płyty CD",
         "blocks": [
-            {"p": "**Nagrywanie > Nagraj CD na {medium}...** najpierw zgrywa płytę audio CD, a potem "
-                  "nagrywa to, co zgrała - na MiniDisc albo na kasetę, zależnie od tego, do czego jest "
-                  "otwarty projekt. Odczytuje płytę, ustala, co to za album, zgrywa każdą ścieżkę do "
-                  "pliku, a po zakończeniu zgrywania pyta, czy **Nagraj teraz**, czy **Tylko metadane** "
-                  "- ta druga opcja wprowadza tytuł albumu i listę utworów do projektu bez nagrywania "
-                  "czegokolwiek, dla kogoś, kto chce mieć właściwą etykietę, choć akurat nie ma pod ręką "
-                  "magnetofonu. Nagraj teraz przekazuje zgrane pliki wprost do okna nagrywania, które "
-                  "już znasz z poprzedniego rozdziału - to samo uzbrajanie, te same znaczniki ścieżek, "
-                  "to samo nadawanie tytułów."},
-            {"note": "**Nagrywanie wymaga przystawki MDRem**, a pozycja w menu pojawia się dopiero po "
-                     "jej włączeniu - sam odczyt płyty przystawki nie potrzebuje, ale wybór Nagraj teraz "
-                     "już tak. **Tylko metadane nigdy nie potrzebuje przystawki**, dlatego ta pozycja "
-                     "zostaje dostępna także w projekcie kasety, z przystawką czy bez."},
+            {"p": "**Źródło > Zgraj płytę audio CD...** kopiuje płytę audio CD do plików. Odczytuje "
+                  "płytę, ustala, co to za album, zgrywa każdą ścieżkę - i na tym kończy: proponuje "
+                  "wprowadzić tytuł albumu i listę utworów do projektu, mówi, gdzie trafiły pliki, i to "
+                  "wszystko."},
+            {"p": "Nagranie tych plików to osobny krok, który uruchamiasz sam: **Nagrywanie > Nagraj z "
+                  "folderu zgrywania/pobierania na {medium}...** - zwykłe okno nagrywania opisane w "
+                  "poprzednim rozdziale, z tym samym uzbrajaniem, tymi samymi znacznikami ścieżek i tym "
+                  "samym nadawaniem tytułów. Kiedyś było to jedno nieprzerwane działanie, co znaczyło, "
+                  "że kopię można było zdobyć tylko rozpoczynając nagrywanie; sama kopia jest coś warta, "
+                  "a płyta jest w napędzie teraz - niezależnie od tego, czy magnetofon jest wolny."},
+            {"note": "**Zgrywanie nie potrzebuje ani przystawki MDRem, ani konkretnego rodzaju "
+                     "projektu**, dlatego siedzi w menu Źródło i nic w nim nie znika ani nie zmienia "
+                     "nazwy wraz z nośnikiem. Przystawki potrzebuje dopiero nagrywanie, które może "
+                     "nastąpić później, i tylko w projekcie MiniDisc."},
             {"h2": "Dlaczego najpierw kopia"},
             {"p": "Napęd potrafi odtwarzać płytę CD bezpośrednio, a pozwolenie mu na to byłoby "
                   "prostsze. Wtedy jednak rysa napotkana w 31. minucie ląduje wprost na MiniDysku, bez "
@@ -813,8 +830,8 @@ BOOK = [
                 "tytuły ścieżek i okładka zmienią się razem z nim.",
                 "Popraw to, co się nie zgadza. Tytuły są edytowalne i to one trafiają do plików, a "
                 "później na MiniDisc.",
-                "Naciśnij **Zgraj i nagraj**, a po zakończeniu kopiowania wybierz **Nagraj teraz** albo "
-                "**Tylko metadane**.",
+                "Naciśnij **Zgraj**. Po zakończeniu kopiowania xD-Tools nazywa folder, do którego "
+                "trafiły pliki, i pyta, czy wprowadzić tytuł albumu i listę utworów do projektu.",
             ]},
             {"note": "Płyta, której nie ma w MusicBrainz - każda nagrana samodzielnie i sporo mniej "
                      "znanych wydań - wraca po prostu z numerowanymi tytułami zastępczymi do "
@@ -866,8 +883,8 @@ BOOK = [
                 "Kiedy przestaniesz dokładać płyty, następujące po tym nagranie obejmuje od razu cały "
                 "komplet.",
             ]},
-            {"note": "Możesz zakończyć po dowolnej płycie: pytanie proponuje kontynuować albo nagrać to, "
-                     "co zostało już zgrane."},
+            {"note": "Możesz zakończyć po dowolnej płycie: pytanie proponuje kontynuować albo "
+                     "zachować to, co zostało już zgrane."},
         ],
     },
     {
@@ -1006,8 +1023,8 @@ BOOK = [
     {
         "title": "Nagrywanie kasety",
         "blocks": [
-            {"p": "**Nagraj CD na kasetę...**, **Nagraj folder na kasetę...** i telegramowe **Nagraj z "
-                  "folderu audio...** — te same trzy drzwi, co w rozdziale o MiniDysku — w projekcie "
+            {"p": "**Nagraj folder na kasetę...** i **Nagraj z folderu zgrywania/pobierania na "
+                  "kasetę...** — te same drzwi, co w rozdziale o MiniDysku — w projekcie "
                   "kasetowym prowadzą tutaj i nagrywają album na kasetę magnetofonową, strona po "
                   "stronie. To wyjątek wśród sposobów nagrywania — i wyjątek, który przesądza o "
                   "wszystkim: **magnetofon obsługujesz ty**. Do magnetofonu nie ma adaptera ani kabla, "
@@ -1142,16 +1159,16 @@ BOOK = [
                      "posiadanie płyty CD tego nie legalizuje: to obejmuje kopiowanie własnej płyty, a nie "
                      "wzięcie kopii od obcej osoby."},
             {"h2": "Włączanie"},
-            {"p": "W **Okno > Ustawienia** jest pole **Pokaż funkcje eksperymentalne**. Po zaznaczeniu w "
-                  "pasku menu pojawia się menu **Eksperymentalne**; po odznaczeniu znika. Dopóki jest "
-                  "wyłączone, nic za nim nie działa."},
-            {"fig": ("experimental-settings", "Eksperymentalne > Ustawienia eksperymentalne. Funkcje "
-                                             "eksperymentalne mają własne okno ustawień."),},
-            {"p": "**Eksperymentalne > Ustawienia eksperymentalne...** to miejsce bota. **Nazwa "
-                  "użytkownika bota** to bot, z którym chcesz rozmawiać, `@coś`. Pobrane pliki trafiają "
-                  "do **Okno > Ustawienia... > Folder zgrywania CD** — tego samego folderu, którego "
-                  "używa zgrywanie CD, bo oba są półproduktem do nagrania, a nie kolekcją muzyki; "
-                  "osobnego ustawienia folderu dla Telegrama już nie ma."},
+            {"p": "W **Okno > Ustawienia > Ogólne** jest pole **Pokaż funkcje eksperymentalne**. To "
+                  "ono sprawia, że pozycja bota pojawia się w menu **Źródło**; dopóki jest wyłączone, "
+                  "nic za nim nie działa."},
+            {"fig": ("settings-telegram", "Okno > Ustawienia, grupa Telegram. Konto bota mieszka razem "
+                                          "z resztą ustawień, a nie w osobnym oknie."),},
+            {"p": "**Okno > Ustawienia > Telegram** to miejsce bota. **Nazwa użytkownika bota** to bot, "
+                  "z którym chcesz rozmawiać, `@coś`. Pobrane pliki trafiają do **Ogólne > Folder "
+                  "zgrywania CD** — tego samego folderu, którego używa zgrywanie CD, bo oba są "
+                  "półproduktem do nagrania, a nie kolekcją muzyki; osobnego ustawienia folderu dla "
+                  "Telegrama już nie ma."},
             {"note": "Nie ma tu żadnego API ID ani API Hash do wpisania. xD-Tools nosi własne, więc "
                      "jedynym krokiem jest zalogowanie. Gdyby jakaś wersja programu została zbudowana bez "
                      "nich, powie to wprost, zamiast nie umieć się połączyć."},
@@ -1168,12 +1185,14 @@ BOOK = [
                      "xD-Tools. Ten plik jest równoważny byciu zalogowanym na Twoje konto: nie jest "
                      "zaszyfrowany i nie jest czymś, co należy kopiować na inny komputer albo komukolwiek "
                      "wysyłać."},
-            {"p": "**Wyloguj**, obok Zaloguj, kasuje ten zapisany sesyjny plik — to samo okno Ustawień "
-                  "eksperymentalnych jest więc też miejscem, gdzie wylogować się z konta, na które się "
+            {"p": "**Wyloguj**, obok Zaloguj, kasuje ten zapisany sesyjny plik — ta sama grupa "
+                  "Telegram jest więc też miejscem, gdzie wylogować się z konta, na które się "
                   "zalogowałeś."},
             {"h2": "Rozmowa"},
-            {"p": "**Eksperymentalne > Pobierz album z bota Telegram...** otwiera zwykły czat. Pojawia się "
-                  "dopiero wtedy, gdy zalogowanie zostało zapisane."},
+            {"p": "**Źródło > Pobierz album z bota Telegram...** otwiera zwykły czat. Pojawia się "
+                  "dopiero wtedy, gdy zalogowanie zostało zapisane i włączone jest pole funkcji "
+                  "eksperymentalnych — a stoi obok Zgraj płytę audio CD, bo pobranie jest źródłem "
+                  "dźwięku dokładnie tak samo jak płyta."},
             {"fig": ("telegram-chat", "Czat, z kolejką pobierań po prawej."),},
             {"p": "Celowo zwykły czat, a nie pole wyszukiwania: komendy Twojego bota są Twoje i xD-Tools nie "
                   "może ich znać. Pokazuje więc to, co bot przysyła, i pozwala go obsługiwać — tekst, jego "
@@ -1199,23 +1218,29 @@ BOOK = [
                   "łączny procent i sumaryczna prędkość — więc stan dwudziestoplikowego albumu to jedna "
                   "linijka do rzucenia okiem, a nie dwadzieścia wierszy do zsumowania w głowie."},
             {"h2": "Od pobrania do płyty"},
-            {"p": "Pliki ze wszystkich sesji zbierają się w jednym folderze pobierań, więc kilka albumów "
-                  "leży obok siebie. **Posortuj na foldery albumów** je rozdziela: jeden podfolder na album, "
-                  "nazwany na podstawie tagów, a to, co bez tagów, grupowane według czasu przyjścia."},
+            {"p": "**Plik FLAC jest odkładany na miejsce już przy odbiorze**: po zakończeniu "
+                  "pobierania jego tagi zostają odczytane, a plik trafia wprost do własnego podfolderu "
+                  "`Wykonawca - Album`. Album pobrany teraz jest więc gotowym folderem albumu, zanim "
+                  "jeszcze wyląduje ostatnia ścieżka — nie ma czego sprzątać."},
+            {"p": "To, czego tagi nie potrafią umiejscowić, zostaje luzem w folderze pobierań: MP3 albo "
+                  "Ogg (ich tagi nie są jeszcze czytane), FLAC bez tagów albo plik, który w ogóle nie "
+                  "jest muzyką. Tym zajmuje się **Posortuj na foldery albumów** — i tym, co zostawiły "
+                  "wcześniejsze sesje: jeden podfolder na album, nazwany na podstawie tagów, a to, co "
+                  "bez tagów, grupowane według czasu przyjścia."},
             {"note": "Sortowanie rusza wyłącznie pliki audio. Okładka przysłana przez bota razem z "
                      "utworami — i cokolwiek innego, co już leży w tym folderze — zostaje dokładnie tam, "
-                     "gdzie było."},
+                     "gdzie było. Nic też nigdy nie jest nadpisywane: zajęta nazwa dostaje `(2)`."},
             {"p": "**Nagraj pobrane albumy...** przechodzi dalej do nagrywania. Najpierw sortuje, żeby "
                   "nie dało się przypadkiem nagrać dwóch albumów na jednej płycie, i pyta który album, "
                   "jeśli jest więcej niż jeden. Dalej jest to zwykłe okno nagrywania opisane w rozdziale "
                   "„Nagrywanie z folderu” — dlatego w projekcie MiniDisc to wymaga przystawki MDRem, choć "
                   "samo pobieranie nie."},
             {"p": "**Otwórz folder pobierania** otwiera go w menedżerze plików, żeby zajrzeć przed nagraniem."},
-            {"p": "Obie operacje są też w menu **Nagrywanie**, bez otwierania czatu, dla plików "
-                  "pobranych wcześniej: **Posortuj folder audio na albumy...** i **Nagraj z folderu "
-                  "audio...** — nazwane od folderu, na którym działają (tego samego, co przy zgrywaniu "
-                  "CD), a nie od Telegrama konkretnie, bo folder nagrywany w ten sposób wcale nie musi "
-                  "pochodzić z bota."},
+            {"p": "Obie operacje istnieją też poza czatem, dla plików pobranych wcześniej: **Źródło > "
+                  "Posortuj folder zgrywania/pobierania na albumy...** i **Nagrywanie > Nagraj z "
+                  "folderu zgrywania/pobierania na {medium}...** — nazwane od folderu, na którym "
+                  "działają (tego samego, co przy zgrywaniu CD), a nie od Telegrama konkretnie, bo "
+                  "folder nagrywany w ten sposób wcale nie musi pochodzić z bota."},
             {"tip": "Oba przyciski milkną, dopóki cokolwiek się pobiera — sortowanie albo nagrywanie "
                     "niedopisanych plików byłoby gorsze niż poczekanie."},
         ],

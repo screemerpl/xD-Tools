@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from mdtools import album_sort
+from mdtools import album_sort, cdrip
 
 
 def _touch(root: Path, name: str) -> Path:
@@ -479,3 +479,99 @@ def test_sort_folder_ignores_subfolders_already_sorted(tmp_path, monkeypatch):
 
     second = album_sort.sort_folder(tmp_path)
     assert second == []
+
+
+# --- placing a download as it arrives -------------------------------------
+#
+# Explicit request: a downloaded FLAC lands in its own "Artist - Album"
+# folder straight away, rather than in a heap at the root waiting for
+# somebody to press Sort. It is downloaded into a staging folder first,
+# because a file's tags cannot be read before it has finished arriving --
+# and a half-written track sitting loose in the shared folder is something
+# the album picker would offer and a sort would file away as finished.
+
+
+def test_staging_is_a_reserved_subfolder_of_the_download_folder(tmp_path):
+    staging = album_sort.staging_dir(tmp_path)
+
+    assert staging.parent == tmp_path
+    assert staging.is_dir()
+    assert staging.name in cdrip.RESERVED_SCRATCH_DIRNAMES
+
+
+def test_staging_never_counts_as_an_album_folder(tmp_path):
+    """Otherwise the very first download would make an empty download
+    folder look like one that had already been sorted -- which is what
+    decides whether a single album gets a folder of its own."""
+    album_sort.staging_dir(tmp_path)
+
+    assert album_sort.has_album_subfolders(tmp_path) is False
+
+
+def test_a_tagged_file_is_placed_in_its_own_album_folder(tmp_path, monkeypatch):
+    monkeypatch.setattr(album_sort, "read_album_tag", lambda p: ("Skillet", "Unleashed"))
+    staged = _touch(album_sort.staging_dir(tmp_path), "01.flac")
+
+    placed = album_sort.place_download(tmp_path, staged)
+
+    assert placed == tmp_path / "Skillet - Unleashed" / "01.flac"
+    assert placed.exists()
+    assert not staged.exists()
+
+
+def test_an_untagged_file_is_placed_in_the_root(tmp_path, monkeypatch):
+    """An MP3, an Ogg, an untagged FLAC, a cover image -- anything the
+    tags cannot place goes where downloads always went, and a later sort
+    is still what deals with it."""
+    monkeypatch.setattr(album_sort, "read_album_tag", lambda p: ("", ""))
+    staged = _touch(album_sort.staging_dir(tmp_path), "folder.jpg")
+
+    placed = album_sort.place_download(tmp_path, staged)
+
+    assert placed == tmp_path / "folder.jpg"
+    assert placed.exists()
+
+
+def test_a_file_with_an_album_but_no_artist_is_placed_under_the_album_alone(tmp_path, monkeypatch):
+    monkeypatch.setattr(album_sort, "read_album_tag", lambda p: ("", "Unleashed"))
+    staged = _touch(album_sort.staging_dir(tmp_path), "01.flac")
+
+    assert album_sort.place_download(tmp_path, staged) == tmp_path / "Unleashed" / "01.flac"
+
+
+def test_placing_lands_where_a_later_sort_would_have_put_it(tmp_path, monkeypatch):
+    """The two must agree, or an album would end up split between two
+    similarly-named folders depending on which path each track took."""
+    monkeypatch.setattr(album_sort, "read_album_tag", lambda p: ("Skillet", "Unleashed"))
+    _touch(tmp_path, "a.flac")
+    _touch(tmp_path, "b.flac")
+    (tmp_path / "Something Else").mkdir()  # so the single-group rule does not apply
+    folders = album_sort.sort_folder(tmp_path)
+
+    staged = _touch(album_sort.staging_dir(tmp_path), "c.flac")
+    placed = album_sort.place_download(tmp_path, staged)
+
+    assert placed.parent in folders
+
+
+def test_a_name_already_taken_is_never_overwritten(tmp_path, monkeypatch):
+    """Nothing in this app may destroy a file in the shared audio folder.
+    A duplicate is visible and removable by hand; a clobbered file is
+    neither."""
+    monkeypatch.setattr(album_sort, "read_album_tag", lambda p: ("Skillet", "Unleashed"))
+    existing = tmp_path / "Skillet - Unleashed"
+    existing.mkdir()
+    (existing / "01.flac").write_bytes(b"the original")
+    staged = _touch(album_sort.staging_dir(tmp_path), "01.flac")
+
+    placed = album_sort.place_download(tmp_path, staged)
+
+    assert placed == existing / "01 (2).flac"
+    assert (existing / "01.flac").read_bytes() == b"the original"
+
+
+def test_placing_a_file_that_is_already_gone_says_so_rather_than_raising(tmp_path):
+    """A retry that raced itself -- the work is already done."""
+    missing = album_sort.staging_dir(tmp_path) / "01.flac"
+
+    assert album_sort.place_download(tmp_path, missing) == missing

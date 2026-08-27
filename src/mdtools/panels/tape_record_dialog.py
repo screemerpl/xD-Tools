@@ -45,7 +45,7 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import QCoreApplication, QTimer, Qt, Signal
+from PySide6.QtCore import QTimer, Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -65,7 +65,8 @@ from PySide6.QtWidgets import (
 
 from mdtools import app_settings, audio_engine, embedded_cover, mixtape_cover, tape, tracks
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
-from mdtools.panels.hideable_dialog import hide_for_background, surface
+from mdtools.panels.decode_worker import DecodeWorker
+from mdtools.panels.hideable_dialog import close_hides_while_busy, surface
 from mdtools.panels.playback_bridge import PlaybackBridge
 from mdtools.panels.preview_player import PreviewPlayerBar
 from mdtools.panels.progress_format import mmss as _mmss
@@ -110,6 +111,13 @@ class TapeRecordDialog(QDialog):
         self._remaining = 0  # seconds of leader silence still to go
         self._player: audio_engine.AudioPlayer | None = None
         self._pending_buffers: list | None = None
+        # The decode running ahead of a side, whether a Stop is waiting for
+        # it to notice, and the window between Start and the countdown --
+        # see _on_start_clicked()/reject(). "Preparing" counts as busy: the
+        # worker must not be left running with nobody holding it.
+        self._decoder: DecodeWorker | None = None
+        self._closing = False
+        self._preparing = False
         # Set by the Hide button, read by exec_hideable() -- see
         # panels/hideable_dialog.py for why a hide has to be told apart
         # from a cancel at all.
@@ -208,13 +216,6 @@ class TapeRecordDialog(QDialog):
         self.close_btn = QPushButton(self.tr("Cancel"))
         self.close_btn.clicked.connect(self.reject)
         self.buttons.addButton(self.close_btn, QDialogButtonBox.ButtonRole.RejectRole)
-        self.hide_btn = QPushButton(self.tr("Hide"))
-        self.hide_btn.setToolTip(
-            self.tr("Hide this window and keep recording in the background -- use \"Show recording "
-                    "window\" in the bar at the bottom of the main window to bring it back.")
-        )
-        self.hide_btn.clicked.connect(self._on_hide_clicked)
-        self.buttons.addButton(self.hide_btn, QDialogButtonBox.ButtonRole.ActionRole)
         layout.addWidget(self.buttons)
 
         self._timer = QTimer(self)
@@ -407,18 +408,33 @@ class TapeRecordDialog(QDialog):
         # otherwise the deck keeps rolling onto (already-magnetic) tape for
         # however long that takes, on top of the deliberate LEADER_SECONDS
         # of silence the countdown itself accounts for.
-        # _report_decode_progress keeps the status label moving meanwhile,
-        # so this doesn't read as the dialog having hung.
+        #
+        # On a worker thread, not here: decoding a whole side is a real
+        # stretch of soxr work, and doing it on the GUI thread froze the
+        # window for all of it (reported against the MiniDisc dialog, which
+        # does the same thing with dither on top). Nothing has been asked of
+        # the user yet at this point -- the "Release Pause now" box is in
+        # _on_decoded(), after the audio is ready -- so the deck is not
+        # rolling while this runs.
         first, last = self._side_bounds()
         paths = [Path(item.path) for item in self._items[first : last + 1]]
-        try:
-            buffers = audio_engine.load_for_playback(
-                paths, samplerate=self._player.samplerate, on_progress=self._report_decode_progress
-            )
-        except audio_engine.AudioEngineError as exc:
-            self._fail(self.tr("Could not decode this side for playback: {error}").format(error=exc))
-            return
+        self._preparing = True
+        self.start_btn.setEnabled(False)
+        self._decoder = DecodeWorker(
+            paths, samplerate=self._player.samplerate, dithered=False, parent=self
+        )
+        self._decoder.progress.connect(self._report_decode_progress)
+        self._decoder.decoded.connect(self._on_decoded)
+        self._decoder.failed.connect(self._on_decode_failed)
+        self._decoder.finished.connect(self._on_decoder_finished)
+        self._decoder.start()
 
+    def _on_decoded(self, buffers: list) -> None:
+        """The side's audio is ready: this is the moment the deck should
+        actually start moving."""
+        if self._closing or not self._preparing:
+            return  # stopped while it was decoding
+        self._preparing = False
         self._recording = True
         self.running_changed.emit(True)
         self._current_local_index = 0
@@ -461,17 +477,33 @@ class TapeRecordDialog(QDialog):
         )
         return answer == QMessageBox.StandardButton.Ok
 
-    def _report_decode_progress(self, index: int, total: int, path: Path) -> None:
-        """`load_for_playback`'s own callback, called synchronously from
-        inside its decode loop -- see _on_start_clicked for why decoding
-        now happens before the leader countdown, and record_dialog.py's
-        own copy of this method for why processEvents() is needed here."""
+    def _on_decode_failed(self, error: str) -> None:
+        if self._closing:
+            return
+        self._preparing = False
+        self._fail(self.tr("Could not decode this side for playback: {error}").format(error=error))
+
+    def _on_decoder_finished(self) -> None:
+        """The one place a decode ends, however it ended -- so a Stop
+        pressed mid-decode returns immediately instead of blocking the GUI
+        thread on wait()."""
+        self._decoder = None
+        if self._closing:
+            self._closing = False
+            self.close_btn.setEnabled(True)
+            super().reject()
+
+    def _report_decode_progress(self, index: int, total: int, name: str) -> None:
+        """DecodeWorker's own progress signal, one per track -- see
+        _on_start_clicked for why decoding happens before the leader
+        countdown, and why it no longer happens on this thread. No
+        processEvents() any more: the event loop is turning by itself, so
+        this is an ordinary queued-signal label update."""
         self.status_label.setText(
             self.tr("Preparing track {index} of {total}: {name}...").format(
-                index=index, total=total, name=path.stem
+                index=index, total=total, name=name
             )
         )
-        QCoreApplication.processEvents()
 
     def _tick_display(self) -> None:
         self.status_label.setText(
@@ -646,12 +678,22 @@ class TapeRecordDialog(QDialog):
         """What MainWindow's own Stop button calls."""
         self.reject()
 
+    def is_busy(self) -> bool:
+        """Whether a side is being recorded, or its audio prepared -- what
+        decides that the window's X hides instead of closes. Preparing
+        counts: a decode worker is running, and closing out from under it
+        is the silent QThread-destroyed process abort."""
+        return self._recording or self._preparing
+
+    def closeEvent(self, event) -> None:
+        if close_hides_while_busy(self, event):
+            return
+        super().closeEvent(event)
+
     def request_show(self) -> None:
         """What the progress bar's "Show recording window" button calls."""
         self.show_requested.emit()
 
-    def _on_hide_clicked(self) -> None:
-        hide_for_background(self)
 
     def reject(self) -> None:
         """Stops playback, and says what the user has to stop themselves.
@@ -661,6 +703,19 @@ class TapeRecordDialog(QDialog):
         in front of it can prevent that."""
         surface(self)
         self.preview_bar.stop()
+        if self._decoder is not None and self._decoder.isRunning():
+            # Mid-decode: nothing has been played and the user has not been
+            # told to release Pause yet, so there is nothing to warn them
+            # about -- just stop preparing. Cancelling lands at the next
+            # track boundary, so _on_decoder_finished() is what actually
+            # closes the window.
+            self._closing = True
+            self._preparing = False
+            self._decoder.cancel()
+            self.status_label.setText(self.tr("Stopping..."))
+            self.close_btn.setEnabled(False)
+            self.running_changed.emit(False)
+            return
         if self._recording:
             self._timer.stop()
             self._countdown.stop()

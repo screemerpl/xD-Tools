@@ -1,8 +1,12 @@
-"""Toolbar > "Regenerate with Font...": wiring between RegenerateFontDialog,
-MainWindow, canvas.scene.font_family_override(), and
-_reused_cover_filter() -- not the dialog's own widgets (see
-test_regenerate_font_dialog.py) and not the override mechanism itself (see
+"""Toolbar > "Regenerate with Font...": wiring between Qt's own font
+picker, MainWindow, canvas.scene.font_family_override(), and
+_reused_cover_filter() -- not the override mechanism itself (see
 test_font_family_override.py).
+
+There is no wrapper dialog any more: the picker *is* the whole
+interaction. Browsing its family list previews each face live on the
+page, and its own OK/Cancel decide whether that becomes the real
+regenerate or is rolled back.
 """
 
 from __future__ import annotations
@@ -13,13 +17,13 @@ import io
 import pytest
 from PIL import Image
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QGraphicsTextItem, QMessageBox
+from PySide6.QtWidgets import QDialog, QFontDialog, QGraphicsTextItem, QMessageBox
 
+from mdtools import app_settings
 from mdtools import app_window as app_module
 from mdtools import cover_filters
 from mdtools.app_window import CD_INSERT_TEMPLATE, CD_LABEL_TEMPLATE, MainWindow
 from mdtools.panels.cover_filter_dialog import CoverFilterDialog
-from mdtools.panels.regenerate_font_dialog import RegenerateFontDialog
 from mdtools.project import MEDIUM_CD, MEDIUM_TAPE, PAGE_COVER, PAGE_DISC, PAGE_SIDE_A, PAGE_SIDE_B, ProjectMetadata, Track
 from mdtools.templates import registry
 
@@ -179,25 +183,24 @@ def _text_families(scene) -> set[str]:
 
 
 def _run_dialog(monkeypatch, window, *, family="Courier New", preview=True, final=None, confirm=None, after_preview=None):
-    """Drives _open_regenerate_font_dialog() without a real modal loop:
-    RegenerateFontDialog.exec is stubbed to optionally fire one Preview
-    first (calling `after_preview()`, if given, right afterwards -- while
-    the preview's own effect is still on screen, before whatever `final`
-    resolves the dialog to has a chance to revert or replace it), then
-    return `final` (Accepted/Rejected). QMessageBox.warning (the "are you
-    sure" confirmation) is stubbed to return `confirm`."""
+    """Drives _open_regenerate_font_dialog() without a real modal loop.
+
+    QFontDialog.exec is stubbed to optionally browse to `family` first --
+    which is what fires currentFontChanged, and so the live preview --
+    calling `after_preview()` right afterwards while that preview is
+    still on screen, then returning `final` (Accepted/Rejected).
+
+    `confirm` is accepted and ignored: OK on the picker now *is* the
+    decision, with no second "are you sure" behind it."""
 
     def _fake_exec(self):
-        self._family = family
         if preview:
-            self.preview_requested.emit(family)
+            self.currentFontChanged.emit(QFont(family))
             if after_preview is not None:
                 after_preview()
-        return final if final is not None else RegenerateFontDialog.DialogCode.Rejected
+        return final if final is not None else QDialog.DialogCode.Rejected
 
-    monkeypatch.setattr(RegenerateFontDialog, "exec", _fake_exec)
-    if confirm is not None:
-        monkeypatch.setattr(app_module.QMessageBox, "warning", lambda *a, **k: confirm)
+    monkeypatch.setattr(QFontDialog, "exec", _fake_exec)
     window._open_regenerate_font_dialog()
 
 
@@ -241,26 +244,10 @@ def test_cancelling_after_a_preview_restores_the_original_page(qt_app, monkeypat
     original_texts = sorted(i.toPlainText() for i in window.project.pages[PAGE_DISC].print_items() if isinstance(i, QGraphicsTextItem))
     original_fonts = _text_families(window.project.pages[PAGE_DISC])
 
-    _run_dialog(monkeypatch, window, family="Courier New", final=RegenerateFontDialog.DialogCode.Rejected)
+    _run_dialog(monkeypatch, window, family="Courier New", final=QDialog.DialogCode.Rejected)
 
     restored_texts = sorted(i.toPlainText() for i in window.project.pages[PAGE_DISC].print_items() if isinstance(i, QGraphicsTextItem))
     assert restored_texts == original_texts
-    assert _text_families(window.project.pages[PAGE_DISC]) == original_fonts
-
-
-def test_declining_the_final_confirmation_also_restores_the_page(qt_app, monkeypatch):
-    window = _md_window(monkeypatch)
-    window.current_page = PAGE_DISC
-    original_fonts = _text_families(window.project.pages[PAGE_DISC])
-
-    _run_dialog(
-        monkeypatch,
-        window,
-        family="Courier New",
-        final=RegenerateFontDialog.DialogCode.Accepted,
-        confirm=QMessageBox.StandardButton.No,
-    )
-
     assert _text_families(window.project.pages[PAGE_DISC]) == original_fonts
 
 
@@ -274,12 +261,12 @@ def test_two_previews_in_a_row_do_not_compound(qt_app, monkeypatch):
 
     def _fake_exec(self):
         self._family = "Courier New"
-        self.preview_requested.emit("Courier New")
+        self.currentFontChanged.emit(QFont("Courier New"))
         self._family = "Arial"
-        self.preview_requested.emit("Arial")
-        return RegenerateFontDialog.DialogCode.Rejected
+        self.currentFontChanged.emit(QFont("Arial"))
+        return QDialog.DialogCode.Rejected
 
-    monkeypatch.setattr(RegenerateFontDialog, "exec", _fake_exec)
+    monkeypatch.setattr(QFontDialog, "exec", _fake_exec)
     window._open_regenerate_font_dialog()
 
     restored_texts = sorted(i.toPlainText() for i in window.project.pages[PAGE_DISC].print_items() if isinstance(i, QGraphicsTextItem))
@@ -311,7 +298,7 @@ def test_accepting_does_not_swap_the_no_slider_variant_back_to_the_slider_one(qt
         window,
         family="Courier New",
         preview=False,
-        final=RegenerateFontDialog.DialogCode.Accepted,
+        final=QDialog.DialogCode.Accepted,
         confirm=QMessageBox.StandardButton.Yes,
     )
 
@@ -344,7 +331,7 @@ def test_accepting_does_not_swap_the_front_only_insert_back_to_the_folded_one(qt
         window,
         family="Courier New",
         preview=False,
-        final=RegenerateFontDialog.DialogCode.Accepted,
+        final=QDialog.DialogCode.Accepted,
         confirm=QMessageBox.StandardButton.Yes,
     )
 
@@ -362,62 +349,59 @@ def test_accepting_regenerates_only_the_current_page(qt_app, monkeypatch):
     window.current_page = PAGE_DISC
     cover_before = window.project.pages[PAGE_COVER]
 
-    _run_dialog(
-        monkeypatch,
-        window,
-        family="Courier New",
-        preview=False,
-        final=RegenerateFontDialog.DialogCode.Accepted,
-        confirm=QMessageBox.StandardButton.Yes,
-    )
+    _run_dialog(monkeypatch, window, family="Courier New", final=QDialog.DialogCode.Accepted)
 
     assert "Courier New" in _text_families(window.project.pages[PAGE_DISC])
     assert window.project.pages[PAGE_COVER] is cover_before
 
 
-def test_accepting_without_ever_clicking_preview_still_regenerates(qt_app, monkeypatch):
-    """OK can be pressed with no Preview click first -- the font still has
-    to apply."""
+def test_ok_without_browsing_uses_the_face_the_picker_opened_on(qt_app, monkeypatch):
+    """OK can be pressed without touching the family list at all. The
+    picker opens on the last face chosen, so that is what applies -- which
+    is the whole point of remembering it."""
     window = _md_window(monkeypatch)
     window.current_page = PAGE_DISC
+    app_settings.set_last_regenerate_font_family("Courier New")
 
-    _run_dialog(
-        monkeypatch,
-        window,
-        family="Courier New",
-        preview=False,
-        final=RegenerateFontDialog.DialogCode.Accepted,
-        confirm=QMessageBox.StandardButton.Yes,
-    )
+    _run_dialog(monkeypatch, window, preview=False, final=QDialog.DialogCode.Accepted)
 
     assert "Courier New" in _text_families(window.project.pages[PAGE_DISC])
 
 
-def test_the_warning_names_the_chosen_font(qt_app, monkeypatch):
+def test_the_chosen_face_is_remembered_for_next_time(qt_app, monkeypatch):
     window = _md_window(monkeypatch)
     window.current_page = PAGE_DISC
-    seen = {}
 
-    def _capture_warning(self_, title, text, *a, **k):
-        seen["text"] = text
-        return QMessageBox.StandardButton.No
+    _run_dialog(monkeypatch, window, family="Courier New", final=QDialog.DialogCode.Accepted)
 
-    monkeypatch.setattr(RegenerateFontDialog, "exec", lambda self: RegenerateFontDialog.DialogCode.Accepted)
-    monkeypatch.setattr(
-        app_module.QMessageBox,
-        "warning",
-        lambda parent, title, text, *a, **k: seen.setdefault("text", text) or QMessageBox.StandardButton.No,
-    )
+    assert app_settings.last_regenerate_font_family() == "Courier New"
 
-    def _fake_exec(self):
-        self._family = "Wingdings"
-        return RegenerateFontDialog.DialogCode.Accepted
 
-    monkeypatch.setattr(RegenerateFontDialog, "exec", _fake_exec)
-    window._open_regenerate_font_dialog()
+def test_cancelling_does_not_change_what_is_remembered(qt_app, monkeypatch):
+    """Browsing is not choosing -- a face merely glanced at on the way to
+    Cancel must not become next time's starting point."""
+    window = _md_window(monkeypatch)
+    window.current_page = PAGE_DISC
+    app_settings.set_last_regenerate_font_family("Arial")
 
-    assert "Wingdings" in seen["text"]
+    _run_dialog(monkeypatch, window, family="Courier New", final=QDialog.DialogCode.Rejected)
 
+    assert app_settings.last_regenerate_font_family() == "Arial"
+
+
+def test_ok_regenerates_straight_away_with_no_second_confirmation(qt_app, monkeypatch):
+    """The picker's own OK is the decision. A second "are you sure" after
+    the user has watched the face live on the page, and then deliberately
+    pressed OK, is asking the same question twice."""
+    window = _md_window(monkeypatch)
+    window.current_page = PAGE_DISC
+    asked: list = []
+    monkeypatch.setattr(app_module.QMessageBox, "warning", lambda *a, **k: asked.append(True))
+
+    _run_dialog(monkeypatch, window, family="Courier New", final=QDialog.DialogCode.Accepted)
+
+    assert asked == [], "no confirmation box should appear"
+    assert "Courier New" in _text_families(window.project.pages[PAGE_DISC])
 
 def test_no_warning_is_shown_when_the_dialog_is_simply_cancelled(qt_app, monkeypatch):
     window = _md_window(monkeypatch)
@@ -425,7 +409,7 @@ def test_no_warning_is_shown_when_the_dialog_is_simply_cancelled(qt_app, monkeyp
     warned = []
     monkeypatch.setattr(app_module.QMessageBox, "warning", lambda *a, **k: warned.append(a))
 
-    _run_dialog(monkeypatch, window, preview=False, final=RegenerateFontDialog.DialogCode.Rejected)
+    _run_dialog(monkeypatch, window, preview=False, final=QDialog.DialogCode.Rejected)
 
     assert not warned
 
@@ -472,7 +456,7 @@ def test_accepting_reuses_the_filter_for_every_regenerated_label(qt_app, monkeyp
         window,
         family="Courier New",
         preview=False,
-        final=RegenerateFontDialog.DialogCode.Accepted,
+        final=QDialog.DialogCode.Accepted,
         confirm=QMessageBox.StandardButton.Yes,
     )
 
@@ -488,7 +472,7 @@ def test_missing_album_and_artist_is_explained_rather_than_opening_the_dialog(qt
     told = []
     monkeypatch.setattr(app_module.QMessageBox, "information", lambda *a, **k: told.append(a))
     opened = []
-    monkeypatch.setattr(RegenerateFontDialog, "exec", lambda self: opened.append(1))
+    monkeypatch.setattr(QFontDialog, "exec", lambda self: opened.append(1))
 
     window._open_regenerate_font_dialog()
 
@@ -503,7 +487,7 @@ def test_no_cover_anywhere_is_explained_rather_than_opening_the_dialog(qt_app, m
     warned = []
     monkeypatch.setattr(app_module.QMessageBox, "warning", lambda *a, **k: warned.append(a))
     opened = []
-    monkeypatch.setattr(RegenerateFontDialog, "exec", lambda self: opened.append(1))
+    monkeypatch.setattr(QFontDialog, "exec", lambda self: opened.append(1))
 
     window._open_regenerate_font_dialog()
 

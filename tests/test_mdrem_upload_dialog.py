@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import pytest
 from PySide6.QtCore import QTimer
+from PySide6.QtGui import QCloseEvent
 
 from mdtools.panels import mdrem_upload_dialog as upload_module
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
@@ -121,28 +122,35 @@ def test_the_run_is_declared_over_however_it_ended(qt_app):
     assert seen == [False]
 
 
-def test_hide_keeps_the_upload_going_and_says_so(qt_app):
-    """The Hide button must not read as a cancel: it marks itself for
-    exec_hideable() (see panels/hideable_dialog.py) and tells the bar to
-    offer "Show recording window"."""
+def test_closing_mid_upload_keeps_it_going_and_says_so(qt_app):
+    """The window's X must not read as a cancel while titles are still
+    going out: it marks itself for exec_hideable() (see
+    panels/hideable_dialog.py) and tells the bar to offer "Show
+    recording window"."""
     dialog = MDRemUploadDialog(_album(), "COM_TEST")
+    dialog._worker = object()  # only is_busy() looks at it here
     seen: list[bool] = []
     dialog.visibility_changed.connect(seen.append)
 
-    dialog.hide_btn.click()
+    event = QCloseEvent()
+    dialog.closeEvent(event)
 
+    assert not event.isAccepted(), "the close has to be refused so the dialog survives"
     assert seen == [True]
     assert dialog.hidden_for_background is True
     assert dialog.isHidden()
 
 
-def test_hide_is_offered_unattended_too(qt_app, no_deferred_start):
-    """Unattended is exactly when hiding is most wanted -- it is the mode
-    a whole album's titling runs in, after a recording nobody sat
-    through. See _NoSingleShot for why this one needs the fixture."""
-    dialog = MDRemUploadDialog(_album(), "COM_TEST", unattended=True)
+def test_closing_with_nothing_running_really_closes(qt_app):
+    """Hiding is only for work worth keeping alive -- an idle window
+    that could not be shut with its own X would be far more surprising."""
+    dialog = MDRemUploadDialog(_album(), "COM_TEST")
 
-    assert dialog.hide_btn.isEnabled()
+    event = QCloseEvent()
+    dialog.closeEvent(event)
+
+    assert event.isAccepted()
+    assert dialog.hidden_for_background is False
 
 
 def test_asking_for_it_back_is_passed_on(qt_app):
