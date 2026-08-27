@@ -165,6 +165,9 @@ class MainWindow(QMainWindow):
         # infrared, and standing in for the deck's remote.
         # "xD-Tools": the x stands in for M or C, which is the joke and
         # also, now, the truth -- it does MiniDisc and CD alike.
+        # Replaced by _refresh_window_title() with the project's own file
+        # name once there is one -- set here as well so the window is
+        # never briefly untitled while the rest of __init__ runs.
         self.setWindowTitle(self.tr("xD-Tools - Retro Media Studio"))
         # Set here too, not just on QApplication in main.py -- so the
         # window has the right icon (title bar/taskbar/alt-tab) even when
@@ -825,6 +828,25 @@ class MainWindow(QMainWindow):
 
     # -- unsaved-changes tracking ---------------------------------------------
 
+    def _refresh_window_title(self) -> None:
+        """The saved project's own file name in the title bar, so the
+        window says which project it is -- taskbar and alt-tab included,
+        which is where it matters with two of them open.
+
+        The file name (its stem, without the .mdproj extension), not the
+        album from the metadata: this names the *file* the user opened
+        and will save back to, which is the question a title bar
+        answers. A project that has never been saved has no file name to
+        show, so it keeps the plain app title."""
+        if self.current_project_path is None:
+            self.setWindowTitle(self.tr("xD-Tools - Retro Media Studio"))
+            return
+        # tr() called on its own line and interpolated after, never
+        # nested inside an f-string -- see the i18n notes in CLAUDE.md,
+        # lupdate's scanner cannot see through that.
+        template = self.tr("{name} - xD-Tools")
+        self.setWindowTitle(template.format(name=Path(self.current_project_path).stem))
+
     def _mark_dirty(self) -> None:
         """Something about the project changed since it was last saved.
 
@@ -1115,6 +1137,7 @@ class MainWindow(QMainWindow):
             pages[entry.page] = scene
 
         self.current_project_path = None
+        self._refresh_window_title()
         self.project = Project(metadata=ProjectMetadata(), pages=pages, medium=medium)
         self._reset_undo_stack()
         self.properties_panel.set_default_text_style(self.project.default_text_style)
@@ -1570,6 +1593,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, self.tr("Open Project"), self.tr("Could not open project:\n{error}").format(error=exc))
             return False
         self.current_project_path = path
+        self._refresh_window_title()
         self.project = project
         self._reset_undo_stack()
         self.properties_panel.set_default_text_style(self.project.default_text_style)
@@ -1630,6 +1654,7 @@ class MainWindow(QMainWindow):
             return False
         save_project(self.project, path)
         self.current_project_path = path
+        self._refresh_window_title()
         recent_projects.add_recent_project(path)
         self._mark_saved()
         self.statusBar().showMessage(self.tr("Saved {path}").format(path=path), 5000)
