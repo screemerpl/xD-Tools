@@ -32,7 +32,6 @@ def window(qt_app, monkeypatch):
 
 def _visible(win) -> dict[str, bool]:
     return {
-        "record_cd": win.record_cd_action.isVisible(),
         "record_folder": win.record_folder_action.isVisible(),
         "remote": win.remote_action.isVisible(),
     }
@@ -43,7 +42,18 @@ def test_a_minidisc_project_is_not_offered_the_cd_only_entries(window):
     window._sync_mdrem_actions()
 
     state = _visible(window)
-    assert state["record_cd"] and state["record_folder"] and state["remote"]
+    assert state["record_folder"] and state["remote"]
+
+
+def test_ripping_a_cd_follows_no_medium_at_all(window):
+    """Source > "Rip Audio CD..." ends at files in the audio folder, and
+    every project can use files -- so unlike everything in the Recording
+    menu it is not hidden for the medium, on a CD project least of all
+    (rip one disc, burn another)."""
+    for medium in (MEDIUM_MD, MEDIUM_CD):
+        window.project.medium = medium
+        window._sync_mdrem_actions()
+        assert window.rip_cd_action.isVisible(), medium
 
 
 def test_a_cd_project_is_still_offered_record_folder(window):
@@ -54,7 +64,7 @@ def test_a_cd_project_is_still_offered_record_folder(window):
 
     state = _visible(window)
     assert state["record_folder"]
-    assert not any(state[name] for name in ("record_cd", "remote"))
+    assert not state["remote"]
 
 
 def test_record_folder_does_not_disappear_with_the_adapter_on_a_cd_project(window, monkeypatch):
@@ -69,17 +79,18 @@ def test_record_folder_does_not_disappear_with_the_adapter_on_a_cd_project(windo
 
 
 def test_without_an_adapter_a_minidisc_project_keeps_only_what_works(window, monkeypatch):
-    """Record CD is the one exception now: ripping needs no adapter at
-    all, and offers "Just Metadata" as well as "Record Now" (see
-    _offer_recording_the_rip), so it stays visible even without one."""
+    """Nothing in the Recording menu can happen without the adapter on a
+    MiniDisc project. Ripping is the exception that proves it belongs
+    elsewhere: it needs no adapter, so it is in the Source menu and stays
+    visible either way."""
     monkeypatch.setattr(app_settings, "mdrem_enabled", lambda: False)
     window.project.medium = MEDIUM_MD
     window._sync_mdrem_actions()
 
     state = _visible(window)
-    assert state["record_cd"]
     assert not state["record_folder"]
     assert not state["remote"]
+    assert window.rip_cd_action.isVisible()
 
 
 def test_with_no_project_nothing_is_hidden_for_the_medium(window):
@@ -101,12 +112,12 @@ def test_opening_a_project_of_the_other_medium_re_syncs_the_menu(window, tmp_pat
     window.project.medium = MEDIUM_MD
     window._sync_mdrem_actions()
     assert window.record_folder_action.isVisible()
-    assert window.record_cd_action.isVisible()
+    assert window.remote_action.isVisible()
 
     assert window._open_project_path(str(path)) is True
 
     assert window.record_folder_action.isVisible()
-    assert not window.record_cd_action.isVisible()
+    assert not window.remote_action.isVisible()
 
 
 # --- the page switcher ---------------------------------------------------

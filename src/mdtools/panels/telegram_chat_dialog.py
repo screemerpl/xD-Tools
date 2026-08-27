@@ -1,4 +1,4 @@
-"""Experimental > "Download Album from Telegram Bot..." -- a generic mini
+"""Source > "Download Album from Telegram Bot..." -- a generic mini
 chat with the user's own bot: shows whatever it sends (text, inline
 buttons, file attachments), lets the user reply, downloads any file the
 bot offers, and hands the resulting folder to the existing Record Folder
@@ -61,7 +61,7 @@ from PySide6.QtWidgets import (
 
 from mdtools import album_sort, app_settings, cdrip, i18n, telegram_bot, user_paths
 from mdtools import translate as mdtools_translate
-from mdtools.panels.hideable_dialog import hide_for_background
+from mdtools.panels.hideable_dialog import close_hides_while_busy
 
 # Inline photo previews are scaled down to this width if wider -- large
 # enough to actually judge a cover, small enough that a whole album's worth
@@ -181,6 +181,10 @@ class _ChatWorker(QThread):
     download_progress = Signal(int, int, int)  # message_id, current, total
     download_finished = Signal(int, str)  # message_id, saved path
     download_failed = Signal(int, str)  # message_id, error
+    # The file arrived, but could not be moved out of staging into its own
+    # album folder -- a different thing from a failed download, and said
+    # differently: the bytes are on disk either way.
+    download_placement_failed = Signal(int, str)  # message_id, error
     photo_loaded = Signal(int, bytes)  # message_id, image data
     translation_loaded = Signal(int, str)  # message_id, translated text
 
@@ -351,12 +355,33 @@ class _ChatWorker(QThread):
             def progress(current: int, total: int, _id=message_id) -> None:
                 self.download_progress.emit(_id, current, total)
 
+            # Downloaded into staging, then moved where it belongs once
+            # it is whole: a file's own ALBUM tag cannot be read before it
+            # has finished arriving, and a half-written track sitting
+            # loose in the shared folder is something the album picker
+            # would offer and a sort would file away as finished.
+            # Explicit request: a downloaded album should land in its own
+            # "Artist - Album" folder as it arrives, rather than in a heap
+            # at the root waiting for someone to press Sort. Anything the
+            # tags cannot place -- an MP3 or an Ogg, which read_album_tag()
+            # does not read yet, or an untagged FLAC, or a file that is
+            # not music at all -- goes to the root exactly as before, and
+            # a later sort is still what deals with it.
+            staging = album_sort.staging_dir(session_folder)
             try:
-                saved = await bot_client.download(message_id, session_folder, progress_callback=progress)
+                saved = await bot_client.download(message_id, staging, progress_callback=progress)
             except telegram_bot.TelegramError as exc:
                 self.download_failed.emit(message_id, str(exc))
                 return
-            self.download_finished.emit(message_id, str(saved))
+            try:
+                placed = album_sort.place_download(session_folder, saved)
+            except OSError as exc:
+                # The bytes are on disk either way; where they ended up is
+                # the only thing in doubt, and staging is still a real
+                # path the user can be told about.
+                placed = saved
+                self.download_placement_failed.emit(message_id, str(exc))
+            self.download_finished.emit(message_id, str(placed))
 
     # --- called from the GUI thread ----------------------------------------
 
@@ -768,15 +793,6 @@ class TelegramChatDialog(QDialog):
         self.continue_btn.setAutoDefault(False)
         self.continue_btn.clicked.connect(self._on_continue_clicked)
         self.buttons.addButton(self.continue_btn, QDialogButtonBox.ButtonRole.AcceptRole)
-        self.hide_btn = QPushButton(self.tr("Hide"))
-        self.hide_btn.setToolTip(
-            self.tr("Hide this window and keep the chat and any downloads running in the "
-                    "background -- use \"Show recording window\" in the bar at the bottom of "
-                    "the main window to bring it back.")
-        )
-        self.hide_btn.setAutoDefault(False)
-        self.hide_btn.clicked.connect(self._on_hide_clicked)
-        self.buttons.addButton(self.hide_btn, QDialogButtonBox.ButtonRole.ActionRole)
         self.close_btn = QPushButton(self.tr("Close"))
         self.close_btn.setAutoDefault(False)
         self.close_btn.clicked.connect(self.reject)
@@ -825,6 +841,7 @@ class TelegramChatDialog(QDialog):
         self._worker.download_progress.connect(self._on_download_progress)
         self._worker.download_finished.connect(self._on_download_finished)
         self._worker.download_failed.connect(self._on_download_failed)
+        self._worker.download_placement_failed.connect(self._on_download_placement_failed)
         self._worker.photo_loaded.connect(self._on_photo_loaded)
         self._worker.translation_loaded.connect(self._on_translation_loaded)
         self._worker.finished.connect(self._on_worker_finished)
@@ -849,17 +866,22 @@ class TelegramChatDialog(QDialog):
         # this session downloads anything at all.
         self._update_sort_button()
         self._update_continue_button()
+        self._update_close_button()
 
     def _on_not_authorized(self) -> None:
         self.status_label.setText(self.tr("Not signed in to Telegram."))
         sign_in_btn = QPushButton(self.tr("Sign in..."))
-        sign_in_btn.clicked.connect(self._open_experimental_settings)
+        sign_in_btn.clicked.connect(self._open_settings)
         self._transcript_layout.insertWidget(self._transcript_layout.count() - 1, sign_in_btn)
 
-    def _open_experimental_settings(self) -> None:
-        from mdtools.panels.experimental_settings_dialog import ExperimentalSettingsDialog
+    def _open_settings(self) -> None:
+        """Straight to the Telegram group of Window > Settings, rather
+        than dropping the user on General to find it themselves."""
+        from mdtools.panels.settings_dialog import GROUP_TELEGRAM, SettingsDialog
 
-        ExperimentalSettingsDialog(self).exec()
+        dialog = SettingsDialog(self)
+        dialog.show_group(GROUP_TELEGRAM)
+        dialog.exec()
 
     def _on_connect_failed(self, message: str) -> None:
         self.status_label.setText(self.tr("Could not connect: {error}").format(error=message))
@@ -1000,6 +1022,7 @@ class TelegramChatDialog(QDialog):
         self._download_progress[message_id] = (0, item.file_size if item is not None and item.file_size else 0)
         self._update_sort_button()
         self._update_continue_button()
+        self._update_close_button()
         self._update_queue_summary()
 
     def _on_download_progress(self, message_id: int, current: int, total: int) -> None:
@@ -1019,6 +1042,7 @@ class TelegramChatDialog(QDialog):
         self._active_downloads.discard(message_id)
         self._update_sort_button()
         self._update_continue_button()
+        self._update_close_button()
         self._update_queue_summary()
 
     def _on_download_failed(self, message_id: int, error: str) -> None:
@@ -1029,7 +1053,17 @@ class TelegramChatDialog(QDialog):
         self._failed_downloads.add(message_id)
         self._update_sort_button()
         self._update_continue_button()
+        self._update_close_button()
         self._update_queue_summary()
+
+    def _on_download_placement_failed(self, message_id: int, error: str) -> None:
+        """Not a failed download -- the file is on disk, just still in the
+        staging folder rather than in an album folder of its own. Said on
+        the status line rather than against the queue item, which
+        correctly shows the download as done."""
+        self.status_label.setText(
+            self.tr("Downloaded, but could not be filed into an album folder: {error}").format(error=error)
+        )
 
     def _update_queue_summary(self) -> None:
         """The aggregate line above the download queue (#7) -- counts plus
@@ -1109,6 +1143,13 @@ class TelegramChatDialog(QDialog):
             return False
         root = Path(self._session_folder)
         return bool(album_sort.loose_audio_files(root)) or album_sort.has_album_subfolders(root)
+
+    def _update_close_button(self) -> None:
+        """"Close" is only true when there is nothing in flight to lose
+        by it. While files are coming down this button abandons them,
+        and the window's own X is what merely puts the window away."""
+        downloading = bool(self._active_downloads)
+        self.close_btn.setText(self.tr("Cancel") if downloading else self.tr("Close"))
 
     def _update_sort_button(self) -> None:
         """Kept in sync from _on_ready() (so a folder that already holds
@@ -1200,6 +1241,7 @@ class TelegramChatDialog(QDialog):
         # showing the state from before the click.
         self._update_sort_button()
         self._update_continue_button()
+        self._update_close_button()
 
     # --- photo previews / translation ---------------------------------------
 
@@ -1225,8 +1267,6 @@ class TelegramChatDialog(QDialog):
         """What the progress bar's "Show recording window" button calls."""
         self.show_requested.emit()
 
-    def _on_hide_clicked(self) -> None:
-        hide_for_background(self)
 
     # --- shutdown -----------------------------------------------------
     #
@@ -1264,7 +1304,18 @@ class TelegramChatDialog(QDialog):
         if self._closing and self._pending_finish is not None:
             self._pending_finish()
 
+    def is_busy(self) -> bool:
+        """Whether files are actually coming down right now.
+
+        Deliberately not "is the chat connected": the worker runs for the
+        whole session, so treating that as busy would mean this window's
+        X could never close it at all. Downloads are the part worth
+        keeping alive in the background."""
+        return bool(self._active_downloads)
+
     def closeEvent(self, event) -> None:
+        if close_hides_while_busy(self, event):
+            return
         if self._worker is not None and self._worker.isRunning():
             self.reject()
             event.ignore()

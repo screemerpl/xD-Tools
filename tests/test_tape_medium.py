@@ -201,10 +201,13 @@ def test_every_recording_source_is_offered_for_a_cassette_without_an_adapter(qt_
     window = _tape_window()
     window._sync_mdrem_actions()
 
-    for action in (window.record_cd_action, window.record_folder_action):
+    for action in (window.record_folder_action, window.telegram_record_action):
         assert action.isVisible(), action.text()
         assert "Cassette" in action.text()
-    assert window.telegram_record_action.isVisible()
+    # A rip is just files, so it is offered whatever the project is for
+    # and says nothing about a machine at all.
+    assert window.rip_cd_action.isVisible()
+    assert "Cassette" not in window.rip_cd_action.text()
     # the deck's own keys still need the adapter, and a cassette has none
     assert not window.remote_action.isVisible()
 
@@ -216,7 +219,7 @@ def test_the_same_entries_still_say_minidisc_on_a_minidisc_project(qt_app, monke
     window = MainWindow(show_startup_dialog=False)
     window._sync_mdrem_actions()
 
-    assert "MiniDisc" in window.record_cd_action.text()
+    assert "MiniDisc" in window.telegram_record_action.text()
     assert "Cassette" not in window.record_folder_action.text()
 
 
@@ -296,19 +299,36 @@ def test_the_two_shell_labels_do_not_overlap_on_their_shared_sheet(qt_app):
     assert not a.sceneBoundingRect().intersects(b.sceneBoundingRect())
 
 
-def test_the_rip_and_folder_dialogs_name_the_machine_the_tracks_go_onto(qt_app):
-    """Reported directly: the rip window said MiniDisc in front of a
+def test_the_folder_dialog_names_the_machine_the_tracks_go_onto(qt_app):
+    """Reported directly: a recording window said MiniDisc in front of a
     cassette project."""
-    from mdtools.panels.cd_rip_dialog import CdRipDialog
     from mdtools.panels.folder_record_dialog import FolderRecordDialog
     from mdtools.project import MEDIUM_TAPE as TAPE
 
-    rip = CdRipDialog(medium=TAPE)
     folder = FolderRecordDialog(medium=TAPE)
 
-    for dialog in (rip, folder):
-        assert "Cassette" in dialog.windowTitle()
-        assert "MiniDisc" not in dialog.windowTitle()
+    assert "Cassette" in folder.windowTitle()
+    assert "MiniDisc" not in folder.windowTitle()
+
+
+def test_the_rip_window_names_no_machine_at_all_but_its_wording_still_follows_one(qt_app):
+    """The rip stops at the files now, so heading its window with a deck
+    would claim something it does not do -- but the titles being edited in
+    it are still headed somewhere, and that is still the project's own
+    medium. It must never say the wrong one, which is the original report
+    (a MiniDisc heading in front of a cassette project)."""
+    from PySide6.QtWidgets import QLabel
+
+    from mdtools.panels.cd_rip_dialog import CdRipDialog
+    from mdtools.project import MEDIUM_TAPE as TAPE
+
+    rip = CdRipDialog(medium=TAPE)
+
+    assert "MiniDisc" not in rip.windowTitle()
+    assert "Cassette" not in rip.windowTitle()
+    said = " ".join(label.text() for label in rip.findChildren(QLabel))
+    assert "Cassette" in said
+    assert "MiniDisc" not in said
 
 
 def test_a_cassette_is_not_warned_about_a_minidiscs_sp_limit(qt_app):

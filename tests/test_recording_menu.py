@@ -45,7 +45,14 @@ def _menu_titles(window: MainWindow) -> list[str]:
 
 def _entries(window: MainWindow) -> list[str]:
     """Every action text in the Recording menu, separators dropped."""
-    menu = window.record_cd_action.parent()
+    menu = window.record_folder_action.parent()
+    return [action.text() for action in menu.actions() if not action.isSeparator()]
+
+
+def _source_entries(window: MainWindow) -> list[str]:
+    """The same for the Source menu -- where audio comes from, as against
+    the Recording menu, where it goes."""
+    menu = window.rip_cd_action.parent()
     return [action.text() for action in menu.actions() if not action.isSeparator()]
 
 
@@ -58,11 +65,23 @@ def test_the_menu_is_called_recording(qt_app):
     assert "&Project" not in titles
 
 
-def test_it_holds_the_two_sources_a_recording_can_come_from(qt_app):
-    """A CD, and a folder of files. Both end in the same recording."""
+def test_it_holds_the_two_folders_a_recording_can_come_from(qt_app):
+    """A folder the user browses to, and the one rips and downloads land
+    in. Both are files already on disk -- getting them there is the Source
+    menu's job now, not this one's."""
     entries = _entries(_window())
-    assert "Record CD to MiniDisc..." in entries
     assert "Record Folder to MiniDisc..." in entries
+    assert any(entry.startswith("Record from Rip/Download Folder") for entry in entries)
+
+
+def test_ripping_a_cd_is_no_longer_a_recording_entry(qt_app):
+    """It used to be "Record CD to MiniDisc...", which ripped *and*
+    recorded in one run -- so the rip could only be had by starting a
+    recording. Splitting them was an explicit request; the rip is a
+    Source now and ends at the files."""
+    entries = _entries(_window())
+    assert not any("CD" in entry for entry in entries), entries
+    assert "Rip Audio CD..." in _source_entries(_window())
 
 
 def test_the_metadata_editor_is_no_longer_in_it(qt_app):
@@ -76,14 +95,21 @@ def test_erasing_moved_to_a_button_on_the_minidisc_record_dialog(qt_app):
     assert "Erase MiniDisc..." not in _entries(_window())
 
 
-def test_the_telegram_download_entries_moved_in_from_experimental(qt_app):
-    """Neither needs a live chat session -- both just act on whatever has
-    already accumulated in the one shared audio folder, which is why they
-    are named for what they act on ("Audio Folder"), not for Telegram in
-    particular."""
-    entries = _entries(_window())
-    assert "Sort Audio Folder into Albums..." in entries
-    assert any(entry.startswith("Record from Audio Folder") for entry in entries)
+def test_the_source_menu_holds_everything_audio_arrives_through(qt_app):
+    """A CD, a bot download, and the tidying of what they leave behind --
+    all three end with files in one folder, and none of them touch a deck.
+    The sort entry is named for that folder, not for Telegram: rips land
+    there too."""
+    entries = _source_entries(_window())
+    assert "Rip Audio CD..." in entries
+    assert "Download Album from Telegram Bot..." in entries
+    assert "Sort Rip/Download Folder into Albums..." in entries
+
+
+def test_the_source_menu_comes_before_recording(qt_app):
+    """Left to right, in the order the work happens."""
+    titles = _menu_titles(_window())
+    assert titles.index("&Source") < titles.index("&Recording")
 
 
 # --- the editor's new home --------------------------------------------

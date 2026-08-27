@@ -35,10 +35,19 @@ from pathlib import Path
 import pytest
 from PySide6.QtWidgets import QApplication, QDialog
 
-from mdtools import app_settings
+from mdtools import album_sort, app_settings, cdrip
 from mdtools.panels import telegram_chat_dialog as module
 from mdtools.panels.telegram_chat_dialog import TelegramChatDialog
 from tests.test_telegram_bot import FakeButton, FakeEvent, FakeFile, FakeMessage, FakeTelethonClient
+
+
+def _albums(root: Path) -> list[str]:
+    """The album folders in the download root -- the app's own scratch
+    subfolders (downloads' staging directory, burning's work directory)
+    are not albums and never show up as ones anywhere else either."""
+    return sorted(
+        p.name for p in root.iterdir() if p.is_dir() and p.name not in cdrip.RESERVED_SCRATCH_DIRNAMES
+    )
 
 
 def _pump_until(condition, timeout: float = 5.0) -> None:
@@ -195,20 +204,56 @@ def test_plain_construction_starts_no_worker(qt_app, tmp_path):
 # --- Hide, via panels/hideable_dialog.py's shared machinery -------------
 
 
-def test_hide_button_marks_the_hide_as_deliberate_and_announces_it(qt_app, tmp_path):
-    """What tells exec_hideable() apart a deliberate Hide from a plain
+def test_closing_while_downloading_hides_instead(qt_app, tmp_path):
+    """What tells exec_hideable() a deliberate hide apart from a plain
     cancel -- see hideable_dialog.py's own module docstring for the bug
     this guards against."""
+    from PySide6.QtGui import QCloseEvent
+
     dialog = TelegramChatDialog("123456", "hash", "@my_bot", tmp_path)
     try:
         assert dialog.hidden_for_background is False
         seen = []
         dialog.visibility_changed.connect(seen.append)
         dialog.show()
-        dialog.hide_btn.click()
+        dialog._active_downloads.add(1)
+
+        event = QCloseEvent()
+        dialog.closeEvent(event)
+
+        assert not event.isAccepted()
         assert dialog.hidden_for_background is True
         assert dialog.isHidden()
         assert seen == [True]
+    finally:
+        dialog._active_downloads.clear()
+        dialog.close()
+
+
+def test_a_connected_chat_with_no_downloads_is_not_busy(qt_app, tmp_path):
+    """Deliberately not "is the worker running": it runs for the whole
+    session, so treating that as busy would leave the window's own X
+    unable to close it at all."""
+    dialog = TelegramChatDialog("123456", "hash", "@my_bot", tmp_path)
+    try:
+        assert dialog.is_busy() is False
+        dialog._active_downloads.add(7)
+        assert dialog.is_busy() is True
+    finally:
+        dialog._active_downloads.clear()
+        dialog.close()
+
+
+def test_the_close_button_says_cancel_while_files_are_coming_down(qt_app, tmp_path):
+    dialog = TelegramChatDialog("123456", "hash", "@my_bot", tmp_path)
+    try:
+        assert dialog.close_btn.text() == "Close"
+        dialog._active_downloads.add(1)
+        dialog._update_close_button()
+        assert dialog.close_btn.text() == "Cancel"
+        dialog._active_downloads.discard(1)
+        dialog._update_close_button()
+        assert dialog.close_btn.text() == "Close"
     finally:
         dialog.close()
 
@@ -377,7 +422,10 @@ def test_end_to_end_downloading_a_file_enables_continue_when_mdrem_is_on(qt_app,
         _deliver(dialog, fake, raw)
         _pump_until(lambda: dialog.continue_btn.isEnabled())
 
-        assert raw.download_target == dialog._session_folder
+        # Downloaded into staging, then placed. This file's bytes are not
+        # a real FLAC, so there are no tags to place it by and the root is
+        # where it belongs -- see album_sort.place_download().
+        assert raw.download_target == str(Path(dialog._session_folder) / cdrip.DOWNLOAD_STAGING_DIRNAME)
         assert dialog._downloaded_files[raw.id] == Path(dialog._session_folder) / "Unleashed.flac"
 
         dialog._on_continue_clicked()
@@ -822,7 +870,7 @@ def test_a_file_message_downloads_with_no_click_needed(qt_app, monkeypatch, tmp_
         assert item.retry_btn.isVisible() is False
 
         _pump_until(lambda: raw.id in dialog._downloaded_files)
-        assert raw.download_target == dialog._session_folder
+        assert raw.download_target == str(Path(dialog._session_folder) / cdrip.DOWNLOAD_STAGING_DIRNAME)
         assert item.status_label.text() == "Saved"
     finally:
         _shutdown(dialog)
@@ -1155,7 +1203,11 @@ def test_sorting_an_already_sorted_folder_says_so_rather_than_claiming_one_album
         _shutdown(dialog)
 
 
-def test_sorting_two_albums_creates_two_subfolders(qt_app, monkeypatch, tmp_path):
+def test_two_albums_are_filed_as_they_arrive(qt_app, monkeypatch, tmp_path):
+    """Explicit request: a downloaded track lands in its own "Artist -
+    Album" folder as it arrives, rather than in a heap at the root
+    waiting for somebody to press Sort. Nothing is left loose here, so
+    pressing Sort afterwards has nothing to do."""
     fake = FakeTelethonClient(authorized=True)
     dialog = _dialog(monkeypatch, tmp_path, fake)
     try:
@@ -1173,15 +1225,40 @@ def test_sorting_two_albums_creates_two_subfolders(qt_app, monkeypatch, tmp_path
         _deliver(dialog, fake, b)
         _pump_until(lambda: b.id in dialog._downloaded_files)
 
+        root = Path(dialog._session_folder)
+        assert _albums(root) == ["Caskets - Lost Souls", "Skillet - Unleashed"]
+        assert (root / "Skillet - Unleashed" / "a.flac").exists()
+        assert dialog._downloaded_files[a.id] == root / "Skillet - Unleashed" / "a.flac"
+        assert not album_sort.loose_audio_files(root)
+
         informed = []
         monkeypatch.setattr(
             module.QMessageBox, "information", staticmethod(lambda *a, **k: informed.append(a[2]))
         )
         dialog._sort_downloads()
 
-        subfolders = sorted(p.name for p in Path(dialog._session_folder).iterdir() if p.is_dir())
-        assert subfolders == ["Caskets - Lost Souls", "Skillet - Unleashed"]
-        assert "2" in informed[0]
+        assert "already sorted" in informed[0]
+    finally:
+        _shutdown(dialog)
+
+
+def test_a_file_the_tags_cannot_place_still_lands_in_the_root(qt_app, monkeypatch, tmp_path):
+    """MP3 and Ogg tags are not read yet (album_sort.read_album_tag does
+    FLAC alone), and neither is an untagged FLAC nor a file that is not
+    music at all. All of them go to the root exactly as before, and a
+    later sort is still what deals with them."""
+    fake = FakeTelethonClient(authorized=True)
+    dialog = _dialog(monkeypatch, tmp_path, fake)
+    try:
+        _pump_until(lambda: dialog._session_folder is not None)
+
+        raw = FakeMessage(text="cover", file=FakeFile("folder.jpg", 10))
+        _deliver(dialog, fake, raw)
+        _pump_until(lambda: raw.id in dialog._downloaded_files)
+
+        root = Path(dialog._session_folder)
+        assert dialog._downloaded_files[raw.id] == root / "folder.jpg"
+        assert _albums(root) == []
     finally:
         _shutdown(dialog)
 
@@ -1243,16 +1320,24 @@ def test_continue_asks_which_album_when_more_than_one_subfolder_exists(qt_app, m
 def test_continue_auto_sorts_a_still_flat_multi_album_session_first(qt_app, monkeypatch, tmp_path):
     """Regression: clicking "Record Downloaded Albums..." straight away,
     without ever pressing "Sort into Album Folders" by hand, used to leave
-    two albums' worth of files flat in the session folder -- pick_album_folder()
-    then saw zero subfolders and silently handed back the whole mixed folder
-    as if it were one album. _on_continue_clicked() now runs
-    album_sort.sort_downloads() itself first."""
+    two albums' worth of files flat in the session folder --
+    pick_album_folder() then saw zero subfolders and silently handed back
+    the whole mixed folder as if it were one album. _on_continue_clicked()
+    runs album_sort.sort_downloads() itself first.
+
+    Files are filed into album folders as they arrive now, so the flat
+    case this guards against is the one placement cannot handle: files
+    whose tags say nothing on arrival (an MP3, an Ogg, an untagged FLAC),
+    faked here by an album_folder_for() that answers "the root" the way it
+    does for those. Sorting them is still Sort's job, and Continue must
+    still do it unasked."""
     app_settings.set_mdrem_enabled(True)
     fake = FakeTelethonClient(authorized=True)
     dialog = _dialog(monkeypatch, tmp_path, fake)
     try:
         _pump_until(lambda: dialog._session_folder is not None)
 
+        monkeypatch.setattr(module.album_sort, "album_folder_for", lambda root, path: root)
         monkeypatch.setattr(
             module.album_sort, "read_album_tag", lambda p: ("Skillet", "Unleashed")
             if p.name.startswith("a") else ("Caskets", "Lost Souls")
@@ -1267,7 +1352,7 @@ def test_continue_auto_sorts_a_still_flat_multi_album_session_first(qt_app, monk
 
         # Still flat at this point -- nothing has sorted anything yet.
         root = Path(dialog._session_folder)
-        assert not any(p.is_dir() for p in root.iterdir())
+        assert _albums(root) == []
 
         monkeypatch.setattr(
             module.QInputDialog, "getItem", staticmethod(lambda *a, **k: ("Skillet - Unleashed", True))
@@ -1276,8 +1361,7 @@ def test_continue_auto_sorts_a_still_flat_multi_album_session_first(qt_app, monk
         dialog._on_continue_clicked()
         _pump_until(lambda: dialog.result() == QDialog.DialogCode.Accepted)
 
-        subfolders = sorted(p.name for p in root.iterdir() if p.is_dir())
-        assert subfolders == ["Caskets - Lost Souls", "Skillet - Unleashed"]
+        assert _albums(root) == ["Caskets - Lost Souls", "Skillet - Unleashed"]
         assert dialog.downloaded_folder == str(root / "Skillet - Unleashed")
     finally:
         _shutdown(dialog)

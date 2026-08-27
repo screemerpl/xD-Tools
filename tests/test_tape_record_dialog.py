@@ -9,6 +9,7 @@ tells the user what to press, and the only thing it can get wrong is
 from pathlib import Path
 
 import pytest
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox
 
 from mdtools import tape, tracks
@@ -71,6 +72,59 @@ def fake_player(monkeypatch):
     monkeypatch.setattr(
         tape_module.audio_engine, "load_for_playback", lambda paths, **kwargs: [None] * len(paths)
     )
+
+
+class _SyncDecoder(QObject):
+    """DecodeWorker, minus the thread.
+
+    Decoding a side runs on a QThread now -- doing it on the GUI thread
+    froze the window for the whole of it -- so start() here decodes and
+    emits inline instead, leaving every test below to assert on the real
+    sequence with the waiting taken out."""
+
+    progress = Signal(int, int, str)
+    decoded = Signal(object)
+    failed = Signal(str)
+    finished = Signal()
+
+    instances: list["_SyncDecoder"] = []
+
+    def __init__(self, paths, *, samplerate, dithered, parent=None):
+        super().__init__()
+        self.paths = list(paths)
+        self.samplerate = samplerate
+        self.dithered = dithered
+        self.cancelled = False
+        self.started = False
+        _SyncDecoder.instances.append(self)
+
+    def cancel(self):
+        self.cancelled = True
+
+    def isRunning(self):
+        return self.started and not self.cancelled
+
+    def start(self):
+        self.started = True
+        try:
+            buffers = tape_module.audio_engine.load_for_playback(
+                self.paths, samplerate=self.samplerate, on_progress=self._progress
+            )
+        except tape_module.audio_engine.AudioEngineError as exc:
+            self.failed.emit(str(exc))
+        else:
+            self.decoded.emit(buffers)
+        self.finished.emit()
+
+    def _progress(self, index, total, path):
+        self.progress.emit(index, total, Path(path).stem)
+
+
+@pytest.fixture(autouse=True)
+def sync_decoder(monkeypatch):
+    _SyncDecoder.instances.clear()
+    monkeypatch.setattr(tape_module, "DecodeWorker", _SyncDecoder)
+    return _SyncDecoder.instances
 
 
 def _dialog(items: list[tracks.PlaylistItem], monkeypatch, **kwargs) -> TapeRecordDialog:
@@ -189,12 +243,52 @@ def test_decode_progress_updates_the_status_label(qt_app, monkeypatch):
     seconds -- without this, that gap reads as the dialog having hung."""
     dialog = _dialog(_items(4), monkeypatch)
 
-    dialog._report_decode_progress(1, 2, Path("some/dir/01 Track.flac"))
+    dialog._report_decode_progress(1, 2, "01 Track")
 
     text = dialog.status_label.text()
     assert "1" in text
     assert "2" in text
     assert "01 Track" in text
+
+
+def test_the_side_is_decoded_on_a_worker_thread(qt_app, monkeypatch):
+    """Reported against the MiniDisc dialog, which does the same work with
+    dither on top: decoding on the GUI thread froze the window for the
+    whole of it. A side is a real stretch of soxr work too."""
+    from PySide6.QtCore import QThread
+
+    from mdtools.panels.decode_worker import DecodeWorker
+
+    assert issubclass(DecodeWorker, QThread)
+
+    dialog = _dialog(_items(4), monkeypatch)
+    dialog._on_start_clicked()
+
+    decoder = _SyncDecoder.instances[-1]
+    assert decoder.dithered is False, "a cassette's analogue line-out needs no dither"
+    assert [Path(p) for p in decoder.paths] == [Path(f"/music/{i:02d}.flac") for i in (1, 2)]
+
+
+def test_stopping_mid_decode_cancels_it_and_never_starts_the_countdown(qt_app, monkeypatch):
+    """Nothing has been played and the user has not been told to release
+    Pause yet, so stopping here is silent -- but the worker still has to be
+    cancelled rather than left running with nobody holding it."""
+    dialog = _dialog(_items(4), monkeypatch)
+
+    class _NeverFinishes(_SyncDecoder):
+        def start(self):
+            self.started = True  # and emits nothing: still decoding
+
+    monkeypatch.setattr(tape_module, "DecodeWorker", _NeverFinishes)
+
+    dialog._on_start_clicked()
+    assert dialog.is_busy(), "a running decode worker counts as busy"
+
+    dialog.reject()
+
+    assert _SyncDecoder.instances[-1].cancelled is True
+    assert dialog._recording is False
+    assert dialog._remaining == 0, "the leader countdown never started"
 
 
 def test_starting_a_side_builds_the_player_with_the_configured_gain(qt_app, monkeypatch):

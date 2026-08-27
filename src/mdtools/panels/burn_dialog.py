@@ -63,7 +63,7 @@ from mdtools import (
     multidisc,
 )
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
-from mdtools.panels.hideable_dialog import hide_for_background, surface
+from mdtools.panels.hideable_dialog import close_hides_while_busy, surface
 from mdtools.panels.preview_player import PreviewPlayerBar
 from mdtools.project import ProjectMetadata, Track
 
@@ -275,13 +275,6 @@ class BurnDialog(QDialog):
         self.close_button = QPushButton(self.tr("Close"))
         self.close_button.clicked.connect(self.reject)
         buttons.addWidget(self.close_button)
-        self.hide_button = QPushButton(self.tr("Hide"))
-        self.hide_button.setToolTip(
-            self.tr("Hide this window and keep burning in the background -- use \"Show recording "
-                    "window\" in the bar at the bottom of the main window to bring it back.")
-        )
-        self.hide_button.clicked.connect(self._on_hide_clicked)
-        buttons.addWidget(self.hide_button)
         layout.addLayout(buttons)
 
         self._refresh_drives()
@@ -894,6 +887,11 @@ class BurnDialog(QDialog):
             self.burn_button,
         ):
             widget.setEnabled(not running)
+        # "Close" is only true when there is nothing to lose by it. While
+        # a disc is being written this button abandons that disc, and the
+        # window's own X is what merely puts the window away -- so the two
+        # must not both read as "close".
+        self.close_button.setText(self.tr("Cancel") if running else self.tr("Close"))
         if not running:
             self._refresh_split_button()
 
@@ -1004,12 +1002,17 @@ class BurnDialog(QDialog):
         worker.cancel()
         self.stage_label.setText(self.tr("Stopping..."))
 
+    def is_busy(self) -> bool:
+        """Whether cdrecord still holds the drive -- what decides that
+        the window's X hides instead of closes."""
+        return self._worker is not None
+
     def closeEvent(self, event) -> None:
-        """The window's X goes through the same question as Close, so the
-        dialog can never be torn down while cdrecord still holds the drive."""
-        if self._worker is not None:
-            event.ignore()
-            self.reject()
+        """While a disc is being written, X puts the window away and lets
+        cdrecord finish; it used to put the "Stop now?" question up
+        instead, which is now what the Cancel button alone does. Either
+        way the dialog is never torn down with the drive still held."""
+        if close_hides_while_busy(self, event):
             return
         super().closeEvent(event)
 
@@ -1022,6 +1025,3 @@ class BurnDialog(QDialog):
     def request_show(self) -> None:
         """What the progress bar's "Show recording window" button calls."""
         self.show_requested.emit()
-
-    def _on_hide_clicked(self) -> None:
-        hide_for_background(self)

@@ -68,7 +68,11 @@ def test_a_hideable_dialog_carries_what_exec_hideable_needs(dialog_class):
     these two -- without them a Hide reads as "the user cancelled", which
     is the whole bug that module exists for."""
     assert hasattr(dialog_class, "show_requested")
-    assert callable(getattr(dialog_class, "_on_hide_clicked", None))
+    # The way in is the window's own X now, not a Hide button -- which
+    # needs both a closeEvent to intercept it and an is_busy() to say
+    # whether this is a moment worth intercepting.
+    assert callable(getattr(dialog_class, "closeEvent", None))
+    assert callable(getattr(dialog_class, "is_busy", None))
 
 
 @pytest.mark.parametrize("dialog_class", NO_TRACK_PROGRESS, ids=lambda c: c.__name__)
@@ -103,3 +107,52 @@ def test_the_preview_player_is_locked_while_the_dialog_is_running(dialog_class, 
 
     dialog.running_changed.emit(False)
     assert dialog.preview_bar._locked is False
+
+
+# --- the window's X, now that the Hide buttons are gone ----------------------
+#
+# Hiding used to be a button in a row of buttons on six separate windows.
+# It is the title bar's own X now: closing a window whose work carries on
+# regardless is what backgrounding looks like everywhere else. The rule is
+# only ever "while busy" -- an idle window that could not be shut with its
+# own X would be far more surprising than the hiding is.
+
+
+def _mark_busy(dialog, busy: bool) -> None:
+    """Each dialog reads a different flag; this sets whichever one its own
+    is_busy() actually consults."""
+
+    class _Running:
+        def isRunning(self):
+            return True
+
+    if hasattr(dialog, "_recording"):
+        dialog._recording = busy
+    else:
+        dialog._worker = _Running() if busy else None
+
+
+@pytest.mark.parametrize("dialog_class", PREVIEW_DIALOGS + [CdRipDialog], ids=lambda c: c.__name__)
+def test_the_window_x_hides_while_busy_and_closes_when_idle(dialog_class, qt_app):
+    from PySide6.QtGui import QCloseEvent
+
+    dialog = _build(dialog_class) if dialog_class in PREVIEW_DIALOGS else CdRipDialog(None)
+
+    idle = QCloseEvent()
+    dialog.closeEvent(idle)
+    assert idle.isAccepted(), "an idle window must still close from its own X"
+    assert dialog.hidden_for_background is False
+
+    _mark_busy(dialog, True)
+    busy = QCloseEvent()
+    dialog.closeEvent(busy)
+    assert not busy.isAccepted(), "a busy window's X must be refused, not close the dialog"
+    assert dialog.hidden_for_background is True, "and it must read as a hide, not a cancel"
+    assert dialog.isHidden()
+
+
+@pytest.mark.parametrize("dialog_class", HIDEABLE_DIALOGS, ids=lambda c: c.__name__)
+def test_no_hide_button_is_left_behind(dialog_class):
+    """The button is gone from all six; a stray one left on a single
+    dialog would be the odd window out rather than a feature."""
+    assert not hasattr(dialog_class, "_on_hide_clicked")

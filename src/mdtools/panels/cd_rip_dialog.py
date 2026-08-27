@@ -1,20 +1,23 @@
-"""Recording > "Record CD to MiniDisc..." -- the step that turns a compact
-disc into something the existing recording flow can play.
+"""Source > "Rip Audio CD..." -- the step that turns a compact disc into
+files the recording flows can play.
 
 The sequence:
 
   1. pick a drive and read the disc's table of contents
   2. identify it (MusicBrainz, by the TOC itself -- a CD carries no text)
   3. extract every track to a tagged FLAC in the rip folder
-  4. hand its file paths, in disc order, off to RecordDialog -- which is
-     unchanged and unaware a CD was ever involved
 
-Step 4 is the point of steps 1-3. Everything that makes recording work --
-arming the deck, the lead-in, a track mark at every boundary, titling
-afterwards -- already exists and is driven by whichever files RecordDialog
-is handed. So this feature's job is not to record anything; it is to
-produce the right files in the right order, and hand their paths over.
-Same hand-off shape as RecordDialog's own to MDRemUploadDialog.
+And it stops there. This used to hand the ripped paths straight to
+RecordDialog, so ripping and recording were one unbroken run; they are
+two separate steps now, by explicit request. A rip is worth having on
+its own -- the files stay in the audio folder, and recording them is
+Recording > "Record from Rip/Download Folder to ...", which is also
+where a Telegram download is recorded from, so one entry covers
+everything that lands in that folder however it got there. Everything
+that makes recording work -- arming the deck, the lead-in, a track mark
+at every boundary, titling afterwards -- is unchanged and still unaware
+a CD was ever involved; it is simply started by the user rather than by
+this dialog finishing.
 
 This used to empty foobar2000's playlist and load the ripped files into it
 instead of handing paths over directly -- see RecordDialog's own module
@@ -41,7 +44,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QThread, Qt, Signal
+from PySide6.QtCore import QThread, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -64,7 +67,7 @@ from PySide6.QtWidgets import (
 
 from mdtools import app_settings, cdrip, mixtape_cover, musicbrainz
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
-from mdtools.panels.hideable_dialog import hide_for_background, surface
+from mdtools.panels.hideable_dialog import close_hides_while_busy, surface
 from mdtools.panels.progress_format import mmss as _mmss
 from mdtools.project import MEDIUM_MD, medium_name, ProjectMetadata, Track, apply_compilation_naming
 
@@ -84,6 +87,12 @@ _RIP_SHARE = 0.9
 # Emitting a signal for every line cdparanoia prints would be thousands per
 # track for movement far below one pixel.
 _PROGRESS_EPSILON = 0.002
+
+# How often the drives are re-listed while this window is open, so that a
+# disc going in turns Read Disc on by itself rather than waiting for
+# somebody to press Refresh. Slow on purpose: it is a courtesy, not a
+# measurement, and each listing asks the drive itself a question.
+_DRIVE_POLL_MS = 2000
 
 
 def _same_name(left: str, right: str) -> bool:
@@ -160,6 +169,13 @@ class _RipWorker(QThread):
         self.progress.emit(fraction)
 
 
+def _drive_state(drives: list[cdrip.CdDrive]) -> list[tuple[str, str, bool]]:
+    """What a drive poll compares: which drives there are *and* whether
+    each holds a disc, so a CD going in or coming out counts as a change
+    worth acting on."""
+    return [(drive.device, drive.label, drive.has_media) for drive in drives]
+
+
 class CdRipDialog(QDialog):
     # Mirrored by MainWindow's own bottom-of-window progress bar (#27) --
     # see app_window.py's _drive_recording_bar()/_release_recording_bar().
@@ -172,11 +188,17 @@ class CdRipDialog(QDialog):
     show_requested = Signal()
 
     def __init__(self, parent=None, medium: str = MEDIUM_MD):
-        """`medium` is only ever wording: the rip itself is the same work
-        whichever machine the tracks are recorded onto afterwards, but a
-        window headed "Record CD to MiniDisc" in front of a cassette
-        project is telling the user something untrue about what they are
-        about to do."""
+        """`medium` is the open project's, and does two things -- neither
+        of which changes the rip itself, which is the same work whichever
+        machine the tracks are recorded onto later (or never are).
+
+        It names what the edited titles will end up on, and it decides
+        whether the 80-minute warning applies at all: that is a MiniDisc
+        limit, and a cassette is measured against the tape actually in
+        the deck instead. The window used to be headed "Record CD to
+        {medium}" too, which it no longer is -- ripping stops at the
+        files now, so a heading naming the deck would be claiming
+        something this window does not do."""
         super().__init__(parent)
         self._medium = medium
         self._target = medium_name(medium)
@@ -184,6 +206,9 @@ class CdRipDialog(QDialog):
         self.resize(560, 560)
         self._toc: cdrip.DiscToc | None = None
         self._releases: list[musicbrainz.DiscRelease] = []
+        # Every drive as last seen, loaded-ness included -- what decides
+        # whether Read Disc is on, and what a poll compares against.
+        self._drives: list[cdrip.CdDrive] = []
         self._worker: _RipWorker | None = None
         self._closing = False
         # Set by the Hide button, read by exec_hideable() -- see
@@ -279,23 +304,21 @@ class CdRipDialog(QDialog):
         layout.addWidget(self.status_label)
 
         self.buttons = QDialogButtonBox()
-        self.start_btn = QPushButton(self.tr("Rip and Record"))
+        self.start_btn = QPushButton(self.tr("Rip"))
         self.start_btn.setEnabled(False)
         self.start_btn.clicked.connect(self._start)
         self.buttons.addButton(self.start_btn, QDialogButtonBox.ButtonRole.AcceptRole)
-        self.hide_btn = QPushButton(self.tr("Hide"))
-        self.hide_btn.setToolTip(
-            self.tr("Hide this window and keep ripping in the background -- use \"Show recording "
-                    "window\" in the bar at the bottom of the main window to bring it back.")
-        )
-        self.hide_btn.clicked.connect(self._on_hide_clicked)
-        self.buttons.addButton(self.hide_btn, QDialogButtonBox.ButtonRole.ActionRole)
         self.close_btn = QPushButton(self.tr("Cancel"))
         self.close_btn.clicked.connect(self.reject)
         self.buttons.addButton(self.close_btn, QDialogButtonBox.ButtonRole.RejectRole)
         layout.addWidget(self.buttons)
 
         self._refresh_drives()  # which also runs the bundled-tool check
+
+        # Started and stopped with the window itself -- see showEvent.
+        self._drive_poll = QTimer(self)
+        self._drive_poll.setInterval(_DRIVE_POLL_MS)
+        self._drive_poll.timeout.connect(self._poll_drives)
 
     # --- construction helpers -------------------------------------------
 
@@ -305,6 +328,9 @@ class CdRipDialog(QDialog):
         row.setContentsMargins(0, 0, 0, 0)
         row.addWidget(QLabel(self.tr("Drive")))
         self.drive_combo = QComboBox()
+        # Which drive is selected decides whether Read Disc is on, so
+        # picking a different one has to re-answer that question.
+        self.drive_combo.currentIndexChanged.connect(lambda _index: self._refresh_read_button())
         row.addWidget(self.drive_combo, 1)
         self.refresh_btn = QPushButton(self.tr("Refresh"))
         self.refresh_btn.clicked.connect(self._refresh_drives)
@@ -315,37 +341,109 @@ class CdRipDialog(QDialog):
         return widget
 
     def _refresh_drives(self) -> None:
-        """Lists drives whether or not they hold a disc -- the usual order
-        of events is to open this, see the drive, and only then put the CD
-        in."""
+        """The Refresh button, and construction: re-list the drives now.
+
+        Drives are listed whether or not they hold a disc -- the usual
+        order of events is to open this, see the drive, and only then put
+        the CD in, so a list of loaded drives alone would be empty exactly
+        when it is first looked at."""
+        self._apply_drives(cdrip.list_drives())
+
+    def _poll_drives(self) -> None:
+        """The same, on a timer, so that putting a disc in is all it takes.
+
+        Read Disc is off until there is actually a disc to read (see
+        _refresh_read_button), and the disc goes in *after* this window is
+        open -- so without a poll the button would sit there dead until
+        the user thought to press Refresh, which is precisely the
+        confusion turning it off was meant to remove.
+
+        Nothing is touched unless the drives themselves changed, so the
+        dropdown never reshuffles under the user's hand and the status
+        line keeps whatever a read or a lookup last wrote there. Skipped
+        while ripping (the drive is busy, and _set_running has disabled
+        the whole row anyway) and while the window is not on screen."""
+        if self._worker is not None or not self.isVisible():
+            return
+        try:
+            drives = cdrip.list_drives()
+        except OSError:
+            return  # a drive answering badly is not worth a dialog
+        if _drive_state(drives) == _drive_state(self._drives):
+            return
+        self._apply_drives(drives)
+
+    def _apply_drives(self, drives: list[cdrip.CdDrive]) -> None:
+        """Puts a fresh listing into the dropdown, keeping the selection."""
+        self._drives = list(drives)
+        # What is already selected wins over the saved setting: a poll
+        # must never move the selection off the drive the user picked.
+        wanted = self.selected_device() or app_settings.cd_drive()
+        self.drive_combo.blockSignals(True)
         self.drive_combo.clear()
-        drives = cdrip.list_drives()
         for drive in drives:
             self.drive_combo.addItem(drive.display(), drive.device)
-        if not drives:
-            self.status_label.setText(self.tr("No CD drive was found. Connect one and press Refresh."))
-            self.read_btn.setEnabled(False)
-            return
-        self.read_btn.setEnabled(True)
-        index = self.drive_combo.findData(app_settings.cd_drive())
+        index = self.drive_combo.findData(wanted)
         if index >= 0:
             self.drive_combo.setCurrentIndex(index)
-        self.status_label.setText(self.tr("Insert an audio CD and press Read Disc."))
-        # Re-checked here, not only in __init__: this method enables the
-        # button, so pressing Refresh would otherwise undo the tool check.
-        self._check_tools()
+        self.drive_combo.blockSignals(False)
+        self._refresh_read_button()
 
-    def _check_tools(self) -> None:
-        missing = cdrip.missing_tools()
-        if not missing:
+    def _selected_drive(self) -> cdrip.CdDrive | None:
+        device = self.selected_device()
+        return next((drive for drive in self._drives if drive.device == device), None)
+
+    def _refresh_read_button(self, *, status: bool = True) -> None:
+        """Read Disc, on only when there is something to read.
+
+        Three separate reasons it can be off, each said in its own words:
+        no drive at all, the bundled tools missing, and an empty drive.
+        The tool check runs here rather than once at construction because
+        this is the method that *enables* the button -- checking only at
+        startup meant pressing Refresh quietly undid it.
+
+        `has_media` is Windows' own answer for the selected drive (see
+        cdrip.list_drives): "something is in there", not "an audio CD is
+        in there", which only reading the TOC can really answer -- so
+        this gates the button on a disc being present and leaves what the
+        disc *is* to the read itself. On other platforms it is always
+        True and this comes to nothing, which is the honest outcome:
+        there is no cheap media check to be had there.
+
+        `status=False` is for callers that have just written a line of
+        their own (a failed read's own message) and want only the button
+        seen to.
+        """
+
+        def say(text: str) -> None:
+            if status:
+                self.status_label.setText(text)
+
+        if not self._drives:
+            self.read_btn.setEnabled(False)
+            say(self.tr("No CD drive was found. Connect one and press Refresh."))
             return
-        self.read_btn.setEnabled(False)
-        self.status_label.setText(
-            self.tr(
-                "These bundled tools are missing, so a CD cannot be read: {tools}. Reinstall xD-Tools, or put "
-                "them on your PATH."
-            ).format(tools=", ".join(missing))
-        )
+        missing = cdrip.missing_tools()
+        if missing:
+            self.read_btn.setEnabled(False)
+            say(
+                self.tr(
+                    "These bundled tools are missing, so a CD cannot be read: {tools}. Reinstall xD-Tools, or put "
+                    "them on your PATH."
+                ).format(tools=", ".join(missing))
+            )
+            return
+        drive = self._selected_drive()
+        if drive is None or not drive.has_media:
+            self.read_btn.setEnabled(False)
+            say(
+                self.tr("Put an audio CD in {drive} -- Read Disc turns on once one is in there.").format(
+                    drive=drive.device if drive is not None else self.selected_device()
+                )
+            )
+            return
+        self.read_btn.setEnabled(True)
+        say(self.tr("Press Read Disc to read {drive}.").format(drive=drive.device))
 
     # --- reading the disc ------------------------------------------------
 
@@ -368,7 +466,10 @@ class CdRipDialog(QDialog):
             return
         finally:
             QApplication.restoreOverrideCursor()
-            self.read_btn.setEnabled(True)
+            # Not a plain setEnabled(True): the disc may have been taken
+            # out, and the line just written about a failed read must not
+            # be overwritten by this.
+            self._refresh_read_button(status=False)
 
         self._toc = toc
         app_settings.set_cd_drive(device)
@@ -394,7 +495,7 @@ class CdRipDialog(QDialog):
         self._warn_about_length(toc.total_seconds)
 
     def _window_title(self) -> str:
-        return self.tr("Record CD to {medium}").format(medium=self._target)
+        return self.tr("Rip Audio CD")
 
     def _warn_about_length(self, total: float) -> None:
         # A MiniDisc's 80-minute SP limit, and nothing else's: a cassette is
@@ -548,7 +649,7 @@ class CdRipDialog(QDialog):
         self.result_metadata = self.build_metadata()
         # Nothing here ever deletes a previous rip -- explicit instruction:
         # this folder is shared with permanently-organized albums (Telegram
-        # downloads, "Sort Audio Folder into Albums..."), and a folder of
+        # downloads, "Sort Rip/Download Folder into Albums..."), and a folder of
         # nothing but .flac files looks exactly like a stale rip whether it
         # is one or not (see cdrip.py's own history for the real incident
         # this cost). Ripped files simply accumulate; nothing here cleans
@@ -605,6 +706,10 @@ class CdRipDialog(QDialog):
             self.multi_check,
         ):
             widget.setEnabled(not running)
+        if not running:
+            # Read Disc has a condition of its own beyond "nothing is
+            # running": there has to be a disc in the drive.
+            self._refresh_read_button(status=False)
         self.close_btn.setText(self.tr("Stop") if running else self.tr("Cancel"))
 
     def _on_track_started(self, index: int) -> None:
@@ -669,7 +774,9 @@ class CdRipDialog(QDialog):
             self._succeeded = True
         if getattr(self, "_succeeded", False):
             self.result_paths = list(self._current_paths)
-            # Accepting is the hand-off: MainWindow opens RecordDialog next.
+            # Accepting is what tells MainWindow the rip is real: it names
+            # the folder the files landed in and offers to take the
+            # album's metadata into the project. Nothing is recorded here.
             self.accept()
             return
         if self._closing:
@@ -689,7 +796,7 @@ class CdRipDialog(QDialog):
                 self._window_title(),
                 self.tr(
                     "Disc {number} is ripped.\n\nPut the next disc of the set in the drive and close the "
-                    "tray, then continue -- or stop here and record what has been ripped so far."
+                    "tray, then continue -- or stop here and keep what has been ripped so far."
                 ).format(number=self._disc),
                 QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
                 QMessageBox.StandardButton.Ok,
@@ -720,6 +827,18 @@ class CdRipDialog(QDialog):
 
     # --- shutdown ---------------------------------------------------------
 
+    def showEvent(self, event) -> None:
+        # Polling drives only matters while someone is looking at them,
+        # and a dialog that is constructed but never shown (every test
+        # that builds one, among others) has no business spinning an
+        # optical drive every couple of seconds.
+        super().showEvent(event)
+        self._drive_poll.start()
+
+    def hideEvent(self, event) -> None:
+        self._drive_poll.stop()
+        super().hideEvent(event)
+
     def request_stop(self) -> None:
         """What MainWindow's own Stop button calls."""
         self.reject()
@@ -728,8 +847,6 @@ class CdRipDialog(QDialog):
         """What the progress bar's "Show recording window" button calls."""
         self.show_requested.emit()
 
-    def _on_hide_clicked(self) -> None:
-        hide_for_background(self)
 
     def reject(self) -> None:
         worker = self._worker
@@ -741,9 +858,15 @@ class CdRipDialog(QDialog):
             return
         super().reject()
 
+    def is_busy(self) -> bool:
+        """Whether the drive is actually being read -- what decides that
+        the window's X hides instead of closes."""
+        return self._worker is not None and self._worker.isRunning()
+
     def closeEvent(self, event) -> None:
-        if self._worker is not None and self._worker.isRunning():
-            self.reject()
-            event.ignore()
+        # While ripping, X puts the window away and leaves cd-paranoia
+        # to it. It used to mean "stop the rip", which is now what the
+        # Stop button alone says.
+        if close_hides_while_busy(self, event):
             return
         super().closeEvent(event)

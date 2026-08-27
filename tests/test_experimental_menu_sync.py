@@ -4,6 +4,17 @@ features" checkbox, exactly like MDRem's entry points are gated by "Enable
 MDRem IR remote adapter" (see test_mdrem_menu_sync.py). It's built once at
 startup as a QMenu, not a QAction, so it needs its own explicit re-sync
 after Settings closes, same as _sync_mdrem_actions().
+
+It currently holds nothing: the bot account became a group in Window >
+Settings and the chat became a Source. So it is hidden regardless of the
+flag -- an empty dropdown on the menu bar reads as something broken --
+and these tests add an action of their own to exercise the flag, which is
+also what proves the menu comes back on its own for the next feature that
+lands in it.
+
+The flag did not retire with the menu, though: it still gates the chat
+entry in its new home, because moving an unfinished feature to a better
+menu did not finish it.
 """
 
 from pathlib import Path
@@ -32,6 +43,12 @@ def _settings_returning(monkeypatch, enabled: bool):
     monkeypatch.setattr(app_module, "SettingsDialog", _Fake)
 
 
+def _with_a_future_feature(window) -> None:
+    """Stands in for whatever lands in the menu next -- the menu is empty
+    today and stays off the menu bar while it is."""
+    window.experimental_menu.addAction("Some Future Thing...")
+
+
 def test_the_menu_is_hidden_by_default(qt_app):
     app_settings.set_experimental_features_enabled(False)
 
@@ -39,9 +56,23 @@ def test_the_menu_is_hidden_by_default(qt_app):
     assert window.experimental_menu.menuAction().isVisible() is False
 
 
+def test_an_empty_menu_stays_off_the_menu_bar_even_with_the_flag_on(qt_app, monkeypatch):
+    """Its contents all found homes of their own. Keeping the menu is for
+    the next feature, not for showing an empty dropdown in the meantime."""
+    app_settings.set_experimental_features_enabled(False)
+    window = _window()
+    _settings_returning(monkeypatch, True)
+
+    window._show_settings()
+
+    assert not window.experimental_menu.actions(), "precondition: it is empty"
+    assert window.experimental_menu.menuAction().isVisible() is False
+
+
 def test_the_menu_appears_when_the_flag_is_switched_on(qt_app, monkeypatch):
     app_settings.set_experimental_features_enabled(False)
     window = _window()
+    _with_a_future_feature(window)
     _settings_returning(monkeypatch, True)
 
     window._show_settings()
@@ -52,6 +83,8 @@ def test_the_menu_appears_when_the_flag_is_switched_on(qt_app, monkeypatch):
 def test_the_menu_disappears_when_the_flag_is_switched_off(qt_app, monkeypatch):
     app_settings.set_experimental_features_enabled(True)
     window = _window()
+    _with_a_future_feature(window)
+    window._sync_experimental_menu()
     assert window.experimental_menu.menuAction().isVisible(), "precondition"
     _settings_returning(monkeypatch, False)
 
@@ -60,23 +93,16 @@ def test_the_menu_disappears_when_the_flag_is_switched_off(qt_app, monkeypatch):
     assert window.experimental_menu.menuAction().isVisible() is False
 
 
-def test_experimental_settings_action_opens_its_own_dialog(qt_app, monkeypatch):
-    """Experimental features get their own settings dialog, separate from
-    Window > Settings -- reached from a menu entry that already only shows
-    up while the flag is on, so it needs no separate gating of its own."""
-    opened = []
-
-    def fake_exec(self):
-        opened.append(self)
-        return 0
-
-    monkeypatch.setattr(app_module.ExperimentalSettingsDialog, "exec", fake_exec)
-
+def test_the_menu_no_longer_carries_a_settings_entry_of_its_own(qt_app):
+    """The one thing it held -- the Telegram bot account -- is a group in
+    Window > Settings now, so there is one place to look for what
+    xD-Tools is configured to do rather than two, one of them filed under
+    Experimental."""
     window = _window()
-    window._show_experimental_settings()
 
-    assert len(opened) == 1
-    assert isinstance(opened[0], app_module.ExperimentalSettingsDialog)
+    labels = [a.text() for a in window.experimental_menu.actions()]
+
+    assert not any("Settings" in label for label in labels), labels
 
 
 def test_the_real_settings_dialog_keeps_the_menu_in_step(qt_app, monkeypatch):
@@ -84,6 +110,7 @@ def test_the_real_settings_dialog_keeps_the_menu_in_step(qt_app, monkeypatch):
     OK, and the menu has to reflect that."""
     app_settings.set_experimental_features_enabled(False)
     window = _window()
+    _with_a_future_feature(window)
     monkeypatch.setattr(
         SettingsDialog,
         "exec",
@@ -96,10 +123,22 @@ def test_the_real_settings_dialog_keeps_the_menu_in_step(qt_app, monkeypatch):
     assert window.experimental_menu.menuAction().isVisible()
 
 
-# --- the Telegram chat entry -- gated a second time, on a local session file -
+# --- the Telegram chat entry -- in the Source menu, gated twice over ------
+#
+# It moved out of this menu, and kept the flag: a download is a source the
+# way a CD is, but signing in to a bot account is still unfinished work.
+# The second, independent gate is a local Telegram session file existing at
+# all, which is what says there is anything to open a chat with.
+
+
+def _sign_in() -> None:
+    session_path = app_settings.telegram_session_path()
+    session_path.parent.mkdir(parents=True, exist_ok=True)
+    session_path.write_bytes(b"fake session")
 
 
 def test_the_chat_entry_is_hidden_without_a_session(qt_app):
+    app_settings.set_experimental_features_enabled(True)
     app_settings.telegram_session_path().parent.mkdir(parents=True, exist_ok=True)
     app_settings.telegram_session_path().unlink(missing_ok=True)
 
@@ -108,34 +147,52 @@ def test_the_chat_entry_is_hidden_without_a_session(qt_app):
     assert window.telegram_chat_action.isVisible() is False
 
 
+def test_the_chat_entry_is_hidden_without_the_flag_even_with_a_session(qt_app):
+    """Moving it to a menu everyone can see did not make it finished."""
+    app_settings.set_experimental_features_enabled(False)
+    _sign_in()
+
+    window = _window()
+
+    assert window.telegram_chat_action.isVisible() is False
+
+
 def test_the_chat_entry_appears_once_a_session_file_exists(qt_app):
+    app_settings.set_experimental_features_enabled(True)
     window = _window()
     assert window.telegram_chat_action.isVisible() is False, "precondition"
 
-    session_path = app_settings.telegram_session_path()
-    session_path.parent.mkdir(parents=True, exist_ok=True)
-    session_path.write_bytes(b"fake session")
+    _sign_in()
     window._sync_experimental_menu()
 
     assert window.telegram_chat_action.isVisible()
 
 
-def test_signing_in_through_experimental_settings_reveals_the_entry_immediately(qt_app, monkeypatch):
-    """No restart required: _show_experimental_settings() must re-sync the
-    menu itself once the dialog closes, the same way _show_settings()
-    already does for the MDRem/experimental-flag actions."""
+def test_the_chat_entry_is_in_the_source_menu(qt_app):
+    """Not in Experimental, which holds nothing now -- and next to the
+    other way audio gets into the audio folder."""
+    app_settings.set_experimental_features_enabled(True)
+    _sign_in()
+    window = _window()
+
+    assert window.telegram_chat_action.parent() is window.rip_cd_action.parent()
+
+
+def test_signing_in_through_settings_reveals_the_entry_immediately(qt_app, monkeypatch):
+    """No restart required: _show_settings() re-syncs the menu once the
+    dialog closes, which now matters for signing in to Telegram too --
+    that happens in the settings window's own Telegram group."""
+    app_settings.set_experimental_features_enabled(True)
     window = _window()
     assert window.telegram_chat_action.isVisible() is False, "precondition"
 
     def fake_exec(self):
-        session_path = app_settings.telegram_session_path()
-        session_path.parent.mkdir(parents=True, exist_ok=True)
-        session_path.write_bytes(b"fake session")
+        _sign_in()
         return 0
 
-    monkeypatch.setattr(app_module.ExperimentalSettingsDialog, "exec", fake_exec)
+    monkeypatch.setattr(app_module.SettingsDialog, "exec", fake_exec)
 
-    window._show_experimental_settings()
+    window._show_settings()
 
     assert window.telegram_chat_action.isVisible()
 

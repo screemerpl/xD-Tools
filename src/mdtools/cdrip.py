@@ -720,4 +720,13 @@ def encode_track(task: RipTask, *, keep_wav: bool = False) -> None:
 # instruction: nothing in this app may ever delete anything from that
 # folder on its own.
 BURN_SCRATCH_DIRNAME = "burn"
-RESERVED_SCRATCH_DIRNAMES = {BURN_SCRATCH_DIRNAME}
+
+# Where a Telegram download is written while it is still arriving, before
+# its tags are read and it is moved into its own album folder (see
+# album_sort.place_download). A partially-written file must not be visible
+# to anything that lists the shared folder -- half a track offered as
+# something to record, or swept into an album folder by a sort that ran a
+# second too early, is exactly what staging exists to prevent.
+DOWNLOAD_STAGING_DIRNAME = "incoming"
+
+RESERVED_SCRATCH_DIRNAMES = {BURN_SCRATCH_DIRNAME, DOWNLOAD_STAGING_DIRNAME}

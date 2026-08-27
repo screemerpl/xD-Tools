@@ -1,6 +1,6 @@
 from mdtools import app_settings, audio_engine
 from mdtools.app_window import MainWindow
-from mdtools.panels.settings_dialog import SettingsDialog
+from mdtools.panels.settings_dialog import GROUP_GENERAL, GROUP_TELEGRAM, SettingsDialog
 
 
 def test_dialog_seeds_fields_from_current_settings(qt_app):
@@ -351,3 +351,83 @@ def test_browsing_creates_the_folder_first_so_the_picker_opens_in_it(qt_app, tmp
 
     assert target.is_dir()
     assert seen == [str(target)]
+
+
+# --- settings groups ---------------------------------------------------------
+#
+# Settings used to be one long form here plus a second dialog of their own
+# for the Telegram account, reached from the Experimental menu -- the same
+# question ("what is xD-Tools configured to do?") answered in two places,
+# one of them only findable if you knew it was filed under Experimental.
+
+
+def test_the_groups_are_listed_down_the_left(qt_app):
+    dialog = SettingsDialog()
+    labels = [dialog.group_list.item(i).text() for i in range(dialog.group_list.count())]
+    assert labels == ["General", "Telegram"]
+    assert dialog.pages.count() == len(labels), "one page per group"
+
+
+def test_it_opens_on_general(qt_app):
+    assert SettingsDialog().pages.currentIndex() == GROUP_GENERAL
+
+
+def test_picking_a_group_shows_its_page(qt_app):
+    dialog = SettingsDialog()
+
+    dialog.group_list.setCurrentRow(GROUP_TELEGRAM)
+
+    assert dialog.pages.currentIndex() == GROUP_TELEGRAM
+
+
+def test_show_group_jumps_straight_to_one(qt_app):
+    """The Telegram chat's own "Sign in..." button has one page to send
+    the user to and no reason to drop them on General to find it."""
+    dialog = SettingsDialog()
+
+    dialog.show_group(GROUP_TELEGRAM)
+
+    assert dialog.pages.currentIndex() == GROUP_TELEGRAM
+    assert dialog.group_list.currentRow() == GROUP_TELEGRAM
+
+
+def test_ok_saves_every_group_not_just_the_one_on_screen(qt_app):
+    """They are pages of one settings window with one OK underneath, so a
+    change made in Telegram must survive switching back to General before
+    pressing it."""
+    dialog = SettingsDialog()
+    dialog.bot_username_edit.setText("@some_bot")
+    dialog.group_list.setCurrentRow(GROUP_GENERAL)
+
+    dialog._on_accept()
+
+    assert app_settings.telegram_bot_username() == "@some_bot"
+
+
+def test_the_telegram_group_reports_whether_a_sign_in_is_saved(qt_app):
+    """Local file presence only -- no network round trip just to open the
+    settings window."""
+    app_settings.telegram_session_path().unlink(missing_ok=True)
+    dialog = SettingsDialog()
+    assert "Not signed in" in dialog.telegram_status_label.text()
+    assert not dialog.sign_out_btn.isEnabled()
+
+    path = app_settings.telegram_session_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"fake session")
+    dialog._refresh_telegram_status()
+
+    assert "saved sign-in" in dialog.telegram_status_label.text()
+    assert dialog.sign_out_btn.isEnabled()
+
+
+def test_signing_out_forgets_the_local_session(qt_app):
+    path = app_settings.telegram_session_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"fake session")
+    dialog = SettingsDialog()
+
+    dialog._sign_out()
+
+    assert not path.exists()
+    assert not dialog.sign_out_btn.isEnabled()

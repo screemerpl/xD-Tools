@@ -81,7 +81,8 @@ src/mdtools/
   decode.py                 what an audio file is, and Red Book PCM out of it (no Qt)
   cdburn.py                 audio CD-R: burn plan, *.inf CD-Text, cdrecord (no Qt UI)
   audio_folder.py           which files in a folder are the album, and in what order (no Qt)
-  album_sort.py             one folder of downloads split into one folder per album (no Qt)
+  album_sort.py             one folder of downloads split into one folder per album, and
+                            where a just-downloaded file belongs (no Qt)
   tape.py                   where a cassette is turned over: sides, leader tape, lengths (no Qt)
   multidisc.py              where an album too long for one disc is cut into several, and
                             what a disc-number tag means (no Qt)
@@ -115,7 +116,6 @@ src/mdtools/
     metadata_dialog.py          album/artist/year/track-list editor + "Lookup Track List..." + "Upload Tracklist"
     cover_preview.py            the cover thumbnail that is also the button for replacing it, plus its lookup
     cover_filter_dialog.py      pick a background treatment for a disc/shell label, from a live preview per option
-    regenerate_font_dialog.py   Regenerate with Font...: live preview while browsing (QFontDialog instance)
     asset_gallery_dialog.py     Insert Asset: pick one of the bundled gallery images
     grayscale_export_dialog.py  brightness/contrast, previewed against the real scene, before the save path
     print_dialog.py             PrintDialog and MultiprintDialog over one shared base: sheets, PDF, PNG
@@ -124,13 +124,14 @@ src/mdtools/
     remote_dialog.py            software Sony MD remote, reachable from Window menu or startup screen
     record_dialog.py            Recording > Record to MiniDisc: arm, play (own AudioPlayer), watch, hand off to titling
     playback_bridge.py          crosses AudioPlayer's realtime callback thread onto the GUI thread (QObject + Signals)
-    cd_rip_dialog.py            Recording > Record CD: read TOC, identify, rip -- separate from recording (#16)
+    decode_worker.py            decoding/resampling/dithering a disc or tape side, off the GUI thread
+    cd_rip_dialog.py            Source > Rip Audio CD: read TOC, identify, rip -- and stop there (#16)
     folder_record_dialog.py     Recording > Record Folder: read a folder's own tags directly instead
     tape_record_dialog.py       Recording > Record Cassette: a side at a time, with the user working the deck
     burn_dialog.py              Recording > Burn Audio CD: the plan, the verdicts, and cdrecord behind a worker
     erase_dialog.py             Erase MiniDisc button (on the record dialog): fixed sequence behind one confirm
     telegram_login_dialog.py    signing in as a user account, over a worker with a live asyncio loop
-    telegram_chat_dialog.py     the bot conversation, its download queue + summary (mirrored into the main window's bar), Hide, and the hand-off to recording
+    telegram_chat_dialog.py     the bot conversation, its download queue + summary (mirrored into the main window's bar), and the hand-off to recording
     about_dialog.py             Help > About xD-Tools
   io/
     svg_export.py               exports just the cut/fold shapes as physically-accurate SVG
@@ -151,7 +152,8 @@ scripts/
   clean_windows.ps1 / clean_linux.sh   remove build/dist/__pycache__/etc.
   make_app_icon.py / make_cd_logo.py   the .ico and the Digital Audio PNG, generated once each
   manual/
-    make_screenshots.py      drives every dialog and grabs it, once per language
+    make_screenshots.py      drives every dialog and grabs it, once per language;
+                             --only <figures> / --list redo just what changed
     build_manual.py           blocks -> QTextDocument -> QPdfWriter, with a measured TOC
     content_{en,pl,ja}.py     the manual's text, as block lists
 ```
@@ -279,6 +281,24 @@ Qt-threading code — `AudioPlayer`'s callbacks run on PortAudio's own
 thread; emitting through a GUI-thread-affine QObject makes Qt's default
 `AutoConnection` become a safe queued connection automatically.
 
+**Decoding a disc/side runs on a worker thread** (`panels/decode_worker.py`,
+`DecodeWorker`). Both recording dialogs still decode everything *before*
+anything starts moving — the MD deck is armed and record-paused first, a
+cassette deck is about to roll onto tape, so decoding afterwards would put
+its own duration onto the medium as silence. What changed is the thread:
+`load_for_recording()` on the GUI thread froze the whole window for the
+length of the work — **measured at 20s for a 12-track album**, with a
+single `processEvents()` per track as the only relief — and was reported
+as exactly that. Now `start()` returns in 0.1ms and the GUI services
+events throughout. `cancel()` lands **between tracks** (it raises out of
+the loader's own per-file progress callback), so a Stop mid-decode sets
+`_closing`, cancels, and lets `finished` close the window — never
+`wait()` on the GUI thread. A cancelled decode emits neither `decoded`
+nor `failed`, and `_on_decoded()` drops a result that arrives after a
+Stop. `TapeRecordDialog.is_busy()` counts `_preparing` as busy for the
+same reason every worker here does: closing out from under a live
+QThread is the silent process abort.
+
 **Multi-disc/side boundaries are now exact, not polled**: `_begin_disc()`/
 `_begin_playback()` hand `AudioPlayer` only that disc/side's own buffers,
 so playback simply ends where the buffer queue ends — no `stop_after_
@@ -325,10 +345,25 @@ folder cleanup, that is a sign to stop and ask, not to write it.
 ### CD rip / burn
 
 Both are plan-then-execute (`build_rip_plan()`/`build_burn_plan()`, no Qt,
-no drive needed to construct). **Ripping is now a separate step from
-recording** (#16) — `CdRipDialog` rips, identifies via MusicBrainz, and
-lets the user choose "record now" vs. "just save the metadata" rather than
-always chaining straight into `RecordDialog`.
+no drive needed to construct). **Ripping and recording are two separate
+steps, in two separate menus** (#16, then split the rest of the way by
+explicit request): Source > "Rip Audio CD..." rips, identifies via
+MusicBrainz, offers the album's metadata to the open project, and ends —
+it resolves no MDRem port and opens no recording dialog. Recording those
+files is Recording > "Record from Rip/Download Folder to {medium}...",
+the same entry a Telegram download is recorded from, since both land in
+`app_settings.cd_rip_folder()`. `CdRipDialog` therefore names no machine
+in its title any more (its `medium` still decides the 80-minute MiniDisc
+warning and the wording about where edited titles end up).
+
+**"Read Disc" is off until there is a disc in the selected drive** —
+`CdDrive.has_media` (Windows' own answer: "something is in there", never
+"an audio CD is in there", which only reading the TOC settles; always
+True elsewhere). The disc goes in *after* the window opens, so the drives
+are re-listed on a `_DRIVE_POLL_MS` timer that runs only while the window
+is shown and nothing is ripping, and acts only when the listing actually
+changed — otherwise the dropdown would reshuffle under the user's hand
+and the status line would eat whatever a read or a lookup just wrote.
 
 Bundled Windows binaries (`bin/win64/`, see `ATTRIBUTION.md` — both GPL):
 `cd-paranoia.exe` (ripping, real error correction — ~3x realtime, the
@@ -572,6 +607,22 @@ a guest-feature credit must not fork the folder) with an arrival-order
 fallback for untagged files; **idempotent and safe to call repeatedly**
 (a lone new file arriving into an already-sorted folder must still get
 picked up, not just "already sorted, nothing to do").
+
+**A download is filed as it arrives, not left in a heap for Sort.** It is
+written into a staging subfolder (`cdrip.DOWNLOAD_STAGING_DIRNAME`,
+reserved alongside burning's own `burn` scratch dir so nothing ever
+offers it as an album), and only once complete are its tags read and the
+file moved into `root/Artist - Album` by `album_sort.place_download()` —
+tags cannot be read from a partial file, and a half-written track sitting
+loose in the shared folder is something the album picker would offer and
+a sort would file away as finished. Placement reuses the *same*
+`read_album_tag()`/`_group_display_name()`/`sanitize_filename()` chain a
+later sort uses, so a track placed on arrival and one placed by Sort can
+never land in two similarly-named folders. Only FLAC has tags read today
+(MP3/Ogg are the next session's work); anything unplaceable goes to the
+root exactly as before, and Sort still deals with it. **Placement never
+overwrites** — a taken name gains a " (2)" — for the same reason nothing
+here deletes from that folder.
 
 **Credentials are never hardcoded in the source tree.** The Telegram
 API ID/Hash resolve in order: per-user `settings.ini` override → env vars
@@ -862,7 +913,12 @@ own `.name`, never by a combo's display text, in any test touching it.
   invalidates screenshots in *all three* languages at once; regenerate via
   `scripts/manual/make_screenshots.py` rather than patching one image, and
   keep the PL/JA manual text in step with `i18n/mdtools_{pl,ja}.ts`'s own
-  menu-name translations. **Deferred, by explicit user preference**: don't
+  menu-name translations. **Redo only the figures that actually changed**:
+  `make_screenshots.py --only cd-rip,settings` (`--list` names them all,
+  grouped by the section that produces them; a group nothing was asked
+  from is skipped outright, and every other file is left byte-for-byte
+  alone so the diff shows only what moved). A new figure must be added to
+  `FIGURE_GROUPS` or `save()` refuses it. **Deferred, by explicit user preference**: don't
   run `pyside6-lupdate`/regenerate the manual mid-feature-set — batch it
   once the whole set of changes has settled, not after every individual
   string change.
