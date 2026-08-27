@@ -63,7 +63,7 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import QCoreApplication, QTimer, Qt, Signal
+from PySide6.QtCore import QTimer, Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -84,6 +84,7 @@ from PySide6.QtWidgets import (
 from mdtools import app_settings, audio_engine, embedded_cover, mdrem, mixtape_cover, multidisc, tracks
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
 from mdtools.panels.erase_dialog import EraseDiscDialog
+from mdtools.panels.decode_worker import DecodeWorker
 from mdtools.panels.hideable_dialog import close_hides_while_busy, exec_hideable, surface
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
 from mdtools.panels.playback_bridge import PlaybackBridge
@@ -164,6 +165,10 @@ class RecordDialog(QDialog):
         self._port = port
         self._items: list[tracks.PlaylistItem] = tracks.playlist_items_from_paths(paths) if paths else []
         self._recording = False
+        # The decode running ahead of a disc, and whether a Stop is waiting
+        # for it to notice -- see _begin_disc()/reject().
+        self._decoder: DecodeWorker | None = None
+        self._closing = False
         self._current_local_index = 0
         # Several discs: the plan, which disc is being recorded.
         self._plan: multidisc.MultiDiscPlan | None = None
@@ -715,22 +720,33 @@ class RecordDialog(QDialog):
         # Decoded, resampled and dithered *before* the pause is released --
         # otherwise the deck sits running into silence for however long
         # that takes (several seconds, for a whole disc's worth of tracks)
-        # instead of just the deliberate LEAD_IN_MS below.
-        # _report_decode_progress keeps the status label moving meanwhile,
-        # so this doesn't read as the dialog having hung. Dithered via
+        # instead of just the deliberate LEAD_IN_MS below. Dithered via
         # load_for_recording(), not load_for_playback() -- the deck's own
         # digital S/PDIF input takes exactly Red Book PCM, the same as a
         # CD-R burn (see audio_engine.load_for_recording()'s own
         # docstring).
+        #
+        # On a worker thread, not here: this is minutes of soxr and dither
+        # for a whole album, and running it on the GUI thread froze the
+        # window solid for all of it (reported directly). The deck is
+        # already armed and record-paused at this point and stays that way
+        # until _on_decoded() releases it, so the sequence is unchanged --
+        # only the thread it happens on is.
         first, last = self._disc_bounds()
         paths = [Path(item.path) for item in self._items[first : last + 1]]
-        try:
-            buffers = audio_engine.load_for_recording(
-                paths, samplerate=self._player.samplerate, on_progress=self._report_decode_progress
-            )
-        except audio_engine.AudioEngineError as exc:
-            self._fail(self.tr("Could not decode the album for playback: {error}").format(error=exc))
-            return
+        self._decoder = DecodeWorker(
+            paths, samplerate=self._player.samplerate, dithered=True, parent=self
+        )
+        self._decoder.progress.connect(self._report_decode_progress)
+        self._decoder.decoded.connect(self._on_decoded)
+        self._decoder.failed.connect(self._on_decode_failed)
+        self._decoder.finished.connect(self._on_decoder_finished)
+        self._decoder.start()
+
+    def _on_decoded(self, buffers: list) -> None:
+        """The disc's audio is ready: release the deck and start playing."""
+        if self._closing or not self._recording:
+            return  # stopped while it was decoding
         if not self._send_key("SEND PAUSE"):  # releases record-pause
             return
         self.status_label.setText(
@@ -742,6 +758,22 @@ class RecordDialog(QDialog):
         # already running when audio arrives. The buffers are already
         # decoded, so nothing but this deliberate gap delays it now.
         QTimer.singleShot(LEAD_IN_MS, lambda: self._begin_playback(buffers))
+
+    def _on_decode_failed(self, error: str) -> None:
+        if self._closing:
+            return
+        self._fail(self.tr("Could not decode the album for playback: {error}").format(error=error))
+
+    def _on_decoder_finished(self) -> None:
+        """The one place a decode ends, however it ended -- the same shape
+        the rip and upload workers use, so a Stop pressed mid-decode can
+        return immediately instead of blocking the GUI thread on wait()."""
+        self._decoder = None
+        if self._closing:
+            self._closing = False
+            self.close_btn.setEnabled(True)
+            self._close_deck()
+            super().reject()
 
     def _confirm_overwrite(self) -> bool:
         if self._multi() and self._plan is not None:
@@ -812,18 +844,16 @@ class RecordDialog(QDialog):
         )
         self._timer.start()
 
-    def _report_decode_progress(self, index: int, total: int, path: Path) -> None:
-        """`load_for_recording`'s own callback, called synchronously from
-        inside its decode loop -- decoding a whole disc up front (see
-        _begin_disc) can take a few real seconds, and processEvents() is
-        what actually lets the label repaint mid-loop, since nothing else
-        returns to the event loop until decoding finishes."""
+    def _report_decode_progress(self, index: int, total: int, name: str) -> None:
+        """DecodeWorker's own progress signal, one per track. No
+        processEvents() any more: the decode runs on its own thread, so
+        the event loop is turning by itself and this is an ordinary
+        queued-signal label update."""
         self.status_label.setText(
             self.tr("Preparing track {index} of {total}: {name}...").format(
-                index=index, total=total, name=path.stem
+                index=index, total=total, name=name
             )
         )
-        QCoreApplication.processEvents()
 
     def _disc_bounds(self) -> tuple[int, int]:
         """The item indices the disc being recorded covers, as [first, last].
@@ -1195,6 +1225,21 @@ class RecordDialog(QDialog):
         recording silence after playback has stopped would append a long
         empty track to the disc."""
         self.preview_bar.stop()
+        if self._decoder is not None and self._decoder.isRunning():
+            # Mid-decode: the deck is armed and paused, nothing has been
+            # played yet. Cancelling takes effect at the next track
+            # boundary, so this returns now and _on_decoder_finished()
+            # closes the window once the worker is genuinely done -- never
+            # wait() on the GUI thread for it.
+            self._closing = True
+            self._recording = False
+            self._decoder.cancel()
+            self._timer.stop()
+            self._send_key("SEND STOP")
+            self.status_label.setText(self.tr("Stopping..."))
+            self.close_btn.setEnabled(False)
+            self.running_changed.emit(False)
+            return
         if self._recording:
             self._timer.stop()
             self._recording = False

@@ -124,6 +124,7 @@ src/mdtools/
     remote_dialog.py            software Sony MD remote, reachable from Window menu or startup screen
     record_dialog.py            Recording > Record to MiniDisc: arm, play (own AudioPlayer), watch, hand off to titling
     playback_bridge.py          crosses AudioPlayer's realtime callback thread onto the GUI thread (QObject + Signals)
+    decode_worker.py            decoding/resampling/dithering a disc or tape side, off the GUI thread
     cd_rip_dialog.py            Source > Rip Audio CD: read TOC, identify, rip -- and stop there (#16)
     folder_record_dialog.py     Recording > Record Folder: read a folder's own tags directly instead
     tape_record_dialog.py       Recording > Record Cassette: a side at a time, with the user working the deck
@@ -279,6 +280,24 @@ external app. `panels/playback_bridge.py`'s `PlaybackBridge(QObject)`
 Qt-threading code — `AudioPlayer`'s callbacks run on PortAudio's own
 thread; emitting through a GUI-thread-affine QObject makes Qt's default
 `AutoConnection` become a safe queued connection automatically.
+
+**Decoding a disc/side runs on a worker thread** (`panels/decode_worker.py`,
+`DecodeWorker`). Both recording dialogs still decode everything *before*
+anything starts moving — the MD deck is armed and record-paused first, a
+cassette deck is about to roll onto tape, so decoding afterwards would put
+its own duration onto the medium as silence. What changed is the thread:
+`load_for_recording()` on the GUI thread froze the whole window for the
+length of the work — **measured at 20s for a 12-track album**, with a
+single `processEvents()` per track as the only relief — and was reported
+as exactly that. Now `start()` returns in 0.1ms and the GUI services
+events throughout. `cancel()` lands **between tracks** (it raises out of
+the loader's own per-file progress callback), so a Stop mid-decode sets
+`_closing`, cancels, and lets `finished` close the window — never
+`wait()` on the GUI thread. A cancelled decode emits neither `decoded`
+nor `failed`, and `_on_decoded()` drops a result that arrives after a
+Stop. `TapeRecordDialog.is_busy()` counts `_preparing` as busy for the
+same reason every worker here does: closing out from under a live
+QThread is the silent process abort.
 
 **Multi-disc/side boundaries are now exact, not polled**: `_begin_disc()`/
 `_begin_playback()` hand `AudioPlayer` only that disc/side's own buffers,

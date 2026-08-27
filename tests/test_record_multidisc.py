@@ -9,6 +9,8 @@ Nothing here touches a real serial port or real audio hardware. An
 accidental send would arm a deck for recording, which is destructive.
 """
 
+from pathlib import Path
+
 import pytest
 from PySide6.QtCore import QObject, Signal
 
@@ -577,7 +579,76 @@ def test_what_the_project_adopts_is_the_whole_album_not_one_disc(qt_app, monkeyp
 # structural guarantee now, not a race between a flag and a poll.
 
 
-def test_begin_disc_only_loads_this_discs_own_tracks(qt_app, monkeypatch, no_hardware, fake_player):
+class _SyncDecoder(QObject):
+    """DecodeWorker, minus the thread.
+
+    Decoding runs on a QThread now (it is minutes of soxr and dither for
+    an album, and doing it on the GUI thread froze the window solid), so
+    a test that wants to see what happens *after* it either pumps a real
+    event loop or stands the worker in for. This does the second: real
+    Signals, and start() decodes and emits inline, so the sequence a test
+    asserts on is the real one with the waiting taken out."""
+
+    progress = Signal(int, int, str)
+    decoded = Signal(object)
+    failed = Signal(str)
+    finished = Signal()
+
+    instances: list["_SyncDecoder"] = []
+
+    def __init__(self, paths, *, samplerate, dithered, parent=None):
+        super().__init__()
+        self.paths = list(paths)
+        self.samplerate = samplerate
+        self.dithered = dithered
+        self.cancelled = False
+        self.started = False
+        _SyncDecoder.instances.append(self)
+
+    def cancel(self):
+        self.cancelled = True
+
+    def isRunning(self):
+        return self.started and not self.cancelled
+
+    def start(self):
+        self.started = True
+        try:
+            buffers = record_module.audio_engine.load_for_recording(
+                self.paths, samplerate=self.samplerate, on_progress=self._progress
+            )
+        except record_module.audio_engine.AudioEngineError as exc:
+            self.failed.emit(str(exc))
+        else:
+            self.decoded.emit(buffers)
+        self.finished.emit()
+
+    def _progress(self, index, total, path):
+        self.progress.emit(index, total, Path(path).stem)
+
+
+@pytest.fixture
+def sync_decoder(monkeypatch):
+    _SyncDecoder.instances.clear()
+    monkeypatch.setattr(record_module, "DecodeWorker", _SyncDecoder)
+    return _SyncDecoder.instances
+
+
+def test_the_decode_runs_on_a_worker_thread(qt_app):
+    """Reported directly: starting a recording froze the whole window
+    while a disc was decoded, resampled and dithered. That work is minutes
+    long for an album, so it cannot be on the GUI thread whatever else is
+    true of it."""
+    from PySide6.QtCore import QThread
+
+    from mdtools.panels.decode_worker import DecodeWorker
+
+    assert issubclass(DecodeWorker, QThread)
+
+
+def test_begin_disc_only_loads_this_discs_own_tracks(
+    qt_app, monkeypatch, no_hardware, fake_player, sync_decoder
+):
     dialog = _double_album(monkeypatch, with_paths=True)
     dialog._player = record_module.audio_engine.AudioPlayer(device=None)
     monkeypatch.setattr(record_module, "QTimer", _NoTimer)
@@ -607,7 +678,9 @@ def test_begin_disc_only_loads_this_discs_own_tracks(qt_app, monkeypatch, no_har
     ]
 
 
-def test_the_pause_is_not_released_until_decoding_finishes(qt_app, monkeypatch, no_hardware, fake_player):
+def test_the_pause_is_not_released_until_decoding_finishes(
+    qt_app, monkeypatch, no_hardware, fake_player, sync_decoder
+):
     """The deck used to start running while xD-Tools was still busy
     decoding/resampling the whole disc -- recording several extra seconds
     of silence onto the disc beyond the deliberate LEAD_IN_MS. Decoding now
@@ -627,3 +700,58 @@ def test_the_pause_is_not_released_until_decoding_finishes(qt_app, monkeypatch, 
     dialog._begin_disc()
 
     assert no_hardware.index("DECODE") < no_hardware.index("SEND PAUSE")
+
+
+def test_stopping_mid_decode_cancels_it_and_never_releases_the_pause(
+    qt_app, monkeypatch, no_hardware, fake_player, sync_decoder
+):
+    """The deck is armed and record-paused before decoding starts, so a
+    Stop pressed while it is still decoding has to put the deck back down
+    without ever letting it roll."""
+    dialog = _double_album(monkeypatch, with_paths=True)
+    dialog._player = record_module.audio_engine.AudioPlayer(device=None)
+    monkeypatch.setattr(record_module, "QTimer", _NoTimer)
+    monkeypatch.setattr(record_module.QMessageBox, "question", _answer_affirmatively)
+
+    class _NeverFinishes(_SyncDecoder):
+        def start(self):
+            self.started = True  # and emits nothing: still decoding
+
+    monkeypatch.setattr(record_module, "DecodeWorker", _NeverFinishes)
+
+    dialog._begin_disc()
+    assert "SEND PAUSE" not in no_hardware, "precondition: still decoding"
+
+    dialog.reject()
+
+    decoder = _SyncDecoder.instances[-1]
+    assert decoder.cancelled is True
+    assert dialog._recording is False
+    assert "SEND STOP" in no_hardware
+    assert "SEND PAUSE" not in no_hardware
+
+
+def test_a_decode_that_finishes_after_a_stop_plays_nothing(
+    qt_app, monkeypatch, no_hardware, fake_player, sync_decoder
+):
+    """Cancelling lands between tracks, so the worker can still deliver a
+    result a moment after the user pressed Stop -- it must be dropped."""
+    dialog = _double_album(monkeypatch, with_paths=True)
+    dialog._player = record_module.audio_engine.AudioPlayer(device=None)
+    monkeypatch.setattr(record_module, "QTimer", _NoTimer)
+    monkeypatch.setattr(record_module.QMessageBox, "question", _answer_affirmatively)
+
+    class _NeverFinishes(_SyncDecoder):
+        def start(self):
+            self.started = True
+
+    monkeypatch.setattr(record_module, "DecodeWorker", _NeverFinishes)
+
+    dialog._begin_disc()
+    dialog.reject()
+    _NoTimer.scheduled.clear()
+
+    dialog._on_decoded(["late buffer"])
+
+    assert _NoTimer.scheduled == []
+    assert "SEND PAUSE" not in no_hardware
