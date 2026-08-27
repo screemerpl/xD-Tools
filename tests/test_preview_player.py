@@ -277,3 +277,83 @@ def test_stop_before_ever_playing_is_a_no_op(qt_app):
     bar.set_current(Path("a.flac"))
 
     bar.stop()  # must not raise
+
+
+# --- locked out while a real recording/burn is running -----------------------
+
+
+def test_locking_disables_the_whole_transport(qt_app):
+    """The bar plays through the OS default output device, which may be
+    the very one a recording is feeding a deck through -- and on a
+    MiniDisc the deck records whatever arrives down that feed. Stopping
+    the bar when a run begins was never enough on its own: nothing
+    stopped the user pressing Play again a second later."""
+    bar = _bar(qt_app)
+    bar.set_current(Path("a.flac"), has_prev=True, has_next=True)
+    assert bar.play_btn.isEnabled()
+
+    bar.set_locked(True)
+
+    assert not bar.play_btn.isEnabled()
+    assert not bar.prev_btn.isEnabled()
+    assert not bar.next_btn.isEnabled()
+    assert not bar.slider.isEnabled()
+    assert bar.play_btn.toolTip()
+
+
+def test_locking_stops_a_preview_already_playing(qt_app):
+    bar = _bar(qt_app)
+    bar.set_current(Path("a.flac"))
+    bar._on_play_pause_clicked()
+    player = _FakePlayer.instances[-1]
+
+    bar.set_locked(True)
+
+    assert player.stopped
+
+
+def test_play_is_refused_while_locked_even_bypassing_the_button(qt_app):
+    """A disabled button is not the only way in -- a shortcut or a stray
+    signal must not open an audio stream either."""
+    bar = _bar(qt_app)
+    bar.set_current(Path("a.flac"))
+    bar.set_locked(True)
+    before = len(_FakePlayer.instances)
+
+    bar._on_play_pause_clicked()
+
+    assert len(_FakePlayer.instances) == before
+
+
+def test_selecting_another_track_while_locked_does_not_re_enable_it(qt_app):
+    """set_current() is driven by the owning dialog's selection handler,
+    which keeps firing while a recording runs (the track list stays
+    readable) -- it must not hand the transport back."""
+    bar = _bar(qt_app)
+    bar.set_current(Path("a.flac"), has_prev=True, has_next=True)
+    bar.set_locked(True)
+
+    bar.set_current(Path("b.flac"), has_prev=True, has_next=True)
+
+    assert not bar.play_btn.isEnabled()
+    assert not bar.next_btn.isEnabled()
+
+
+def test_unlocking_restores_what_the_selection_allows(qt_app):
+    bar = _bar(qt_app)
+    bar.set_current(Path("a.flac"), has_prev=False, has_next=True)
+    bar.set_locked(True)
+
+    bar.set_locked(False)
+
+    assert bar.play_btn.isEnabled()
+    assert bar.next_btn.isEnabled()
+    assert not bar.prev_btn.isEnabled(), "has_prev was False -- unlocking must not invent a Prev"
+    assert bar.play_btn.toolTip() == ""
+
+
+def test_unlocking_with_nothing_selected_leaves_play_disabled(qt_app):
+    bar = _bar(qt_app)
+    bar.set_locked(True)
+    bar.set_locked(False)
+    assert not bar.play_btn.isEnabled()

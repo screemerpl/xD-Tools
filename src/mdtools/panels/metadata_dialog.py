@@ -38,6 +38,7 @@ from mdtools.metadata_lookup import (
     search_albums,
 )
 from mdtools.panels.cover_preview import CoverPreview
+from mdtools.panels.hideable_dialog import exec_hideable
 from mdtools.panels.mdrem_port import resolve_port
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
 from mdtools.project import MEDIUM_MD, ProjectMetadata, Track, format_time, parse_time
@@ -110,17 +111,42 @@ class _TrackTable(QTableWidget):
 
 
 class MetadataDialog(QDialog):
-    def __init__(self, metadata: ProjectMetadata, parent=None, medium: str = MEDIUM_MD):
+    # A thin pass-through, active only while "Upload Tracklist" has a
+    # nested MDRemUploadDialog open -- mirrored by MainWindow's own
+    # bottom-of-window progress bar (#27). No track_progress_changed:
+    # titling has no per-track concept.
+    running_changed = Signal(bool)
+    overall_progress_changed = Signal(float, str)
+    visibility_changed = Signal(bool)
+
+    def __init__(
+        self,
+        metadata: ProjectMetadata,
+        parent=None,
+        medium: str = MEDIUM_MD,
+        is_recording_busy=None,
+    ):
         """`medium` decides whether "Upload Tracklist" is offered at all.
 
         That button writes titles onto a MiniDisc over infrared; on a CD
         project there is no MiniDisc for it to write to, and the titles
         went onto the disc as CD-Text when it was burned. It stayed visible
-        on CD projects at first -- reported directly."""
+        on CD projects at first -- reported directly.
+
+        `is_recording_busy`, when given, is MainWindow's own
+        `_guard_no_concurrent_operation` -- called before "Upload
+        Tracklist" opens MDRemUploadDialog, so it can't fight another
+        recording/rip/burn/upload already running (possibly hidden) over
+        the same MDRem port. `None` (every caller that predates #27, and
+        every test) means "nothing else to check against"."""
         super().__init__(parent)
         self.setWindowTitle(self.tr("Project Metadata"))
         self.resize(420, 480)
         self.result_metadata: ProjectMetadata | None = None
+        self._is_recording_busy = is_recording_busy
+        # The MDRemUploadDialog currently open for "Upload Tracklist", if
+        # any -- see request_stop().
+        self._nested_dialog: QDialog | None = None
 
         layout = QVBoxLayout(self)
 
@@ -467,10 +493,32 @@ class MetadataDialog(QDialog):
         )
 
     def _upload_tracklist(self) -> None:
+        if self._is_recording_busy is not None and not self._is_recording_busy():
+            return
         port = resolve_port(self)
         if port is None:
             return
-        MDRemUploadDialog(self._current_metadata(), port, self).exec()
+        dialog = MDRemUploadDialog(self._current_metadata(), port, self)
+        dialog.overall_progress_changed.connect(self.overall_progress_changed)
+        dialog.visibility_changed.connect(self.visibility_changed)
+        self._nested_dialog = dialog
+        self.running_changed.emit(True)
+        exec_hideable(dialog)
+        self.running_changed.emit(False)
+        self._nested_dialog = None
+
+    def request_stop(self) -> None:
+        """What MainWindow's own Stop button calls -- only meaningful
+        while "Upload Tracklist" has a nested dialog open, which is the
+        only time MainWindow's bar is driven by this dialog at all."""
+        if self._nested_dialog is not None:
+            self._nested_dialog.request_stop()
+
+    def request_show(self) -> None:
+        """Likewise: the dialog that can be hidden here is the nested
+        one, never this one (which has no Hide button of its own)."""
+        if self._nested_dialog is not None:
+            self._nested_dialog.request_show()
 
     def _on_accept(self) -> None:
         self.result_metadata = self._current_metadata()

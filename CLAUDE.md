@@ -130,7 +130,7 @@ src/mdtools/
     burn_dialog.py              Recording > Burn Audio CD: the plan, the verdicts, and cdrecord behind a worker
     erase_dialog.py             Erase MiniDisc button (on the record dialog): fixed sequence behind one confirm
     telegram_login_dialog.py    signing in as a user account, over a worker with a live asyncio loop
-    telegram_chat_dialog.py     the bot conversation, its download queue + summary, and the hand-off to recording
+    telegram_chat_dialog.py     the bot conversation, its download queue + summary (mirrored into the main window's bar), Hide, and the hand-off to recording
     about_dialog.py             Help > About xD-Tools
   io/
     svg_export.py               exports just the cut/fold shapes as physically-accurate SVG
@@ -508,6 +508,24 @@ auto-picked (`readable_text_colour()` against the text colour itself).
 Every auto-generated label/cover turns shadow on by default; manually
 added text stays plain (opt-in via Properties).
 
+**`cover_filters.py`'s strengths are counts across the image, never
+pixel sizes.** A cover arrives from iTunes/Deezer/MusicBrainz/embedded
+FLAC art/the user's own files at whatever size that source provides, so
+an absolute constant (a 14px mosaic block, a 6px blur radius, a 10px dot
+cell — the original values) made each filter hit a small cover far
+harder than a large one: pixelate kept 0.91 of a 300px cover but 0.99 of
+a 1200px one, and was reported as "almost unrecognizable". `_divide()`
+turns a division count into a pixel size against the image's *shorter*
+side. Pixelate also averages each block (`BOX`) rather than sampling one
+pixel of it (`NEAREST`), which is what a mosaic actually is. Halftone's
+`HALFTONE_CELLS` is capped by (smallest cover worth supporting ≈300px) ÷
+`_HALFTONE_MIN_CELL_PX` — ask for more and small covers clamp to the
+minimum and stop matching large ones, defeating the point. **Do not
+reintroduce a pixel-sized constant here.** `BRIGHTEN_AMOUNT` is the
+deliberate exception at 0.55, matching `cd_layout.LIGHTEN`: it is a
+legibility control, not a stylistic one (label text prints over it, and
+a lighter wash leaves dark covers unreadable).
+
 **Cover/palette derivation**: `palette.py` pulls background/accent/text
 out of a cover image (Pillow quantize + WCAG luminance for text). Every
 auto-generated page (disc label, CD ring, J-card, cassette shell/J-card)
@@ -627,6 +645,74 @@ plan-then-execute, never repacking the running order, and balanced (not
 "fill the first one to the brim"). Manual disc/side breaks are sticky and
 start from whatever's already placed, not reset to none.
 
+**Recording progress is mirrored into the main window** (#27,
+`panels/recording_progress_bar.py` + `panels/hideable_dialog.py`): a bar
+below the design view, above the status bar, showing overall *and*
+per-track progress plus Stop and "Show recording window". Each operation
+dialog (`RecordDialog`, `TapeRecordDialog`, `BurnDialog`, `CdRipDialog`,
+`MDRemUploadDialog`, `MetadataDialog` proxying its titling, and
+`TelegramChatDialog` mirroring its download-queue status) keeps its own
+bar and additionally emits `running_changed`/`overall_progress_changed`/
+`track_progress_changed`/`visibility_changed`, plus `request_stop()`/
+`request_show()` — one shape, asserted in
+`tests/test_operation_dialog_contract.py`, so `_drive_recording_bar()`
+never needs to know which dialog it holds. **No per-track progress for
+burning** (cdrecord writes a disc as one continuous DAO stream), titling,
+or a Telegram download queue (several files can be in flight at once,
+with no single "current" one) — those four deliberately do not define
+`track_progress_changed`, and a test guards that.
+
+**The bar is visible for an attached dialog's whole lifetime** —
+`_drive_recording_bar()` → `recording_bar.attach()` shows it,
+`_release_recording_bar()` → `stop()` is the *only* thing that hides it.
+Tying visibility to `running_changed` instead shipped broken twice over:
+a dialog hidden before its operation started left no bar and so no way
+back to it, and an operation's own quiet moments (finished but waiting
+to be closed, between discs) took the bar — including "Show recording
+window" — away from a still-open hidden dialog. Both reported directly.
+**The bar carries the only route back to a hidden window, so it must
+outlive every pause in the work it reports on.** Anything emitting
+`running_changed(True)` from its own constructor/starter (as
+`TelegramChatDialog.start_connecting()` does) must be wired up *before*
+that call or the emission is missed entirely.
+
+**The bar has exactly one owner.** `_drive_recording_bar()` declines if
+another dialog already holds it, and `_release_recording_bar()` declines
+to put it away unless the dialog releasing it is the owner. Every
+hideable operation asks `_guard_no_concurrent_operation()` first so two
+of those can't overlap — but **`MetadataDialog` deliberately opens
+without that guard** (editing metadata mid-rip is ordinary), and it used
+to seize the bar on the way in and switch it off on the way out, taking
+a running rip's progress and its way back with it. Reported exactly that
+way. It is also *not* an operation, only a proxy for the
+`MDRemUploadDialog` its "Upload Tracklist" opens, so it takes the bar
+via `_drive_recording_bar_for_metadata()` **only while that upload
+runs** — holding it for the editor's whole lifetime both put up a
+"Waiting…" bar for something that wasn't happening and made
+`_guard_no_concurrent_operation()` see *itself*, which permanently
+refused Upload Tracklist with a "still running" box and nothing running
+(hence the guard's `ignoring` parameter and `_new_metadata_dialog()`).
+
+**Hide keeps an operation running; two things exist only because of
+that.** `exec_hideable()` is what survives a Hide at all (see the gotcha
+below — a bare `hide()` ends `exec()`), and because the main window is
+then usable mid-operation, `_guard_no_concurrent_operation()` refuses
+both a second operation *and* closing the main window while one runs —
+quitting out from under a live worker thread is the silent
+`QThread`-destroyed process abort. **Only one recording/rip/burn/upload
+may ever be in flight**; `MainWindow._active_recording_dialog` is what
+both guards read, and it means "an operation that owns the MDRem port /
+drive / progress bar is in flight" — *not* merely "one of these dialogs
+is open". That distinction is load-bearing: `MetadataDialog` is open far
+longer than it is uploading, and while it wrongly counted as in-flight
+it refused its own Upload Tracklist (see above).
+`TelegramChatDialog` shares this same guard even though a chat session
+touches none of those physical resources — what it *does* share with the
+other six is the one bottom progress bar itself, which only one dialog
+can ever be wired into at a time, and reusing the existing guard was
+simpler and safer than inventing a second, parallel single-owner
+mechanism just for it.
+
 ## PySide6/Qt gotchas hit in this codebase
 
 - **Never construct a Qt GUI type** (`QColor`/`QPen`/`QBrush`/`QFont`/
@@ -695,6 +781,24 @@ start from whatever's already placed, not reset to none.
   regardless, forcing an extra round-trip on a non-premultiplied target).
   `render_scene_to_image()` paints onto the premultiplied format; `.save()`
   still writes an ordinary PNG regardless.
+- **`QDialog.hide()` called from inside that dialog's own `exec()` makes
+  `exec()` return** — `QDialog::setVisible(false)` exits the modal event
+  loop. It does *not* call `done()`, so no result is set and no
+  `finished` is emitted: the call site just gets `Rejected` back and
+  reads it as a cancel. Shipped once (#27's Hide button): hiding a CD rip
+  took the rip window *and* the main window's progress bar with it while
+  cd-paranoia carried on in a worker nobody could reach. Anything that
+  needs to hide a dialog and keep it running goes through
+  `panels/hideable_dialog.py`'s `exec_hideable()`, never a bare `exec()`.
+- **A widget added to a `QToolBar` via `addWidget()` is wrapped in a
+  `QWidgetAction`, and one added while hidden stays *disabled* even after
+  it is shown again** — leaving buttons visible but dead, since
+  `QAbstractButton.click()` does nothing on a disabled button. Separately,
+  under `QT_QPA_PLATFORM=offscreen` such a widget never hides again once
+  shown, through either its own `setVisible()` or its action's. Both bit
+  the same feature (#27) in a row. Put a composite bar in an **ordinary
+  layout**, not a toolbar, whenever its children's visibility or enabled
+  state has to change at runtime.
 
 **Test pattern for this app:** `QT_QPA_PLATFORM=offscreen
 .venv/Scripts/python.exe -c "..."` for quick smoke scripts; a session-
@@ -718,9 +822,29 @@ own `.name`, never by a combo's display text, in any test touching it.
 - **Run only the tests relevant to what you just changed while working;
   save the full suite for the end of the task** — it's an integration
   gate, not a progress check.
+- `scratchpad/` in the repo root is the user's own build/test logs. It is
+  untracked and *not* in `.gitignore`, so it shows up as untracked
+  forever — never `git add -A`/`git add .`, stage files by name.
 - The user runs the real app and reports back concrete, specific
   symptoms — reproduce them exactly rather than generalizing away from
   the specifics.
+- **One reported symptom can have several independent causes; fixing the
+  first one found and shipping is how a bug gets reported twice.** "The
+  progress bar disappears" turned out to be three separate defects
+  (visibility tied to the wrong signal, a signal connected after the
+  emission it needed, and no ownership of the bar at all), and chasing
+  the third surfaced a fourth, unreported one. After a fix, ask what
+  *else* could produce the same symptom before calling it done.
+- **Measure a perceptual/geometric change instead of eyeballing it.** A
+  complaint like "the filters are too strong" invites lowering a
+  constant, which here would have left the actual defect (strength
+  varying with the source image's resolution) untouched. Scoring the
+  output against the input across several input sizes is what exposed
+  it, and is cheap: a throwaway script in the scratchpad, not a test.
+  This applies to anything in `cover_filters.py`, `grayscale.py`,
+  `palette.py` or the `*_layout.py` modules, where "tuned by eye"
+  constants are common and a plausible-looking number can hide a
+  structural bug.
 - **Physical/geometric specs often arrive in fragments across multiple
   messages, and a later correction can invalidate the *entire* previous
   reading, not just one number.** Don't build adjacent features on an

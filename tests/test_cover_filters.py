@@ -99,23 +99,71 @@ def test_posterize_reduces_the_number_of_distinct_tones():
 
 
 def test_pixelate_makes_each_block_a_flat_colour():
-    source = _checkerboard(size=(140, 140), cell=1)  # noisy at pixel level
+    size = 480
+    source = _checkerboard(size=(size, size), cell=1)  # noisy at pixel level
     out = cover_filters.apply_cover_filter(source, cover_filters.FILTER_PIXELATE)
     image = Image.open(io.BytesIO(out)).convert("RGB")
-    block = cover_filters.PIXELATE_BLOCK_PX
+    block = size // cover_filters.PIXELATE_BLOCKS
     colours_in_first_block = {image.getpixel((x, y)) for x in range(block) for y in range(block)}
     assert len(colours_in_first_block) == 1
+
+
+def test_pixelate_averages_a_block_rather_than_sampling_one_pixel_of_it():
+    """A block spanning a 1px checkerboard averages to mid-grey. Picking
+    a single pixel out of it instead (the original NEAREST downscale)
+    lands on pure black or pure white, which is what made fine detail
+    turn into noise rather than into a recognizable mosaic."""
+    source = _checkerboard(size=(480, 480), cell=1)
+    out = cover_filters.apply_cover_filter(source, cover_filters.FILTER_PIXELATE)
+    red, green, blue = _pixel(out, (5, 5))
+    assert 60 < red < 195, f"block colour {red} looks sampled, not averaged"
+    assert red == green == blue
 
 
 # -- halftone -----------------------------------------------------------------
 
 
-def test_halftone_output_is_only_black_and_white():
-    source = _solid((60, 60, 60))
+def test_halftone_output_carries_no_colour_and_is_mostly_black_and_white():
+    """Black dots on white, with grey only where a dot's antialiased edge
+    falls (the supersample-then-downscale in _halftone) -- ImageDraw
+    cannot antialias, and hard-edged ellipses at this dot size read as
+    ragged rather than as a print screen. What must never come back is
+    *colour*: a halftone is a one-ink effect."""
+    source = _solid((60, 60, 90), (480, 480))
     out = cover_filters.apply_cover_filter(source, cover_filters.FILTER_HALFTONE)
     image = Image.open(io.BytesIO(out)).convert("RGB")
-    colours = {image.getpixel((x, y)) for x in range(0, image.width, 3) for y in range(0, image.height, 3)}
-    assert colours <= {(0, 0, 0), (255, 255, 255)}
+    sampled = [
+        image.getpixel((x, y)) for x in range(0, image.width, 3) for y in range(0, image.height, 3)
+    ]
+    assert all(red == green == blue for red, green, blue in sampled), "a halftone must not keep colour"
+    # Real ink and real paper, not an all-over grey wash: the dots have
+    # to reach true black and the gaps true white. (What fraction lands
+    # in between is just geometry -- a small dot is mostly perimeter --
+    # so it is deliberately not asserted here.)
+    tones = Image.open(io.BytesIO(out)).convert("L").histogram()
+    assert tones[0] > 0, "no dot reaches black -- the screen has washed out to grey"
+    assert tones[255] > 0, "no gap reaches white -- the screen has washed out to grey"
+
+
+def test_halftone_dots_scale_with_the_cover_rather_than_staying_a_fixed_size():
+    """The same guard as the pixelate/blur one below, for the dot screen:
+    a fixed cell size in pixels put ~4x as many dots across a 1200px
+    cover as across a 300px one."""
+    counts = []
+    for size in (300, 1200):
+        out = cover_filters.apply_cover_filter(_solid((60, 60, 60), (size, size)), cover_filters.FILTER_HALFTONE)
+        image = Image.open(io.BytesIO(out)).convert("L")
+        # Dots across, counted as runs of dark pixels along a scanline.
+        # The busiest scanline of many, not one fixed row: a single row
+        # can fall in the gap between two rows of dots and find none,
+        # which says nothing about the screen's density.
+        best = 0
+        for fraction in range(10, 90, 3):
+            row = [image.getpixel((x, image.height * fraction // 100)) < 128 for x in range(image.width)]
+            best = max(best, sum(1 for index, dark in enumerate(row) if dark and not row[index - 1]))
+        counts.append(best)
+    assert counts[0] > 0, "no dots found at all"
+    assert counts[0] == pytest.approx(counts[1], rel=0.15), f"dot counts differ by source size: {counts}"
 
 
 def test_halftone_dots_are_bigger_for_a_darker_source():
@@ -127,3 +175,63 @@ def test_halftone_dots_are_bigger_for_a_darker_source():
     dark = black_pixel_count((20, 20, 20))
     light = black_pixel_count((220, 220, 220))
     assert dark > light
+
+
+# -- strength must not depend on the source cover's resolution ----------------
+#
+# The defect these guard: every spatial constant used to be an absolute
+# pixel size, so the same filter hit a small cover far harder than a big
+# one. Covers arrive from iTunes/Deezer/MusicBrainz/embedded FLAC art/the
+# user's own files at whatever size each provides, and pixelate on a small
+# one was reported as leaving the cover "almost unrecognizable".
+
+
+def _gradient(size: int) -> bytes:
+    """Structure at several scales, so a filter has something real to
+    destroy -- a flat colour survives everything."""
+    image = Image.new("RGB", (size, size))
+    pixels = image.load()
+    for y in range(size):
+        for x in range(size):
+            stripe = 255 if int(x / (size / 32)) % 2 else 40
+            pixels[x, y] = (int(255 * x / size), int(200 * y / size), stripe)
+    out = io.BytesIO()
+    image.save(out, format="PNG")
+    return out.getvalue()
+
+
+def _detail_kept(original: bytes, filtered: bytes) -> float:
+    """How much of the picture still reads the same, 1.0 = identical.
+    Both reduced to a common size first, so this compares the images
+    rather than their resolutions."""
+    def _reduced(data: bytes) -> list[int]:
+        with Image.open(io.BytesIO(data)) as image:
+            return list(image.convert("L").resize((128, 128), Image.Resampling.BOX).getdata())
+
+    a, b = _reduced(original), _reduced(filtered)
+    mean_a, mean_b = sum(a) / len(a), sum(b) / len(b)
+    deltas_a = [v - mean_a for v in a]
+    deltas_b = [v - mean_b for v in b]
+    denominator = (sum(v * v for v in deltas_a) ** 0.5) * (sum(v * v for v in deltas_b) ** 0.5)
+    return sum(x * y for x, y in zip(deltas_a, deltas_b)) / denominator if denominator else 0.0
+
+
+@pytest.mark.parametrize(
+    "filter_id",
+    [cover_filters.FILTER_BLUR, cover_filters.FILTER_PIXELATE, cover_filters.FILTER_HALFTONE],
+)
+def test_a_filter_costs_a_small_cover_no_more_than_a_large_one(filter_id):
+    kept = []
+    for size in (300, 900):
+        source = _gradient(size)
+        kept.append(_detail_kept(source, cover_filters.apply_cover_filter(source, filter_id)))
+    assert abs(kept[0] - kept[1]) < 0.15, f"{filter_id} is resolution-dependent: {kept}"
+
+
+def test_pixelate_leaves_the_cover_recognizable():
+    """Reported directly: it "pixels the image to almost unrecognizable".
+    A mosaic has to still read as the cover it was made from -- it is a
+    background a label's text prints over, not an abstraction of one."""
+    source = _gradient(600)
+    kept = _detail_kept(source, cover_filters.apply_cover_filter(source, cover_filters.FILTER_PIXELATE))
+    assert kept > 0.9, f"only {kept:.2f} of the cover survives pixelating"

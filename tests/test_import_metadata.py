@@ -1,3 +1,4 @@
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QDialog
 
 from mdtools import app_window as app_window_module
@@ -6,17 +7,26 @@ from mdtools.io.project_io import save_project
 from mdtools.project import PAGE_COVER, PAGE_DISC, ProjectMetadata, Track
 
 
-class _FakeMetadataDialog:
+class _FakeMetadataDialog(QObject):
     """Stands in for the real MetadataDialog -- a real one's exec() would
     block forever under the offscreen platform with no user to click OK.
     Captures what it was shown, and reports it back as the result, same
     shape as the real dialog's own result_metadata. Accepts by default;
-    a test wanting Cancel overrides `exec` on the class itself."""
+    a test wanting Cancel overrides `exec` on the class itself.
+
+    A QObject with the real signals MainWindow's own
+    _drive_recording_bar() connects to (#27) -- none of them ever fire
+    here (nothing to upload), but the connection itself must not raise."""
 
     DialogCode = QDialog.DialogCode
     instances: list["_FakeMetadataDialog"] = []
 
-    def __init__(self, metadata, parent=None, medium="md"):
+    running_changed = Signal(bool)
+    overall_progress_changed = Signal(float, str)
+    visibility_changed = Signal(bool)
+
+    def __init__(self, metadata, parent=None, medium="md", is_recording_busy=None):
+        super().__init__()
         self.shown_metadata = metadata
         self.result_metadata = metadata
         _FakeMetadataDialog.instances.append(self)

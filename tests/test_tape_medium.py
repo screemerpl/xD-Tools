@@ -11,6 +11,7 @@ import io
 
 import pytest
 from PIL import Image
+from PySide6.QtCore import QObject, Signal
 
 from mdtools.app_window import TAPE_JCARD_TEMPLATE, TAPE_LABEL_TEMPLATE, MainWindow
 from mdtools.io.project_io import load_project, save_project
@@ -226,8 +227,14 @@ def test_a_cassette_project_records_through_the_cassette_dialog(qt_app, monkeypa
 
     opened = {}
 
-    class FakeTapeDialog:
+    class FakeTapeDialog(QObject):
+        running_changed = Signal(bool)
+        overall_progress_changed = Signal(float, str)
+        track_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
         def __init__(self, *args, **kwargs):
+            super().__init__()
             opened["kwargs"] = kwargs
             self.result_metadata = None
             self.total_minutes = 60.0

@@ -54,6 +54,7 @@ from PySide6.QtWidgets import (
 
 from mdtools import app_settings, audio_folder, embedded_cover, mixtape_cover, tracks, user_paths
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
+from mdtools.panels.progress_format import mmss as _mmss
 from mdtools.project import MEDIUM_MD, medium_name, ProjectMetadata
 
 # The same 80 minutes RecordDialog and CdRipDialog warn about, checked here
@@ -66,11 +67,6 @@ DISC_SP_SECONDS = 80 * 60
 # hundred-track collection onto an LP4 disc -- but worth saying out loud,
 # since picking a whole library's root folder produces exactly this.
 UNLIKELY_TRACK_COUNT = 60
-
-
-def _mmss(seconds: float) -> str:
-    seconds = max(0, int(seconds))
-    return f"{seconds // 60}:{seconds % 60:02d}"
 
 
 class FolderRecordDialog(QDialog):

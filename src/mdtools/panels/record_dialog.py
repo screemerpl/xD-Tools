@@ -63,7 +63,7 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from PySide6.QtCore import QCoreApplication, QTimer, Qt
+from PySide6.QtCore import QCoreApplication, QTimer, Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -84,9 +84,11 @@ from PySide6.QtWidgets import (
 from mdtools import app_settings, audio_engine, embedded_cover, mdrem, mixtape_cover, multidisc, tracks
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
 from mdtools.panels.erase_dialog import EraseDiscDialog
+from mdtools.panels.hideable_dialog import exec_hideable, hide_for_background, surface
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
 from mdtools.panels.playback_bridge import PlaybackBridge
 from mdtools.panels.preview_player import PreviewPlayerBar
+from mdtools.panels.progress_format import mmss as _mmss
 from mdtools.project import ProjectMetadata, Track
 
 # An MD holds 80 minutes in SP. The deck also has MDLP (LP2/LP4) for 160/320,
@@ -119,12 +121,21 @@ TRACK_MARK_KEY = "SEND RECORD"
 COL_DISC, COL_NUMBER, COL_TITLE, COL_ARTIST, COL_LENGTH = range(5)
 
 
-def _mmss(seconds: float) -> str:
-    seconds = max(0, int(seconds))
-    return f"{seconds // 60}:{seconds % 60:02d}"
-
-
 class RecordDialog(QDialog):
+    # Mirrored by MainWindow's own bottom-of-window progress bar (#27) --
+    # see app_window.py's _drive_recording_bar()/_release_recording_bar().
+    # running_changed spans recording *and* the titling that follows it as
+    # one continuous True -- see _title_single_disc()/_title_current_disc()
+    # for why the nested MDRemUploadDialog's own running_changed is *not*
+    # proxied through (it would flash the bar hidden in between).
+    running_changed = Signal(bool)
+    overall_progress_changed = Signal(float, str)
+    track_progress_changed = Signal(float, str)
+    visibility_changed = Signal(bool)
+    # Asked for by the progress bar's "Show recording window" button --
+    # see panels/hideable_dialog.py, which is what actually re-shows this.
+    show_requested = Signal()
+
     def __init__(
         self,
         port: str,
@@ -173,6 +184,16 @@ class RecordDialog(QDialog):
         # See the module docstring: this is what gets AudioPlayer's
         # realtime-thread callbacks safely onto this (the GUI) thread.
         self._bridge = PlaybackBridge(self)
+        # The MDRemUploadDialog currently open for titling, if any -- set
+        # only while one of _title_single_disc()/_title_current_disc()'s
+        # own exec() calls is on the stack. request_stop() dispatches here
+        # first, since stopping *this* dialog does nothing once recording
+        # has already finished and titling has taken over.
+        self._nested_dialog: QDialog | None = None
+        # Set by the Hide button, read by exec_hideable() -- see
+        # panels/hideable_dialog.py for why a hide has to be told apart
+        # from a cancel at all.
+        self.hidden_for_background = False
         self._bridge.track_boundary.connect(self._on_track_boundary)
         self._bridge.finished.connect(self._on_disc_finished)
 
@@ -245,6 +266,11 @@ class RecordDialog(QDialog):
         self.preview_bar = PreviewPlayerBar()
         self.preview_bar.prev_requested.connect(lambda: self._step_preview(-1))
         self.preview_bar.next_requested.connect(lambda: self._step_preview(1))
+        # Locked for as long as real work is in progress -- connected to
+        # this dialog's own running_changed rather than toggled by hand at
+        # each start/finish/fail site, so it cannot drift out of step with
+        # them. See PreviewPlayerBar.set_locked().
+        self.running_changed.connect(self.preview_bar.set_locked)
         layout.addWidget(self.preview_bar)
 
         hint = QLabel(
@@ -328,6 +354,13 @@ class RecordDialog(QDialog):
         self.close_btn = QPushButton(self.tr("Cancel"))
         self.close_btn.clicked.connect(self.reject)
         self.buttons.addButton(self.close_btn, QDialogButtonBox.ButtonRole.RejectRole)
+        self.hide_btn = QPushButton(self.tr("Hide"))
+        self.hide_btn.setToolTip(
+            self.tr("Hide this window and keep recording in the background -- use \"Show recording "
+                    "window\" in the bar at the bottom of the main window to bring it back.")
+        )
+        self.hide_btn.clicked.connect(self._on_hide_clicked)
+        self.buttons.addButton(self.hide_btn, QDialogButtonBox.ButtonRole.ActionRole)
         layout.addWidget(self.buttons)
 
         self._timer = QTimer(self)
@@ -685,6 +718,7 @@ class RecordDialog(QDialog):
         self._recording = True
         self._current_local_index = 0
         self.progress.setValue(0)
+        self.running_changed.emit(True)
         # Decoded, resampled and dithered *before* the pause is released --
         # otherwise the deck sits running into silence for however long
         # that takes (several seconds, for a whole disc's worth of tracks)
@@ -742,7 +776,12 @@ class RecordDialog(QDialog):
         """RECORD puts the deck into record-pause, then the user confirms it
         actually did. There is no feedback channel, so without asking, a
         RECORD that never arrived would mean playing a whole album into a
-        deck that isn't recording -- and only finding out 40 minutes later."""
+        deck that isn't recording -- and only finding out 40 minutes later.
+
+        Reached again for every disc of a multi-disc run, by which point
+        the user may well have hidden this window -- so it comes back
+        before asking."""
+        surface(self)
         try:
             self._deck = mdrem.MDRemClient(self._port)
             self._deck.open()
@@ -827,29 +866,36 @@ class RecordDialog(QDialog):
         done = sum(item.length_seconds for item in self._items[first:current])
         elapsed = done + self._player.position_seconds
         total = max(1, sum(item.length_seconds for item in self._items[first : last + 1]))
-        self.progress.setValue(int(1000 * min(1.0, elapsed / total)))
+        overall_fraction = min(1.0, elapsed / total)
+        self.progress.setValue(int(1000 * overall_fraction))
         title = self._items[current].display_title() if 0 <= current < len(self._items) else ""
+        track_seconds = self._items[current].length_seconds if 0 <= current < len(self._items) else 0
+        track_fraction = min(1.0, self._player.position_seconds / max(1, track_seconds))
         if self._multi() and self._plan is not None:
-            self.status_label.setText(
-                self.tr("Disc {disc} of {discs}, track {index} of {count}: {title} -- {elapsed} of {total}").format(
-                    disc=self._disc + 1,
-                    discs=self._plan.count,
-                    index=current - first + 1,
-                    count=last - first + 1,
-                    title=title,
-                    elapsed=_mmss(elapsed),
-                    total=_mmss(total),
-                )
+            text = self.tr("Disc {disc} of {discs}, track {index} of {count}: {title} -- {elapsed} of {total}").format(
+                disc=self._disc + 1,
+                discs=self._plan.count,
+                index=current - first + 1,
+                count=last - first + 1,
+                title=title,
+                elapsed=_mmss(elapsed),
+                total=_mmss(total),
             )
-            return
-        self.status_label.setText(
-            self.tr("Recording {index} of {count}: {title} -- {elapsed} of {total}").format(
+        else:
+            text = self.tr("Recording {index} of {count}: {title} -- {elapsed} of {total}").format(
                 index=current + 1,
                 count=len(self._items),
                 title=title,
                 elapsed=_mmss(elapsed),
                 total=_mmss(total),
             )
+        self.status_label.setText(text)
+        self.overall_progress_changed.emit(overall_fraction, text)
+        self.track_progress_changed.emit(
+            track_fraction,
+            self.tr("{title} -- {elapsed} of {total}").format(
+                title=title, elapsed=_mmss(self._player.position_seconds), total=_mmss(track_seconds)
+            ),
         )
 
     def _on_disc_finished(self) -> None:
@@ -891,6 +937,21 @@ class RecordDialog(QDialog):
         # and will take the titling keys.
         QTimer.singleShot(TITLING_DELAY_MS, self._title_current_disc)
 
+    def _begin_nested_titling(self, dialog: MDRemUploadDialog) -> None:
+        """Proxies the titling dialog's own overall_progress_changed/
+        visibility_changed straight through as this dialog's own -- but
+        deliberately *not* running_changed (see the class-level comment).
+        The -1.0 sentinel hides the per-track row in MainWindow's bar:
+        titling has no per-track concept, and the next disc's first
+        _refresh_progress() tick naturally un-hides it."""
+        dialog.overall_progress_changed.connect(self.overall_progress_changed)
+        dialog.visibility_changed.connect(self.visibility_changed)
+        self._nested_dialog = dialog
+        self.track_progress_changed.emit(-1.0, "")
+
+    def _end_nested_titling(self) -> None:
+        self._nested_dialog = None
+
     def _title_single_disc(self) -> None:
         """Writes the album's titles and ejects, unattended -- nobody sits
         through a whole recording, so a confirmation between the music
@@ -903,7 +964,9 @@ class RecordDialog(QDialog):
         # A disc that was just recorded has no titles to erase, and erasing
         # is roughly half the total time.
         dialog = MDRemUploadDialog(metadata, self._port, self, clear_default=False, unattended=True)
-        dialog.exec()
+        self._begin_nested_titling(dialog)
+        exec_hideable(dialog)
+        self._end_nested_titling()
         if dialog.succeeded:
             self.status_label.setText(self.tr("Recording finished. Titles written and the disc ejected."))
         else:
@@ -913,6 +976,7 @@ class RecordDialog(QDialog):
                     "the titles can be written again from Tools > Metadata..."
                 )
             )
+        self.running_changed.emit(False)
 
     def _title_current_disc(self) -> None:
         """Writes this disc's titles, ejects it, and asks for the next --
@@ -927,7 +991,9 @@ class RecordDialog(QDialog):
         dialog = MDRemUploadDialog(
             self._disc_metadata(disc), self._port, self, clear_default=False, unattended=True
         )
-        dialog.exec()
+        self._begin_nested_titling(dialog)
+        exec_hideable(dialog)
+        self._end_nested_titling()
         if not dialog.succeeded:
             self._finish_run(
                 self.tr(
@@ -956,6 +1022,7 @@ class RecordDialog(QDialog):
         self._begin_disc()
 
     def _ask_for_next_disc(self) -> bool:
+        surface(self)
         answer = QMessageBox.question(
             self,
             self.tr("Record to MiniDisc"),
@@ -977,6 +1044,7 @@ class RecordDialog(QDialog):
         self.mark_check.setEnabled(True)
         self.status_label.setVisible(True)
         self.status_label.setText(message)
+        self.running_changed.emit(False)
 
     def _capture_metadata(self) -> None:
         """Reads the dialog back as the project's metadata.
@@ -1093,6 +1161,28 @@ class RecordDialog(QDialog):
         self.erase_btn.setEnabled(True)
         self.mark_check.setEnabled(True)
         self._set_fields_editable(True)
+        self.running_changed.emit(False)
+
+    def request_stop(self) -> None:
+        """What MainWindow's own Stop button calls -- dispatches to the
+        nested titling dialog if one is open (this dialog's own reject()
+        would do nothing useful once recording has already finished and
+        titling has taken over), otherwise stops the recording itself."""
+        if self._nested_dialog is not None:
+            self._nested_dialog.request_stop()
+        else:
+            self.reject()
+
+    def request_show(self) -> None:
+        """The other half of request_stop()'s dispatch: while titling is
+        under way it is the nested dialog that is hidden, not this one."""
+        if self._nested_dialog is not None:
+            self._nested_dialog.request_show()
+        else:
+            self.show_requested.emit()
+
+    def _on_hide_clicked(self) -> None:
+        hide_for_background(self)
 
     def reject(self) -> None:
         """Stopping mid-recording has to stop both ends -- leaving the deck
@@ -1105,5 +1195,6 @@ class RecordDialog(QDialog):
             if self._player is not None:
                 self._player.stop()
             self._send_key("SEND STOP")
+            self.running_changed.emit(False)
         self._close_deck()
         super().reject()

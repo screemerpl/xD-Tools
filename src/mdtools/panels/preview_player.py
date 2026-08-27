@@ -38,14 +38,10 @@ from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSlider, QWidget
 
 from mdtools import audio_engine
 from mdtools.panels.playback_bridge import PlaybackBridge
+from mdtools.panels.progress_format import mmss as _mmss
 
 POLL_MS = 200
 SLIDER_RANGE = 1000
-
-
-def _mmss(seconds: float) -> str:
-    seconds = max(0, int(seconds))
-    return f"{seconds // 60}:{seconds % 60:02d}"
 
 
 class PreviewPlayerBar(QWidget):
@@ -63,6 +59,14 @@ class PreviewPlayerBar(QWidget):
         self._player: audio_engine.AudioPlayer | None = None
         self._playing = False
         self._duration = 0.0
+        # Whether the owning dialog is actually recording/burning right
+        # now -- see set_locked(). Kept alongside _has_prev/_has_next
+        # because every one of the transport buttons' enabled states is
+        # a function of both "is there a track here" and "are we allowed
+        # to touch the audio device at all".
+        self._locked = False
+        self._has_prev = False
+        self._has_next = False
         self._bridge = PlaybackBridge(self)
         self._bridge.finished.connect(self._on_finished)
 
@@ -98,7 +102,7 @@ class PreviewPlayerBar(QWidget):
         self._timer.setInterval(POLL_MS)
         self._timer.timeout.connect(self._refresh_position)
 
-        self._set_enabled_state(False)
+        self._refresh_enabled()
 
     # --- selection, driven by the owning dialog ------------------------
 
@@ -109,8 +113,9 @@ class PreviewPlayerBar(QWidget):
         that same signal (e.g. a reorder that leaves the selection where
         it was) is avoided by no-op'ing when `path` has not actually
         changed."""
-        self.prev_btn.setEnabled(has_prev)
-        self.next_btn.setEnabled(has_next)
+        self._has_prev = has_prev
+        self._has_next = has_next
+        self._refresh_enabled()
         if path == self._path:
             return
         # Skip-while-playing: Prev/Next during playback should not force
@@ -119,17 +124,56 @@ class PreviewPlayerBar(QWidget):
         was_playing = self._playing
         self.stop()
         self._path = path
-        self._set_enabled_state(path is not None)
-        if path is not None and was_playing:
+        self._refresh_enabled()
+        if path is not None and was_playing and not self._locked:
             self._begin_playback()
 
-    def _set_enabled_state(self, enabled: bool) -> None:
-        self.play_btn.setEnabled(enabled)
-        self.slider.setEnabled(enabled)
+    def set_locked(self, locked: bool) -> None:
+        """Recording/burning is under way (or has stopped), so the whole
+        transport is out of bounds (or back in).
+
+        Connected straight to the owning dialog's own `running_changed`
+        -- the one thing in each of those dialogs that already means
+        "real work is in progress" -- rather than called by hand at each
+        place a run starts and ends, of which there are several per
+        dialog and more of them over time.
+
+        Locking is not just tidiness. This bar deliberately plays through
+        the OS *default* output device (see the module docstring), which
+        may well be the very device the recording is feeding a deck
+        through; under WDM-KS, the host API this app prefers, a second
+        stream onto a device already open is at best a fight over it. And
+        on a MiniDisc the deck is recording whatever arrives down that
+        feed, so anything else played while it runs risks landing on the
+        disc. The bar was already stopped when a run began, but nothing
+        stopped the user pressing Play again a second later."""
+        self._locked = locked
+        if locked:
+            self.stop()
+        self._refresh_enabled()
+
+    def _refresh_enabled(self) -> None:
+        usable = not self._locked and self._path is not None
+        self.play_btn.setEnabled(usable)
+        self.slider.setEnabled(usable)
+        self.prev_btn.setEnabled(self._has_prev and not self._locked)
+        self.next_btn.setEnabled(self._has_next and not self._locked)
+        tip = (
+            self.tr("Not while recording is in progress.")
+            if self._locked
+            else ""
+        )
+        for widget in (self.play_btn, self.slider, self.prev_btn, self.next_btn):
+            widget.setToolTip(tip)
 
     # --- playback --------------------------------------------------------
 
     def _on_play_pause_clicked(self) -> None:
+        # Belt and braces over the disabled button: a keyboard shortcut,
+        # a click() from a test, or a stray signal must not open an audio
+        # stream while a recording owns the device.
+        if self._locked:
+            return
         if self._player is None:
             self._begin_playback()
         elif self._playing:
@@ -138,7 +182,7 @@ class PreviewPlayerBar(QWidget):
             self._resume()
 
     def _begin_playback(self) -> None:
-        if self._path is None:
+        if self._path is None or self._locked:
             return
         try:
             samples, rate = audio_engine.load_for_preview(self._path)

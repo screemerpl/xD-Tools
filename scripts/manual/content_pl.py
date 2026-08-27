@@ -13,7 +13,7 @@ TITLE = "xD-Tools"
 SUBTITLE = "Studio Retro Nośników — instrukcja obsługi"
 TITLE_NOTE = "Projektowanie etykiet, nagrywanie MiniDisców i kaset, wypalanie CD-R i nadawanie tytułów"
 COVER_CAPTION = "Co z czym rozmawia: komendy przez USB, klawisze przez podczerwień, dźwięk przez S/PDIF."
-VERSION_LINE = "Wersja 0.3.2"
+VERSION_LINE = "Wersja 0.3.3"
 AUTHOR_LINE = 'Artur "Screemer" Jakubowicz'
 DATE_LINE = "Sierpień 2026"
 TOC_TITLE = "Spis treści"
@@ -24,10 +24,10 @@ BOOK = [
     {
         "title": "Czym to jest",
         "blocks": [
-            {"p": "xD-Tools to komputerowy warsztat do starych nośników muzyki: MiniDisc, CD-R i "
-                  "kasety magnetofonowej. (Za x podstaw M albo C — zaczęło się jako żart, a wyszło z "
-                  "tego opis). Zaczęło się od projektanta etykiet, a wyrosło z tego kilka narzędzi "
-                  "dzielących jeden plik projektu:"},
+            {"p": "xD-Tools to komputerowy warsztat do pracy ze starymi nośnikami muzyki: MiniDiskiem, "
+                  "CD-R i kasetą magnetofonową. (X zastępuje M albo C — zaczęło się jako żart, a wyszło "
+                  "z tego całkiem trafny opis). Zaczęło się od projektowania etykiet, a wyrosło z tego "
+                  "kilka narzędzi współdzielących jeden plik projektu:"},
             {"ul": [
                 "**Projektowanie** etykiet: naklejki na MiniDisc i wkładki J-card albo pierścienia na "
                 "płytę CD i wkładki do pudełka slim — wraz z eksportem gotowym do druku i cięcia.",
@@ -125,7 +125,7 @@ BOOK = [
             {"p": "Żeby wyjść z xD-Tools na dobre, użyj **Plik > Zakończ** albo anuluj ekran powitalny, "
                   "kiedy się pojawi."},
             {"h2": "Gdzie zapisywane są projekty"},
-            {"p": "Przy pierwszym zapisie xD-Tools proponuje **Dokumenty\\MiniDiscProjects** i nazwę pliku "
+            {"p": "Przy pierwszym zapisie xD-Tools proponuje **Dokumenty\\XDProjects** i nazwę pliku "
                   "zbudowaną z samego albumu - `Skillet - Unleashed (2016).mdproj`. To ten sam napis, "
                   "który dostaje magnetofon, więc plik na komputerze i tytuł na płycie się zgadzają."},
             {"p": "Pozostałe okna plików też startują w sensownym miejscu: **Dodaj obraz...** i okładka "
@@ -165,6 +165,22 @@ BOOK = [
                   "szablonu nie jest warstwą i nie da się go tu ruszyć."},
             {"note": "Wszystkie trzy panele można zamknąć i przywrócić z menu **Widok**, a także wyciągnąć "
                      "jako osobne okna."},
+            {"h2": "Kiedy coś się nagrywa"},
+            {"p": "Nagrywanie, zgrywanie, wypalanie i zapisywanie tytułów odbywa się w osobnym oknie - "
+                  "a każde z tych okien ma przycisk **Ukryj**. Po ukryciu praca trwa dalej: główne okno "
+                  "znów jest dostępne, a na dole, nad paskiem stanu, pojawia się pasek postępu. Pokazuje "
+                  "postęp całości, bieżący utwór (jeśli jest), przycisk **Zatrzymaj** oraz **Pokaż okno "
+                  "nagrywania**, który przywraca okno."},
+            {"p": "Pasek zostaje tak długo, jak długo to okno jest otwarte - również po zakończeniu samej "
+                  "pracy. To jedyna droga powrotu do ukrytego okna, więc znika dopiero razem z nim."},
+            {"note": "Naraz może działać tylko jedna taka operacja. W trakcie jej trwania uruchomienie "
+                     "kolejnej - albo zamknięcie xD-Tools - zostanie odrzucone: biłyby się o ten sam "
+                     "adapter, napęd lub urządzenie dźwiękowe."},
+            {"h2": "Który projekt jest otwarty"},
+            {"p": "Gdy projekt został już zapisany, na pasku tytułu widnieje nazwa jego pliku - "
+                  "*Kind of Blue - xD-Tools*. Ta sama nazwa pojawia się na pasku zadań i w Alt+Tab, co "
+                  "pozwala odróżnić dwa okna xD-Tools. Projekt jeszcze niezapisany nie ma nazwy pliku, "
+                  "więc zostaje przy *xD-Tools - Retro Media Studio*."},
             {"h2": "Przesuwanie, skalowanie i obracanie"},
             {"ul": [
                 "Przeciągnij **środek** elementu, żeby go przesunąć.",

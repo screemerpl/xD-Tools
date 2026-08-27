@@ -8,7 +8,7 @@ TITLE = "xD-Tools"
 SUBTITLE = "Retro Media Studio - User Manual"
 TITLE_NOTE = "Designing labels, recording MiniDiscs and cassettes, burning CD-Rs, and titling discs"
 COVER_CAPTION = "What talks to what: commands over USB, keys over infrared, audio over S/PDIF."
-VERSION_LINE = "Version 0.3.2"
+VERSION_LINE = "Version 0.3.3"
 AUTHOR_LINE = 'Artur "Screemer" Jakubowicz'
 DATE_LINE = "August 2026"
 TOC_TITLE = "Contents"
@@ -122,7 +122,7 @@ BOOK = [
             {"p": "To leave xD-Tools altogether, use **File > Exit**, or cancel the startup screen when it "
                   "reappears."},
             {"h2": "Where your projects are saved"},
-            {"p": "The first time you save, xD-Tools proposes **Documents\\MiniDiscProjects** and a file "
+            {"p": "The first time you save, xD-Tools proposes **Documents\\XDProjects** and a file "
                   "name built from the album itself - `Skillet - Unleashed (2016).mdproj`. That is the "
                   "same line the deck is told to display, so the file on your computer and the title on "
                   "the disc agree with each other."},
@@ -165,6 +165,23 @@ BOOK = [
                   "cannot be touched here."},
             {"note": "All three panels can be closed and reopened from the **View** menu, and dragged out "
                      "into floating windows."},
+            {"h2": "While something is recording"},
+            {"p": "Recording, ripping, burning and title-writing each happen in a window of their own - "
+                  "and each of those windows has a **Hide** button. Hide it and the work carries on: the "
+                  "main window becomes usable again, and a progress bar appears along the bottom, above "
+                  "the status bar. It shows overall progress, the current track where there is one, a "
+                  "**Stop** button, and **Show recording window** to bring the window back."},
+            {"p": "The bar stays for as long as that window is open, even once the work itself has "
+                  "finished - it is the only way back to a window you have hidden, so it does not go "
+                  "away until the window does."},
+            {"note": "Only one of these can run at a time. While one is going, starting another - or "
+                     "closing xD-Tools - is refused: they would be fighting over the same adapter, "
+                     "drive or sound device."},
+            {"h2": "Which project is open"},
+            {"p": "Once a project has been saved, the title bar shows its file name - "
+                  "*Kind of Blue - xD-Tools*. That name is in the taskbar and Alt+Tab too, which is what "
+                  "tells two xD-Tools windows apart. A project you have not saved yet has no file name "
+                  "to show, so it stays *xD-Tools - Retro Media Studio*."},
             {"h2": "Moving, scaling and rotating"},
             {"ul": [
                 "Drag an item's **body** to move it.",
@@ -678,6 +695,7 @@ BOOK = [
                   "check a particular passage, and **Prev/Next** step through the album without going "
                   "back to the list. It is there to catch a wrong file or a bad edit before forty minutes "
                   "goes down onto the disc, not to audition the whole album end to end."},
+            {"p": "The player switches off while a recording is actually running - it plays through the computer's default output, which may be the very device feeding the deck."},
             {"h2": "What happens"},
             {"ol": [
                 "xD-Tools shows the playlist and its total time, and warns if it will not fit on an "

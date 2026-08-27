@@ -10,6 +10,7 @@ accidental send would arm a deck for recording, which is destructive.
 """
 
 import pytest
+from PySide6.QtCore import QObject, Signal
 
 from mdtools import tracks as tracks_module
 from mdtools.panels import record_dialog as record_module
@@ -152,8 +153,12 @@ def _uploads(monkeypatch, succeeded: bool = True) -> list:
     write onto which disc."""
     made: list = []
 
-    class _FakeUpload:
+    class _FakeUpload(QObject):
+        overall_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
         def __init__(self, metadata, port, parent=None, clear_default=True, unattended=False):
+            super().__init__()
             made.append((metadata, unattended, clear_default))
             self.succeeded = succeeded
 
@@ -162,6 +167,27 @@ def _uploads(monkeypatch, succeeded: bool = True) -> list:
 
     monkeypatch.setattr(record_module, "MDRemUploadDialog", _FakeUpload)
     return made
+
+
+def test_a_hidden_recording_comes_back_before_asking_for_the_next_disc(qt_app, monkeypatch, no_hardware):
+    """A QMessageBox is its own window and appears whether or not the
+    dialog that parented it does -- so "put a blank disc in" could
+    otherwise arrive with nothing behind it, from a window the user hid
+    forty minutes ago."""
+    dialog = _double_album(monkeypatch)
+    seen: list = []
+    dialog.show_requested.connect(lambda: seen.append("asked back"))
+    monkeypatch.setattr(
+        record_module.QMessageBox,
+        "question",
+        lambda *a, **k: seen.append("asked the user") or record_module.QMessageBox.StandardButton.Ok,
+    )
+    dialog.hide()
+
+    dialog._ask_for_next_disc()
+
+    assert seen[0] == "asked back", f"the window was not brought back first: {seen}"
+    assert "asked the user" in seen
 
 
 def _answer_affirmatively(*args, **kwargs):
