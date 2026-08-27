@@ -84,7 +84,7 @@ from PySide6.QtWidgets import (
 from mdtools import app_settings, audio_engine, embedded_cover, mdrem, mixtape_cover, multidisc, tracks
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
 from mdtools.panels.erase_dialog import EraseDiscDialog
-from mdtools.panels.hideable_dialog import exec_hideable, hide_for_background, surface
+from mdtools.panels.hideable_dialog import close_hides_while_busy, exec_hideable, surface
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
 from mdtools.panels.playback_bridge import PlaybackBridge
 from mdtools.panels.preview_player import PreviewPlayerBar
@@ -354,13 +354,6 @@ class RecordDialog(QDialog):
         self.close_btn = QPushButton(self.tr("Cancel"))
         self.close_btn.clicked.connect(self.reject)
         self.buttons.addButton(self.close_btn, QDialogButtonBox.ButtonRole.RejectRole)
-        self.hide_btn = QPushButton(self.tr("Hide"))
-        self.hide_btn.setToolTip(
-            self.tr("Hide this window and keep recording in the background -- use \"Show recording "
-                    "window\" in the bar at the bottom of the main window to bring it back.")
-        )
-        self.hide_btn.clicked.connect(self._on_hide_clicked)
-        self.buttons.addButton(self.hide_btn, QDialogButtonBox.ButtonRole.ActionRole)
         layout.addWidget(self.buttons)
 
         self._timer = QTimer(self)
@@ -1173,6 +1166,21 @@ class RecordDialog(QDialog):
         else:
             self.reject()
 
+    def is_busy(self) -> bool:
+        """Whether a recording is actually running -- what decides that
+        the window's X hides instead of closes (see
+        panels/hideable_dialog.py's close_hides_while_busy()).
+
+        The recording itself, not the titling that follows it: titling
+        happens in a nested modal dialog of its own, so this window's X
+        is not reachable while it runs."""
+        return self._recording
+
+    def closeEvent(self, event) -> None:
+        if close_hides_while_busy(self, event):
+            return
+        super().closeEvent(event)
+
     def request_show(self) -> None:
         """The other half of request_stop()'s dispatch: while titling is
         under way it is the nested dialog that is hidden, not this one."""
@@ -1181,8 +1189,6 @@ class RecordDialog(QDialog):
         else:
             self.show_requested.emit()
 
-    def _on_hide_clicked(self) -> None:
-        hide_for_background(self)
 
     def reject(self) -> None:
         """Stopping mid-recording has to stop both ends -- leaving the deck

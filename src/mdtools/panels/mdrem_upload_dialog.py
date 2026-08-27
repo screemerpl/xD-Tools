@@ -43,7 +43,7 @@ from PySide6.QtWidgets import (
 )
 
 from mdtools import mdrem
-from mdtools.panels.hideable_dialog import hide_for_background, surface
+from mdtools.panels.hideable_dialog import close_hides_while_busy, surface
 from mdtools.panels.progress_format import mmss as _mmss
 from mdtools.project import ProjectMetadata
 
@@ -213,13 +213,6 @@ class MDRemUploadDialog(QDialog):
         self.close_btn = QPushButton(self.tr("Cancel"))
         self.close_btn.clicked.connect(self.reject)
         self.buttons.addButton(self.close_btn, QDialogButtonBox.ButtonRole.RejectRole)
-        self.hide_btn = QPushButton(self.tr("Hide"))
-        self.hide_btn.setToolTip(
-            self.tr("Hide this window and keep writing titles in the background -- use \"Show recording "
-                    "window\" in the bar at the bottom of the main window to bring it back.")
-        )
-        self.hide_btn.clicked.connect(self._on_hide_clicked)
-        self.buttons.addButton(self.hide_btn, QDialogButtonBox.ButtonRole.ActionRole)
         layout.addWidget(self.buttons)
 
         self._ticker = QTimer(self)
@@ -388,14 +381,12 @@ class MDRemUploadDialog(QDialog):
         except mdrem.MDRemError as exc:
             QMessageBox.warning(self, self.tr("Save to Disc"), self.tr("Could not eject: {error}").format(error=exc))
 
-    # --- shutdown -----------------------------------------------------
+    def is_busy(self) -> bool:
+        """Whether titles are actually going out over infrared -- what
+        decides that the window's X hides instead of closes."""
+        return self._worker is not None
 
-    def _on_hide_clicked(self) -> None:
-        """Keeps writing in the background -- the worker thread does not
-        care whether this dialog is visible. See
-        panels/hideable_dialog.py for what has to happen around exec()
-        for that to actually be true."""
-        hide_for_background(self)
+    # --- shutdown -----------------------------------------------------
 
     def request_show(self) -> None:
         """What the progress bar's "Show recording window" button calls."""
@@ -425,10 +416,10 @@ class MDRemUploadDialog(QDialog):
         super().reject()
 
     def closeEvent(self, event) -> None:
-        """The window's own X button must behave like Stop, not tear the
-        dialog down while a worker thread is still using its port."""
-        if self._worker is not None and self._worker.isRunning():
-            self.reject()
-            event.ignore()
+        """While titles are going out, the window's X puts this dialog
+        away and lets the worker finish -- it used to mean Stop, which is
+        now what the Stop button alone says. Either way it never tears
+        the dialog down with a worker thread still holding the port."""
+        if close_hides_while_busy(self, event):
             return
         super().closeEvent(event)

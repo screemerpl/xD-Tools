@@ -51,6 +51,36 @@ def hide_for_background(dialog) -> None:
     dialog.visibility_changed.emit(True)
 
 
+def close_hides_while_busy(dialog, event) -> bool:
+    """The window's own X, while its work is in flight, means "get this
+    window out of my way" -- not "throw the work away".
+
+    This replaced a **Hide** button on every one of these dialogs. The
+    button said what it did, but it sat in a row of other buttons on six
+    separate windows and duplicated something the title bar already
+    offers on every window on the desktop; closing a window whose work
+    carries on regardless is what minimising to a background task looks
+    like everywhere else.
+
+    Only while busy. With nothing running there is nothing to keep
+    alive, so X keeps its ordinary meaning and closes the dialog -- being
+    unable to shut an idle window with its own X would be far more
+    surprising than the hiding is.
+
+    Returns True when the close has been turned into a hide, so a
+    dialog's own closeEvent can hand back immediately; False means "this
+    is an ordinary close, carry on".
+    """
+    if not dialog.is_busy():
+        return False
+    # Ignore first: hide() makes a running exec() return (the whole
+    # reason exec_hideable() exists), and there is no reason to leave
+    # the event unanswered across that.
+    event.ignore()
+    hide_for_background(dialog)
+    return True
+
+
 def surface(dialog) -> None:
     """Bring a dialog back if it is hidden, *before* it asks the user
     something.

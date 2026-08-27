@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QDockWidget,
     QFileDialog,
+    QFontDialog,
     QInputDialog,
     QLabel,
     QLineEdit,
@@ -61,7 +62,6 @@ from mdtools.panels.add_page_dialog import AddPageDialog
 from mdtools.panels.asset_gallery_dialog import AssetGalleryDialog
 from mdtools.panels.cd_rip_dialog import CdRipDialog
 from mdtools.panels.cover_filter_dialog import CoverFilterDialog
-from mdtools.panels.experimental_settings_dialog import ExperimentalSettingsDialog
 from mdtools.audio_folder import album_from_folder, list_audio_files
 from mdtools.cd_layout import CdLayoutError, build_case_back, build_disc_label, build_front_insert, build_insert
 from mdtools import tape
@@ -78,7 +78,6 @@ from mdtools.panels.mdrem_port import resolve_port
 from mdtools.panels.metadata_dialog import MetadataDialog
 from mdtools.panels.record_dialog import RecordDialog
 from mdtools.panels.recording_progress_bar import RecordingProgressBar
-from mdtools.panels.regenerate_font_dialog import RegenerateFontDialog
 from mdtools.panels.tape_record_dialog import TapeRecordDialog
 from mdtools.panels.new_design_dialog import NewDesignDialog
 from mdtools.panels.print_dialog import PrintDialog
@@ -216,6 +215,9 @@ class MainWindow(QMainWindow):
         self._build_page_toolbar()
         self._build_docks()
         self._build_menu()
+        # After _build_menu(), not before: this shows that menu's own
+        # QAction objects, so they have to exist first.
+        self._build_main_toolbar()
 
         # show_startup_dialog=False skips the modal startup prompt (used by
         # tests, which would otherwise hang waiting for it); real usage
@@ -235,8 +237,64 @@ class MainWindow(QMainWindow):
 
     # -- setup --------------------------------------------------------------
 
+    def _build_main_toolbar(self) -> None:
+        """The ordinary File/Edit strip every desktop app has, along the
+        top -- New, Open, Save, Print, Undo, Redo, Cut, Copy, Paste,
+        Delete.
+
+        It shows the **same QAction objects the menus do**, not parallel
+        copies: one action carries one enabled state, one shortcut and
+        one handler wherever it appears, so a toolbar button can never
+        drift out of step with its menu entry. Undo and Redo come from
+        the QUndoGroup itself and so grey themselves out with an empty
+        history for free.
+
+        Setting the icon on the action rather than on a button of its own
+        also puts it beside the menu entry, which is what a Windows menu
+        looks like anyway.
+
+        Placed above the page toolbar (the medium/template/zoom row)
+        rather than beside it: these act on the project as a whole, that
+        one acts on the page being edited, and a break between them keeps
+        the two readable as the separate things they are.
+        """
+        icon_for = {
+            self.new_action: icons.new_project_icon,
+            self.open_action: icons.open_project_icon,
+            self.save_action: icons.save_project_icon,
+            self.print_action: icons.print_icon,
+            self.undo_action: icons.undo_icon,
+            self.redo_action: icons.redo_icon,
+            self.cut_action: icons.cut_icon,
+            self.copy_action: icons.copy_icon,
+            self.paste_action: icons.paste_icon,
+            self.delete_action: icons.delete_icon,
+        }
+        for action, make_icon in icon_for.items():
+            action.setIcon(make_icon())
+
+        self.main_toolbar = toolbar = QToolBar(self.tr("Main"), self)
+        toolbar.setObjectName("mainToolBar")
+        # Icon-only, like the Tools panel and the page toolbar's own
+        # buttons -- the action's text becomes the tooltip.
+        toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
+        for action in (self.new_action, self.open_action, self.save_action, self.print_action):
+            toolbar.addAction(action)
+        toolbar.addSeparator()
+        toolbar.addAction(self.undo_action)
+        toolbar.addAction(self.redo_action)
+        toolbar.addSeparator()
+        for action in (self.cut_action, self.copy_action, self.paste_action, self.delete_action):
+            toolbar.addAction(action)
+
+        # insertToolBar puts this one ahead of the page toolbar;
+        # insertToolBarBreak then pushes the page toolbar onto its own
+        # row underneath, instead of the two sharing one long line.
+        self.insertToolBar(self.page_toolbar, toolbar)
+        self.insertToolBarBreak(self.page_toolbar)
+
     def _build_page_toolbar(self) -> None:
-        toolbar = QToolBar(self.tr("Page"), self)
+        self.page_toolbar = toolbar = QToolBar(self.tr("Page"), self)
         toolbar.addWidget(QLabel(self.tr("Editing:")))
         self.page_combo = QComboBox()
         # Filled from whatever pages the open project actually has -- see
@@ -417,11 +475,16 @@ class MainWindow(QMainWindow):
         # _language_actions are: re-fetching a QMenu through the menu bar
         # later hands back a wrapper whose C++ object has been collected.
         self.file_menu = file_menu = self.menuBar().addMenu(self.tr("&File"))
-        file_menu.addAction(self.tr("New..."), self._new_design)
-        file_menu.addAction(self.tr("Open Project..."), self._open_project)
+        # Kept on self so the main toolbar can show the *same* QAction
+        # objects rather than parallel copies -- one action means one
+        # enabled state, one shortcut and one handler, however many places
+        # it is shown from. See _build_main_toolbar().
+        self.new_action = file_menu.addAction(self.tr("New..."), self._new_design)
+        self.open_action = file_menu.addAction(self.tr("Open Project..."), self._open_project)
         self.open_recent_menu = file_menu.addMenu(self.tr("Open Recent"))
         self.open_recent_menu.aboutToShow.connect(self._populate_open_recent_menu)
-        file_menu.addAction(self.tr("Save"), self._save_project).setShortcut(QKeySequence.StandardKey.Save)
+        self.save_action = file_menu.addAction(self.tr("Save"), self._save_project)
+        self.save_action.setShortcut(QKeySequence.StandardKey.Save)
         file_menu.addAction(self.tr("Save As..."), self._save_project_as).setShortcut(QKeySequence("Ctrl+Shift+S"))
         file_menu.addSeparator()
         file_menu.addAction(self.tr("Import Metadata from Project..."), self._import_metadata)
@@ -430,7 +493,8 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self.tr("Export Print PNG..."), self._export_png)
         file_menu.addAction(self.tr("Export Print PNG (Grayscale)..."), self._export_png_grayscale)
         file_menu.addSeparator()
-        file_menu.addAction(self.tr("Print..."), self._print_project).setShortcut(QKeySequence.StandardKey.Print)
+        self.print_action = file_menu.addAction(self.tr("Print..."), self._print_project)
+        self.print_action.setShortcut(QKeySequence.StandardKey.Print)
         file_menu.addSeparator()
         # Both ways out, next to each other. The window's close button has
         # gone back to the startup screen since it stopped quitting, but a
@@ -442,21 +506,27 @@ class MainWindow(QMainWindow):
         file_menu.addAction(self.tr("Exit"), self._exit_app)
 
         edit_menu = self.menuBar().addMenu(self.tr("&Edit"))
-        undo_action = self.undo_group.createUndoAction(self, self.tr("&Undo"))
+        # These two come from the QUndoGroup itself, so they enable and
+        # disable themselves as the stack changes -- which the toolbar
+        # gets for free by showing these very actions.
+        self.undo_action = undo_action = self.undo_group.createUndoAction(self, self.tr("&Undo"))
         undo_action.setShortcut(QKeySequence.StandardKey.Undo)
         edit_menu.addAction(undo_action)
-        redo_action = self.undo_group.createRedoAction(self, self.tr("&Redo"))
+        self.redo_action = redo_action = self.undo_group.createRedoAction(self, self.tr("&Redo"))
         redo_action.setShortcut(QKeySequence.StandardKey.Redo)
         edit_menu.addAction(redo_action)
         edit_menu.addSeparator()
-        edit_menu.addAction(self.tr("Cut"), self._cut_selected).setShortcut(QKeySequence.StandardKey.Cut)
-        edit_menu.addAction(self.tr("Copy"), self._copy_selected).setShortcut(QKeySequence.StandardKey.Copy)
-        edit_menu.addAction(self.tr("Paste"), self._paste).setShortcut(QKeySequence.StandardKey.Paste)
+        self.cut_action = edit_menu.addAction(self.tr("Cut"), self._cut_selected)
+        self.cut_action.setShortcut(QKeySequence.StandardKey.Cut)
+        self.copy_action = edit_menu.addAction(self.tr("Copy"), self._copy_selected)
+        self.copy_action.setShortcut(QKeySequence.StandardKey.Copy)
+        self.paste_action = edit_menu.addAction(self.tr("Paste"), self._paste)
+        self.paste_action.setShortcut(QKeySequence.StandardKey.Paste)
         # No shortcut here: DesignView's own keyPressEvent already handles
         # Delete/Backspace while the canvas has focus (see canvas/view.py).
         # A window-level shortcut on this action would fire *in addition to*
         # that, deleting twice / pushing two undo entries for one press.
-        edit_menu.addAction(self.tr("Delete"), self._delete_selected)
+        self.delete_action = edit_menu.addAction(self.tr("Delete"), self._delete_selected)
 
         # Nothing but recording lives here. It was "Project" and held the
         # metadata editor as well, which put the one dialog used while
@@ -476,32 +546,53 @@ class MainWindow(QMainWindow):
         # integration (see RecordDialog's own module docstring): there is
         # no "whatever's queued in some other app" concept once recording
         # decodes and plays its own files.
+        # Where audio comes *from*, as against where it goes -- the two
+        # halves used to be one menu and one unbroken flow ("Record CD
+        # to MiniDisc" both ripped and recorded), which meant the rip
+        # could only be had by starting a recording. Getting audio in and
+        # putting audio out are separate jobs, done at separate times,
+        # and now separate menus: everything here ends with files in the
+        # audio folder, and everything in Recording starts from files
+        # that are already there.
+        source_menu = self.menuBar().addMenu(self.tr("&Source"))
+        # No medium or adapter gating at all, unlike everything in
+        # Recording: a rip is just files, whatever is (or is not) going
+        # to be recorded from them afterwards, so there is no project
+        # this could not be useful in.
+        self.rip_cd_action = source_menu.addAction(self.tr("Rip Audio CD..."), self._rip_cd)
+        # Moved out of Experimental, which now holds nothing (see below):
+        # a download is a source like a CD is, and it is the sign-in that
+        # is experimental, not the idea of the entry existing. Still
+        # hidden until there is a session to use and the experimental
+        # flag is on -- see _sync_experimental_menu().
+        self.telegram_chat_action = source_menu.addAction(
+            self.tr("Download Album from Telegram Bot..."), self._open_telegram_bot_chat
+        )
+        source_menu.addSeparator()
+        # Tidying what those two produced belongs with them rather than
+        # with recording: it acts on the folder they write into and needs
+        # no deck, no drive and no adapter. Named for that folder, not
+        # for Telegram -- CD rips and bot downloads land in the same one
+        # (app_settings.cd_rip_folder(); see telegram_chat_dialog.py on
+        # why it is no longer a fresh folder per session).
+        self.telegram_sort_action = source_menu.addAction(
+            self.tr("Sort Rip/Download Folder into Albums..."), self._sort_telegram_downloads
+        )
+
         recording_menu = self.menuBar().addMenu(self.tr("&Recording"))
         # Hidden rather than disabled without the adapter (on a MiniDisc/
         # cassette project -- a CD project needs no adapter at all, so
         # these stay visible for it regardless): like the other MDRem entry
         # points, there is nothing it could usefully do.
-        self.record_cd_action = recording_menu.addAction(
-            self.tr("Record CD to MiniDisc..."), self._record_cd
-        )
         self.record_folder_action = recording_menu.addAction(
             self.tr("Record Folder to MiniDisc..."), self._record_folder
         )
-        # Moved here from Experimental -- neither needs a live chat session
-        # at all, both just act on whatever has already accumulated in the
-        # one configured audio folder (shared by CD ripping and Telegram
-        # bot downloads -- see app_settings.cd_rip_folder() -- so these are
-        # named for what they act on, not for one particular source of it;
-        # see telegram_chat_dialog.py's own note on why that folder is no
-        # longer a fresh one per session). Sorting is medium-agnostic (no
-        # _sync_mdrem_actions() gating); recording collapses onto whichever
-        # medium the open project is for, the same "just Record" shape the
-        # entries above follow.
-        self.telegram_sort_action = recording_menu.addAction(
-            self.tr("Sort Audio Folder into Albums..."), self._sort_telegram_downloads
-        )
+        # The other half of the pair that used to read "Record from Audio
+        # Folder...", which was one word away from the entry above it and
+        # said nothing about *which* folder. This one is not browsed for:
+        # it is always the rip/download folder, so it says so.
         self.telegram_record_action = recording_menu.addAction(
-            self.tr("Record from Audio Folder..."), self._record_from_telegram_downloads
+            self.tr("Record from Rip/Download Folder..."), self._record_from_telegram_downloads
         )
         # _sync_mdrem_actions() is deliberately *not* called here: it also
         # touches the Experimental menu, which is built further down. It
@@ -533,21 +624,16 @@ class MainWindow(QMainWindow):
         # Gated by Window > Settings' "Show experimental features" checkbox
         # so nobody sees an in-development feature unless they opted in.
         # See _sync_experimental_menu().
+        # Deliberately empty, and kept: everything it held has found a
+        # home of its own (the bot account is a group in Window >
+        # Settings; the chat is a Source, and its sign-in is what carries
+        # the experimental gate now, not its position in a menu). The
+        # menu itself stays for the next unfinished feature to land in,
+        # and stays off the menu bar while it holds nothing -- an empty
+        # dropdown reads as something broken. Add an action and it
+        # reappears on its own, under the same flag it always answered
+        # to. See _sync_experimental_menu().
         self.experimental_menu = self.menuBar().addMenu(self.tr("Experi&mental"))
-        self.experimental_menu.addAction(
-            self.tr("Experimental Settings..."), self._show_experimental_settings
-        )
-        # Hidden until a Telegram session actually exists -- see
-        # _sync_experimental_menu(); there is nothing this could usefully
-        # do without one, same "hidden rather than disabled" convention
-        # _sync_mdrem_actions() already follows for its own entries.
-        self.telegram_chat_action = self.experimental_menu.addAction(
-            self.tr("Download Album from Telegram Bot..."), self._open_telegram_bot_chat
-        )
-        # "Sort Audio Folder into Albums..." and "Record from Audio
-        # Folder..." moved to the Recording menu -- see the comment
-        # there. This menu now holds only what actually needs the
-        # experimental-features flag: signing in, and starting a chat.
         self._sync_experimental_menu()
 
         window_menu = self.menuBar().addMenu(self.tr("&Window"))
@@ -1775,6 +1861,10 @@ class MainWindow(QMainWindow):
         dialog = SettingsDialog(self)
         dialog.exec()
         self._sync_mdrem_actions()
+        # Signing in to Telegram happens inside this dialog now (its own
+        # Telegram group) -- without this re-sync, the chat entry would
+        # stay hidden until the next full app restart even though a
+        # session now exists.
         self._sync_experimental_menu()
 
     def _sync_mdrem_actions(self) -> None:
@@ -1807,27 +1897,22 @@ class MainWindow(QMainWindow):
         for_md = medium in (None, MEDIUM_MD)
         for_cd = medium in (None, MEDIUM_CD)
 
-        # Ripping a CD needs no adapter -- and, since it now offers "Just
-        # Metadata" as well as "Record Now" (see _offer_recording_the_rip),
-        # it no longer strictly needs one to be useful at all. Only the
-        # "Record Now" half of it does; that is resolved and checked at the
-        # point it is actually chosen, not here. Same for reading a
-        # folder's own tags: on its own it is not a feature anyone asked
-        # for, so it stays adapter-gated below.
+        # Ripping a CD needs no adapter, and does not appear here at all
+        # any more -- it ends at files, so it is a Source (see _rip_cd)
+        # and nothing about it follows the deck. Reading a folder's own
+        # tags is the opposite case: on its own it is not a feature anyone
+        # asked for, so it stays adapter-gated below.
         # A cassette deck is driven by the person in front of it, so a
         # cassette project needs no adapter for either of these -- the two
         # sources are the same two either way, and only the machine at
         # the end of them changes. Which is why they are one set of entries
         # that rename themselves, not two sets where one is always hidden.
         for_tape = medium == MEDIUM_TAPE
-        # "Record CD to..." has no burning twin (there is no "burn a CD
-        # from a CD rip" flow) -- but it no longer needs the adapter-only
-        # rule that used to justify mentioning that, since ripping alone
-        # (see above) is offered regardless.
-        self.record_cd_action.setText(
-            self.tr("Record CD to {medium}...").format(medium=self._recording_target_name())
-        )
-        self.record_cd_action.setVisible(for_tape or for_md)
+        # Ripping used to be named and gated like a recording, because it
+        # was one -- "Record CD to {medium}..." both ripped and recorded.
+        # It is Source > "Rip Audio CD..." now: no medium in its name and
+        # no gating here at all, since it ends at files and every project
+        # can use files.
         # Record Folder... dispatches to burning internally when the open
         # project is a CD one (see _record_folder_dialog) -- collapsing
         # what used to be a separate "Burn Audio CD from ..." action beside
@@ -1847,10 +1932,11 @@ class MainWindow(QMainWindow):
         # to gate.
         self.remote_action.setVisible(adapter and for_md)
 
-        # "Sort Audio Folder into Albums..." stays visible regardless of
-        # medium or adapter -- tidying files on disk belongs to neither.
+        # Source > "Sort Rip/Download Folder into Albums..." stays visible
+        # regardless of medium or adapter -- tidying files on disk belongs
+        # to neither.
         self.telegram_record_action.setText(
-            self.tr("Record from Audio Folder to {medium}...").format(
+            self.tr("Record from Rip/Download Folder to {medium}...").format(
                 medium=self._recording_target_name()
             )
         )
@@ -2169,25 +2255,29 @@ class MainWindow(QMainWindow):
         setVisible(); menuAction() is the QAction that actually places it
         on the menu bar, and hiding that is what hides the whole menu.
 
-        The Telegram chat entry gets a second, independent gate on top:
-        a local Telegram session file existing at all. Fast and local
-        (same optimistic convention ExperimentalSettingsDialog's own status
-        label uses -- no network round trip just to build a menu), not a
-        promise the session is still valid; TelegramChatDialog's own live
-        is_authorized() check is what actually decides that once opened."""
-        self.experimental_menu.menuAction().setVisible(app_settings.experimental_features_enabled())
-        self.telegram_chat_action.setVisible(app_settings.telegram_session_path().exists())
+        The menu itself is also hidden while it holds no actions at all,
+        which is its current state -- see _build_menu(). It is kept for
+        the next unfinished feature; an empty dropdown on the menu bar
+        would just look broken until then.
 
-    def _show_experimental_settings(self) -> None:
-        ExperimentalSettingsDialog(self).exec()
-        # Signing in happens inside this dialog (its own "Sign in to
-        # Telegram..." button) -- without this, the chat entry would stay
-        # hidden until the next full app restart even though a session now
-        # exists.
-        self._sync_experimental_menu()
+        The Telegram chat entry lives in the Source menu now, but is
+        still gated on the same flag as well as on a second, independent
+        condition of its own: a local Telegram session file existing at
+        all. Fast and local (same optimistic convention the Settings
+        window's own Telegram status label uses -- no network round trip
+        just to build a menu), not a promise the session is still valid;
+        TelegramChatDialog's own live is_authorized() check is what
+        actually decides that once opened. Moving it out of the
+        Experimental menu did not make the feature finished, so the flag
+        follows it."""
+        enabled = app_settings.experimental_features_enabled()
+        self.experimental_menu.menuAction().setVisible(
+            enabled and bool(self.experimental_menu.actions())
+        )
+        self.telegram_chat_action.setVisible(enabled and app_settings.telegram_session_path().exists())
 
     def _open_telegram_bot_chat(self) -> None:
-        """Experimental > Download Album from Telegram Bot... -- opens a
+        """Source > Download Album from Telegram Bot... -- opens a
         generic chat with the bot the user configured, then hands off to
         Record Folder to MiniDisc. See panels/telegram_chat_dialog.py.
 
@@ -2218,7 +2308,7 @@ class MainWindow(QMainWindow):
             QMessageBox.information(
                 self,
                 self.tr("Download Album from Telegram Bot"),
-                self.tr("Set the bot username first, in Experimental > Experimental Settings..."),
+                self.tr("Set the bot username first, in Window > Settings, under Telegram."),
             )
             return
         if not (app_settings.telegram_api_id() and app_settings.telegram_api_hash()):
@@ -2256,7 +2346,7 @@ class MainWindow(QMainWindow):
             self._record_folder_dialog(Path(dialog.downloaded_folder))
 
     def _sort_telegram_downloads(self) -> None:
-        """Recording > Sort Audio Folder into Albums... -- the same
+        """Source > Sort Rip/Download Folder into Albums... -- the same
         operation TelegramChatDialog's own "Sort into Album Folders"
         button runs, but reachable without opening a chat at all.
 
@@ -2281,7 +2371,7 @@ class MainWindow(QMainWindow):
             # confusing to read: "already sorted" was previously also shown
             # for a folder with nothing in it at all, which is not sorted,
             # it is just empty (reported directly, about the sibling
-            # "Record from Audio Folder..." action making the same mistake
+            # "Record from Rip/Download Folder..." action making the same mistake
             # -- silently proceeding rather than saying so). A single
             # unmoved album is still loose at this point, so checking the
             # folder afterwards tells all three apart unambiguously.
@@ -2308,11 +2398,17 @@ class MainWindow(QMainWindow):
         )
 
     def _record_from_telegram_downloads(self) -> None:
-        """Recording > Record from Audio Folder... -- records whatever has
-        already been downloaded through the Telegram bot chat (or ripped
-        from a CD, or dropped in by hand -- this acts on the whole shared
-        audio folder, not just Telegram's own contribution to it), without
-        opening the bot chat itself.
+        """Recording > Record from Rip/Download Folder... -- records
+        whatever has landed in the shared audio folder: a CD ripped
+        through Source > "Rip Audio CD...", an album downloaded through
+        the bot chat, or files dropped in by hand. It is named for that
+        folder because it never asks for one -- it is always this folder,
+        which is what told it apart from "Record Folder to ...", the
+        entry above it, too late to be useful.
+
+        This is also where a rip is recorded from now that ripping stops
+        at the files (see _rip_cd) -- one entry for everything that
+        arrives in that folder, however it got there.
 
         Sorts first (silently, same reasoning as
         TelegramChatDialog._on_continue_clicked()'s own auto-sort fix: a
@@ -2333,7 +2429,7 @@ class MainWindow(QMainWindow):
         if not list_audio_files(folder):
             QMessageBox.information(
                 self,
-                self.tr("Record from Audio Folder"),
+                self.tr("Record from Rip/Download Folder"),
                 self.tr("There is nothing to record -- the audio folder is empty."),
             )
             return
@@ -2486,19 +2582,20 @@ class MainWindow(QMainWindow):
             return None
         return resolve_port(self)
 
-    def _record_cd(self) -> None:
-        """Recording > Record CD to {medium}... -- rips the disc to tagged
-        FLAC files, then asks whether to record those files now or just
-        bring the disc's metadata into the project.
+    def _rip_cd(self) -> None:
+        """Source > Rip Audio CD... -- rips the disc to tagged FLAC files
+        in the audio folder, and ends there.
 
-        Ripping needs no adapter at all -- only recording does -- so the
-        port is resolved *after* a successful rip, and only once the user
-        has actually said they want to record, rather than up front the
-        way it used to be. Explicit request: a rip should be usable
-        entirely on its own, ending with nothing more than the album's
-        metadata landing in the project, for whoever wants the label right
-        without recording right now (no adapter at hand, or no disc to
-        record onto yet)."""
+        This used to be Recording > "Record CD to {medium}...", and ripped
+        and recorded in one unbroken run; splitting the two was an
+        explicit request. A rip is worth having on its own -- the disc is
+        in the drive now, the deck may not be free, the adapter may not
+        be plugged in, and there may be no MiniDisc to hand -- and the
+        files it leaves behind are recorded exactly the way a Telegram
+        download is, through Recording > "Record from Rip/Download
+        Folder to ...". So nothing here resolves an MDRem port or opens
+        a recording dialog any more; it offers the album's metadata to
+        the open project and stops."""
         if not self._guard_no_concurrent_operation():
             return
         rip = CdRipDialog(self, medium=self._recording_medium())
@@ -2509,43 +2606,47 @@ class MainWindow(QMainWindow):
             self._release_recording_bar(rip)
         if not accepted:
             return
-        if not self._offer_recording_the_rip(rip.result_metadata):
-            return
-        port = self._resolve_recording_port()
-        if port is None:
-            return
-        # The rip's own metadata goes forward. Its titles are the ones it
-        # wrote into the files, so they say the same thing the files
-        # themselves do -- what it adds is the artwork it found (or the
-        # user picked) while identifying the disc, which a tag does not
-        # carry.
-        self._run_record_dialog(port, rip.result_paths, metadata=rip.result_metadata)
+        self._offer_the_rips_metadata(rip.result_metadata, rip.result_folder)
 
-    def _offer_recording_the_rip(self, metadata: ProjectMetadata) -> bool:
-        """Record this now, or just take its metadata? Returns True for
-        "record now" (the caller resolves a port and hands off to
-        RecordDialog next); for "just metadata" this applies it to the
-        project itself and returns False, since there is nothing left for
-        the caller to do. Cancelling leaves the rip exactly as it finished
-        -- the files stay on disk, the project is untouched."""
-        box = QMessageBox(
-            QMessageBox.Icon.Question,
-            self.tr("Record CD"),
-            self.tr(
-                "The disc has been ripped.\n\nRecord it now, or just bring its title and track list into "
-                "the project?"
-            ),
-            parent=self,
+    def _offer_the_rips_metadata(self, metadata: ProjectMetadata | None, folder: Path | None) -> None:
+        """Says where the files went, and offers what the disc turned out
+        to be to the open project.
+
+        Worth asking rather than doing: the rip identified an album, and
+        a project already carrying its own title, artist and track list
+        should not have them replaced without a word. The files stay
+        where they are either way -- declining loses nothing but the
+        typing.
+
+        What the metadata adds over the files themselves is the artwork
+        found (or corrected by the user) while identifying the disc,
+        which a FLAC tag does not carry here; the titles in it are the
+        ones already written into those files."""
+        where = str(folder) if folder is not None else str(app_settings.cd_rip_folder())
+        record_entry = self.tr("Record from Rip/Download Folder to {medium}...").format(
+            medium=self._recording_target_name()
         )
-        record_btn = box.addButton(self.tr("Record Now"), QMessageBox.ButtonRole.AcceptRole)
-        metadata_btn = box.addButton(self.tr("Just Metadata"), QMessageBox.ButtonRole.ActionRole)
-        box.addButton(self.tr("Cancel"), QMessageBox.ButtonRole.RejectRole)
-        box.exec()
-        if box.clickedButton() is record_btn:
-            return True
-        if box.clickedButton() is metadata_btn:
+        if metadata is None:
+            QMessageBox.information(
+                self,
+                self.tr("Rip Audio CD"),
+                self.tr("The disc has been ripped into {folder}.\n\nRecord it with Recording > {entry}").format(
+                    folder=where, entry=record_entry
+                ),
+            )
+            return
+        answered = QMessageBox.question(
+            self,
+            self.tr("Rip Audio CD"),
+            self.tr(
+                "The disc has been ripped into {folder}.\n\nRecord it with Recording > {entry}\n\nBring its "
+                "title and track list into the project now?"
+            ).format(folder=where, entry=record_entry),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        if answered == QMessageBox.StandardButton.Yes:
             self._apply_metadata_to_project(metadata)
-        return False
 
     def _apply_metadata_to_project(self, metadata: ProjectMetadata) -> None:
         """Adopts `metadata` onto the open project directly -- no second
@@ -2572,7 +2673,8 @@ class MainWindow(QMainWindow):
         """Recording > Record Folder to MiniDisc... -- reads the tags of an
         album that is already on disk, then records those files.
 
-        The same shape as _record_cd, and for the same reasons: the port is
+        The same shape as _record_from_telegram_downloads, and for the
+        same reasons: the port is
         resolved first (there is no point reading a folder for a recording
         that cannot happen), and the dialog's own result is the hand-off.
         Unlike the CD, its metadata *is* passed on -- see FolderRecordDialog
@@ -3615,9 +3717,19 @@ class MainWindow(QMainWindow):
         self._refresh_layers()
 
     def _open_regenerate_font_dialog(self) -> None:
-        """Toolbar > "Regenerate with Font...": preview a different font on
-        the current page, then, only if accepted and confirmed, rebuild
-        that one page -- and only that page -- with it.
+        """Toolbar > "Regenerate with Font...": Qt's own font picker,
+        previewing each face live on the current page as it is browsed,
+        and rebuilding that one page -- and only that page -- with
+        whichever face its OK is pressed on.
+
+        The picker is the whole interaction. It used to sit behind a
+        small window of its own offering "Choose Font..." and "Preview",
+        which meant three dialogs deep to change a font and a Preview
+        button for something the browsing already did; its OK/Cancel now
+        decide the regenerate directly. There is no second "are you
+        sure?" behind that OK either -- the user has been watching the
+        face on the page and then pressed OK, which is the same question
+        twice.
 
         Preview and the final regenerate are the *same* auto-layout call
         (whichever one _auto_layout_method_for_page() maps the current page
@@ -3648,7 +3760,12 @@ class MainWindow(QMainWindow):
         if self._regeneration_metadata(self.tr("Regenerate with Font")) is None:
             return
 
-        dialog = RegenerateFontDialog(self)
+        # Opens on whatever was picked last time, not the application's
+        # own default -- settling on a face and re-picking it on every use
+        # would defeat remembering it at all.
+        last_family = app_settings.last_regenerate_font_family() or self.font().family()
+        dialog = QFontDialog(QFont(last_family), self)
+        dialog.setWindowTitle(self.tr("Regenerate with Font"))
         preview_snapshot: dict | None = None
 
         def _run_preview(family: str) -> None:
@@ -3669,38 +3786,47 @@ class MainWindow(QMainWindow):
                 method(metadata)
             self._refresh_layers()
 
-        dialog.preview_requested.connect(_run_preview)
+        # Whatever the page is currently showing -- the face last browsed
+        # to, or the one the picker opened on if it was never touched.
+        # Read from the browsing itself rather than back off the dialog:
+        # this is by construction the family that was actually previewed,
+        # where QFontDialog's own currentFont() is its idea of the
+        # nearest installed match, which need not be the same string.
+        chosen_family = last_family
+
+        def _on_font_changed(font: QFont) -> None:
+            nonlocal chosen_family
+            chosen_family = font.family()
+            _run_preview(chosen_family)
+
+        # Live, as the user browses the family list -- not only once OK is
+        # pressed. Browsing the picker *is* the preview now that there is
+        # no separate Preview button to press.
+        dialog.currentFontChanged.connect(_on_font_changed)
         accepted = dialog.exec() == QDialog.DialogCode.Accepted
-        chosen_family = dialog.selected_family
 
         if accepted:
-            answer = QMessageBox.warning(
-                self,
-                self.tr("Regenerate with Font"),
-                self.tr(
-                    'Are you sure? This regenerates this label using "{family}", and resets the undo '
-                    "history."
-                ).format(family=chosen_family),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
-            )
-            if answer == QMessageBox.StandardButton.Yes:
-                # Rebuilt fresh rather than just "keeping" whatever Preview
-                # left on screen -- Preview may never have run at all (OK
-                # pressed with no Preview click first), and rebuilding is
-                # cheap and exactly idempotent with what Preview itself
-                # already does, so there is no reason to special-case it.
-                method = self._auto_layout_method_for_page(
+            # Only the family is kept; size and style are discarded on
+            # purpose. Auto-generated text carries its own size (fitted to
+            # its panel) and weight (bold where the layout wants it), and
+            # this substitutes the *face* those choices are made in.
+            app_settings.set_last_regenerate_font_family(chosen_family)
+            method = self._auto_layout_method_for_page(
                 page, disc_template_name=current_template_name, cover_template_name=current_template_name
             )
-                if method is not None:
-                    with font_family_override(chosen_family), self._reused_cover_filter():
-                        method(metadata)
-                    self._refresh_layers()
-                return
+            if method is not None:
+                # From the true original, not from whatever the last
+                # previewed face left on screen, so the result is the same
+                # whether the user browsed ten faces first or none.
+                if preview_snapshot is not None:
+                    self._restore_page(page, preview_snapshot)
+                with font_family_override(chosen_family), self._reused_cover_filter():
+                    method(metadata)
+                self._refresh_layers()
+            return
 
-        # Cancelled outright, or backed out of the confirmation -- put the
-        # page back exactly how it looked before Preview was ever clicked.
+        # Cancelled -- put the page back exactly how it looked before any
+        # browsing previewed anything onto it.
         if preview_snapshot is not None:
             self._restore_page(page, preview_snapshot)
             self._refresh_layers()

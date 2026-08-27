@@ -10,6 +10,7 @@ with it.
 
 import pytest
 from PySide6.QtCore import QObject, Signal
+from PySide6.QtWidgets import QMessageBox
 
 from mdtools import app_settings
 from mdtools import app_window as app_module
@@ -149,284 +150,196 @@ def test_no_port_no_remote_dialog(qt_app, isolated_settings, monkeypatch):
     window._open_remote_control()
 
 
-# --- and the CD entry alongside it ------------------------------------------
+# --- and the rip alongside it -----------------------------------------------
+#
+# Source > "Rip Audio CD..." used to be Recording > "Record CD to
+# MiniDisc...", and ripped and recorded in one unbroken run. Splitting the
+# two was an explicit request, so what is left to test here is mostly what
+# must *not* happen any more: no port is resolved, and no recording dialog
+# is opened, however the rip ends.
 
 
-def _answer_record_choice(monkeypatch, label: str):
-    """Drives _offer_recording_the_rip()'s own QMessageBox by button text
-    ("Record Now" / "Just Metadata" / "Cancel") -- confirmed directly that
-    QMessageBox.buttons() does *not* preserve addButton()'s own insertion
-    order (it reorders by role for platform convention: AcceptRole,
-    RejectRole, then ActionRole here), so indexing into it positionally is
-    not reliable."""
+class _FakeRip(QObject):
+    """A CdRipDialog that has already finished. Real Signals, since
+    _drive_recording_bar() connects to every one of them."""
 
-    def fake_exec(self):
-        self._clicked = next(b for b in self.buttons() if b.text() == label)
-        return 0
+    running_changed = Signal(bool)
+    overall_progress_changed = Signal(float, str)
+    track_progress_changed = Signal(float, str)
+    visibility_changed = Signal(bool)
 
-    def fake_clicked_button(self):
-        return self._clicked
+    result_metadata = None
+    result_folder = None
+    result_paths = ["01.flac"]
+    code = None  # set per subclass/instance
 
-    monkeypatch.setattr(app_module.QMessageBox, "exec", fake_exec)
-    monkeypatch.setattr(app_module.QMessageBox, "clickedButton", fake_clicked_button)
+    def __init__(self, *args, **kwargs):
+        super().__init__()
 
-
-def test_the_cd_entry_no_longer_needs_the_adapter(qt_app, isolated_settings):
-    """Ripping needs no adapter at all any more -- "Record Now" is only one
-    of two things a finished rip can be used for, "Just Metadata" needs
-    nothing beyond the CD drive itself (see _offer_recording_the_rip)."""
-    app_settings.set_mdrem_enabled(False)
-    assert _window().record_cd_action.isVisible()
+    def exec(self):
+        return self.code
 
 
-def test_choosing_record_now_without_the_adapter_refuses_to_record(qt_app, isolated_settings, monkeypatch):
-    """Ripping itself still needs no adapter -- only the "Record Now"
-    choice does, and only once it is actually made."""
-    from PySide6.QtWidgets import QDialog
+def _rip_returning(monkeypatch, code, *, metadata=None, folder=None):
+    class _Rip(_FakeRip):
+        pass
 
-    app_settings.set_mdrem_enabled(False)
+    _Rip.code = code
+    _Rip.result_metadata = metadata
+    _Rip.result_folder = folder
+    monkeypatch.setattr(app_module, "CdRipDialog", _Rip)
 
-    class _AcceptedRip(QObject):
-        running_changed = Signal(bool)
-        overall_progress_changed = Signal(float, str)
-        track_progress_changed = Signal(float, str)
-        visibility_changed = Signal(bool)
 
-        result_metadata = None
-        result_paths = ["01.flac"]
+def _answer_question(monkeypatch, answer):
+    monkeypatch.setattr(app_module.QMessageBox, "question", staticmethod(lambda *a, **k: answer))
 
-        def __init__(self, *args, **kwargs):
-            super().__init__()
 
-        def exec(self):
-            return QDialog.DialogCode.Accepted
-
-    monkeypatch.setattr(app_module, "CdRipDialog", _AcceptedRip)
+def _never_records(monkeypatch):
     monkeypatch.setattr(
         app_module, "resolve_port", lambda *a, **k: pytest.fail("must not go looking for a port")
     )
     monkeypatch.setattr(
         app_module, "RecordDialog", lambda *a, **k: pytest.fail("must not start recording")
     )
-    _answer_record_choice(monkeypatch, "Record Now")
-
-    _window()._record_cd()  # must not raise -- _resolve_recording_port() itself declines
 
 
-def test_the_port_is_resolved_only_after_record_now_is_chosen(qt_app, isolated_settings, monkeypatch):
-    """The rip happens regardless -- the adapter is only checked once the
-    user has actually asked to record, not before ripping the way it used
-    to be (ripping needs no adapter at all)."""
+def test_ripping_needs_no_adapter(qt_app, isolated_settings):
+    """It ends at files in the audio folder, which no adapter is involved
+    in producing -- so unlike the Recording menu's own entries this one is
+    never hidden."""
+    app_settings.set_mdrem_enabled(False)
+    assert _window().rip_cd_action.isVisible()
+
+
+def test_a_finished_rip_never_records_anything(qt_app, isolated_settings, monkeypatch):
+    """The split itself: ripping used to hand its paths straight to
+    RecordDialog. Recording is now a separate thing the user starts, from
+    Recording > "Record from Rip/Download Folder to ...".""."""
     from PySide6.QtWidgets import QDialog
 
     app_settings.set_mdrem_enabled(True)
-    resolved: list = []
-    monkeypatch.setattr(app_module, "resolve_port", lambda *a, **k: resolved.append(1) or "COM7")
+    _never_records(monkeypatch)
+    _rip_returning(monkeypatch, QDialog.DialogCode.Accepted)
+    _answer_question(monkeypatch, QMessageBox.StandardButton.No)
+    monkeypatch.setattr(app_module.QMessageBox, "information", staticmethod(lambda *a, **k: None))
 
-    class _AcceptedRip(QObject):
-        running_changed = Signal(bool)
-        overall_progress_changed = Signal(float, str)
-        track_progress_changed = Signal(float, str)
-        visibility_changed = Signal(bool)
-
-        result_metadata = None
-        result_paths = ["01.flac"]
-
-        def __init__(self, *args, **kwargs):
-            super().__init__()
-
-        def exec(self):
-            return QDialog.DialogCode.Accepted
-
-    class _FakeRecord(QObject):
-        result_metadata = None
-
-        running_changed = Signal(bool)
-        overall_progress_changed = Signal(float, str)
-        track_progress_changed = Signal(float, str)
-        visibility_changed = Signal(bool)
-
-        def __init__(self, *args, **kwargs):
-            super().__init__()
-
-        def exec(self):
-            return QDialog.DialogCode.Accepted
-
-    monkeypatch.setattr(app_module, "CdRipDialog", _AcceptedRip)
-    monkeypatch.setattr(app_module, "RecordDialog", _FakeRecord)
-    _answer_record_choice(monkeypatch, "Record Now")
-
-    _window()._record_cd()
-
-    assert resolved == [1]
+    _window()._rip_cd()
 
 
-def test_a_cancelled_rip_never_reaches_the_recording_dialog(qt_app, isolated_settings, monkeypatch):
+def test_a_cancelled_rip_says_nothing_at_all(qt_app, isolated_settings, monkeypatch):
     from PySide6.QtWidgets import QDialog
 
     app_settings.set_mdrem_enabled(True)
+    _never_records(monkeypatch)
+    _rip_returning(monkeypatch, QDialog.DialogCode.Rejected)
     monkeypatch.setattr(
-        app_module, "resolve_port", lambda *a, **k: pytest.fail("must not go looking for a port")
+        app_module.QMessageBox,
+        "question",
+        staticmethod(lambda *a, **k: pytest.fail("nothing was ripped -- nothing to offer")),
+    )
+    monkeypatch.setattr(
+        app_module.QMessageBox,
+        "information",
+        staticmethod(lambda *a, **k: pytest.fail("nothing was ripped -- nothing to report")),
     )
 
-    class _RejectedRip(QObject):
-        running_changed = Signal(bool)
-        overall_progress_changed = Signal(float, str)
-        track_progress_changed = Signal(float, str)
-        visibility_changed = Signal(bool)
-
-        def __init__(self, *args, **kwargs):
-            super().__init__()
-
-        def exec(self):
-            return QDialog.DialogCode.Rejected
-
-    monkeypatch.setattr(app_module, "CdRipDialog", _RejectedRip)
-    monkeypatch.setattr(
-        app_module, "RecordDialog", lambda *a, **k: pytest.fail("must not start recording")
-    )
-
-    _window()._record_cd()
+    _window()._rip_cd()
 
 
-def test_choosing_record_now_hands_straight_over_to_the_recording_dialog(qt_app, isolated_settings, monkeypatch):
-    """The whole point of the feature: once the playlist holds the CD, the
-    existing record flow takes over unchanged and unaware a CD was ever
-    involved."""
+def test_saying_yes_brings_the_ripped_albums_metadata_into_the_project(qt_app, isolated_settings, monkeypatch):
+    """A rip is usable on its own: the label can be designed now and the
+    disc recorded later, or never. What the metadata adds over the ripped
+    files themselves is the artwork found while identifying the disc,
+    which their tags do not carry here."""
     from PySide6.QtWidgets import QDialog
-
-    app_settings.set_mdrem_enabled(True)
-    monkeypatch.setattr(app_module, "resolve_port", lambda *a, **k: "COM7")
 
     from mdtools.project import ProjectMetadata
 
-    identified = ProjectMetadata(album="Unleashed", artist="Skillet", cover_art=b"art")
-
-    class _AcceptedRip(QObject):
-        running_changed = Signal(bool)
-        overall_progress_changed = Signal(float, str)
-        track_progress_changed = Signal(float, str)
-        visibility_changed = Signal(bool)
-
-        result_metadata = identified
-        result_paths = ["01.flac"]
-
-        def __init__(self, *args, **kwargs):
-            super().__init__()
-
-        def exec(self):
-            return QDialog.DialogCode.Accepted
-
-    recorded: list = []
-
-    class _FakeRecord(QObject):
-        result_metadata = None
-
-        running_changed = Signal(bool)
-        overall_progress_changed = Signal(float, str)
-        track_progress_changed = Signal(float, str)
-        visibility_changed = Signal(bool)
-
-        def __init__(self, port, paths, parent=None, metadata=None):
-            super().__init__()
-            recorded.append((port, paths, metadata))
-
-        def exec(self):
-            return QDialog.DialogCode.Accepted
-
-    monkeypatch.setattr(app_module, "CdRipDialog", _AcceptedRip)
-    monkeypatch.setattr(app_module, "RecordDialog", _FakeRecord)
-    _answer_record_choice(monkeypatch, "Record Now")
-
-    window = _window()
-    window._record_cd()
-
-    # The rip's own metadata goes with it. Its titles are the ones it wrote
-    # into the files, so they say what the files say; what it adds is the
-    # artwork found while identifying the disc, which a tag does not carry.
-    assert recorded == [("COM7", ["01.flac"], identified)]
-    # "Record Now" does not also apply the metadata to the open project
-    # directly -- RecordDialog's own hand-off (_run_record_dialog) is what
-    # does that, same as every other recording source.
-    assert window.project.metadata.album != "Unleashed"
-
-
-def test_choosing_just_metadata_applies_it_without_recording(qt_app, isolated_settings, monkeypatch):
-    """Explicit request: a rip should be usable on its own, ending with
-    nothing more than the album's metadata landing in the project, for
-    whoever wants the label right without recording right now."""
-    from PySide6.QtWidgets import QDialog
-
     app_settings.set_mdrem_enabled(True)
-    monkeypatch.setattr(
-        app_module, "resolve_port", lambda *a, **k: pytest.fail("must not go looking for a port")
-    )
-    monkeypatch.setattr(
-        app_module, "RecordDialog", lambda *a, **k: pytest.fail("must not start recording")
-    )
-
-    from mdtools.project import ProjectMetadata
-
+    _never_records(monkeypatch)
     identified = ProjectMetadata(album="Unleashed", artist="Skillet", cover_art=b"art")
-
-    class _AcceptedRip(QObject):
-        running_changed = Signal(bool)
-        overall_progress_changed = Signal(float, str)
-        track_progress_changed = Signal(float, str)
-        visibility_changed = Signal(bool)
-
-        result_metadata = identified
-        result_paths = ["01.flac"]
-
-        def __init__(self, *args, **kwargs):
-            super().__init__()
-
-        def exec(self):
-            return QDialog.DialogCode.Accepted
-
-    monkeypatch.setattr(app_module, "CdRipDialog", _AcceptedRip)
-    _answer_record_choice(monkeypatch, "Just Metadata")
+    _rip_returning(monkeypatch, QDialog.DialogCode.Accepted, metadata=identified)
+    _answer_question(monkeypatch, QMessageBox.StandardButton.Yes)
 
     window = _window()
-    window._record_cd()
+    window._rip_cd()
 
     assert window.project.metadata is identified
 
 
-def test_cancelling_the_record_choice_leaves_the_project_untouched(qt_app, isolated_settings, monkeypatch):
+def test_saying_no_leaves_the_project_exactly_as_it_was(qt_app, isolated_settings, monkeypatch):
+    """Declining costs nothing but the typing -- the ripped files stay
+    where they are either way."""
     from PySide6.QtWidgets import QDialog
-
-    app_settings.set_mdrem_enabled(True)
-    monkeypatch.setattr(
-        app_module, "resolve_port", lambda *a, **k: pytest.fail("must not go looking for a port")
-    )
-    monkeypatch.setattr(
-        app_module, "RecordDialog", lambda *a, **k: pytest.fail("must not start recording")
-    )
 
     from mdtools.project import ProjectMetadata
 
-    class _AcceptedRip(QObject):
-        running_changed = Signal(bool)
-        overall_progress_changed = Signal(float, str)
-        track_progress_changed = Signal(float, str)
-        visibility_changed = Signal(bool)
-
-        result_metadata = ProjectMetadata(album="Unleashed", artist="Skillet")
-        result_paths = ["01.flac"]
-
-        def __init__(self, *args, **kwargs):
-            super().__init__()
-
-        def exec(self):
-            return QDialog.DialogCode.Accepted
-
-    monkeypatch.setattr(app_module, "CdRipDialog", _AcceptedRip)
-    _answer_record_choice(monkeypatch, "Cancel")
+    app_settings.set_mdrem_enabled(True)
+    _never_records(monkeypatch)
+    _rip_returning(
+        monkeypatch,
+        QDialog.DialogCode.Accepted,
+        metadata=ProjectMetadata(album="Unleashed", artist="Skillet"),
+    )
+    _answer_question(monkeypatch, QMessageBox.StandardButton.No)
 
     window = _window()
     original = window.project.metadata
 
-    window._record_cd()
+    window._rip_cd()
 
     assert window.project.metadata is original
+
+
+def test_the_message_names_the_folder_and_the_entry_that_records_it(qt_app, isolated_settings, monkeypatch, tmp_path):
+    """The one thing that replaced the hand-off: the user is told where
+    the files are and which entry records them, since nothing does it for
+    them any more."""
+    from PySide6.QtWidgets import QDialog
+
+    from mdtools.project import ProjectMetadata
+
+    app_settings.set_mdrem_enabled(True)
+    _never_records(monkeypatch)
+    folder = tmp_path / "Skillet - Unleashed"
+    _rip_returning(
+        monkeypatch,
+        QDialog.DialogCode.Accepted,
+        metadata=ProjectMetadata(album="Unleashed"),
+        folder=folder,
+    )
+    asked: list[str] = []
+    monkeypatch.setattr(
+        app_module.QMessageBox,
+        "question",
+        staticmethod(lambda *a, **k: asked.append(a[2]) or QMessageBox.StandardButton.No),
+    )
+
+    _window()._rip_cd()
+
+    assert str(folder) in asked[0]
+    assert "Record from Rip/Download Folder" in asked[0]
+
+
+def test_a_rip_with_nothing_identified_still_says_where_the_files_went(qt_app, isolated_settings, monkeypatch, tmp_path):
+    """No metadata to offer is not the same as nothing to say: the files
+    exist, and where they are is the part the user needs."""
+    from PySide6.QtWidgets import QDialog
+
+    app_settings.set_mdrem_enabled(True)
+    _never_records(monkeypatch)
+    folder = tmp_path / "Track 01"
+    _rip_returning(monkeypatch, QDialog.DialogCode.Accepted, metadata=None, folder=folder)
+    monkeypatch.setattr(
+        app_module.QMessageBox,
+        "question",
+        staticmethod(lambda *a, **k: pytest.fail("there is no metadata to offer")),
+    )
+    told: list[str] = []
+    monkeypatch.setattr(
+        app_module.QMessageBox, "information", staticmethod(lambda *a, **k: told.append(a[2]))
+    )
+
+    _window()._rip_cd()
+
+    assert str(folder) in told[0]

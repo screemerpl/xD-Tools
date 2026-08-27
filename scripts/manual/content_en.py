@@ -149,6 +149,11 @@ BOOK = [
                 "goes read-only while it is on - and what you dial in here is what Export Print PNG "
                 "(Grayscale) will use.",
             ]},
+            {"p": "Above the canvas are two toolbars. The upper one is the ordinary file and edit "
+                  "row every program has - New, Open, Save, Print, Undo, Redo, Cut, Copy, Paste and "
+                  "Delete - and every button on it is the same command as the menu entry of the same "
+                  "name, with the same keyboard shortcut. The lower one belongs to the page in front "
+                  "of you: which page, which template, the zoom controls and the grayscale preview."},
             {"h2": "The three panels"},
             {"p": "**Tools** (left) adds things to the page: text, a filled rectangle, an image from a "
                   "file, an image from the built-in gallery, or text taken straight from the project's "
@@ -167,10 +172,15 @@ BOOK = [
                      "into floating windows."},
             {"h2": "While something is recording"},
             {"p": "Recording, ripping, burning and title-writing each happen in a window of their own - "
-                  "and each of those windows has a **Hide** button. Hide it and the work carries on: the "
-                  "main window becomes usable again, and a progress bar appears along the bottom, above "
-                  "the status bar. It shows overall progress, the current track where there is one, a "
-                  "**Stop** button, and **Show recording window** to bring the window back."},
+                  "and while one of them is working, its **close button (X)** puts the window away "
+                  "instead of stopping it. The work carries on: the main window becomes usable again, "
+                  "and a progress bar appears along the bottom, above the status bar. It shows overall "
+                  "progress, the current track where there is one, a **Stop** button, and **Show "
+                  "recording window** to bring the window back."},
+            {"note": "With nothing running, X closes the window as it does anywhere else. Stopping the "
+                     "work is what **Stop** is for - and the button beside it says **Cancel** while "
+                     "something is running and **Close** when it is not, so the one that throws the "
+                     "work away and the one that merely shuts a finished window never look alike."},
             {"p": "The bar stays for as long as that window is open, even once the work itself has "
                   "finished - it is the only way back to a window you have hidden, so it does not go "
                   "away until the window does."},
@@ -487,14 +497,19 @@ BOOK = [
                   "serial port."},
             {"fig": ("settings", "Window > Settings. The audio output devices are separate from the "
                                  "adapter - recording needs a device, not the infrared connection.")},
+            {"p": "Settings is one window with its groups listed down the left. **General** is "
+                  "everything here; **Telegram** is the bot account (its own chapter). Whichever group "
+                  "is on screen, **OK** saves all of them."},
             {"p": "**Detect** asks every serial port on the machine whether an MDRem answers on it. It has "
                   "to work that way: the board reports the USB ID `2E8A:0003`, which is also its own "
                   "bootloader's and other Waveshare boards', so the only reliable identification is the "
                   "device replying to a `PING`."},
             {"p": "Three things appear once the checkbox is ticked: **Upload Tracklist** in the "
-                  "Metadata dialog, **Remote...** on the Window menu, and the MiniDisc-specific entries "
-                  "in **Recording** - Record CD/Folder to MiniDisc and Erase MiniDisc, both of which "
-                  "need the adapter to arm the deck."},
+                  "Metadata dialog, **Remote...** on the Window menu, and the MiniDisc entries in "
+                  "**Recording** - Record Folder to MiniDisc and Record from Rip/Download Folder to "
+                  "MiniDisc, both of which need the adapter to arm the deck. **Source > Rip Audio "
+                  "CD...** is not among them: ripping ends at files on disk and never touches the "
+                  "deck."},
             {"note": "**MiniDisc audio output device** and **Cassette audio output device**, on the same "
                      "page, are deliberately *not* tied to the checkbox - a cassette needs an output "
                      "device whether or not the adapter is enabled, since nothing about recording onto "
@@ -638,11 +653,11 @@ BOOK = [
     {
         "title": "Recording an album to MiniDisc",
         "blocks": [
-            {"p": "Recording to MiniDisc is one shared window reached from three different starting "
-                  "points - **Record CD to MiniDisc...**, **Record Folder to MiniDisc...**, and Telegram's "
-                  "**Record from Audio Folder...** (its own chapter) - depending on where the tracks come "
-                  "from. This chapter covers what happens once you are in it, whichever door got you "
-                  "there: it arms the deck, plays the album through xD-Tools' own audio engine, watches "
+            {"p": "Recording to MiniDisc is one shared window reached from two starting points - "
+                  "**Record Folder to MiniDisc...** for an album you point at yourself, and **Record "
+                  "from Rip/Download Folder to MiniDisc...** for whatever a CD rip or a Telegram "
+                  "download has left in the audio folder. This chapter covers what happens once you "
+                  "are in it, whichever door got you there: it arms the deck, plays the album through xD-Tools' own audio engine, watches "
                   "it to the end, writes the titles, and lays out both labels from the album's own "
                   "artwork."},
             {"note": "**This needs the MDRem adapter, and the entries only appear once it is enabled in "
@@ -776,20 +791,22 @@ BOOK = [
     },
     # ------------------------------------------------------------------
     {
-        "title": "Recording a CD",
+        "title": "Ripping a CD",
         "blocks": [
-            {"p": "**Recording > Record CD to {medium}...** copies an audio CD, then records what it "
-                  "copied - onto a MiniDisc or a cassette, whichever the open project is for. It reads "
-                  "the disc, works out what album it is, extracts every track to a file, and once ripping "
-                  "finishes asks whether to **Record Now** or **Just Metadata** - the second brings the "
-                  "album's title and track list into the project without recording anything, for whoever "
-                  "wants the label right without a deck to hand right now. Recording Now hands the ripped "
-                  "files straight to the recording window you already know from the previous chapter - "
-                  "the same arming, the same track marks, the same titling."},
-            {"note": "**Recording needs the MDRem adapter**, and the entry only appears once it is "
-                     "enabled - reading a CD does not need it, but choosing Record Now does. **Just "
-                     "Metadata never needs the adapter at all**, which is why the entry stays available "
-                     "on a cassette project too, adapter or not."},
+            {"p": "**Source > Rip Audio CD...** copies an audio CD to files. It reads the disc, works "
+                  "out what album it is, extracts every track, and stops there - it offers to bring the "
+                  "album's title and track list into the project, tells you where the files went, and "
+                  "that is the end of it."},
+            {"p": "Recording those files is a separate step you start yourself, from **Recording > "
+                  "Record from Rip/Download Folder to {medium}...** - the ordinary recording window "
+                  "the previous chapter describes, with the same arming, the same track marks and the "
+                  "same titling. The two used to be one unbroken run, which meant a copy could only be "
+                  "had by starting a recording; a rip is worth having on its own, and the disc is in "
+                  "the drive now whether or not the deck is free."},
+            {"note": "**Ripping needs no MDRem adapter and no particular kind of project**, which is "
+                     "why it sits in the Source menu with nothing hidden or renamed for the medium. "
+                     "Only the recording that may follow needs the adapter, and only on a MiniDisc "
+                     "project."},
             {"h2": "Why it copies the disc first"},
             {"p": "A drive can play a CD directly, and letting a recording read it in real time would be "
                   "simpler. But then a scratch stumbled over at minute 31 lands directly on the MiniDisc, "
@@ -811,8 +828,8 @@ BOOK = [
                 "**Release**; the track titles and the cover art change with it.",
                 "Correct anything wrong. The titles are editable, and they are what gets written into "
                 "the files and later onto the MiniDisc.",
-                "Press **Rip and Record**, then choose **Record Now** or **Just Metadata** once the copy "
-                "finishes.",
+                "Press **Rip**. When the copy finishes, xD-Tools names the folder the files went into "
+                "and asks whether to bring the album's title and track list into the project.",
             ]},
             {"note": "A disc that is not in MusicBrainz - anything home-burned, and plenty of obscure "
                      "releases - simply comes back with numbered placeholder titles for you to type "
@@ -862,7 +879,7 @@ BOOK = [
                 "set back in its own order.",
                 "When you stop adding discs, the recording that follows records the whole set at once.",
             ]},
-            {"note": "You can stop after any disc: the question offers to carry on or to record what has "
+            {"note": "You can stop after any disc: the question offers to carry on or to keep what has "
                      "been ripped so far."},
         ],
     },
@@ -998,8 +1015,8 @@ BOOK = [
     {
         "title": "Recording a cassette",
         "blocks": [
-            {"p": "**Record CD to Cassette...**, **Record Folder to Cassette...** and Telegram's "
-                  "**Record from Audio Folder...** - the same three entry points the MiniDisc chapter "
+            {"p": "**Record Folder to Cassette...** and **Record from Rip/Download Folder to "
+                  "Cassette...** - the same entry points the MiniDisc chapter "
                   "covers - lead here instead on a cassette project, and record an album onto a compact "
                   "cassette one side at a time. It is the odd one out among the recording flows, and in "
                   "a way that decides everything about it: **the deck is yours to operate**. There is no "
@@ -1125,24 +1142,24 @@ BOOK = [
             {"warn": "Everything in this chapter is **experimental** and hidden until you ask for it. It "
                      "works, but it is newer and less exercised than the rest of the program, and the way "
                      "it is presented may still change."},
-            {"p": "xD-Tools can hold a conversation with a Telegram bot **you run yourself**, download the "
-                  "files it sends, and hand the result to Record Folder to MiniDisc - so a download becomes "
+            {"p": "xD-Tools can hold a conversation with a Telegram bot **you run yourself**, download "
+                  "the files it sends, and hand the result to the recording flow - so a download becomes "
                   "a recorded, titled disc without leaving the program."},
             {"warn": "This is for a bot you control. Downloading albums from a public bot that "
                      "redistributes music without the rights holder's permission is not what this is for, "
                      "and owning the CD does not make it legal - that covers copying your own disc, not "
                      "taking a copy from a stranger."},
             {"h2": "Turning it on"},
-            {"p": "**Window > Settings** has a **Show experimental features** checkbox. Tick it and an "
-                  "**Experimental** menu appears in the menu bar; untick it and the menu disappears again. "
-                  "Nothing behind it runs while it is off."},
-            {"fig": ("experimental-settings", "Experimental > Experimental Settings. Experimental features "
-                                             "keep their own settings window."),},
-            {"p": "**Experimental > Experimental Settings...** is where the bot lives. **Bot username** is "
-                  "the bot you want to talk to, `@something`. Downloaded files land in **Window > "
-                  "Settings... > CD rip folder** - the same folder a CD rip uses, since both are raw "
-                  "material for a recording rather than a music library; there is no separate Telegram "
-                  "folder setting any more."},
+            {"p": "**Window > Settings > General** has a **Show experimental features** checkbox. It is "
+                  "what makes the bot's own entry appear in the **Source** menu; while it is off, "
+                  "nothing behind it runs."},
+            {"fig": ("settings-telegram", "Window > Settings, Telegram group. The bot account lives with "
+                                          "every other setting rather than in a window of its own."),},
+            {"p": "**Window > Settings > Telegram** is where the bot lives. **Bot username** is the bot "
+                  "you want to talk to, `@something`. Downloaded files land in **General > CD rip "
+                  "folder** - the same folder a CD rip uses, since both are raw material for a "
+                  "recording rather than a music library; there is no separate Telegram folder setting "
+                  "any more."},
             {"note": "There is no API ID or API Hash to fill in. xD-Tools carries its own, so signing in is "
                      "the only step. If a build ever ships without them it says so plainly instead of "
                      "failing to connect."},
@@ -1158,11 +1175,12 @@ BOOK = [
             {"warn": "The sign-in is saved locally, in `telegram.session` next to xD-Tools' own settings. "
                      "That file is equivalent to being logged in to your account: it is not encrypted, and "
                      "it is not something to copy onto another machine or send to anyone."},
-            {"p": "**Sign out**, next to Sign in, deletes that saved session, so the same Experimental "
-                  "Settings window is also where to leave the account you signed in with."},
+            {"p": "**Sign out**, next to Sign in, deletes that saved session, so the same Telegram "
+                  "group is also where to leave the account you signed in with."},
             {"h2": "The conversation"},
-            {"p": "**Experimental > Download Album from Telegram Bot...** opens a plain chat. It appears "
-                  "only once a sign-in has been saved."},
+            {"p": "**Source > Download Album from Telegram Bot...** opens a plain chat. It appears only "
+                  "once a sign-in has been saved and the experimental checkbox is on - it sits beside "
+                  "Rip Audio CD because a download is a source of audio the same way a disc is."},
             {"fig": ("telegram-chat", "The chat, with the download queue on the right."),},
             {"p": "Deliberately a plain chat rather than a search box: your bot's commands are yours, and "
                   "xD-Tools cannot know them. So it shows whatever the bot sends and lets you drive it - "
@@ -1188,22 +1206,29 @@ BOOK = [
                   "downloading, the overall percentage, and the combined speed - so the state of a "
                   "twenty-file album is one line to glance at rather than twenty rows to add up."},
             {"h2": "From download to disc"},
-            {"p": "Files from every session pile up in the one download folder, so several albums end up "
-                  "side by side. **Sort into Album Folders** separates them: one subfolder per album, named "
-                  "from the tags, with anything untagged grouped by when it arrived."},
+            {"p": "A **FLAC file is filed as it arrives**: its tags are read once it has finished "
+                  "downloading, and it goes straight into its own `Artist - Album` subfolder. So an "
+                  "album downloaded now is already an album folder by the time the last track lands, "
+                  "with nothing to tidy up afterwards."},
+            {"p": "Anything whose tags cannot say where it belongs stays loose in the download folder: "
+                  "an MP3 or an Ogg (their tags are not read yet), an untagged FLAC, or a file that is "
+                  "not music at all. **Sort into Album Folders** is what deals with those, and with "
+                  "whatever earlier sessions left behind: one subfolder per album, named from the tags, "
+                  "with anything untagged grouped by when it arrived."},
             {"note": "Sorting only ever moves audio files. A cover image the bot sent alongside the tracks, "
-                     "or anything else already in that folder, is left exactly where it is."},
+                     "or anything else already in that folder, is left exactly where it is. Nor is "
+                     "anything ever overwritten: a name already taken gets a `(2)`."},
             {"p": "**Record Downloaded Albums...** then goes to the recording flow. It sorts first, so you "
                   "cannot accidentally record two albums onto one disc, and asks which album if there is "
                   "more than one. From there it is the ordinary recording window \"Recording a folder of "
                   "files\" describes - which is also why this needs the MDRem adapter on a MiniDisc "
                   "project, even though downloading does not."},
             {"p": "**Open Download Folder** opens it in your file manager, for a look before recording."},
-            {"p": "Both operations are also on the **Recording** menu without opening the chat at all, for "
-                  "files downloaded earlier: **Sort Audio Folder into Albums...** and **Record from Audio "
-                  "Folder...** - named for the one folder they act on (the same one a CD rip fills) rather "
-                  "than for Telegram specifically, since a folder recorded this way need not have come "
-                  "from the bot at all."},
+            {"p": "Both operations exist outside the chat as well, for files downloaded earlier: "
+                  "**Source > Sort Rip/Download Folder into Albums...** and **Recording > Record from "
+                  "Rip/Download Folder to {medium}...** - named for the one folder they act on (the "
+                  "same one a CD rip fills) rather than for Telegram specifically, since a folder "
+                  "recorded this way need not have come from the bot at all."},
             {"tip": "Both buttons go quiet while anything is still downloading - sorting or recording "
                     "half-written files would be worse than waiting."},
         ],
