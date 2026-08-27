@@ -266,6 +266,11 @@ class RecordDialog(QDialog):
         self.preview_bar = PreviewPlayerBar()
         self.preview_bar.prev_requested.connect(lambda: self._step_preview(-1))
         self.preview_bar.next_requested.connect(lambda: self._step_preview(1))
+        # Locked for as long as real work is in progress -- connected to
+        # this dialog's own running_changed rather than toggled by hand at
+        # each start/finish/fail site, so it cannot drift out of step with
+        # them. See PreviewPlayerBar.set_locked().
+        self.running_changed.connect(self.preview_bar.set_locked)
         layout.addWidget(self.preview_bar)
 
         hint = QLabel(

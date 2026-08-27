@@ -40,6 +40,16 @@ HIDEABLE_DIALOGS = [RecordDialog, TapeRecordDialog, BurnDialog, CdRipDialog, MDR
 NO_TRACK_PROGRESS = [BurnDialog, MDRemUploadDialog, MetadataDialog, TelegramChatDialog]
 
 
+def _build(dialog_class):
+    """Each of these takes a different set of required arguments; none of
+    them touches a device or a thread on construction."""
+    if dialog_class is RecordDialog:
+        return RecordDialog("COM7", [], None)
+    if dialog_class is TapeRecordDialog:
+        return TapeRecordDialog([], None)
+    return BurnDialog([], album="a", artist="b", year=2020, parent=None)
+
+
 @pytest.mark.parametrize("dialog_class", DRIVING_DIALOGS, ids=lambda c: c.__name__)
 def test_it_offers_everything_the_progress_bar_connects_to(dialog_class):
     for name in ("running_changed", "overall_progress_changed", "visibility_changed"):
@@ -72,3 +82,24 @@ def test_the_deliberate_exclusions_stay_excluded(dialog_class):
 @pytest.mark.parametrize("dialog_class", [RecordDialog, TapeRecordDialog, CdRipDialog], ids=lambda c: c.__name__)
 def test_the_rest_do_report_per_track_progress(dialog_class):
     assert hasattr(dialog_class, "track_progress_changed")
+
+
+# Every dialog that offers the preview player must also take it away
+# while it is actually recording/burning -- see PreviewPlayerBar.set_locked().
+PREVIEW_DIALOGS = [RecordDialog, TapeRecordDialog, BurnDialog]
+
+
+@pytest.mark.parametrize("dialog_class", PREVIEW_DIALOGS, ids=lambda c: c.__name__)
+def test_the_preview_player_is_locked_while_the_dialog_is_running(dialog_class, qt_app):
+    """Wired to each dialog's own running_changed rather than toggled by
+    hand at every start/finish/fail site, so this holds however many of
+    those there are. Asserted through the signal, not the connection, so
+    it stays true whatever the wiring looks like."""
+    dialog = _build(dialog_class)
+
+    dialog.running_changed.emit(True)
+    assert not dialog.preview_bar.play_btn.isEnabled()
+    assert not dialog.preview_bar.next_btn.isEnabled()
+
+    dialog.running_changed.emit(False)
+    assert dialog.preview_bar._locked is False
