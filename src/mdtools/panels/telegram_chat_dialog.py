@@ -61,6 +61,7 @@ from PySide6.QtWidgets import (
 
 from mdtools import album_sort, app_settings, cdrip, i18n, telegram_bot, user_paths
 from mdtools import translate as mdtools_translate
+from mdtools.panels.hideable_dialog import hide_for_background
 
 # Inline photo previews are scaled down to this width if wider -- large
 # enough to actually judge a cover, small enough that a whole album's worth
@@ -577,11 +578,36 @@ class TelegramChatDialog(QDialog):
     gate before ever constructing this) -- but that's only the fast,
     optimistic half; _ChatWorker's own is_authorized() check is what
     actually decides whether chatting is possible, and not_authorized()
-    below is what a stale/revoked session looks like once opened anyway."""
+    below is what a stale/revoked session looks like once opened anyway.
+
+    Wired into #27's shared machinery exactly like the six recording/rip/
+    burn/upload dialogs -- see app_window._open_telegram_bot_chat(), which
+    hands this to the same _drive_recording_bar()/_release_recording_bar()
+    and _guard_no_concurrent_operation() they use. A chat session touches
+    no MDRem port, audio device or optical drive, so it is not blocked by
+    the same *reason* those dialogs are -- but it drives the very same
+    single bottom progress bar (download-queue status, mirroring the
+    aggregate line above the queue panel itself), and that bar can only
+    ever belong to one dialog at a time, so reusing the one-at-a-time
+    guard is what keeps it from being fought over rather than inventing a
+    second, parallel mechanism just for this dialog."""
+
+    # Mirrored by MainWindow's own bottom-of-window progress bar (#27) --
+    # see app_window.py's _drive_recording_bar()/_release_recording_bar().
+    running_changed = Signal(bool)
+    overall_progress_changed = Signal(float, str)
+    visibility_changed = Signal(bool)
+    # Asked for by the progress bar's "Show recording window" button --
+    # see panels/hideable_dialog.py, which is what actually re-shows this.
+    show_requested = Signal()
 
     def __init__(self, api_id: str, api_hash: str, bot_username: str, download_root: Path, parent=None):
         super().__init__(parent)
         self.setWindowTitle(self.tr("Telegram Bot"))
+        # Set by the Hide button, read by exec_hideable() -- see
+        # panels/hideable_dialog.py for why a hide has to be told apart
+        # from a cancel at all.
+        self.hidden_for_background = False
         # Wider than a plain single-pane chat would need -- the transcript
         # and the download queue (added alongside each other in a
         # QSplitter, see __init__ below) each need real room now that
@@ -742,6 +768,15 @@ class TelegramChatDialog(QDialog):
         self.continue_btn.setAutoDefault(False)
         self.continue_btn.clicked.connect(self._on_continue_clicked)
         self.buttons.addButton(self.continue_btn, QDialogButtonBox.ButtonRole.AcceptRole)
+        self.hide_btn = QPushButton(self.tr("Hide"))
+        self.hide_btn.setToolTip(
+            self.tr("Hide this window and keep the chat and any downloads running in the "
+                    "background -- use \"Show recording window\" in the bar at the bottom of "
+                    "the main window to bring it back.")
+        )
+        self.hide_btn.setAutoDefault(False)
+        self.hide_btn.clicked.connect(self._on_hide_clicked)
+        self.buttons.addButton(self.hide_btn, QDialogButtonBox.ButtonRole.ActionRole)
         self.close_btn = QPushButton(self.tr("Close"))
         self.close_btn.setAutoDefault(False)
         self.close_btn.clicked.connect(self.reject)
@@ -794,6 +829,11 @@ class TelegramChatDialog(QDialog):
         self._worker.translation_loaded.connect(self._on_translation_loaded)
         self._worker.finished.connect(self._on_worker_finished)
         self._worker.start()
+        # Spans the whole session, not just active downloads -- there is
+        # no natural "operation ends" moment for an interactive chat short
+        # of the dialog actually closing (see _on_worker_finished()),
+        # unlike the six recording dialogs' own single run.
+        self.running_changed.emit(True)
 
     def _on_ready(self, bot_name: str, session_folder: str) -> None:
         self._bot_name = bot_name
@@ -1033,8 +1073,18 @@ class TelegramChatDialog(QDialog):
         if speed_bps > 0:
             parts.append(self.tr("{speed}/s").format(speed=_human_size(int(speed_bps))))
 
-        self.queue_summary_label.setText(" · ".join(parts))
+        summary = " · ".join(parts)
+        self.queue_summary_label.setText(summary)
         self.queue_summary_label.setVisible(True)
+
+        # Mirrored into MainWindow's own bottom progress bar (#27) -- the
+        # same aggregate this label already shows, so the two can never
+        # disagree. Byte-accurate when at least one file's size is known
+        # (known_total_bytes), falling back to a plain file count
+        # otherwise (a file with no reported size, e.g. one still
+        # queued behind Telegram not having sent it yet).
+        fraction = current_bytes / known_total_bytes if known_total_bytes else finished / total
+        self.overall_progress_changed.emit(fraction, summary)
 
     # --- folder-level actions -------------------------------------------------
 
@@ -1163,6 +1213,21 @@ class TelegramChatDialog(QDialog):
         if widget is not None:
             widget.set_translation(text)
 
+    # --- hide/show -----------------------------------------------------
+
+    def request_stop(self) -> None:
+        """What MainWindow's own Stop button calls -- closes the chat,
+        cancelling the worker gracefully via reject() (see _close_with()
+        below), same as clicking Close by hand."""
+        self.reject()
+
+    def request_show(self) -> None:
+        """What the progress bar's "Show recording window" button calls."""
+        self.show_requested.emit()
+
+    def _on_hide_clicked(self) -> None:
+        hide_for_background(self)
+
     # --- shutdown -----------------------------------------------------
     #
     # Unlike TelegramLoginDialog (a one-shot exchange whose worker finishes
@@ -1188,6 +1253,14 @@ class TelegramChatDialog(QDialog):
 
     def _on_worker_finished(self) -> None:
         self._worker = None
+        # Before the closing branch below, not after -- same ordering
+        # CdRipDialog's own _on_worker_finished uses, and for the same
+        # reason: if this dialog is hidden right now, MainWindow's
+        # running_changed(False) handler asks for it back (see
+        # app_window._on_recording_running_changed()'s own "stranded
+        # hidden dialog" fix), and that has to happen before finish()
+        # potentially closes it for good below.
+        self.running_changed.emit(False)
         if self._closing and self._pending_finish is not None:
             self._pending_finish()
 

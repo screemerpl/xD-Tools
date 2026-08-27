@@ -63,6 +63,7 @@ from mdtools import (
     multidisc,
 )
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
+from mdtools.panels.hideable_dialog import hide_for_background, surface
 from mdtools.panels.preview_player import PreviewPlayerBar
 from mdtools.project import ProjectMetadata, Track
 
@@ -168,6 +169,18 @@ class _BurnWorker(QThread):
 
 
 class BurnDialog(QDialog):
+    # Mirrored by MainWindow's own bottom-of-window progress bar (#27) --
+    # see app_window.py's _drive_recording_bar()/_release_recording_bar().
+    # No track_progress_changed: cdrecord writes the whole disc as one
+    # continuous DAO stream with no natural per-track breakdown to surface.
+    running_changed = Signal(bool)
+    overall_progress_changed = Signal(float, str)
+    visibility_changed = Signal(bool)
+    # Asked for by the progress bar's "Show recording window" button --
+    # see panels/hideable_dialog.py, which is what actually re-shows this.
+    show_requested = Signal()
+
+
     """`sources` is (path, title, artist) per track, in disc order.
 
     Whoever assembled that list -- a folder, a foobar2000 playlist -- is not
@@ -201,6 +214,14 @@ class BurnDialog(QDialog):
         self._sources = [given[index] for index in order]
         self._worker: _BurnWorker | None = None
         self._burning = False
+        # The last fraction _on_progress reported -- re-emitted from
+        # _on_stage too, since a decode->burn transition changes the status
+        # text without necessarily coming with a fresh progress tick.
+        self._last_fraction = 0.0
+        # Set by the Hide button, read by exec_hideable() -- see
+        # panels/hideable_dialog.py for why a hide has to be told apart
+        # from a cancel at all.
+        self.hidden_for_background = False
         # One plan per disc, and which of them is on the drive now. A list
         # of one for an ordinary album, so the single-disc path is the same
         # code rather than a special case.
@@ -218,6 +239,11 @@ class BurnDialog(QDialog):
         self.preview_bar = PreviewPlayerBar()
         self.preview_bar.prev_requested.connect(lambda: self._step_preview(-1))
         self.preview_bar.next_requested.connect(lambda: self._step_preview(1))
+        # Locked for as long as real work is in progress -- connected to
+        # this dialog's own running_changed rather than toggled by hand at
+        # each start/finish/fail site, so it cannot drift out of step with
+        # them. See PreviewPlayerBar.set_locked().
+        self.running_changed.connect(self.preview_bar.set_locked)
         layout.addWidget(self.preview_bar)
         layout.addWidget(self._build_disc_box())
 
@@ -249,6 +275,13 @@ class BurnDialog(QDialog):
         self.close_button = QPushButton(self.tr("Close"))
         self.close_button.clicked.connect(self.reject)
         buttons.addWidget(self.close_button)
+        self.hide_button = QPushButton(self.tr("Hide"))
+        self.hide_button.setToolTip(
+            self.tr("Hide this window and keep burning in the background -- use \"Show recording "
+                    "window\" in the bar at the bottom of the main window to bring it back.")
+        )
+        self.hide_button.clicked.connect(self._on_hide_clicked)
+        buttons.addWidget(self.hide_button)
         layout.addLayout(buttons)
 
         self._refresh_drives()
@@ -839,6 +872,7 @@ class BurnDialog(QDialog):
 
         What is on screen when Burn is pressed is what gets written -- and
         unlike a MiniDisc, it cannot be corrected afterwards."""
+        self.running_changed.emit(running)
         self._burning = running
         for widget in (
             self.table,
@@ -864,20 +898,24 @@ class BurnDialog(QDialog):
             self._refresh_split_button()
 
     def _on_stage(self, stage: str) -> None:
-        self.stage_label.setText(
-            self.tr("Preparing audio...") if stage == "decode" else self.tr("Writing the disc...")
-        )
+        text = self.tr("Preparing audio...") if stage == "decode" else self.tr("Writing the disc...")
+        self.stage_label.setText(text)
+        self.overall_progress_changed.emit(self._last_fraction, text)
 
     def _on_progress(self, fraction: float) -> None:
+        self._last_fraction = fraction
         self.progress_bar.setValue(int(fraction * 1000))
+        self.overall_progress_changed.emit(fraction, self.stage_label.text())
 
     def _on_failed(self, message: str) -> None:
+        surface(self)
         QMessageBox.critical(self, self.tr("Burn Audio CD"), message)
 
     def _on_cancelled(self) -> None:
         self.stage_label.setText(self.tr("Stopped."))
 
     def _on_succeeded(self) -> None:
+        surface(self)
         self.result_metadata = self.metadata()
         if self._disc + 1 < len(self._plans):
             # Asked for from _on_worker_finished, not here: this thread is
@@ -923,6 +961,7 @@ class BurnDialog(QDialog):
         self._burn_current_disc()
 
     def _ask_for_next_disc(self) -> bool:
+        surface(self)
         return (
             QMessageBox.question(
                 self,
@@ -973,3 +1012,16 @@ class BurnDialog(QDialog):
             self.reject()
             return
         super().closeEvent(event)
+
+    def request_stop(self) -> None:
+        """What MainWindow's own Stop button calls -- reuses the same
+        "Stop now?" confirmation reject() already asks, rather than a
+        second, silent way to abandon a disc mid-write."""
+        self.reject()
+
+    def request_show(self) -> None:
+        """What the progress bar's "Show recording window" button calls."""
+        self.show_requested.emit()
+
+    def _on_hide_clicked(self) -> None:
+        hide_for_background(self)

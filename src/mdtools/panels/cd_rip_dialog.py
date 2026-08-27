@@ -64,6 +64,8 @@ from PySide6.QtWidgets import (
 
 from mdtools import app_settings, cdrip, mixtape_cover, musicbrainz
 from mdtools.panels.cover_preview import CoverPreview, fetch_into
+from mdtools.panels.hideable_dialog import hide_for_background, surface
+from mdtools.panels.progress_format import mmss as _mmss
 from mdtools.project import MEDIUM_MD, medium_name, ProjectMetadata, Track, apply_compilation_naming
 
 # An MD holds 80 minutes in SP -- the same limit RecordDialog warns about,
@@ -84,11 +86,6 @@ _RIP_SHARE = 0.9
 _PROGRESS_EPSILON = 0.002
 
 
-def _mmss(seconds: float) -> str:
-    seconds = max(0, int(seconds))
-    return f"{seconds // 60}:{seconds % 60:02d}"
-
-
 def _same_name(left: str, right: str) -> bool:
     return left.strip().casefold() == right.strip().casefold()
 
@@ -98,6 +95,7 @@ class _RipWorker(QThread):
 
     track_started = Signal(int)
     progress = Signal(float)
+    track_progress = Signal(float)  # this track's own fraction, 0.0-1.0
     stage = Signal(str)
     failed = Signal(str)
     cancelled = Signal()
@@ -148,6 +146,11 @@ class _RipWorker(QThread):
 
     def _on_track_progress(self, task: cdrip.RipTask, within_track: float) -> None:
         self._emit_progress((self._done_sectors + within_track * task.sectors) / self._total_sectors)
+        # within_track only ever reaches _RIP_SHARE (extraction's own share
+        # of the track) -- rescaled back to a genuine 0.0-1.0 fraction of
+        # this one track, encoding's own short remainder included for free
+        # since it snaps to 1.0 the moment the *next* track_started fires.
+        self.track_progress.emit(min(1.0, within_track / _RIP_SHARE))
 
     def _emit_progress(self, fraction: float) -> None:
         fraction = min(1.0, max(0.0, fraction))
@@ -158,6 +161,16 @@ class _RipWorker(QThread):
 
 
 class CdRipDialog(QDialog):
+    # Mirrored by MainWindow's own bottom-of-window progress bar (#27) --
+    # see app_window.py's _drive_recording_bar()/_release_recording_bar().
+    running_changed = Signal(bool)
+    overall_progress_changed = Signal(float, str)
+    track_progress_changed = Signal(float, str)
+    visibility_changed = Signal(bool)
+    # Asked for by the progress bar's "Show recording window" button --
+    # see panels/hideable_dialog.py, which is what actually re-shows this.
+    show_requested = Signal()
+
     def __init__(self, parent=None, medium: str = MEDIUM_MD):
         """`medium` is only ever wording: the rip itself is the same work
         whichever machine the tracks are recorded onto afterwards, but a
@@ -173,6 +186,10 @@ class CdRipDialog(QDialog):
         self._releases: list[musicbrainz.DiscRelease] = []
         self._worker: _RipWorker | None = None
         self._closing = False
+        # Set by the Hide button, read by exec_hideable() -- see
+        # panels/hideable_dialog.py for why a hide has to be told apart
+        # from a cancel at all.
+        self.hidden_for_background = False
         # Several discs ripped as one album: which one is in the drive, the
         # folder they all share (fixed by the first, since a later disc may
         # well be identified under a different name), and what the discs
@@ -266,6 +283,13 @@ class CdRipDialog(QDialog):
         self.start_btn.setEnabled(False)
         self.start_btn.clicked.connect(self._start)
         self.buttons.addButton(self.start_btn, QDialogButtonBox.ButtonRole.AcceptRole)
+        self.hide_btn = QPushButton(self.tr("Hide"))
+        self.hide_btn.setToolTip(
+            self.tr("Hide this window and keep ripping in the background -- use \"Show recording "
+                    "window\" in the bar at the bottom of the main window to bring it back.")
+        )
+        self.hide_btn.clicked.connect(self._on_hide_clicked)
+        self.buttons.addButton(self.hide_btn, QDialogButtonBox.ButtonRole.ActionRole)
         self.close_btn = QPushButton(self.tr("Cancel"))
         self.close_btn.clicked.connect(self.reject)
         self.buttons.addButton(self.close_btn, QDialogButtonBox.ButtonRole.RejectRole)
@@ -558,6 +582,7 @@ class CdRipDialog(QDialog):
         self._worker = _RipWorker(self.selected_device(), plan, self)
         self._worker.track_started.connect(self._on_track_started)
         self._worker.progress.connect(self._on_progress)
+        self._worker.track_progress.connect(self._on_track_progress)
         self._worker.stage.connect(self._on_stage)
         self._worker.failed.connect(self._on_failed)
         self._worker.cancelled.connect(self._on_cancelled)
@@ -566,6 +591,7 @@ class CdRipDialog(QDialog):
         self._worker.start()
 
     def _set_running(self, running: bool) -> None:
+        self.running_changed.emit(running)
         for widget in (
             self.start_btn,
             self.read_btn,
@@ -600,6 +626,11 @@ class CdRipDialog(QDialog):
 
     def _on_progress(self, fraction: float) -> None:
         self.progress.setValue(int(_PROGRESS_SCALE * fraction))
+        self.overall_progress_changed.emit(fraction, self.status_label.text())
+
+    def _on_track_progress(self, fraction: float) -> None:
+        task = self._plan.tasks[self._current_index]
+        self.track_progress_changed.emit(fraction, task.title)
 
     def _on_failed(self, message: str) -> None:
         self.progress.setVisible(False)
@@ -651,6 +682,7 @@ class CdRipDialog(QDialog):
         self._done_paths += list(self._plan.flac_paths)
 
     def _ask_for_next_disc(self) -> bool:
+        surface(self)
         return (
             QMessageBox.question(
                 self,
@@ -687,6 +719,17 @@ class CdRipDialog(QDialog):
         )
 
     # --- shutdown ---------------------------------------------------------
+
+    def request_stop(self) -> None:
+        """What MainWindow's own Stop button calls."""
+        self.reject()
+
+    def request_show(self) -> None:
+        """What the progress bar's "Show recording window" button calls."""
+        self.show_requested.emit()
+
+    def _on_hide_clicked(self) -> None:
+        hide_for_background(self)
 
     def reject(self) -> None:
         worker = self._worker

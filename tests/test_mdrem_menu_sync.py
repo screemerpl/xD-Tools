@@ -9,6 +9,7 @@ with it.
 """
 
 import pytest
+from PySide6.QtCore import QObject, Signal
 
 from mdtools import app_settings
 from mdtools import app_window as app_module
@@ -185,12 +186,17 @@ def test_choosing_record_now_without_the_adapter_refuses_to_record(qt_app, isola
 
     app_settings.set_mdrem_enabled(False)
 
-    class _AcceptedRip:
+    class _AcceptedRip(QObject):
+        running_changed = Signal(bool)
+        overall_progress_changed = Signal(float, str)
+        track_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
         result_metadata = None
         result_paths = ["01.flac"]
 
         def __init__(self, *args, **kwargs):
-            pass
+            super().__init__()
 
         def exec(self):
             return QDialog.DialogCode.Accepted
@@ -217,21 +223,31 @@ def test_the_port_is_resolved_only_after_record_now_is_chosen(qt_app, isolated_s
     resolved: list = []
     monkeypatch.setattr(app_module, "resolve_port", lambda *a, **k: resolved.append(1) or "COM7")
 
-    class _AcceptedRip:
+    class _AcceptedRip(QObject):
+        running_changed = Signal(bool)
+        overall_progress_changed = Signal(float, str)
+        track_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
         result_metadata = None
         result_paths = ["01.flac"]
 
         def __init__(self, *args, **kwargs):
-            pass
+            super().__init__()
 
         def exec(self):
             return QDialog.DialogCode.Accepted
 
-    class _FakeRecord:
+    class _FakeRecord(QObject):
         result_metadata = None
 
+        running_changed = Signal(bool)
+        overall_progress_changed = Signal(float, str)
+        track_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
         def __init__(self, *args, **kwargs):
-            pass
+            super().__init__()
 
         def exec(self):
             return QDialog.DialogCode.Accepted
@@ -253,9 +269,14 @@ def test_a_cancelled_rip_never_reaches_the_recording_dialog(qt_app, isolated_set
         app_module, "resolve_port", lambda *a, **k: pytest.fail("must not go looking for a port")
     )
 
-    class _RejectedRip:
+    class _RejectedRip(QObject):
+        running_changed = Signal(bool)
+        overall_progress_changed = Signal(float, str)
+        track_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
         def __init__(self, *args, **kwargs):
-            pass
+            super().__init__()
 
         def exec(self):
             return QDialog.DialogCode.Rejected
@@ -281,22 +302,33 @@ def test_choosing_record_now_hands_straight_over_to_the_recording_dialog(qt_app,
 
     identified = ProjectMetadata(album="Unleashed", artist="Skillet", cover_art=b"art")
 
-    class _AcceptedRip:
+    class _AcceptedRip(QObject):
+        running_changed = Signal(bool)
+        overall_progress_changed = Signal(float, str)
+        track_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
         result_metadata = identified
         result_paths = ["01.flac"]
 
         def __init__(self, *args, **kwargs):
-            pass
+            super().__init__()
 
         def exec(self):
             return QDialog.DialogCode.Accepted
 
     recorded: list = []
 
-    class _FakeRecord:
+    class _FakeRecord(QObject):
         result_metadata = None
 
+        running_changed = Signal(bool)
+        overall_progress_changed = Signal(float, str)
+        track_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
         def __init__(self, port, paths, parent=None, metadata=None):
+            super().__init__()
             recorded.append((port, paths, metadata))
 
         def exec(self):
@@ -337,12 +369,17 @@ def test_choosing_just_metadata_applies_it_without_recording(qt_app, isolated_se
 
     identified = ProjectMetadata(album="Unleashed", artist="Skillet", cover_art=b"art")
 
-    class _AcceptedRip:
+    class _AcceptedRip(QObject):
+        running_changed = Signal(bool)
+        overall_progress_changed = Signal(float, str)
+        track_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
         result_metadata = identified
         result_paths = ["01.flac"]
 
         def __init__(self, *args, **kwargs):
-            pass
+            super().__init__()
 
         def exec(self):
             return QDialog.DialogCode.Accepted
@@ -369,12 +406,17 @@ def test_cancelling_the_record_choice_leaves_the_project_untouched(qt_app, isola
 
     from mdtools.project import ProjectMetadata
 
-    class _AcceptedRip:
+    class _AcceptedRip(QObject):
+        running_changed = Signal(bool)
+        overall_progress_changed = Signal(float, str)
+        track_progress_changed = Signal(float, str)
+        visibility_changed = Signal(bool)
+
         result_metadata = ProjectMetadata(album="Unleashed", artist="Skillet")
         result_paths = ["01.flac"]
 
         def __init__(self, *args, **kwargs):
-            pass
+            super().__init__()
 
         def exec(self):
             return QDialog.DialogCode.Accepted

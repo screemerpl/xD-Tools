@@ -192,6 +192,40 @@ def test_plain_construction_starts_no_worker(qt_app, tmp_path):
         dialog.close()
 
 
+# --- Hide, via panels/hideable_dialog.py's shared machinery -------------
+
+
+def test_hide_button_marks_the_hide_as_deliberate_and_announces_it(qt_app, tmp_path):
+    """What tells exec_hideable() apart a deliberate Hide from a plain
+    cancel -- see hideable_dialog.py's own module docstring for the bug
+    this guards against."""
+    dialog = TelegramChatDialog("123456", "hash", "@my_bot", tmp_path)
+    try:
+        assert dialog.hidden_for_background is False
+        seen = []
+        dialog.visibility_changed.connect(seen.append)
+        dialog.show()
+        dialog.hide_btn.click()
+        assert dialog.hidden_for_background is True
+        assert dialog.isHidden()
+        assert seen == [True]
+    finally:
+        dialog.close()
+
+
+def test_request_show_emits_show_requested(qt_app, tmp_path):
+    """What app_window._open_telegram_bot_chat() calls to bring a hidden
+    chat back when the menu action is triggered again."""
+    dialog = TelegramChatDialog("123456", "hash", "@my_bot", tmp_path)
+    try:
+        seen = []
+        dialog.show_requested.connect(lambda: seen.append(True))
+        dialog.request_show()
+        assert seen == [True]
+    finally:
+        dialog.close()
+
+
 # --- reject()/accept() must never block on a busy worker ---------------------
 
 

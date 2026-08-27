@@ -69,7 +69,9 @@ class _FakeWorker:
         # this disc" -- there is no playlist any more to read it back from.
         self.playlist_paths = list(parent._current_paths) if parent is not None else []
         _FakeWorker.made.append(self)
-        for name in ("track_started", "progress", "stage", "failed", "cancelled", "succeeded", "finished"):
+        for name in (
+            "track_started", "progress", "track_progress", "stage", "failed", "cancelled", "succeeded", "finished"
+        ):
             setattr(self, name, _Signal())
 
     def start(self):

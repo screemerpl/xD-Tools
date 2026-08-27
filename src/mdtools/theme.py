@@ -82,8 +82,10 @@ _BORDER_LIGHT = "#4f545c"
 _TEXT = "#dcddde"
 _DISABLED_TEXT = "#72767d"
 _DISABLED_BG = "#26282c"
-# Discord's own danger red, for QPalette's BrightText role.
-_DANGER = "#ed4245"
+# Discord's own danger red, for QPalette's BrightText role -- public
+# (not underscore-prefixed) since panels/recording_progress_bar.py's Stop
+# button also uses it directly.
+DANGER = "#ed4245"
 
 _RADIUS = "4px"
 
@@ -99,7 +101,7 @@ def _build_palette() -> QPalette:
     palette.setColor(QPalette.ColorRole.Text, QColor(_TEXT))
     palette.setColor(QPalette.ColorRole.Button, QColor(_WINDOW))
     palette.setColor(QPalette.ColorRole.ButtonText, QColor(_TEXT))
-    palette.setColor(QPalette.ColorRole.BrightText, QColor(_DANGER))
+    palette.setColor(QPalette.ColorRole.BrightText, QColor(DANGER))
     palette.setColor(QPalette.ColorRole.Link, QColor(_ACCENT))
     palette.setColor(QPalette.ColorRole.Highlight, QColor(_ACCENT))
     # White, not black -- _ACCENT is now a deep indigo-blue (Discord's own

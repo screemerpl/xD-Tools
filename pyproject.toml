@@ -1,6 +1,6 @@
 [project]
 name = "mdtools"
-version = "0.3.2"
+version = "0.3.3"
 description = "Desktop workbench for MiniDisc, CD-R and compact cassette: design disc labels, J-cards, case inserts and shell labels for Cricut cutting and printing, record albums from a CD or a folder of files, burn audio CD-Rs with CD-Text, record cassettes side by side, and title MiniDiscs over infrared"
 license = { text = "GPL-3.0-or-later" }
 classifiers = [

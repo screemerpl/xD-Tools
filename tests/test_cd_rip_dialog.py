@@ -294,6 +294,39 @@ def test_progress_climbs_across_tracks_and_ends_at_one(qt_app, monkeypatch, tmp_
     assert seen[-1] == pytest.approx(1.0)
 
 
+def test_per_track_progress_is_reported_as_that_tracks_own_fraction(qt_app, monkeypatch, tmp_path):
+    """#27's per-track row. The worker blends each track's own progress
+    into the album-wide bar, weighted by _RIP_SHARE -- what goes out
+    here has to be rescaled back to a plain 0..1 of *this* track, or the
+    row would never pass 90%."""
+
+    def rip(device, task, on_progress=None, should_cancel=None):
+        if task.number == 1:
+            for fraction in (0.0, 0.5, 1.0):
+                on_progress(fraction)
+
+    _wire(monkeypatch, rip=rip)
+    worker = _RipWorker("D:", _plan(tmp_path))
+    seen: list[float] = []
+    worker.track_progress.connect(seen.append)
+
+    worker.run()
+
+    assert seen[:3] == [pytest.approx(0.0), pytest.approx(0.5), pytest.approx(1.0)]
+
+
+def test_the_dialog_names_the_track_its_per_track_progress_is_about(qt_app, monkeypatch, tmp_path):
+    dialog = CdRipDialog()
+    dialog._plan = _plan(tmp_path)
+    dialog._current_index = 1
+    seen: list = []
+    dialog.track_progress_changed.connect(lambda f, t: seen.append((f, t)))
+
+    dialog._on_track_progress(0.25)
+
+    assert seen == [(pytest.approx(0.25), "Song 2")]
+
+
 def test_a_failed_rip_stops_and_reports_it(qt_app, monkeypatch, tmp_path):
     def rip(device, task, **kw):
         if task.number == 2:
