@@ -39,6 +39,9 @@ _MDREM_ENABLED_KEY = "mdrem_enabled"
 _EXPERIMENTAL_FEATURES_ENABLED_KEY = "experimental_features_enabled"
 _MDREM_PORT_KEY = "mdrem_port"
 _MDREM_EXTENDED_REMOTE_KEY = "mdrem_extended_remote"
+_NETMD_ENABLED_KEY = "netmd_enabled"
+_NETMD_DEVICE_KEY = "netmd_device"
+_NETMD_RECORDING_MODE_KEY = "netmd_recording_mode"
 _CD_RIP_FOLDER_KEY = "cd_rip_folder"
 _CD_DRIVE_KEY = "cd_drive"
 _MUSIC_FOLDER_KEY = "music_folder"
@@ -109,6 +112,16 @@ def mdrem_enabled() -> bool:
     back as the *text* "true"/"false", and `bool("false")` is True, so
     reading this with a plain bool() would make the setting impossible to
     ever turn back off."""
+    if netmd_enabled():
+        # The invariant, enforced on the way out as well as on the way in
+        # (see set_mdrem_enabled). The setters keep these two apart, but a
+        # settings.ini can be edited by hand or carried over from a build
+        # that only knew about one of them -- and a call site asking "is
+        # the adapter on?" must never be told yes while the app is driving
+        # the deck over USB. NetMD wins the tie because it is the more
+        # specific answer: it names a cable that is plugged in, where the
+        # MDRem flag only says an adapter exists somewhere.
+        return False
     value = _settings().value(_MDREM_ENABLED_KEY, False)
     if isinstance(value, str):
         return value.strip().lower() in ("true", "1", "yes")
@@ -116,7 +129,69 @@ def mdrem_enabled() -> bool:
 
 
 def set_mdrem_enabled(value: bool) -> None:
+    """Turning the adapter on turns NetMD off.
+
+    **The two are mutually exclusive, and enforced here rather than in the
+    dialog that offers them.** A recording has to know which machine it is
+    driving before it starts -- they arm the deck differently, mark tracks
+    differently and write titles differently -- so "which one" is a single
+    answer, not a pair of independent flags that can both be true and
+    leave every call site guessing. Enforcing it in app_settings means the
+    invariant holds however the setting is reached: the Settings window,
+    a test, or a hand-edited settings.ini."""
     _settings().setValue(_MDREM_ENABLED_KEY, bool(value))
+    if value:
+        _settings().setValue(_NETMD_ENABLED_KEY, False)
+
+
+def netmd_enabled() -> bool:
+    """Whether the deck is driven over its own USB cable (NetMD) instead
+    of the MDRem infrared adapter -- see set_netmd_enabled() for why the
+    two cannot both be on, and mdtools.netmd for what it buys.
+
+    Same string handling as mdrem_enabled(): an IniFormat QSettings hands
+    a bool back as the text "true"/"false", and bool("false") is True."""
+    value = _settings().value(_NETMD_ENABLED_KEY, False)
+    if isinstance(value, str):
+        return value.strip().lower() in ("true", "1", "yes")
+    return bool(value)
+
+
+def set_netmd_enabled(value: bool) -> None:
+    """Turning NetMD on turns the MDRem adapter off -- see
+    set_mdrem_enabled() for why that is one answer rather than two."""
+    _settings().setValue(_NETMD_ENABLED_KEY, bool(value))
+    if value:
+        _settings().setValue(_MDREM_ENABLED_KEY, False)
+
+
+def netmd_device() -> str:
+    """Which NetMD deck to use, as the name it reported. Empty means "the
+    one that is plugged in", which is the ordinary case.
+
+    Worth being clear about what this can and cannot do: netmdcli always
+    talks to the *first* device it enumerates and takes no way to choose
+    another (confirmed in its source). So this records which deck the user
+    picked and lets xD-Tools say so when the deck answering is not that
+    one -- it cannot redirect the tool at a second deck."""
+    return str(_settings().value(_NETMD_DEVICE_KEY, "") or "")
+
+
+def set_netmd_device(value: str) -> None:
+    _settings().setValue(_NETMD_DEVICE_KEY, str(value))
+
+
+def netmd_recording_mode() -> str:
+    """SP, LP2 or LP4 -- the mode a NetMD recording is made in, which
+    decides both how much fits on the disc and which cable carries the
+    audio (see mdtools.netmd.MODES). Validated there, not here: this
+    returns whatever was stored and netmd.mode() falls back to SP for
+    anything it does not recognise."""
+    return str(_settings().value(_NETMD_RECORDING_MODE_KEY, "sp") or "sp")
+
+
+def set_netmd_recording_mode(value: str) -> None:
+    _settings().setValue(_NETMD_RECORDING_MODE_KEY, str(value))
 
 
 def experimental_features_enabled() -> bool:

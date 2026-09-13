@@ -15,6 +15,7 @@ from mdtools.panels.burn_dialog import BurnDialog
 from mdtools.panels.cd_rip_dialog import CdRipDialog
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
 from mdtools.panels.metadata_dialog import MetadataDialog
+from mdtools.panels.netmd_upload_dialog import NetMdUploadDialog
 from mdtools.panels.record_dialog import RecordDialog
 from mdtools.panels.tape_record_dialog import TapeRecordDialog
 from mdtools.panels.telegram_chat_dialog import TelegramChatDialog
@@ -29,7 +30,15 @@ DRIVING_DIALOGS = [RecordDialog, TapeRecordDialog, BurnDialog, CdRipDialog, Meta
 # The ones the user can hide -- MetadataDialog is left out on purpose: it
 # only ever proxies for the MDRemUploadDialog it opens, and has no Hide
 # button of its own (see its own request_show()).
-HIDEABLE_DIALOGS = [RecordDialog, TapeRecordDialog, BurnDialog, CdRipDialog, MDRemUploadDialog, TelegramChatDialog]
+HIDEABLE_DIALOGS = [
+    RecordDialog,
+    TapeRecordDialog,
+    BurnDialog,
+    CdRipDialog,
+    MDRemUploadDialog,
+    NetMdUploadDialog,
+    TelegramChatDialog,
+]
 
 # Per-track progress exists only where it is genuinely available. Burning
 # is the deliberate exclusion: cdrecord writes a disc as one continuous
@@ -37,7 +46,15 @@ HIDEABLE_DIALOGS = [RecordDialog, TapeRecordDialog, BurnDialog, CdRipDialog, MDR
 # per-track concept at all, and MetadataDialog only ever proxies titling.
 # A Telegram download queue has no single "current track" either -- up to
 # _MAX_CONCURRENT_DOWNLOADS files can be in flight at once.
-NO_TRACK_PROGRESS = [BurnDialog, MDRemUploadDialog, MetadataDialog, TelegramChatDialog]
+# NetMdUploadDialog joins them: a title is one command, not a track
+# being recorded, and "title 3 of 12" is already its overall progress.
+NO_TRACK_PROGRESS = [
+    BurnDialog,
+    MDRemUploadDialog,
+    NetMdUploadDialog,
+    MetadataDialog,
+    TelegramChatDialog,
+]
 
 
 def _build(dialog_class):

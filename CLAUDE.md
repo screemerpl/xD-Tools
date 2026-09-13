@@ -75,6 +75,7 @@ src/mdtools/
   palette.py                background/accent/text colours pulled out of a cover image (Pillow, no Qt)
   cover_filters.py          six background treatments (brighten/blur/posterize/halftone/pixelate/none), pure Pillow
   mdrem.py                  MDRem IR adapter: serial protocol, transliteration, upload plan (no Qt UI)
+  netmd.py                  NetMD over USB: recording modes, disc TOC, title plan, via bundled netmdcli (no Qt)
   audio_engine.py           FLAC decode/encode, resampling, dithering, realtime playback (soundfile/soxr/sounddevice, no Qt)
   tracks.py                 track list + album/artist/year from files' own tags -- no external player (no Qt)
   cdrip.py                  audio CD: drives, TOC, disc ids, rip plan, cdparanoia/flac (no Qt UI)
@@ -121,6 +122,7 @@ src/mdtools/
     print_dialog.py             PrintDialog and MultiprintDialog over one shared base: sheets, PDF, PNG
     mdrem_port.py               resolve_port(): the saved port, a probe, or a warning -- shared by both entry points
     mdrem_upload_dialog.py      preview-then-write dialog + the worker thread driving an upload
+    netmd_upload_dialog.py      the same, over USB: reads the disc first, so it knows what landed
     remote_dialog.py            software Sony MD remote, reachable from Window menu or startup screen
     record_dialog.py            Recording > Record to MiniDisc: arm, play (own AudioPlayer), watch, hand off to titling
     playback_bridge.py          crosses AudioPlayer's realtime callback thread onto the GUI thread (QObject + Signals)
@@ -589,6 +591,34 @@ guaranteed released across a `QThread`-wrapped blocking call), reported as
 `unattended=True` mode (no Start button, no eject prompt, self-`accept()`s
 when its worker finishes) is what both single- and multi-disc automatic
 titling ride on.
+
+**NetMD is the second way to drive a deck, and the two are exclusive.**
+`app_settings.set_netmd_enabled()`/`set_mdrem_enabled()` each switch the
+other off, and `mdrem_enabled()` also returns False whenever
+`netmd_enabled()` is True — the invariant is enforced on the way out as
+well as the way in, because a settings.ini can be hand-edited and every
+recording flow asks "which machine am I driving?" before it starts. NetMD
+wins that tie (it names a cable that is plugged in). `netmd.py` shells out
+to the bundled **`netmdcli.exe`** (`bin/win64`, GPL-2.0-or-later, from
+Jo2003's fork of linux-minidisc — see ATTRIBUTION.md), the same
+plan-then-execute shape `cdrip.py`/`cdburn.py` use, rather than
+reimplementing Sony's protocol where nobody here can test it.
+
+Three things about that tool are load-bearing: **it counts tracks from
+zero** in its own commands (`track_command_index()` owns that off-by-one,
+with a test, because getting it wrong retitles the wrong track on a real
+disc); **it always uses the first device it enumerates** and takes no way
+to choose another, so `netmd_device()` records which deck the user meant
+but cannot redirect anything; and **a deck on Sony's own driver looks
+exactly like no deck at all** — it needs WinUSB/libusb (Zadig), which is
+why "no NetMD device" says all three possibilities.
+
+**A mode decides the cable, and the cable decides the flow**
+(`netmd.MODES`): SP is what a Toslink feed carries, so the audio path is
+unchanged and NetMD is there for the titles; LP2/LP4 are ATRAC3, which a
+digital input cannot carry at all, so they go over USB as a file transfer.
+`connection_advice()` states which cables a chosen mode needs, because
+plugging in the wrong one records silence and costs a disc.
 
 **Telegram bot integration** (`telegram_bot.py` + 3 panels, experimental,
 gated behind Settings' checkbox): signs in as a real **user account**
