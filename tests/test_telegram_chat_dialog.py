@@ -927,13 +927,14 @@ def test_retrying_a_failed_download_reaches_the_worker(qt_app, monkeypatch, tmp_
 
 
 def test_the_queue_panel_caps_concurrent_downloads(qt_app, monkeypatch, tmp_path):
-    """_MAX_CONCURRENT_DOWNLOADS files download at once at most -- an album
-    arriving as a burst of file messages used to start every one of them
-    immediately with no limit at all."""
+    """app_settings.telegram_download_concurrency() files download at once
+    at most -- an album arriving as a burst of file messages used to start
+    every one of them immediately with no limit at all."""
     fake = FakeTelethonClient(authorized=True)
     dialog = _dialog(monkeypatch, tmp_path, fake)
     try:
         _pump_until(lambda: dialog._session_folder is not None)
+        max_concurrent = dialog._worker._max_concurrent_downloads
 
         # Each download blocks on its own asyncio.Event until released, so
         # however many actually started can be observed directly rather
@@ -954,18 +955,18 @@ def test_the_queue_panel_caps_concurrent_downloads(qt_app, monkeypatch, tmp_path
         for raw in raws:
             _deliver(dialog, fake, raw)  # only waits for the queue row, not for the download to finish
 
-        _pump_until(lambda: len(started) == module._MAX_CONCURRENT_DOWNLOADS)
+        _pump_until(lambda: len(started) == max_concurrent)
         # Give the remaining, still-queued messages a brief window in which
         # a bug (no cap at all) would have let them start too.
         for _ in range(20):
             QApplication.processEvents()
             time.sleep(0.01)
-        assert len(started) == module._MAX_CONCURRENT_DOWNLOADS
+        assert len(started) == max_concurrent
 
         # Release exactly one -- exactly one more should now be free to start.
         loop = dialog._worker._loop
         loop.call_soon_threadsafe(events[started[0]].set)
-        _pump_until(lambda: len(started) == module._MAX_CONCURRENT_DOWNLOADS + 1)
+        _pump_until(lambda: len(started) == max_concurrent + 1)
 
         # Release everything still outstanding so the worker can shut down
         # cleanly.

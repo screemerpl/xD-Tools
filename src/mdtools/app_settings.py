@@ -49,6 +49,7 @@ _TELEGRAM_API_ID_KEY = "telegram_api_id"
 _TELEGRAM_API_HASH_KEY = "telegram_api_hash"
 _TELEGRAM_BOT_USERNAME_KEY = "telegram_bot_username"
 _TELEGRAM_PHONE_KEY = "telegram_phone"
+_TELEGRAM_DOWNLOAD_CONCURRENCY_KEY = "telegram_download_concurrency"
 _REGENERATE_FONT_FAMILY_KEY = "regenerate_font_family"
 _AUDIO_OUTPUT_DEVICE_KEY = "audio_output_device"
 _TAPE_AUDIO_OUTPUT_DEVICE_KEY = "tape_audio_output_device"
@@ -490,6 +491,29 @@ def telegram_bot_username() -> str:
 
 def set_telegram_bot_username(value: str) -> None:
     _settings().setValue(_TELEGRAM_BOT_USERNAME_KEY, str(value).strip())
+
+
+# How many files _ChatWorker will download at once. Was a hardcoded
+# constant (3); lowered to 2 by default after a real report of ~300KB/s
+# aggregate over a 1Gbit link -- Telethon downloads one chunk at a time
+# per file with no pipelining, so each concurrent download is its own
+# round-trip-bound stream, and without `cryptg` installed the decrypt step
+# is pure-Python besides. More concurrent streams does not reliably help
+# once the bottleneck is per-account throttling rather than local
+# bandwidth, so this is a user-tunable knob (Settings > Telegram), not a
+# constant to just raise.
+DEFAULT_TELEGRAM_DOWNLOAD_CONCURRENCY = 2
+MIN_TELEGRAM_DOWNLOAD_CONCURRENCY = 1
+MAX_TELEGRAM_DOWNLOAD_CONCURRENCY = 8
+
+
+def telegram_download_concurrency() -> int:
+    return int(_settings().value(_TELEGRAM_DOWNLOAD_CONCURRENCY_KEY, DEFAULT_TELEGRAM_DOWNLOAD_CONCURRENCY))
+
+
+def set_telegram_download_concurrency(value: int) -> None:
+    clamped = max(MIN_TELEGRAM_DOWNLOAD_CONCURRENCY, min(MAX_TELEGRAM_DOWNLOAD_CONCURRENCY, int(value)))
+    _settings().setValue(_TELEGRAM_DOWNLOAD_CONCURRENCY_KEY, clamped)
 
 
 def telegram_session_path() -> Path:

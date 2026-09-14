@@ -47,6 +47,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QMessageBox,
     QPushButton,
+    QSpinBox,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -622,6 +623,20 @@ class SettingsDialog(QDialog):
         # separately-configurable folders for the same purpose only invited
         # them to drift apart.
 
+        self.telegram_concurrency_spin = QSpinBox()
+        self.telegram_concurrency_spin.setRange(
+            app_settings.MIN_TELEGRAM_DOWNLOAD_CONCURRENCY, app_settings.MAX_TELEGRAM_DOWNLOAD_CONCURRENCY
+        )
+        self.telegram_concurrency_spin.setValue(app_settings.telegram_download_concurrency())
+        self.telegram_concurrency_spin.setToolTip(
+            self.tr(
+                "How many files to download at once. Telegram's own per-file transfer is "
+                "round-trip-bound, not bandwidth-bound, so a higher number does not always mean "
+                "faster -- try a small change and see."
+            )
+        )
+        layout.addRow(self.tr("Simultaneous downloads"), self.telegram_concurrency_spin)
+
         self.telegram_status_label = QLabel()
         layout.addRow(self.tr("Status"), self.telegram_status_label)
 
@@ -708,6 +723,7 @@ class SettingsDialog(QDialog):
         app_settings.set_cd_rip_folder(self.cd_rip_folder_edit.text())
         # Every group, not only the one on screen -- see __init__.
         app_settings.set_telegram_bot_username(self.bot_username_edit.text())
+        app_settings.set_telegram_download_concurrency(self.telegram_concurrency_spin.value())
         self._create_rip_folder()
         self.accept()
 

@@ -682,10 +682,26 @@ loop (unlike every one-shot worker elsewhere) — it must never be
 auto-started from `__init__` (plain construction must stay inert), and
 every test that starts it **must** stop it again before returning, or a
 QThread destroyed while still "running" aborts the whole process with no
-Python traceback. Downloads are capped at `_MAX_CONCURRENT_DOWNLOADS`=3
-via an `asyncio.Semaphore`, shown in a queue panel with an aggregate
-summary line (counts/overall %/speed, fed by the same signals each row
-already reacts to). `album_sort.py` groups downloaded files by `ALBUM` tag
+Python traceback. Downloads are capped via an `asyncio.Semaphore` sized
+from `app_settings.telegram_download_concurrency()` (Settings > Telegram
+"Simultaneous downloads", default 2 — read on the GUI thread and passed
+into `_ChatWorker.__init__`, never read from `run()` itself, since
+QSettings has no cross-thread access guarantee), shown in a queue panel
+with an aggregate summary line (counts/overall %/speed, fed by the same
+signals each row already reacts to). **A real report of ~300KB/s
+aggregate over a 1Gbit link** traced to two things, neither a bug in this
+codebase: Telethon downloads one chunk at a time per file with no
+pipelining (each concurrent download is its own round-trip-bound stream,
+so raising the file-count cap only helps up to a point), and **`cryptg`
+was not an installed dependency**, leaving Telethon's own AES-IGE decrypt
+step in pure Python instead of its C extension — Telethon's own
+`download_media()` docstring names this exact fix. `cryptg` is now a
+declared dependency (`pyproject.toml`); the concurrency cap was lowered
+from a hardcoded 3 to a user-tunable default of 2 for the same reason it's
+now a setting at all — more concurrent streams doesn't reliably help once
+the bottleneck is per-account throttling rather than local bandwidth, so
+it needs to be something the user can try changing, not a constant to
+just raise. `album_sort.py` groups downloaded files by `ALBUM` tag
 (majority-vote for the folder's display artist, not the first file seen —
 a guest-feature credit must not fork the folder) with an arrival-order
 fallback for untagged files; **idempotent and safe to call repeatedly**

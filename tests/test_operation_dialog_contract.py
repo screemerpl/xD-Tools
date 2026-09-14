@@ -57,7 +57,8 @@ HIDEABLE_DIALOGS = [
 # DAO stream with no per-track breakdown to report. Titling has no
 # per-track concept at all, and MetadataDialog only ever proxies titling.
 # A Telegram download queue has no single "current track" either -- up to
-# _MAX_CONCURRENT_DOWNLOADS files can be in flight at once.
+# app_settings.telegram_download_concurrency() files can be in flight at
+# once.
 # NetMdUploadDialog joins them: a title is one command, not a track
 # being recorded, and "title 3 of 12" is already its overall progress.
 NO_TRACK_PROGRESS = [

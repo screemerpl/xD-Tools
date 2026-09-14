@@ -429,6 +429,16 @@ def test_ok_saves_every_group_not_just_the_one_on_screen(qt_app):
     assert app_settings.telegram_bot_username() == "@some_bot"
 
 
+def test_telegram_download_concurrency_is_editable_and_saved(qt_app):
+    dialog = SettingsDialog()
+    assert dialog.telegram_concurrency_spin.value() == app_settings.telegram_download_concurrency()
+
+    dialog.telegram_concurrency_spin.setValue(4)
+    dialog._on_accept()
+
+    assert app_settings.telegram_download_concurrency() == 4
+
+
 def test_the_telegram_group_reports_whether_a_sign_in_is_saved(qt_app):
     """Local file presence only -- no network round trip just to open the
     settings window."""
