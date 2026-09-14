@@ -729,4 +729,9 @@ BURN_SCRATCH_DIRNAME = "burn"
 # second too early, is exactly what staging exists to prevent.
 DOWNLOAD_STAGING_DIRNAME = "incoming"
 
-RESERVED_SCRATCH_DIRNAMES = {BURN_SCRATCH_DIRNAME, DOWNLOAD_STAGING_DIRNAME}
+# A NetMD recording's own scratch work -- the WAV files prepared for
+# netmdcli's `send` before they go out over USB, the same idea as
+# BURN_SCRATCH_DIRNAME for a CD-R and reserved for the same reason.
+NETMD_SCRATCH_DIRNAME = "netmd"
+
+RESERVED_SCRATCH_DIRNAMES = {BURN_SCRATCH_DIRNAME, DOWNLOAD_STAGING_DIRNAME, NETMD_SCRATCH_DIRNAME}

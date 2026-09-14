@@ -54,6 +54,7 @@ $runtimeToolFiles = @(
     "cd-paranoia.exe", "cdrecord.exe", "cygwin1.dll",
     "libcdio-19.dll", "libcdio_cdda-2.dll", "libcdio_paranoia-2.dll",
     "libcharset-1.dll", "libiconv-2.dll", "libwinpthread-1.dll",
+    "netmdcli.exe",
     "ATTRIBUTION.md"
 )
 foreach ($file in $runtimeToolFiles) {

@@ -39,6 +39,9 @@ _MDREM_ENABLED_KEY = "mdrem_enabled"
 _EXPERIMENTAL_FEATURES_ENABLED_KEY = "experimental_features_enabled"
 _MDREM_PORT_KEY = "mdrem_port"
 _MDREM_EXTENDED_REMOTE_KEY = "mdrem_extended_remote"
+_NETMD_ENABLED_KEY = "netmd_enabled"
+_NETMD_DEVICE_KEY = "netmd_device"
+_NETMD_RECORDING_MODE_KEY = "netmd_recording_mode"
 _CD_RIP_FOLDER_KEY = "cd_rip_folder"
 _CD_DRIVE_KEY = "cd_drive"
 _MUSIC_FOLDER_KEY = "music_folder"
@@ -46,6 +49,7 @@ _TELEGRAM_API_ID_KEY = "telegram_api_id"
 _TELEGRAM_API_HASH_KEY = "telegram_api_hash"
 _TELEGRAM_BOT_USERNAME_KEY = "telegram_bot_username"
 _TELEGRAM_PHONE_KEY = "telegram_phone"
+_TELEGRAM_DOWNLOAD_CONCURRENCY_KEY = "telegram_download_concurrency"
 _REGENERATE_FONT_FAMILY_KEY = "regenerate_font_family"
 _AUDIO_OUTPUT_DEVICE_KEY = "audio_output_device"
 _TAPE_AUDIO_OUTPUT_DEVICE_KEY = "tape_audio_output_device"
@@ -109,6 +113,16 @@ def mdrem_enabled() -> bool:
     back as the *text* "true"/"false", and `bool("false")` is True, so
     reading this with a plain bool() would make the setting impossible to
     ever turn back off."""
+    if netmd_enabled():
+        # The invariant, enforced on the way out as well as on the way in
+        # (see set_mdrem_enabled). The setters keep these two apart, but a
+        # settings.ini can be edited by hand or carried over from a build
+        # that only knew about one of them -- and a call site asking "is
+        # the adapter on?" must never be told yes while the app is driving
+        # the deck over USB. NetMD wins the tie because it is the more
+        # specific answer: it names a cable that is plugged in, where the
+        # MDRem flag only says an adapter exists somewhere.
+        return False
     value = _settings().value(_MDREM_ENABLED_KEY, False)
     if isinstance(value, str):
         return value.strip().lower() in ("true", "1", "yes")
@@ -116,7 +130,84 @@ def mdrem_enabled() -> bool:
 
 
 def set_mdrem_enabled(value: bool) -> None:
+    """Turning the adapter on turns NetMD off.
+
+    **The two are mutually exclusive, and enforced here rather than in the
+    dialog that offers them.** A recording has to know which machine it is
+    driving before it starts -- they arm the deck differently, mark tracks
+    differently and write titles differently -- so "which one" is a single
+    answer, not a pair of independent flags that can both be true and
+    leave every call site guessing. Enforcing it in app_settings means the
+    invariant holds however the setting is reached: the Settings window,
+    a test, or a hand-edited settings.ini."""
     _settings().setValue(_MDREM_ENABLED_KEY, bool(value))
+    if value:
+        _settings().setValue(_NETMD_ENABLED_KEY, False)
+
+
+def netmd_enabled() -> bool:
+    """Whether the deck is driven over its own USB cable (NetMD) instead
+    of the MDRem infrared adapter -- see set_netmd_enabled() for why the
+    two cannot both be on, and mdtools.netmd for what it buys.
+
+    Same string handling as mdrem_enabled(): an IniFormat QSettings hands
+    a bool back as the text "true"/"false", and bool("false") is True."""
+    value = _settings().value(_NETMD_ENABLED_KEY, False)
+    if isinstance(value, str):
+        return value.strip().lower() in ("true", "1", "yes")
+    return bool(value)
+
+
+def set_netmd_enabled(value: bool) -> None:
+    """Turning NetMD on turns the MDRem adapter off -- see
+    set_mdrem_enabled() for why that is one answer rather than two."""
+    _settings().setValue(_NETMD_ENABLED_KEY, bool(value))
+    if value:
+        _settings().setValue(_MDREM_ENABLED_KEY, False)
+
+
+def md_deck_driveable() -> bool:
+    """Whether *some* way of driving a MiniDisc deck is configured --
+    MDRem or NetMD, whichever it is. Every menu entry that needs a deck to
+    be reachable at all (Record Folder, Record from Rip/Download Folder,
+    Remote Control) used to check `mdrem_enabled()` alone, which is right
+    for whether that deck answers to *keypresses*, but wrong for whether
+    there is a deck to record onto or remote-control at all -- it hid
+    those entries outright the moment NetMD was switched on, since
+    mdrem_enabled() is forced False whenever netmd_enabled() is True (see
+    its own docstring). This is the "is there a deck" question those call
+    sites actually mean to ask."""
+    return mdrem_enabled() or netmd_enabled()
+
+
+def netmd_device() -> str:
+    """Which NetMD deck to use, as the name it reported. Empty means "the
+    one that is plugged in", which is the ordinary case.
+
+    Worth being clear about what this can and cannot do: netmdcli always
+    talks to the *first* device it enumerates and takes no way to choose
+    another (confirmed in its source). So this records which deck the user
+    picked and lets xD-Tools say so when the deck answering is not that
+    one -- it cannot redirect the tool at a second deck."""
+    return str(_settings().value(_NETMD_DEVICE_KEY, "") or "")
+
+
+def set_netmd_device(value: str) -> None:
+    _settings().setValue(_NETMD_DEVICE_KEY, str(value))
+
+
+def netmd_recording_mode() -> str:
+    """SP, LP2 or LP4 -- the mode a NetMD recording is made in, which
+    decides how much fits on the disc (see mdtools.netmd.MODES). Every
+    mode goes out over the same USB cable now, so this no longer decides
+    a cable too -- see netmd.py's own header. Validated there, not here:
+    this returns whatever was stored and netmd.mode() falls back to SP
+    for anything it does not recognise."""
+    return str(_settings().value(_NETMD_RECORDING_MODE_KEY, "sp") or "sp")
+
+
+def set_netmd_recording_mode(value: str) -> None:
+    _settings().setValue(_NETMD_RECORDING_MODE_KEY, str(value))
 
 
 def experimental_features_enabled() -> bool:
@@ -400,6 +491,29 @@ def telegram_bot_username() -> str:
 
 def set_telegram_bot_username(value: str) -> None:
     _settings().setValue(_TELEGRAM_BOT_USERNAME_KEY, str(value).strip())
+
+
+# How many files _ChatWorker will download at once. Was a hardcoded
+# constant (3); lowered to 2 by default after a real report of ~300KB/s
+# aggregate over a 1Gbit link -- Telethon downloads one chunk at a time
+# per file with no pipelining, so each concurrent download is its own
+# round-trip-bound stream, and without `cryptg` installed the decrypt step
+# is pure-Python besides. More concurrent streams does not reliably help
+# once the bottleneck is per-account throttling rather than local
+# bandwidth, so this is a user-tunable knob (Settings > Telegram), not a
+# constant to just raise.
+DEFAULT_TELEGRAM_DOWNLOAD_CONCURRENCY = 2
+MIN_TELEGRAM_DOWNLOAD_CONCURRENCY = 1
+MAX_TELEGRAM_DOWNLOAD_CONCURRENCY = 8
+
+
+def telegram_download_concurrency() -> int:
+    return int(_settings().value(_TELEGRAM_DOWNLOAD_CONCURRENCY_KEY, DEFAULT_TELEGRAM_DOWNLOAD_CONCURRENCY))
+
+
+def set_telegram_download_concurrency(value: int) -> None:
+    clamped = max(MIN_TELEGRAM_DOWNLOAD_CONCURRENCY, min(MAX_TELEGRAM_DOWNLOAD_CONCURRENCY, int(value)))
+    _settings().setValue(_TELEGRAM_DOWNLOAD_CONCURRENCY_KEY, clamped)
 
 
 def telegram_session_path() -> Path:

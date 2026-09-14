@@ -43,25 +43,33 @@ BOOK = [
                   "jakie szablony dostajesz do wyboru, jak nazywa się druga strona i które pozycje "
                   "pokazuje menu Nagrywanie. Projekt MiniDisc nigdy nie dostaje wypalania CD, a projekt "
                   "CD — pilota do magnetofonu."},
-            {"p": "Pierwsze z nich nie wymaga niczego poza komputerem. Pozostałe trzy potrzebują "
-                  "**MDRem**: małej płytki RP2040, która udaje pilota Sony RM-D10P i wpina się w USB. "
-                  "Wszystko, co dotyczy MDRem, jest opcjonalne i wyłączone, dopóki go nie włączysz."},
+            {"p": "Pierwsze z nich nie wymaga niczego poza komputerem. Pozostałe trzy potrzebują sposobu "
+                  "na sterowanie magnetofonem, a są dwa: **MDRem**, mała płytka RP2040, która udaje "
+                  "pilota Sony RM-D10P i wpina się w USB, albo **NetMD**, jeśli sam magnetofon ma port "
+                  "USB i go obsługuje — co to daje, opisuje osobny rozdział. Wszystko, czego wymaga "
+                  "którekolwiek z nich, jest opcjonalne i wyłączone, dopóki go nie włączysz."},
             {"fig": ("signal-chain", COVER_CAPTION)},
-            {"p": "Trzy osobne połączenia — i warto od razu wiedzieć, które co przenosi. Kabel USB "
-                  "przenosi wyłącznie komendy; dźwięk nigdy nim nie płynie. Wiązka podczerwieni przenosi "
-                  "naciśnięcia klawiszy, dokładnie tak jak zwykły pilot. Dźwięk idzie zupełnie inną "
-                  "drogą, przez S/PDIF, i jest potrzebny tylko przy nagrywaniu."},
+            {"p": "Trzy osobne połączenia — i warto od razu wiedzieć, które co przenosi. To konkretnie "
+                  "schemat MDRem. Kabel USB przenosi wyłącznie komendy; dźwięk nigdy nim nie płynie. "
+                  "Wiązka podczerwieni przenosi naciśnięcia klawiszy, dokładnie tak jak zwykły pilot. "
+                  "Dźwięk idzie zupełnie inną drogą, przez S/PDIF, i jest potrzebny tylko przy "
+                  "nagrywaniu."},
+            {"note": "**Schemat NetMD jest prostszy: jeden kabel USB przenosi wszystko** — komendy, "
+                     "tytuły i sam dźwięk, w każdym trybie nagrywania. Zobacz rozdział o NetMD."},
             {"h2": "Co jest potrzebne"},
             {"table": {
                 "head": ["Do czego", "Co potrzeba"],
                 "rows": [
                     ["Projektowanie i druk", "xD-Tools, drukarka, a do cięcia — ploter Cricut albo pewna "
                                              "ręka i nożyczki."],
-                    ["Nadawanie tytułów", "Przystawka MDRem w porcie USB i magnetofon MiniDisc Sony, w "
-                                          "który da się nią wycelować."],
-                    ["Nagrywanie albumu", "Powyższe oraz kabel cyfrowy (S/PDIF) z komputera do "
-                                          "magnetofonu — albo analogowy, realnym kosztem jakości. Nic "
-                                          "poza samym xD-Tools: album odtwarza sam program."],
+                    ["Nadawanie tytułów (MDRem)", "Przystawka MDRem w porcie USB i magnetofon MiniDisc "
+                                                   "Sony, w który da się nią wycelować."],
+                    ["Nagrywanie albumu (MDRem)", "Powyższe oraz kabel cyfrowy (S/PDIF) z komputera do "
+                                                   "magnetofonu — albo analogowy, realnym kosztem jakości. "
+                                                   "Nic poza samym xD-Tools: album odtwarza sam program."],
+                    ["Wszystko, ale przez NetMD", "Magnetofon MiniDisc obsługujący NetMD i jego własny "
+                                                   "kabel USB — nic więcej. Co może, a czego nie może w "
+                                                   "porównaniu z MDRem, opisuje rozdział o NetMD."],
                 ],
             }},
             {"note": "Wszystko w tej instrukcji zostało ustalone na **Sony MDS-JE480**. Inne magnetofony "
@@ -494,12 +502,13 @@ BOOK = [
             {"h2": "Włączenie w xD-Tools"},
             {"p": "**Okno > Ustawienia...**, zaznacz **Włącz przystawkę MDRem (pilot na podczerwień)** i "
                   "wybierz port szeregowy."},
-            {"fig": ("settings", "Okno > Ustawienia. Urządzenia wyjścia audio są niezależne od "
-                                 "przystawki — do nagrywania potrzeba urządzenia, nie łącza na "
-                                 "podczerwień.")},
-            {"p": "Ustawienia to jedno okno z listą grup po lewej stronie. **Ogólne** to wszystko, co "
-                  "opisano tutaj; **Telegram** to konto bota (osobny rozdział). Niezależnie od tego, "
-                  "która grupa jest na ekranie, **OK** zapisuje je wszystkie."},
+            {"fig": ("settings", "Okno > Ustawienia. Pięć grup po lewej stronie; MDRem mieszka w grupie "
+                                 "Nagrywanie MiniDisc, razem z NetMD (zobacz jego własny rozdział).")},
+            {"p": "Ustawienia to jedno okno z listą grup po lewej stronie: **Ogólne** (wartości DPI i "
+                  "flaga funkcji eksperymentalnych), **Audio** (urządzenia wyjściowe i wzmocnienie "
+                  "nagrywania), **Nagrywanie MiniDisc** (MDRem i NetMD, opisane tu i w rozdziale o "
+                  "NetMD), **CD** (folder zgrywania) oraz **Telegram** (konto bota, osobny rozdział). "
+                  "Niezależnie od tego, która grupa jest na ekranie, **OK** zapisuje je wszystkie."},
             {"p": "**Wykryj** pyta każdy port szeregowy w komputerze, czy odpowiada na nim MDRem. Musi tak "
                   "działać: płytka zgłasza identyfikator USB `2E8A:0003`, ten sam co jej własny bootloader "
                   "i inne płytki Waveshare, więc jedyną pewną identyfikacją jest odpowiedź urządzenia na "
@@ -509,10 +518,12 @@ BOOK = [
                   "**Nagrywanie** — Nagraj folder na MiniDisc i Nagraj z folderu zgrywania/pobierania "
                   "na MiniDisc, bo obie potrzebują przystawki, żeby uzbroić magnetofon. **Źródło > "
                   "Zgraj płytę audio CD...** nie jest wśród nich: zgrywanie kończy się na plikach i w "
-                  "ogóle nie dotyka magnetofonu."},
+                  "ogóle nie dotyka magnetofonu. NetMD, włączone zamiast MDRem, przywraca te same trzy "
+                  "rzeczy — same pozycje menu się nie zmieniają, zmienia się tylko okno, które otwierają "
+                  "(zobacz rozdział o NetMD)."},
             {"note": "**Urządzenie wyjścia audio dla MiniDisc** i **Urządzenie wyjścia audio dla "
-                     "kasety**, na tej samej stronie, celowo *nie* są powiązane z tym polem — kaseta "
-                     "potrzebuje urządzenia wyjściowego niezależnie od tego, czy przystawka jest "
+                     "kasety**, na stronie **Audio**, a nie tutaj, celowo *nie* są powiązane z tym polem "
+                     "— kaseta potrzebuje urządzenia wyjściowego niezależnie od tego, czy przystawka jest "
                      "włączona, bo nagrywanie na nią w ogóle nie przechodzi przez MDRem. Każde z nich "
                      "pamięta swój własny wybór, bo cyfrowe wyjście S/PDIF do jednego magnetofonu i "
                      "analogowe wyjście liniowe do drugiego to zwykle dwa różne fizyczne gniazda. "
@@ -651,6 +662,110 @@ BOOK = [
                   "każda inna. Pole numeru w magnetofonie domyka się po drugiej cyfrze, więc ścieżki "
                   "powyżej 99 nie da się wybrać w ogóle; takie tytuły są wypisane jako pominięte, a nie "
                   "po cichu wyrzucone. Tak długa bywa tylko płyta nagrana w LP4."},
+        ],
+    },
+    # ------------------------------------------------------------------
+    {
+        "title": "NetMD: sterowanie magnetofonem przez USB",
+        "blocks": [
+            {"p": "**NetMD** to drugi sposób na sterowanie magnetofonem i działa na tyle inaczej niż "
+                  "MDRem, że zasługuje na własny rozdział, a nie dopisek w innych. Jeśli twój magnetofon "
+                  "ma port USB i obsługuje NetMD, to właśnie jego warto użyć: jeden kabel załatwia "
+                  "wszystko — nagrywanie, nadawanie tytułów, sterowanie transportem — a magnetofon "
+                  "naprawdę odpowiada, czego podczerwień MDRem nigdy nie potrafi."},
+            {"table": {
+                "head": ["", "MDRem", "NetMD"],
+                "rows": [
+                    ["Połączenie", "Podczerwień, w jedną stronę", "USB, w obie strony"],
+                    ["Nagrywanie", "Odtwarza album w czasie rzeczywistym przez S/PDIF", "Wysyła każdy "
+                                                                                         "utwór jako "
+                                                                                         "plik, w LP2/LP4 "
+                                                                                         "szybciej niż w "
+                                                                                         "czasie "
+                                                                                         "rzeczywistym"],
+                    ["Nadawanie tytułów", "Osobny przebieg, wpisywany klawisz po klawiszu", "Idzie razem "
+                                                                                            "z dźwiękiem "
+                                                                                            "utworu, w "
+                                                                                            "jednym "
+                                                                                            "kroku"],
+                    ["Potwierdzenie", "„Wysłano”, nigdy „Zrobiono” — magnetofon nie może odpowiedzieć",
+                     "Magnetofon melduje powodzenie albo porażkę każdej komendy"],
+                ],
+            }},
+            {"note": "**Nic w tym rozdziale nie zostało sprawdzone na prawdziwym sprzęcie NetMD.** Każda "
+                     "komenda to dokładnie to, co dokumentuje `netmdcli` (dołączone narzędzie "
+                     "wiersza poleceń, którym steruje ten program), ale nie ma tu magnetofonu, żeby to "
+                     "potwierdzić. Jeśli coś w tym rozdziale zachowuje się inaczej na twoim sprzęcie, to "
+                     "pierwsze miejsce, w którym warto szukać przyczyny."},
+            {"h2": "Włączenie w Ustawieniach"},
+            {"p": "**Okno > Ustawienia...**, grupa **Nagrywanie MiniDisc**, zaznacz **Użyj kabla USB "
+                  "NetMD**."},
+            {"fig": ("settings-minidisc", "Grupa Nagrywanie MiniDisc. Zaznaczenie NetMD wyłącza MDRem i "
+                                          "pokazuje to na ekranie, a nie dopiero po OK.")},
+            {"p": "**MDRem i NetMD wykluczają się wzajemnie** — nagranie musi wiedzieć, którym "
+                  "urządzeniem steruje, zanim się zacznie, więc zaznaczenie jednego wyłącza drugie. "
+                  "**Magnetofon NetMD** pamięta, który magnetofon odpowiedział na **Wykryj** — przydatne "
+                  "głównie jako notatka dla siebie: `netmdcli` zawsze rozmawia z pierwszym znalezionym "
+                  "urządzeniem NetMD i nie ma jak zaadresować drugiego, więc przy dwóch podłączonych "
+                  "magnetofonach to pole niczego nie przełącza."},
+            {"p": "**Tryb nagrywania** to SP, LP2 albo LP4 i decyduje, ile zmieści się na płycie (80, 160 "
+                  "albo 320 minut) — te same trzy tryby, które MiniDisc miał zawsze. W przeciwieństwie do "
+                  "MDRem, który nie ma jak zapytać magnetofonu o ustawiony tryb, NetMD *mówi* programowi, "
+                  "w jakim trybie działa, więc każda liczba \"ile się zmieści\", jaką pokazuje ten "
+                  "program, jest dokładna, a nie zgadywana."},
+            {"note": "**Magnetofon przypisany do własnego sterownika Sony w Windows wygląda dokładnie "
+                     "tak samo jak brak magnetofonu.** `netmdcli` potrzebuje sterownika zgodnego z "
+                     "libusb (WinUSB) — zainstaluj go narzędziem takim jak Zadig, jeśli Wykryj nic nie "
+                     "znajduje mimo podłączonego i włączonego magnetofonu."},
+            {"h2": "Nagrywanie albumu"},
+            {"p": "**Nagrywanie > Nagraj folder na MiniDisc...** oraz **Nagraj z folderu zgrywania/"
+                  "pobierania na MiniDisc...** otwierają to samo okno nagrywania przez NetMD, gdy tylko "
+                  "NetMD jest włączone — pozycje menu nie zmieniają nazwy ani miejsca, po prostu sterują "
+                  "innym oknem pod spodem."},
+            {"fig": ("netmd-record", "Nagrywanie przez NetMD. Nic tu nie odtwarza się w czasie "
+                                     "rzeczywistym, więc nie ma etapu uzbrajania ani czasu na "
+                                     "odczekanie.")},
+            {"p": "Tabela utworów, okładka oraz zmiana kolejności i podział albumu na kilka płyt działają "
+                  "dokładnie tak jak dla MDRem — patrz następny rozdział. Różnica pojawia się dopiero po "
+                  "naciśnięciu **Rozpocznij nagrywanie**: każdy utwór jest dekodowany do zwykłego pliku "
+                  "WAV i przekazywany komendzie `send` samego `netmdcli`, po kolei, każdy już z własnym "
+                  "tytułem. Gdy ostatni utwór zostanie wysłany, tą samą drogą trafia tytuł całej płyty."},
+            {"p": "**Każdy tryb nagrywania idzie przez kabel USB — łącznie z SP.** Nagrywanie SP przez "
+                  "MDRem musi odtworzyć album przez prawdziwy kabel optyczny w czasie rzeczywistym, bo "
+                  "przystawka w ogóle nie umie przenieść dźwięku; komenda `send` NetMD przyjmuje zwykłe, "
+                  "nieskodowane audio PCM wprost przez USB, a tym właśnie już jest SP, więc nie "
+                  "potrzebuje innego kabla ani kodowania niż LP2/LP4. Jeden kabel, każdy tryb — nie ma "
+                  "jak podłączyć złego."},
+            {"note": "Ponieważ tytuł idzie razem z dźwiękiem, nie ma osobnego przebiegu nadawania "
+                     "tytułów, który wyłapałby znak, którego magnetofon nie pokaże — jest on pokazany i "
+                     "potwierdzony, zanim nagrywanie się zacznie, ta sama obietnica, jaką składają już "
+                     "Wyślij listę utworów i CD-Text."},
+            {"h2": "Pilot NetMD"},
+            {"p": "**Okno > Pilot...** oraz przycisk **Pilot...** na ekranie powitalnym otwierają pilota "
+                  "pasującego do aktualnie włączonego urządzenia — siatkę przycisków MDRem albo ten "
+                  "poniżej, automatycznie. Nie ma osobnej pozycji menu do zapamiętania."},
+            {"fig": ("netmd-remote", "Własny pilot NetMD. Każdy przycisk melduje, co naprawdę się "
+                                     "wydarzyło, bo magnetofon odpowiada.")},
+            {"p": "Znacznie mniejszy niż pilot MDRem, i celowo: tytuł przez NetMD nigdy nie jest "
+                  "wpisywany klawisz po klawiszu, więc nie ma tu niczego przypominającego grupy Nadawanie "
+                  "tytułów czy Pisanie z pilota MDRem. **Transport** obejmuje Odtwarzanie, Pauzę, Stop, "
+                  "przewijanie do przodu, przewijanie do tyłu, Następny, Poprzedni i Od nowa; **Odtwórz "
+                  "utwór** przeskakuje od razu do numeru utworu (do 99, a nie do 25 jak fizyczny pilot); "
+                  "**Tryb odtwarzania** ustawia Pojedynczo, Powtarzanie albo Losowo."},
+            {"note": "**Nie ma przycisku Wysuń.** `netmdcli` w ogóle nie ma komendy `eject` — sprawdzone "
+                     "w jego własnym `--help`, a nie założone. Wysuń płytę z panelu samego magnetofonu."},
+            {"h2": "Tylko zapisanie tytułów"},
+            {"p": "**Metadane... > Wyślij listę utworów** działa tak samo jak dla MDRem — patrz "
+                  "wcześniejszy rozdział — poza tym, że przy włączonym NetMD najpierw odczytuje płytę, "
+                  "więc tytuł dla utworu, którego płyta faktycznie nie ma, jest pomijany i wymieniony z "
+                  "nazwy zamiast zapisany donikąd, a powodzenie każdej komendy jest znane, a nie "
+                  "zakładane."},
+            {"h2": "Kasowanie płyty"},
+            {"p": "**Kasuj MiniDisc...**, ten sam przycisk w tym samym miejscu co u MDRem, wysyła wprost "
+                  "komendę `erase force` narzędzia `netmdcli` — jedna komenda, potwierdzona raz, zamiast "
+                  "ślepej sekwencji pięciu klawiszy MDRem. `force` jest wymagane przez sam `netmdcli`, z "
+                  "tego samego powodu, dla którego istnieje sekwencja MDRem: bez niego to narzędzie samo "
+                  "zadawałoby pytanie, na które nic tutaj nie umie odpowiedzieć."},
         ],
     },
     # ------------------------------------------------------------------

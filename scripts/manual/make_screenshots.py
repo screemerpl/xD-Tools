@@ -74,6 +74,7 @@ FIGURE_GROUPS: dict[str, tuple[str, ...]] = {
     "dialogs": ("metadata", "settings", "templates", "about"),
     "cd": ("cd-label", "cd-insert", "cd-back", "cd-print", "burn"),
     "mdrem": ("remote", "remote-extended", "upload", "record"),
+    "netmd": ("settings-minidisc", "netmd-remote", "netmd-record"),
     "rip": ("cd-rip",),
     "folder": ("folder-record",),
     "erase": ("erase",),
@@ -431,6 +432,31 @@ def _install_recording_stand_ins() -> None:
     tape_record_dialog.tracks.playlist_items_from_paths = lambda paths: items
 
 
+def _install_netmd_stand_in() -> None:
+    """A NetMD deck that answers with the demo album already on it --
+    stood in for the same reason the CD drive and the MDRem adapter
+    already are. Without this, NetMdRemoteDialog opens straight into "Not
+    connected" and NetMdRecordDialog's own tool check shows "Missing
+    tools", which is a picture of the machine taking the screenshot, not
+    of the feature."""
+    from mdtools import netmd
+    from mdtools.panels import netmd_record_dialog
+
+    def disc():
+        return netmd.NetMdDisc(
+            title=f"{DEMO_ARTIST} - {DEMO_ALBUM} ({DEMO_YEAR})",
+            tracks=[
+                netmd.NetMdTrack(number=index, title=title, seconds=length)
+                for index, (title, length) in enumerate(DEMO_TRACKS, start=1)
+            ],
+            free_seconds=600,
+        )
+
+    netmd.missing_tools = lambda: []
+    netmd.read_disc = lambda **_kwargs: disc()
+    netmd_record_dialog.tracks.playlist_items_from_paths = lambda paths: _demo_playlist_items()
+
+
 # --- diagrams --------------------------------------------------------------
 
 
@@ -713,11 +739,13 @@ def capture_language(app, code: str) -> None:
     from mdtools.panels.folder_record_dialog import FolderRecordDialog
     from mdtools.panels.metadata_dialog import MetadataDialog
     from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
+    from mdtools.panels.netmd_record_dialog import NetMdRecordDialog
+    from mdtools.panels.netmd_remote_dialog import NetMdRemoteDialog
     from mdtools.panels.new_design_dialog import NewDesignDialog
     from mdtools.panels.print_dialog import PrintDialog
     from mdtools.panels.record_dialog import RecordDialog
     from mdtools.panels.remote_dialog import RemoteDialog
-    from mdtools.panels.settings_dialog import SettingsDialog
+    from mdtools.panels.settings_dialog import GROUP_MINIDISC, SettingsDialog
     from mdtools.panels.startup_dialog import StartupDialog
     from mdtools.project import PAGE_COVER, PAGE_DISC
     from mdtools.templates.template_dialog import TemplateManagerDialog
@@ -802,6 +830,25 @@ def capture_language(app, code: str) -> None:
         app_settings.set_mdrem_extended_remote(False)
         save(MDRemUploadDialog(metadata, "COM7"), out / "upload.png", settle_ms=400)
         save(RecordDialog("COM7", _demo_paths()), out / "record.png", settle_ms=400)
+
+    # -- NetMD: the other way to drive a deck, with netmdcli stood in for
+    if group_wanted("netmd"):
+        app_settings.set_netmd_enabled(True)
+        app_settings.set_netmd_recording_mode("sp")
+
+        settings = SettingsDialog()
+        settings.show_group(GROUP_MINIDISC)
+        save(settings, out / "settings-minidisc.png")
+
+        save(NetMdRemoteDialog(), out / "netmd-remote.png", settle_ms=400)
+        save(NetMdRecordDialog(_demo_paths()), out / "netmd-record.png", settle_ms=400)
+
+        # Left as MDRem for every group after this one -- the CD/rip/folder/
+        # erase/tape figures below carry no opinion of their own about which
+        # is enabled, but a screenshot run is not the place to leave a
+        # setting in a state no group after this one asked for.
+        app_settings.set_netmd_enabled(False)
+        app_settings.set_mdrem_enabled(True)
 
     # -- reading a CD, with the drive and MusicBrainz stood in for
     if group_wanted("rip"):
@@ -1153,6 +1200,7 @@ def main() -> int:
     _install_cover_filter_stand_in()
     _install_folder_stand_in()
     _install_recording_stand_ins()
+    _install_netmd_stand_in()
 
     if wanted("ir-circuit"):
         draw_ir_circuit(OUT_DIR / "ir-circuit.png")

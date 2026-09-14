@@ -40,25 +40,34 @@ BOOK = [
                   "follows from that: which templates you are offered, what the second page is called, "
                   "and which entries the Recording menu shows. A MiniDisc project is never offered CD "
                   "burning, and a CD project is never offered the deck's remote."},
-            {"p": "The first of those needs nothing but the computer. The other three need **MDRem**: a "
-                  "small RP2040 board that pretends to be a Sony RM-D10P infrared remote and plugs into "
-                  "USB. Everything MDRem-related is optional and switched off until you turn it on."},
+            {"p": "The first of those needs nothing but the computer. The other three need a way to drive "
+                  "the deck, and there are two: **MDRem**, a small RP2040 board that pretends to be a "
+                  "Sony RM-D10P infrared remote and plugs into USB, or **NetMD**, if the deck itself has "
+                  "a USB port and speaks it - its own chapter covers what that buys you. Everything "
+                  "either one needs is optional and switched off until you turn it on."},
             {"fig": ("signal-chain", COVER_CAPTION)},
-            {"p": "Three separate links, and it is worth being clear about which carries what. The USB "
-                  "cable carries commands and nothing else - no audio ever travels over it. The infrared "
-                  "beam carries keypresses, exactly as a handheld remote would. The audio takes the third "
-                  "path entirely, over S/PDIF, and is needed only when recording."},
+            {"p": "Three separate links, and it is worth being clear about which carries what - this is "
+                  "MDRem's picture specifically. The USB cable carries commands and nothing else - no "
+                  "audio ever travels over it. The infrared beam carries keypresses, exactly as a "
+                  "handheld remote would. The audio takes the third path entirely, over S/PDIF, and is "
+                  "needed only when recording."},
+            {"note": "**NetMD's own picture is simpler: one USB cable carries everything** - commands, "
+                     "titles and the audio itself, in every recording mode. See the NetMD chapter."},
             {"h2": "What you need"},
             {"table": {
                 "head": ["For", "You need"],
                 "rows": [
                     ["Designing and printing", "xD-Tools, a printer, and - for cutting - a Cricut machine "
                                                "or a steady hand with scissors."],
-                    ["Titling a disc", "An MDRem adapter on a USB port, and a Sony MiniDisc deck it can be "
-                                       "aimed at."],
-                    ["Recording an album", "The above, plus a digital (S/PDIF) cable from the computer to "
-                                           "the deck - or an analogue one, at a real cost in quality. No "
-                                           "other software: xD-Tools plays the album itself."],
+                    ["Titling a disc (MDRem)", "An MDRem adapter on a USB port, and a Sony MiniDisc deck "
+                                               "it can be aimed at."],
+                    ["Recording an album (MDRem)", "The above, plus a digital (S/PDIF) cable from the "
+                                                    "computer to the deck - or an analogue one, at a real "
+                                                    "cost in quality. No other software: xD-Tools plays "
+                                                    "the album itself."],
+                    ["Everything, over NetMD instead", "A MiniDisc deck with NetMD support and its own USB "
+                                                        "cable - nothing else. See the NetMD chapter for "
+                                                        "what it can and cannot do that MDRem can."],
                 ],
             }},
             {"note": "Everything in this manual was worked out against a **Sony MDS-JE480**. Other Sony "
@@ -495,10 +504,12 @@ BOOK = [
             {"h2": "Turning it on in xD-Tools"},
             {"p": "**Window > Settings...**, tick **Enable MDRem IR remote adapter**, and choose the "
                   "serial port."},
-            {"fig": ("settings", "Window > Settings. The audio output devices are separate from the "
-                                 "adapter - recording needs a device, not the infrared connection.")},
-            {"p": "Settings is one window with its groups listed down the left. **General** is "
-                  "everything here; **Telegram** is the bot account (its own chapter). Whichever group "
+            {"fig": ("settings", "Window > Settings. Five groups, listed down the left; MDRem lives on "
+                                 "MiniDisc Recording, alongside NetMD (see its own chapter).")},
+            {"p": "Settings is one window with its groups listed down the left: **General** (DPI values "
+                  "and the experimental-features flag), **Audio** (output devices and recording gain), "
+                  "**MiniDisc Recording** (MDRem and NetMD, covered here and in the NetMD chapter), **CD** "
+                  "(the rip folder), and **Telegram** (the bot account, its own chapter). Whichever group "
                   "is on screen, **OK** saves all of them."},
             {"p": "**Detect** asks every serial port on the machine whether an MDRem answers on it. It has "
                   "to work that way: the board reports the USB ID `2E8A:0003`, which is also its own "
@@ -509,15 +520,17 @@ BOOK = [
                   "**Recording** - Record Folder to MiniDisc and Record from Rip/Download Folder to "
                   "MiniDisc, both of which need the adapter to arm the deck. **Source > Rip Audio "
                   "CD...** is not among them: ripping ends at files on disk and never touches the "
-                  "deck."},
-            {"note": "**MiniDisc audio output device** and **Cassette audio output device**, on the same "
-                     "page, are deliberately *not* tied to the checkbox - a cassette needs an output "
-                     "device whether or not the adapter is enabled, since nothing about recording onto "
-                     "one goes through MDRem at all. Each keeps its own choice, because a digital S/PDIF "
-                     "feed for one deck and an analogue line-out for the other are routinely different "
-                     "physical outputs. **Recording gain** (default -5 dB) backs the output level off a "
-                     "little before it leaves the computer, so a hot digital source has no chance to clip "
-                     "on the way in; it does not affect the audition player below."},
+                  "deck. NetMD, switched on instead, brings the same three back - the menu entries "
+                  "themselves do not change, only which window they open (see the NetMD chapter)."},
+            {"note": "**MiniDisc audio output device** and **Cassette audio output device**, on the "
+                     "**Audio** page rather than here, are deliberately *not* tied to the checkbox - a "
+                     "cassette needs an output device whether or not the adapter is enabled, since "
+                     "nothing about recording onto one goes through MDRem at all. Each keeps its own "
+                     "choice, because a digital S/PDIF feed for one deck and an analogue line-out for the "
+                     "other are routinely different physical outputs. **Recording gain** (default -5 dB) "
+                     "backs the output level off a little before it leaves the computer, so a hot digital "
+                     "source has no chance to clip on the way in; it does not affect the audition player "
+                     "below."},
         ],
     },
     # ------------------------------------------------------------------
@@ -647,6 +660,100 @@ BOOK = [
                   "deck's number field commits on the second digit, so a track past 99 cannot be selected "
                   "at all - those titles are listed as skipped rather than silently dropped, and only an "
                   "LP4 disc ever gets that long."},
+        ],
+    },
+    # ------------------------------------------------------------------
+    {
+        "title": "NetMD: driving a deck over USB",
+        "blocks": [
+            {"p": "**NetMD** is the second way to drive a deck, and it works differently enough from MDRem "
+                  "that it gets its own chapter rather than a footnote in the others. If your deck has a "
+                  "USB port and speaks NetMD, this is very likely the one to use: one cable does "
+                  "everything - recording, titling, transport control - and the deck actually answers "
+                  "back, which MDRem's infrared can never do."},
+            {"table": {
+                "head": ["", "MDRem", "NetMD"],
+                "rows": [
+                    ["Connection", "Infrared, one-way", "USB, both ways"],
+                    ["Recording", "Plays the album in real time over S/PDIF", "Sends each track as a "
+                                                                                "file, faster than real "
+                                                                                "time in LP2/LP4"],
+                    ["Titling", "A separate pass, typed key by key", "Goes out with the track's own "
+                                                                      "audio, in one step"],
+                    ["Confirmation", "\"Sent\", never \"Done\" - the deck cannot answer", "The deck reports "
+                                                                                          "success or "
+                                                                                          "failure for "
+                                                                                          "every command"],
+                ],
+            }},
+            {"note": "**Nothing in this chapter has been tested against real NetMD hardware.** Every "
+                     "command is exactly what `netmdcli` (the bundled command-line tool this app drives) "
+                     "documents, but there is no deck here to confirm it against. If something in this "
+                     "chapter turns out to behave differently on your deck, that is the first place to "
+                     "look."},
+            {"h2": "Turning it on in Settings"},
+            {"p": "**Window > Settings...**, group **MiniDisc Recording**, tick **Use a NetMD USB "
+                  "cable**."},
+            {"fig": ("settings-minidisc", "The MiniDisc Recording group. Ticking NetMD switches MDRem off, "
+                                          "and shows so on screen rather than only on OK.")},
+            {"p": "**MDRem and NetMD are mutually exclusive** - a recording has to know which machine it "
+                  "is driving before it starts, so ticking one switches the other off. **NetMD deck** "
+                  "remembers which deck answered a **Detect**, useful mainly as a note to yourself: "
+                  "`netmdcli` always talks to the first NetMD device it finds and has no way to address a "
+                  "second one, so with two decks plugged in this cannot redirect anything."},
+            {"p": "**Recording mode** is SP, LP2 or LP4, and decides how much fits on a disc (80, 160 or "
+                  "320 minutes) - the same three modes a MiniDisc has always had. Unlike MDRem, which has "
+                  "no way to ask the deck what mode it is set to, NetMD is *told* the mode here, so every "
+                  "figure this app shows for \"how much fits\" is exact rather than a guess."},
+            {"note": "**A deck bound to Sony's own Windows driver looks exactly like no deck at all.** "
+                     "`netmdcli` needs a libusb-compatible driver (WinUSB) - install one with a tool like "
+                     "Zadig if Detect finds nothing despite the deck being plugged in and switched on."},
+            {"h2": "Recording an album"},
+            {"p": "**Recording > Record Folder to MiniDisc...** and **Record from Rip/Download Folder to "
+                  "MiniDisc...** open the same NetMD recording window either way, once NetMD is switched "
+                  "on - the menu entries do not change name or move, they simply drive a different window "
+                  "underneath."},
+            {"fig": ("netmd-record", "Recording over NetMD. Nothing here plays in real time, so there is "
+                                     "no arming step and no lead-in to wait through.")},
+            {"p": "The track table, the cover art, and reordering and splitting an album across several "
+                  "discs all work exactly as they do for MDRem - see the next chapter for those. What is "
+                  "different is what happens once **Start Recording** is pressed: every track is decoded "
+                  "to a plain WAV file and handed to `netmdcli`'s own `send` command, one at a time, each "
+                  "already carrying its track title. Once the last track is sent, the disc's own title "
+                  "goes out the same way."},
+            {"p": "**Every recording mode goes out over the USB cable - including SP.** MDRem's SP "
+                  "recording has to play the album through a real optical cable in real time, because the "
+                  "adapter cannot move audio at all; NetMD's own `send` command accepts plain, unencoded "
+                  "PCM audio directly over USB, which *is* what SP already is, so it needs no different "
+                  "cable or encoding step from LP2/LP4. One cable, every mode, no cable to plug in wrong."},
+            {"note": "Because the title goes out with the audio, there is no separate titling pass to "
+                     "catch a character the deck cannot show - it is shown, and confirmed, before the "
+                     "recording starts, the same promise Upload Tracklist and CD-Text both already make."},
+            {"h2": "The NetMD remote"},
+            {"p": "**Window > Remote Control...** and the startup screen's own **Remote...** button open "
+                  "whichever remote fits the machine currently switched on - MDRem's button grid, or this "
+                  "one, automatically. There is no separate menu entry to remember."},
+            {"fig": ("netmd-remote", "NetMD's own remote. Every button reports what actually happened, "
+                                     "since the deck answers.")},
+            {"p": "Far smaller than MDRem's own remote, and deliberately so: a NetMD title is never typed "
+                  "key by key, so there is nothing here resembling MDRem's Titling or Typing groups. "
+                  "**Transport** covers Play, Pause, Stop, fast-forward, rewind, Next, Previous and "
+                  "Restart; **Play a Track** jumps straight to a track number (up to 99, not the physical "
+                  "remote's 25); **Play Mode** sets Single, Repeat or Shuffle."},
+            {"note": "**There is no Eject button.** `netmdcli` has no `eject` command at all - confirmed "
+                     "against its own `--help` output, not assumed. Eject the disc from the deck's own "
+                     "front panel."},
+            {"h2": "Writing titles only"},
+            {"p": "**Metadata... > Upload Tracklist** works the same way it does for MDRem - see the "
+                  "earlier chapter - except that with NetMD switched on it reads the disc first, so a "
+                  "title for a track the disc does not actually have is skipped and named rather than "
+                  "written into nothing, and every command's success is known rather than assumed."},
+            {"h2": "Erasing a disc"},
+            {"p": "**Erase MiniDisc...**, the same button in the same place as MDRem's own, sends "
+                  "`netmdcli`'s `erase force` directly - one command, confirmed once, rather than MDRem's "
+                  "blind five-key sequence. `force` is required by `netmdcli` itself, for the same reason "
+                  "MDRem's own sequence exists: without it, the tool would be the one asking a question "
+                  "nothing here can answer."},
         ],
     },
     # ------------------------------------------------------------------

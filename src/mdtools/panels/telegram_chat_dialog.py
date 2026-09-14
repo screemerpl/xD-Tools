@@ -71,8 +71,9 @@ _PHOTO_MAX_WIDTH = 320
 
 # How many files _ChatWorker will download at once -- a whole album
 # arriving as a burst of file messages used to start every one of them
-# immediately, with no limit at all.
-_MAX_CONCURRENT_DOWNLOADS = 3
+# immediately, with no limit at all. The actual cap is a user setting now
+# (app_settings.telegram_download_concurrency(), Settings > Telegram) --
+# see _ChatWorker.__init__'s max_concurrent_downloads parameter.
 
 
 def _guess_image_extension(data: bytes) -> str:
@@ -196,6 +197,7 @@ class _ChatWorker(QThread):
         download_root: Path,
         target_language: str,
         parent=None,
+        max_concurrent_downloads: int = app_settings.DEFAULT_TELEGRAM_DOWNLOAD_CONCURRENCY,
     ):
         super().__init__(parent)
         self._api_id = api_id
@@ -203,6 +205,11 @@ class _ChatWorker(QThread):
         self._bot_username = bot_username
         self._download_root = download_root
         self._target_language = target_language
+        # Read on the GUI thread at construction time and passed in, not
+        # read from app_settings on run() -- QSettings has no cross-thread
+        # access guarantee, and this worker's own thread is where run()
+        # executes.
+        self._max_concurrent_downloads = max_concurrent_downloads
         self._loop: asyncio.AbstractEventLoop | None = None
         self._incoming: asyncio.Queue | None = None
         self._outgoing: asyncio.Queue | None = None
@@ -218,7 +225,7 @@ class _ChatWorker(QThread):
         self._incoming = asyncio.Queue()
         self._outgoing = asyncio.Queue()
         self._cancel_event = asyncio.Event()
-        self._download_semaphore = asyncio.Semaphore(_MAX_CONCURRENT_DOWNLOADS)
+        self._download_semaphore = asyncio.Semaphore(self._max_concurrent_downloads)
         self._ready.set()
         try:
             self._loop.run_until_complete(self._flow())
@@ -829,7 +836,13 @@ class TelegramChatDialog(QDialog):
             return
 
         self._worker = _ChatWorker(
-            api_id, self._api_hash, self._bot_username, self._download_root, i18n.current_language(), self
+            api_id,
+            self._api_hash,
+            self._bot_username,
+            self._download_root,
+            i18n.current_language(),
+            self,
+            max_concurrent_downloads=app_settings.telegram_download_concurrency(),
         )
         self._worker.ready.connect(self._on_ready)
         self._worker.not_authorized.connect(self._on_not_authorized)
@@ -1176,14 +1189,18 @@ class TelegramChatDialog(QDialog):
         _on_download_started()/_on_download_finished()/_on_download_failed()
         -- reported as looking permanently disabled with no explanation; a
         disabled button with no tooltip at all reads as broken, not as
-        "waiting for something". The adapter-off check stays first even
+        "waiting for something". The deck-driveable check stays first even
         though a download in progress would also block proceeding, since
-        turning MDRem on is the more fundamental blocker of the two -- it
-        doesn't go away just because the current download finishes."""
-        if not app_settings.mdrem_enabled():
+        having no way to drive a deck is the more fundamental blocker of
+        the two -- it doesn't go away just because the current download
+        finishes. md_deck_driveable(), not mdrem_enabled() alone: NetMD
+        drives a recording just as well as MDRem does, and this used to
+        stay disabled -- wrongly, with a wrong reason given too -- the
+        moment NetMD was switched on instead."""
+        if not app_settings.md_deck_driveable():
             self.continue_btn.setEnabled(False)
             self.continue_btn.setToolTip(
-                self.tr("Enable the MDRem adapter in Window > Settings to record.")
+                self.tr("Enable MDRem or NetMD in Window > Settings to record.")
             )
         elif self._active_downloads:
             self.continue_btn.setEnabled(False)

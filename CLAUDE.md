@@ -75,6 +75,7 @@ src/mdtools/
   palette.py                background/accent/text colours pulled out of a cover image (Pillow, no Qt)
   cover_filters.py          six background treatments (brighten/blur/posterize/halftone/pixelate/none), pure Pillow
   mdrem.py                  MDRem IR adapter: serial protocol, transliteration, upload plan (no Qt UI)
+  netmd.py                  NetMD over USB: recording modes, disc TOC, title plan, via bundled netmdcli (no Qt)
   audio_engine.py           FLAC decode/encode, resampling, dithering, realtime playback (soundfile/soxr/sounddevice, no Qt)
   tracks.py                 track list + album/artist/year from files' own tags -- no external player (no Qt)
   cdrip.py                  audio CD: drives, TOC, disc ids, rip plan, cdparanoia/flac (no Qt UI)
@@ -111,7 +112,7 @@ src/mdtools/
     layers_panel.py             list + select + reorder + rename + delete items
     startup_dialog.py           the first screen: recent projects, open, new, multiprint, remote
     new_design_dialog.py        File > New: medium, then one template picker per page (remembers last choice)
-    settings_dialog.py          Window > Settings: DPI, MDRem port, rip folder, audio devices, experimental
+    settings_dialog.py          Window > Settings: 5 grouped pages -- General, Audio, MiniDisc Recording, CD, Telegram
     experimental_settings_dialog.py   whatever an experimental feature needs, kept out of the stable one
     metadata_dialog.py          album/artist/year/track-list editor + "Lookup Track List..." + "Upload Tracklist"
     cover_preview.py            the cover thumbnail that is also the button for replacing it, plus its lookup
@@ -121,8 +122,11 @@ src/mdtools/
     print_dialog.py             PrintDialog and MultiprintDialog over one shared base: sheets, PDF, PNG
     mdrem_port.py               resolve_port(): the saved port, a probe, or a warning -- shared by both entry points
     mdrem_upload_dialog.py      preview-then-write dialog + the worker thread driving an upload
-    remote_dialog.py            software Sony MD remote, reachable from Window menu or startup screen
+    netmd_upload_dialog.py      the same, over USB: reads the disc first, so it knows what landed
+    remote_dialog.py            software Sony MD remote (MDRem) + open_remote_control(), which picks it or NetMD's own
+    netmd_remote_dialog.py      NetMD's own transport remote: play/pause/stop/seek/track/play-mode over USB
     record_dialog.py            Recording > Record to MiniDisc: arm, play (own AudioPlayer), watch, hand off to titling
+    netmd_record_dialog.py      the same, over NetMD: decode to WAV, send each track (audio + title) over USB
     playback_bridge.py          crosses AudioPlayer's realtime callback thread onto the GUI thread (QObject + Signals)
     decode_worker.py            decoding/resampling/dithering a disc or tape side, off the GUI thread
     cd_rip_dialog.py            Source > Rip Audio CD: read TOC, identify, rip -- and stop there (#16)
@@ -590,6 +594,86 @@ guaranteed released across a `QThread`-wrapped blocking call), reported as
 when its worker finishes) is what both single- and multi-disc automatic
 titling ride on.
 
+**NetMD is the second way to drive a deck, and the two are exclusive.**
+`app_settings.set_netmd_enabled()`/`set_mdrem_enabled()` each switch the
+other off, and `mdrem_enabled()` also returns False whenever
+`netmd_enabled()` is True — the invariant is enforced on the way out as
+well as the way in, because a settings.ini can be hand-edited and every
+recording flow asks "which machine am I driving?" before it starts. NetMD
+wins that tie (it names a cable that is plugged in). `netmd.py` shells out
+to the bundled **`netmdcli.exe`** (`bin/win64`, GPL-2.0-or-later, from
+Jo2003's fork of linux-minidisc — see ATTRIBUTION.md), the same
+plan-then-execute shape `cdrip.py`/`cdburn.py` use, rather than
+reimplementing Sony's protocol where nobody here can test it.
+
+Three things about that tool are load-bearing: **it counts tracks from
+zero** in its own commands (`track_command_index()` owns that off-by-one,
+with a test, because getting it wrong retitles the wrong track on a real
+disc); **it always uses the first device it enumerates** and takes no way
+to choose another, so `netmd_device()` records which deck the user meant
+but cannot redirect anything; and **a deck on Sony's own driver looks
+exactly like no deck at all** — it needs WinUSB/libusb (Zadig), which is
+why "no NetMD device" says all three possibilities.
+
+**Every NetMD recording mode goes out over the same USB cable — deliberately
+simplified from the first cut of this feature, which still ran SP over a
+Toslink cable because that is the only way MDRem's own (adapter-driven)
+recording can move audio at all.** `netmdcli`'s `send <file>` takes a
+plain 16-bit/44100Hz WAV with no `-d` flag, which *is* SP — unencoded Red
+Book PCM — so SP goes out as a file exactly like LP2/LP4 already did
+(`-d lp2`/`-d lp4`, netmdcli's own on-the-fly ATRAC3 encoder, since a
+digital input cannot carry ATRAC3 at all). `netmd.connection_advice()`
+now says one thing whatever mode is chosen: connect the USB cable, done.
+MDRem's own recording is unaffected — that adapter presses buttons and
+hears nothing back, so a real album still has to play through a real
+Toslink cable in real time for it; this simplification only applies when
+NetMD is the machine being driven. `netmd.build_record_plan()` +
+`prepare_track_wavs()` (via `decode.to_wav()`, the same conversion
+`cdburn.prepare_wavs()` uses) + `send_tracks()` are the plan-then-execute
+trio `panels/netmd_record_dialog.py`'s `NetMdRecordDialog` drives — closer
+in shape to `BurnDialog` than to MDRem's own `RecordDialog`, since nothing
+here plays in real time: a track's title goes out in the same `send`
+command as its audio, so there is no second titling pass the way MDRem's
+flow needs one. `app_window._run_record_dialog()` branches on
+`app_settings.netmd_enabled()` to pick `NetMdRecordDialog` over
+`RecordDialog`; `_resolve_recording_port()` returns `""` (no MDRem port
+needed) rather than probing for an adapter that will never be asked to do
+anything.
+
+**"Remote Control..." is one entry point for either machine**, same as
+recording: `panels/remote_dialog.py`'s `open_remote_control()` branches on
+`app_settings.netmd_enabled()` to open `NetMdRemoteDialog`
+(`panels/netmd_remote_dialog.py`) instead of the MDRem `RemoteDialog`, and
+both the Window menu and the startup screen's Remote button call it rather
+than each resolving a port and constructing `RemoteDialog` directly (which
+is what they used to do — silently wrong for NetMD, since there is no
+MDRem port to resolve). `NetMdRemoteDialog` is deliberately far smaller
+than `RemoteDialog`: no titling/typing/character-entry groups (a NetMD
+title always goes out in one shot, never typed key by key), no Eject
+button (`netmdcli` has no `eject` command — confirmed against its
+`--help`, not assumed), and a typed track number instead of a bank of
+buttons (NetMD tracks go up to `MAX_TRACK`=99, not the physical remote's
+25). `netmd.py`'s own transport functions (`play()`/`pause()`/`stop()`/
+`fast_forward()`/`rewind()`/`next_track()`/`previous_track()`/
+`restart_track()`/`set_play_mode()`) all go through one shared
+`_run_checked()` helper — the same no-device/non-zero check `erase_disc()`
+already made its own way, now written once.
+
+**A menu action gated on "is there a deck at all" must ask
+`app_settings.md_deck_driveable()` (`mdrem_enabled() or netmd_enabled()`),
+never `mdrem_enabled()` alone.** Three real entries shipped checking only
+the adapter — `record_folder_action`/`telegram_record_action` in
+`app_window.py`, the startup screen's own Remote button, and
+`TelegramChatDialog`'s Continue button — and every one of them went
+invisible or permanently disabled the moment NetMD-only was switched on,
+even though NetMD could drive the exact same recording. `mdrem_enabled()`
+itself already returns `False` whenever `netmd_enabled()` is `True` (see
+above), which is right for "does the *adapter* answer" but wrong for "is
+there a deck to reach at all" — the two questions look identical until
+NetMD exists, which is exactly why this was missed for an entire stage of
+NetMD's development. Any new gate shaped like "hide this without a deck"
+belongs on `md_deck_driveable()`, not on `mdrem_enabled()`.
+
 **Telegram bot integration** (`telegram_bot.py` + 3 panels, experimental,
 gated behind Settings' checkbox): signs in as a real **user account**
 (Telethon/MTProte), not a bot token — a bot can't message another bot.
@@ -598,10 +682,26 @@ loop (unlike every one-shot worker elsewhere) — it must never be
 auto-started from `__init__` (plain construction must stay inert), and
 every test that starts it **must** stop it again before returning, or a
 QThread destroyed while still "running" aborts the whole process with no
-Python traceback. Downloads are capped at `_MAX_CONCURRENT_DOWNLOADS`=3
-via an `asyncio.Semaphore`, shown in a queue panel with an aggregate
-summary line (counts/overall %/speed, fed by the same signals each row
-already reacts to). `album_sort.py` groups downloaded files by `ALBUM` tag
+Python traceback. Downloads are capped via an `asyncio.Semaphore` sized
+from `app_settings.telegram_download_concurrency()` (Settings > Telegram
+"Simultaneous downloads", default 2 — read on the GUI thread and passed
+into `_ChatWorker.__init__`, never read from `run()` itself, since
+QSettings has no cross-thread access guarantee), shown in a queue panel
+with an aggregate summary line (counts/overall %/speed, fed by the same
+signals each row already reacts to). **A real report of ~300KB/s
+aggregate over a 1Gbit link** traced to two things, neither a bug in this
+codebase: Telethon downloads one chunk at a time per file with no
+pipelining (each concurrent download is its own round-trip-bound stream,
+so raising the file-count cap only helps up to a point), and **`cryptg`
+was not an installed dependency**, leaving Telethon's own AES-IGE decrypt
+step in pure Python instead of its C extension — Telethon's own
+`download_media()` docstring names this exact fix. `cryptg` is now a
+declared dependency (`pyproject.toml`); the concurrency cap was lowered
+from a hardcoded 3 to a user-tunable default of 2 for the same reason it's
+now a setting at all — more concurrent streams doesn't reliably help once
+the bottleneck is per-account throttling rather than local bandwidth, so
+it needs to be something the user can try changing, not a constant to
+just raise. `album_sort.py` groups downloaded files by `ALBUM` tag
 (majority-vote for the folder's display artist, not the first file seen —
 a guest-feature credit must not fork the folder) with an arrival-order
 fallback for untagged files; **idempotent and safe to call repeatedly**

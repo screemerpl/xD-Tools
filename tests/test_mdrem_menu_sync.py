@@ -15,6 +15,7 @@ from PySide6.QtWidgets import QMessageBox
 from mdtools import app_settings
 from mdtools import app_window as app_module
 from mdtools.app_window import MainWindow
+from mdtools.panels import remote_dialog as remote_module
 from mdtools.panels.settings_dialog import SettingsDialog
 
 
@@ -120,9 +121,12 @@ def test_the_remote_entry_follows_the_adapter_too(qt_app, isolated_settings):
 
 
 def test_opening_the_remote_resolves_a_port_and_shows_the_dialog(qt_app, isolated_settings, monkeypatch):
+    """open_remote_control() is where the dispatch actually lives now
+    (shared with the startup screen's own Remote button) -- see its own
+    docstring."""
     app_settings.set_mdrem_enabled(True)
     window = _window()
-    monkeypatch.setattr(app_module, "resolve_port", lambda parent: "COM_TEST")
+    monkeypatch.setattr(remote_module, "resolve_port", lambda parent: "COM_TEST")
     opened: list[str] = []
 
     class _FakeRemote:
@@ -132,7 +136,7 @@ def test_opening_the_remote_resolves_a_port_and_shows_the_dialog(qt_app, isolate
         def exec(self):
             return 1
 
-    monkeypatch.setattr(app_module, "RemoteDialog", _FakeRemote)
+    monkeypatch.setattr(remote_module, "RemoteDialog", _FakeRemote)
 
     window._open_remote_control()
 
@@ -142,12 +146,34 @@ def test_opening_the_remote_resolves_a_port_and_shows_the_dialog(qt_app, isolate
 def test_no_port_no_remote_dialog(qt_app, isolated_settings, monkeypatch):
     app_settings.set_mdrem_enabled(True)
     window = _window()
-    monkeypatch.setattr(app_module, "resolve_port", lambda parent: None)
+    monkeypatch.setattr(remote_module, "resolve_port", lambda parent: None)
     monkeypatch.setattr(
-        app_module, "RemoteDialog", lambda *a, **k: pytest.fail("must not open without a resolved port")
+        remote_module, "RemoteDialog", lambda *a, **k: pytest.fail("must not open without a resolved port")
     )
 
     window._open_remote_control()
+
+
+def test_netmd_opens_its_own_remote_instead(qt_app, isolated_settings, monkeypatch):
+    """When NetMD is the machine being driven, the same "Remote Control"
+    entry must reach NetMdRemoteDialog, never RemoteDialog's MDRem port
+    resolution at all."""
+    app_settings.set_netmd_enabled(True)
+    window = _window()
+    monkeypatch.setattr(
+        remote_module, "resolve_port", lambda *a, **k: pytest.fail("must not resolve an MDRem port for NetMD")
+    )
+    opened = []
+    monkeypatch.setattr(remote_module, "NetMdRemoteDialog", lambda parent=None: opened.append(True) or _Exec())
+
+    window._open_remote_control()
+
+    assert opened == [True]
+
+
+class _Exec:
+    def exec(self):
+        return 1
 
 
 # --- and the rip alongside it -----------------------------------------------

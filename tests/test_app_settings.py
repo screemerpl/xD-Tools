@@ -149,6 +149,25 @@ def test_recording_gain_round_trips():
     assert app_settings.recording_gain_db() == -3.5
 
 
+def test_telegram_download_concurrency_defaults_to_2():
+    assert app_settings.telegram_download_concurrency() == 2
+    assert app_settings.telegram_download_concurrency() == app_settings.DEFAULT_TELEGRAM_DOWNLOAD_CONCURRENCY
+
+
+def test_telegram_download_concurrency_round_trips():
+    app_settings.set_telegram_download_concurrency(5)
+
+    assert app_settings.telegram_download_concurrency() == 5
+
+
+def test_telegram_download_concurrency_is_clamped_to_its_range():
+    app_settings.set_telegram_download_concurrency(0)
+    assert app_settings.telegram_download_concurrency() == app_settings.MIN_TELEGRAM_DOWNLOAD_CONCURRENCY
+
+    app_settings.set_telegram_download_concurrency(99)
+    assert app_settings.telegram_download_concurrency() == app_settings.MAX_TELEGRAM_DOWNLOAD_CONCURRENCY
+
+
 def test_telegram_bot_username_and_phone_are_empty_by_default():
     assert app_settings.telegram_bot_username() == ""
     assert app_settings.telegram_phone() == ""

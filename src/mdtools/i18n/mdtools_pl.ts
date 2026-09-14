@@ -1466,18 +1466,18 @@ Wysunąć teraz, żeby zapisać je trwale?</translation>
         <translation type="vanished">MDTools - Projektant etykiet MiniDisc</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="297"/>
+        <location filename="../app_window.py" line="298"/>
         <source>Page</source>
         <translation>Strona</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="298"/>
+        <location filename="../app_window.py" line="299"/>
         <source>Editing:</source>
         <translation>Edycja:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3250"/>
-        <location filename="../app_window.py" line="3371"/>
+        <location filename="../app_window.py" line="3275"/>
+        <location filename="../app_window.py" line="3396"/>
         <source>Disc Label</source>
         <translation>Etykieta płyty</translation>
     </message>
@@ -1486,28 +1486,28 @@ Wysunąć teraz, żeby zapisać je trwale?</translation>
         <translation type="vanished">Okładka / J-Card</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="170"/>
-        <location filename="../app_window.py" line="928"/>
+        <location filename="../app_window.py" line="171"/>
+        <location filename="../app_window.py" line="929"/>
         <source>xD-Tools - Retro Media Studio</source>
         <translation>xD-Tools — Studio Retro Nośników</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="276"/>
+        <location filename="../app_window.py" line="277"/>
         <source>Main</source>
         <translation>Główne</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="313"/>
+        <location filename="../app_window.py" line="314"/>
         <source>+</source>
         <translation>+</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="318"/>
+        <location filename="../app_window.py" line="319"/>
         <source>-</source>
         <translation>-</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3688"/>
+        <location filename="../app_window.py" line="3713"/>
         <source>Regenerate</source>
         <translation>Wygeneruj ponownie</translation>
     </message>
@@ -1520,177 +1520,177 @@ Wysunąć teraz, żeby zapisać je trwale?</translation>
         <translation type="vanished">Wygeneruj ponownie z czcionką...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="362"/>
+        <location filename="../app_window.py" line="363"/>
         <source>Zoom</source>
         <translation>Powiększenie</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="367"/>
-        <location filename="../app_window.py" line="613"/>
+        <location filename="../app_window.py" line="368"/>
+        <location filename="../app_window.py" line="614"/>
         <source>Zoom Out</source>
         <translation>Pomniejsz</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="370"/>
-        <location filename="../app_window.py" line="612"/>
+        <location filename="../app_window.py" line="371"/>
+        <location filename="../app_window.py" line="613"/>
         <source>Zoom In</source>
         <translation>Powiększ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="371"/>
+        <location filename="../app_window.py" line="372"/>
         <source>100%</source>
         <translation>100%</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="372"/>
+        <location filename="../app_window.py" line="373"/>
         <source>Fit</source>
         <translation>Dopasuj</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="375"/>
+        <location filename="../app_window.py" line="376"/>
         <source>Grayscale</source>
         <translation>Skala szarości</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="378"/>
+        <location filename="../app_window.py" line="379"/>
         <source>Temporarily preview the canvas in grayscale -- view only, click again to restore color</source>
         <translation>Tymczasowy podgląd widoku w skali szarości -- tylko podgląd, kliknij ponownie, aby przywrócić kolor</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="393"/>
+        <location filename="../app_window.py" line="394"/>
         <source>Grayscale preview/export brightness</source>
         <translation>Jasność podglądu/eksportu w skali szarości</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="399"/>
+        <location filename="../app_window.py" line="400"/>
         <source>Grayscale preview/export contrast</source>
         <translation>Kontrast podglądu/eksportu w skali szarości</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="403"/>
+        <location filename="../app_window.py" line="404"/>
         <source>Brightness:</source>
         <translation>Jasność:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="405"/>
+        <location filename="../app_window.py" line="406"/>
         <source>Contrast:</source>
         <translation>Kontrast:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="437"/>
+        <location filename="../app_window.py" line="438"/>
         <source>Tools</source>
         <translation>Narzędzia</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="457"/>
+        <location filename="../app_window.py" line="458"/>
         <source>Properties</source>
         <translation>Właściwości</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="467"/>
+        <location filename="../app_window.py" line="468"/>
         <source>Layers</source>
         <translation>Warstwy</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="477"/>
+        <location filename="../app_window.py" line="478"/>
         <source>&amp;File</source>
         <translation>&amp;Plik</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="482"/>
+        <location filename="../app_window.py" line="483"/>
         <source>New...</source>
         <translation>Nowy...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="483"/>
+        <location filename="../app_window.py" line="484"/>
         <source>Open Project...</source>
         <translation>Otwórz projekt...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="484"/>
+        <location filename="../app_window.py" line="485"/>
         <source>Open Recent</source>
         <translation>Otwórz ostatnie</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="486"/>
+        <location filename="../app_window.py" line="487"/>
         <source>Save</source>
         <translation>Zapisz</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="488"/>
+        <location filename="../app_window.py" line="489"/>
         <source>Save As...</source>
         <translation>Zapisz jako...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="490"/>
+        <location filename="../app_window.py" line="491"/>
         <source>Import Metadata from Project...</source>
         <translation>Importuj metadane z projektu...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="492"/>
+        <location filename="../app_window.py" line="493"/>
         <source>Export Cut SVG...</source>
         <translation>Eksportuj cięcie SVG...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="493"/>
+        <location filename="../app_window.py" line="494"/>
         <source>Export Print PNG...</source>
         <translation>Eksportuj wydruk PNG...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="494"/>
+        <location filename="../app_window.py" line="495"/>
         <source>Export Print PNG (Grayscale)...</source>
         <translation>Eksportuj wydruk PNG (skala szarości)...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="496"/>
+        <location filename="../app_window.py" line="497"/>
         <source>Print...</source>
         <translation>Drukuj...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="503"/>
+        <location filename="../app_window.py" line="504"/>
         <source>Close Project</source>
         <translation>Zamknij projekt</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="506"/>
+        <location filename="../app_window.py" line="507"/>
         <source>Exit</source>
         <translation>Zakończ</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="508"/>
+        <location filename="../app_window.py" line="509"/>
         <source>&amp;Edit</source>
         <translation>&amp;Edycja</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="512"/>
+        <location filename="../app_window.py" line="513"/>
         <source>&amp;Undo</source>
         <translation>&amp;Cofnij</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="515"/>
+        <location filename="../app_window.py" line="516"/>
         <source>&amp;Redo</source>
         <translation>&amp;Ponów</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="519"/>
-        <location filename="../app_window.py" line="1497"/>
+        <location filename="../app_window.py" line="520"/>
+        <location filename="../app_window.py" line="1498"/>
         <source>Cut</source>
         <translation>Wytnij</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="521"/>
+        <location filename="../app_window.py" line="522"/>
         <source>Copy</source>
         <translation>Kopiuj</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="523"/>
-        <location filename="../app_window.py" line="1505"/>
-        <location filename="../app_window.py" line="1508"/>
+        <location filename="../app_window.py" line="524"/>
+        <location filename="../app_window.py" line="1506"/>
+        <location filename="../app_window.py" line="1509"/>
         <source>Paste</source>
         <translation>Wklej</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="529"/>
+        <location filename="../app_window.py" line="530"/>
         <source>Delete</source>
         <translation>Usuń</translation>
     </message>
@@ -1703,7 +1703,7 @@ Wysunąć teraz, żeby zapisać je trwale?</translation>
         <translation type="vanished">Nagraj z folderu audio...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="698"/>
+        <location filename="../app_window.py" line="699"/>
         <source>Busy</source>
         <translation>Zajęte</translation>
     </message>
@@ -1716,7 +1716,7 @@ Wysunąć teraz, żeby zapisać je trwale?</translation>
         <translation type="vanished">Nagraj z folderu audio na {medium}...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2391"/>
+        <location filename="../app_window.py" line="2398"/>
         <source>There is nothing to sort -- the audio folder is empty.</source>
         <translation>Nie ma czego sortować -- folder audio jest pusty.</translation>
     </message>
@@ -1725,7 +1725,7 @@ Wysunąć teraz, żeby zapisać je trwale?</translation>
         <translation type="vanished">Nagraj z folderu audio</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2433"/>
+        <location filename="../app_window.py" line="2440"/>
         <source>There is nothing to record -- the audio folder is empty.</source>
         <translation>Nie ma czego nagrywać -- folder audio jest pusty.</translation>
     </message>
@@ -1754,28 +1754,28 @@ Nagrać ją teraz, czy tylko wprowadzić jej tytuł i listę utworów do projekt
         <translation type="vanished">Anuluj</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2878"/>
+        <location filename="../app_window.py" line="2903"/>
         <source>Recording Finished</source>
         <translation>Nagrywanie zakończone</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2880"/>
+        <location filename="../app_window.py" line="2905"/>
         <source>The album&apos;s metadata has been filled in from the recording. Review it in the Tools panel&apos;s Metadata... dialog, then click the magic wand button there to lay out the label.</source>
         <translation>Metadane albumu zostały uzupełnione na podstawie nagrania. Sprawdź je w oknie Metadane... w panelu Narzędzia, a potem kliknij tam przycisk z magiczną różdżką, aby rozmieścić etykietę.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3695"/>
+        <location filename="../app_window.py" line="3720"/>
         <source>This page&apos;s template is not one the automatic layout knows how to build, so there is nothing to regenerate. Pick a built-in template for this page first.</source>
         <translation>Automatyczny układ nie umie zbudować szablonu tej strony, więc nie ma czego generować ponownie. Wybierz najpierw wbudowany szablon dla tej strony.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3706"/>
+        <location filename="../app_window.py" line="3731"/>
         <source>Are you sure? This rebuilds this page from the metadata, and resets the undo history.</source>
         <translation>Czy na pewno? To zbuduje tę stronę na nowo z metadanych i wyzeruje historię cofania.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3760"/>
-        <location filename="../app_window.py" line="3768"/>
+        <location filename="../app_window.py" line="3785"/>
+        <location filename="../app_window.py" line="3793"/>
         <source>Regenerate with Font</source>
         <translation>Wygeneruj ponownie z czcionką</translation>
     </message>
@@ -1784,27 +1784,27 @@ Nagrać ją teraz, czy tylko wprowadzić jej tytuł i listę utworów do projekt
         <translation type="vanished">Czy na pewno? To wygeneruje ponownie tę etykietę czcionką &quot;{family}&quot; i zresetuje historię cofania.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="315"/>
+        <location filename="../app_window.py" line="316"/>
         <source>Add Page...</source>
         <translation>Dodaj stronę...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="320"/>
+        <location filename="../app_window.py" line="321"/>
         <source>Remove This Page</source>
         <translation>Usuń tę stronę</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="656"/>
+        <location filename="../app_window.py" line="657"/>
         <source>About xD-Tools...</source>
         <translation>O programie xD-Tools...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1278"/>
+        <location filename="../app_window.py" line="1279"/>
         <source>Add Page</source>
         <translation>Dodaj stronę</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1279"/>
+        <location filename="../app_window.py" line="1280"/>
         <source>This project already has every page it can have.</source>
         <translation>Ten projekt ma już wszystkie strony, jakie może mieć.</translation>
     </message>
@@ -1817,90 +1817,90 @@ Nagrać ją teraz, czy tylko wprowadzić jej tytuł i listę utworów do projekt
         <translation type="vanished">Nie ma szablonów dla tej strony (Szablony &gt; Zarządzaj szablonami).</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="323"/>
+        <location filename="../app_window.py" line="324"/>
         <source>Template:</source>
         <translation>Szablon:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="349"/>
+        <location filename="../app_window.py" line="350"/>
         <source>Regenerate: rebuild this page from the project&apos;s metadata, with its default fonts and styling</source>
         <translation>Odśwież: przebuduj tę stronę na podstawie metadanych projektu, z domyślnymi czcionkami i stylem</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="356"/>
+        <location filename="../app_window.py" line="357"/>
         <source>Regenerate with Font...: rebuild this page using a font you pick</source>
         <translation>Odśwież z czcionką...: przebuduj tę stronę, używając wybranej przez Ciebie czcionki</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="557"/>
+        <location filename="../app_window.py" line="558"/>
         <source>&amp;Source</source>
         <translation>&amp;Źródło</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="562"/>
+        <location filename="../app_window.py" line="563"/>
         <source>Rip Audio CD...</source>
         <translation>Zgraj płytę audio CD...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="579"/>
+        <location filename="../app_window.py" line="580"/>
         <source>Sort Rip/Download Folder into Albums...</source>
         <translation>Posortuj folder zgrywania/pobierania na albumy...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="595"/>
+        <location filename="../app_window.py" line="596"/>
         <source>Record from Rip/Download Folder...</source>
         <translation>Nagraj z folderu zgrywania/pobierania...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="700"/>
+        <location filename="../app_window.py" line="701"/>
         <source>A recording, ripping, burning, title-writing or Telegram download operation is still running. Finish or stop it first -- use “Show recording window” in the bar at the bottom if you hid it.</source>
         <translation>Nagrywanie, zgrywanie, wypalanie, zapisywanie tytułów lub pobieranie z Telegrama wciąż trwa. Najpierw zakończ lub zatrzymaj tę operację — jeśli ukryto okno, użyj „Pokaż okno nagrywania” w pasku na dole.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="933"/>
+        <location filename="../app_window.py" line="934"/>
         <source>{name} - xD-Tools</source>
         <translation>{name} — xD-Tools</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1346"/>
-        <location filename="../app_window.py" line="1353"/>
+        <location filename="../app_window.py" line="1347"/>
+        <location filename="../app_window.py" line="1354"/>
         <source>Remove Page</source>
         <translation>Usuń stronę</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1851"/>
+        <location filename="../app_window.py" line="1852"/>
         <source>xD-Tools Project (*.mdproj)</source>
         <translation>Projekt xD-Tools (*.mdproj)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1939"/>
-        <location filename="../app_window.py" line="2626"/>
+        <location filename="../app_window.py" line="1946"/>
+        <location filename="../app_window.py" line="2642"/>
         <source>Record from Rip/Download Folder to {medium}...</source>
         <translation>Nagraj z folderu zgrywania/pobierania na {medium}...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2311"/>
+        <location filename="../app_window.py" line="2318"/>
         <source>Set the bot username first, in Window &gt; Settings, under Telegram.</source>
         <translation>Najpierw ustaw nazwę użytkownika bota w Okno &gt; Ustawienia, w grupie Telegram.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2432"/>
+        <location filename="../app_window.py" line="2439"/>
         <source>Record from Rip/Download Folder</source>
         <translation>Nagraj z folderu zgrywania/pobierania</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2513"/>
+        <location filename="../app_window.py" line="2520"/>
         <source>Restart xD-Tools for the new language to take full effect.</source>
         <translation>Uruchom ponownie xD-Tools, aby nowy język w pełni obowiązywał.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2632"/>
-        <location filename="../app_window.py" line="2640"/>
+        <location filename="../app_window.py" line="2648"/>
+        <location filename="../app_window.py" line="2656"/>
         <source>Rip Audio CD</source>
         <translation>Zgraj płytę audio CD</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2633"/>
+        <location filename="../app_window.py" line="2649"/>
         <source>The disc has been ripped into {folder}.
 
 Record it with Recording &gt; {entry}</source>
@@ -1909,7 +1909,7 @@ Record it with Recording &gt; {entry}</source>
 Nagraj ją poleceniem Nagrywanie &gt; {entry}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2642"/>
+        <location filename="../app_window.py" line="2658"/>
         <source>The disc has been ripped into {folder}.
 
 Record it with Recording &gt; {entry}
@@ -1922,17 +1922,17 @@ Nagraj ją poleceniem Nagrywanie &gt; {entry}
 Wprowadzić teraz jej tytuł i listę utworów do projektu?</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3526"/>
+        <location filename="../app_window.py" line="3551"/>
         <source>Shell Label Background</source>
         <translation>Tło etykiety na obudowę</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3543"/>
+        <location filename="../app_window.py" line="3568"/>
         <source>Lay Out Shell Label</source>
         <translation>Rozmieść etykietę kasety</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3545"/>
+        <location filename="../app_window.py" line="3570"/>
         <source>Shell Label</source>
         <translation>Etykieta kasety</translation>
     </message>
@@ -1941,12 +1941,12 @@ Wprowadzić teraz jej tytuł i listę utworów do projektu?</translation>
         <translation type="vanished">Etykieta płyty i okładka są częścią każdego projektu i nie da się ich usunąć.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1355"/>
+        <location filename="../app_window.py" line="1356"/>
         <source>Remove the {page} page? Everything on it is deleted, and the undo history is reset.</source>
         <translation>Usunąć stronę „{page}”? Wszystko, co na niej jest, zostanie skasowane, a historia cofania wyzerowana.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2923"/>
+        <location filename="../app_window.py" line="2948"/>
         <source>This replaces everything on {pages} and resets the undo history.
 
 The project&apos;s metadata is left alone.</source>
@@ -1955,22 +1955,22 @@ The project&apos;s metadata is left alone.</source>
 Metadane projektu zostają nietknięte.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2944"/>
+        <location filename="../app_window.py" line="2969"/>
         <source>{first} and {last}</source>
         <translation>{first} i {last}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3395"/>
+        <location filename="../app_window.py" line="3420"/>
         <source>Lay Out Case Back</source>
         <translation>Rozmieść tył pudełka</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3397"/>
+        <location filename="../app_window.py" line="3422"/>
         <source>Case Back</source>
         <translation>Tył pudełka</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3451"/>
+        <location filename="../app_window.py" line="3476"/>
         <source>Lay Out Case Insert</source>
         <translation>Rozmieść wkładkę</translation>
     </message>
@@ -1995,12 +1995,12 @@ Metadane projektu zostają nietknięte.</translation>
         <translation type="vanished">xD-Tools — Studio MiniDisc i CD</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="582"/>
+        <location filename="../app_window.py" line="583"/>
         <source>&amp;Recording</source>
         <translation>&amp;Nagrywanie</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="588"/>
+        <location filename="../app_window.py" line="589"/>
         <source>Record Folder to MiniDisc...</source>
         <translation>Nagraj folder na MiniDisc...</translation>
     </message>
@@ -2017,17 +2017,17 @@ Metadane projektu zostają nietknięte.</translation>
         <translation type="vanished">Skasuj MiniDisc...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="648"/>
+        <location filename="../app_window.py" line="649"/>
         <source>Remote Control...</source>
         <translation>Pilot...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="608"/>
+        <location filename="../app_window.py" line="609"/>
         <source>&amp;Templates</source>
         <translation>&amp;Szablony</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="609"/>
+        <location filename="../app_window.py" line="610"/>
         <source>Manage Templates...</source>
         <translation>Zarządzaj szablonami...</translation>
     </message>
@@ -2036,17 +2036,17 @@ Metadane projektu zostają nietknięte.</translation>
         <translation type="vanished">Zmień szablon tej strony...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="611"/>
+        <location filename="../app_window.py" line="612"/>
         <source>&amp;View</source>
         <translation>&amp;Widok</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="614"/>
+        <location filename="../app_window.py" line="615"/>
         <source>Fit to Window</source>
         <translation>Dopasuj do okna</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="636"/>
+        <location filename="../app_window.py" line="637"/>
         <source>Experi&amp;mental</source>
         <translation>&amp;Eksperymentalne</translation>
     </message>
@@ -2055,7 +2055,7 @@ Metadane projektu zostają nietknięte.</translation>
         <translation type="vanished">Ustawienia eksperymentalne...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="569"/>
+        <location filename="../app_window.py" line="570"/>
         <source>Download Album from Telegram Bot...</source>
         <translation>Pobierz album z bota Telegram...</translation>
     </message>
@@ -2072,17 +2072,17 @@ Metadane projektu zostają nietknięte.</translation>
         <translation type="vanished">Wypal pobrane z Telegrama na płytę audio CD...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="639"/>
+        <location filename="../app_window.py" line="640"/>
         <source>&amp;Window</source>
         <translation>&amp;Okno</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="640"/>
+        <location filename="../app_window.py" line="641"/>
         <source>Settings...</source>
         <translation>Ustawienia...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="654"/>
+        <location filename="../app_window.py" line="655"/>
         <source>&amp;Help</source>
         <translation>&amp;Pomoc</translation>
     </message>
@@ -2091,12 +2091,12 @@ Metadane projektu zostają nietknięte.</translation>
         <translation type="vanished">O programie MDTools...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="958"/>
+        <location filename="../app_window.py" line="959"/>
         <source>Unsaved Changes</source>
         <translation>Niezapisane zmiany</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="959"/>
+        <location filename="../app_window.py" line="960"/>
         <source>This project has changes that have not been saved.
 
 Save them before continuing?</source>
@@ -2105,14 +2105,14 @@ Save them before continuing?</source>
 Zapisać je przed kontynuowaniem?</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1071"/>
+        <location filename="../app_window.py" line="1072"/>
         <source>&apos;{name}&apos; has unverified placeholder dimensions -- measure your physical media/case and correct it in Templates &gt; Manage Templates before cutting anything for real.</source>
         <translation>Szablon &apos;{name}&apos; ma niezweryfikowane wymiary zastępcze -- zmierz swój fizyczny nośnik/pudełko i popraw go w Szablony &gt; Zarządzaj szablonami, zanim wytniesz cokolwiek naprawdę.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2155"/>
-        <location filename="../app_window.py" line="2205"/>
-        <location filename="../app_window.py" line="2216"/>
+        <location filename="../app_window.py" line="2162"/>
+        <location filename="../app_window.py" line="2212"/>
+        <location filename="../app_window.py" line="2223"/>
         <source>Change Template</source>
         <translation>Zmiana szablonu</translation>
     </message>
@@ -2129,145 +2129,145 @@ The other page and the project&apos;s metadata are left alone.</source>
 Druga strona i metadane projektu pozostają nietknięte.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1347"/>
+        <location filename="../app_window.py" line="1348"/>
         <source>That page is part of every project of this kind and cannot be removed.</source>
         <translation>Ta strona należy do każdego projektu tego rodzaju i nie można jej usunąć.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1428"/>
+        <location filename="../app_window.py" line="1429"/>
         <source>Add Text</source>
         <translation>Dodaj tekst</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1435"/>
+        <location filename="../app_window.py" line="1436"/>
         <source>Add Rectangle</source>
         <translation>Dodaj prostokąt</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1442"/>
-        <location filename="../app_window.py" line="1522"/>
+        <location filename="../app_window.py" line="1443"/>
+        <location filename="../app_window.py" line="1523"/>
         <source>Delete Layer</source>
         <translation>Usuń warstwę</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1471"/>
-        <location filename="../app_window.py" line="1478"/>
+        <location filename="../app_window.py" line="1472"/>
+        <location filename="../app_window.py" line="1479"/>
         <source>Rename Layer</source>
         <translation>Zmień nazwę warstwy</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1471"/>
+        <location filename="../app_window.py" line="1472"/>
         <source>Layer name:</source>
         <translation>Nazwa warstwy:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1540"/>
-        <location filename="../app_window.py" line="1551"/>
-        <location filename="../app_window.py" line="1561"/>
+        <location filename="../app_window.py" line="1541"/>
+        <location filename="../app_window.py" line="1552"/>
+        <location filename="../app_window.py" line="1562"/>
         <source>Insert Metadata Text</source>
         <translation>Wstaw tekst z metadanych</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1570"/>
-        <location filename="../app_window.py" line="1576"/>
+        <location filename="../app_window.py" line="1571"/>
+        <location filename="../app_window.py" line="1577"/>
         <source>Add Image</source>
         <translation>Dodaj obraz</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1570"/>
+        <location filename="../app_window.py" line="1571"/>
         <source>Images (*.png *.jpg *.jpeg *.bmp)</source>
         <translation>Obrazy (*.png *.jpg *.jpeg *.bmp)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1588"/>
+        <location filename="../app_window.py" line="1589"/>
         <source>Insert Asset</source>
         <translation>Wstaw zasób</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1599"/>
-        <location filename="../app_window.py" line="3329"/>
+        <location filename="../app_window.py" line="1600"/>
+        <location filename="../app_window.py" line="3354"/>
         <source>Clip Layers</source>
         <translation>Przycinaj warstwy</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1602"/>
-        <location filename="../app_window.py" line="3332"/>
+        <location filename="../app_window.py" line="1603"/>
+        <location filename="../app_window.py" line="3357"/>
         <source>Clip Image</source>
         <translation>Przycięcie obrazu</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1620"/>
+        <location filename="../app_window.py" line="1621"/>
         <source>Bake Layers</source>
         <translation>Spłaszcz warstwy</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1632"/>
+        <location filename="../app_window.py" line="1633"/>
         <source>Import Metadata from Project</source>
         <translation>Importuj metadane z projektu</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1641"/>
+        <location filename="../app_window.py" line="1642"/>
         <source>Import Metadata</source>
         <translation>Importuj metadane</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1641"/>
+        <location filename="../app_window.py" line="1642"/>
         <source>Could not read project:
 {error}</source>
         <translation>Nie można odczytać projektu:
 {error}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1657"/>
+        <location filename="../app_window.py" line="1658"/>
         <source>Imported metadata from {path}</source>
         <translation>Zaimportowano metadane z {path}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1661"/>
-        <location filename="../app_window.py" line="1679"/>
+        <location filename="../app_window.py" line="1662"/>
+        <location filename="../app_window.py" line="1680"/>
         <source>Open Project</source>
         <translation>Otwórz projekt</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1679"/>
+        <location filename="../app_window.py" line="1680"/>
         <source>Could not open project:
 {error}</source>
         <translation>Nie można otworzyć projektu:
 {error}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1701"/>
+        <location filename="../app_window.py" line="1702"/>
         <source>(No Recent Projects)</source>
         <translation>(Brak ostatnich projektów)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1721"/>
-        <location filename="../app_window.py" line="1746"/>
+        <location filename="../app_window.py" line="1722"/>
+        <location filename="../app_window.py" line="1747"/>
         <source>Saved {path}</source>
         <translation>Zapisano {path}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1735"/>
+        <location filename="../app_window.py" line="1736"/>
         <source>Save Project As</source>
         <translation>Zapisz projekt jako</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1753"/>
+        <location filename="../app_window.py" line="1754"/>
         <source>Export Cut SVG</source>
         <translation>Eksportuj cięcie SVG</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1753"/>
+        <location filename="../app_window.py" line="1754"/>
         <source>SVG (*.svg)</source>
         <translation>SVG (*.svg)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1759"/>
+        <location filename="../app_window.py" line="1760"/>
         <source>Exported cut outline to {path}</source>
         <translation>Wyeksportowano kontur cięcia do {path}</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1812"/>
+        <location filename="../app_window.py" line="1813"/>
         <source>Export Print PNG (Grayscale)</source>
         <translation>Eksportuj wydruk PNG (skala szarości)</translation>
     </message>
@@ -2276,7 +2276,7 @@ Druga strona i metadane projektu pozostają nietknięte.</translation>
         <translation type="vanished">Nagraj CD na {medium}...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1924"/>
+        <location filename="../app_window.py" line="1931"/>
         <source>Record Folder to {medium}...</source>
         <translation>Nagraj folder na {medium}...</translation>
     </message>
@@ -2289,40 +2289,40 @@ Druga strona i metadane projektu pozostają nietknięte.</translation>
         <translation type="vanished">Nagraj pobrane z Telegrama na {medium}...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2158"/>
+        <location filename="../app_window.py" line="2165"/>
         <source>Switch this page to &quot;{name}&quot;? Everything currently on it is removed, and the undo history is reset.</source>
         <translation>Zmienić tę stronę na &quot;{name}&quot;? Wszystko, co się na niej obecnie znajduje, zostanie usunięte, a historia cofania zresetowana.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2162"/>
+        <location filename="../app_window.py" line="2169"/>
         <source>Empty Template</source>
         <translation>Pusty szablon</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2163"/>
+        <location filename="../app_window.py" line="2170"/>
         <source>Generated from Metadata</source>
         <translation>Wygenerowany z metadanych</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2168"/>
+        <location filename="../app_window.py" line="2175"/>
         <source>There is no automatic layout for this template yet -- it can still be used as a blank starting point.</source>
         <translation>Nie ma jeszcze automatycznego układu dla tego szablonu -- nadal można go użyć jako pustego punktu wyjścia.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3169"/>
-        <location filename="../app_window.py" line="3238"/>
-        <location filename="../app_window.py" line="3349"/>
+        <location filename="../app_window.py" line="3194"/>
+        <location filename="../app_window.py" line="3263"/>
+        <location filename="../app_window.py" line="3374"/>
         <source>Disc Label Background</source>
         <translation>Tło etykiety na płytę</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3453"/>
+        <location filename="../app_window.py" line="3478"/>
         <source>Case Insert</source>
         <translation>Wkładka</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2310"/>
         <location filename="../app_window.py" line="2317"/>
+        <location filename="../app_window.py" line="2324"/>
         <source>Download Album from Telegram Bot</source>
         <translation>Pobierz album z bota Telegram</translation>
     </message>
@@ -2331,8 +2331,8 @@ Druga strona i metadane projektu pozostają nietknięte.</translation>
         <translation type="vanished">Najpierw ustaw API ID, API Hash i nazwę użytkownika bota w Experimental &gt; Experimental Settings...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2392"/>
-        <location filename="../app_window.py" line="2396"/>
+        <location filename="../app_window.py" line="2399"/>
+        <location filename="../app_window.py" line="2403"/>
         <source>Sort into Album Folders</source>
         <translation>Posortuj na foldery albumów</translation>
     </message>
@@ -2341,33 +2341,33 @@ Druga strona i metadane projektu pozostają nietknięte.</translation>
         <translation type="vanished">Wykryto tylko jeden album -- nie ma czego sortować.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2397"/>
+        <location filename="../app_window.py" line="2404"/>
         <source>Sorted into {count} album folders.</source>
         <translation>Posortowano na {count} folderów albumów.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2516"/>
+        <location filename="../app_window.py" line="2523"/>
         <source>Restart Now</source>
         <translation>Uruchom ponownie teraz</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2517"/>
+        <location filename="../app_window.py" line="2524"/>
         <source>Later</source>
         <translation>Później</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2731"/>
+        <location filename="../app_window.py" line="2747"/>
         <source>Choose Album Folder</source>
         <translation>Wybierz folder albumu</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2746"/>
-        <location filename="../app_window.py" line="2781"/>
+        <location filename="../app_window.py" line="2762"/>
+        <location filename="../app_window.py" line="2797"/>
         <source>Burn Audio CD</source>
         <translation>Wypal płytę audio CD</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2747"/>
+        <location filename="../app_window.py" line="2763"/>
         <source>There are no audio files in that folder.</source>
         <translation>W tym folderze nie ma plików dźwiękowych.</translation>
     </message>
@@ -2376,27 +2376,27 @@ Druga strona i metadane projektu pozostają nietknięte.</translation>
         <translation type="vanished">Playlista foobar2000 jest pusta albo jej pliki są stąd nieosiągalne.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2782"/>
+        <location filename="../app_window.py" line="2798"/>
         <source>Put this album&apos;s details into the open project, ready to design its label?</source>
         <translation>Wstawić dane tego albumu do otwartego projektu, żeby zaprojektować etykietę?</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2901"/>
-        <location filename="../app_window.py" line="2911"/>
+        <location filename="../app_window.py" line="2926"/>
+        <location filename="../app_window.py" line="2936"/>
         <source>Auto-Layout Disc Label</source>
         <translation>Ułóż etykietę płyty automatycznie</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2206"/>
-        <location filename="../app_window.py" line="2902"/>
-        <location filename="../app_window.py" line="3650"/>
+        <location filename="../app_window.py" line="2213"/>
+        <location filename="../app_window.py" line="2927"/>
+        <location filename="../app_window.py" line="3675"/>
         <source>Fill in the album and artist in the Tools panel&apos;s Metadata... first.</source>
         <translation>Uzupełnij najpierw album i wykonawcę w Metadanych... na panelu narzędzi.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2218"/>
-        <location filename="../app_window.py" line="2913"/>
-        <location filename="../app_window.py" line="3660"/>
+        <location filename="../app_window.py" line="2225"/>
+        <location filename="../app_window.py" line="2938"/>
+        <location filename="../app_window.py" line="3685"/>
         <source>No cover art could be found for this album, and the layout is built around it. Add an image yourself, or fetch one with the Metadata dialog&apos;s lookup.</source>
         <translation>Nie udało się znaleźć okładki dla tego albumu, a cały układ jest na niej oparty. Dodaj obraz samodzielnie albo pobierz okładkę wyszukiwarką w oknie Metadane...</translation>
     </message>
@@ -2409,7 +2409,7 @@ Druga strona i metadane projektu pozostają nietknięte.</translation>
         <translation type="vanished">Nie udało się znaleźć okładki dla tego albumu, a cały układ jest na niej oparty. Dodaj obraz samodzielnie albo pobierz okładkę wyszukiwarką w Projekt &gt; Metadane...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2921"/>
+        <location filename="../app_window.py" line="2946"/>
         <source>Auto-Layout</source>
         <translation>Układ automatyczny</translation>
     </message>
@@ -2422,14 +2422,14 @@ The project&apos;s metadata is left alone.</source>
 Metadane projektu pozostaną nietknięte.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3297"/>
-        <location filename="../app_window.py" line="3504"/>
+        <location filename="../app_window.py" line="3322"/>
+        <location filename="../app_window.py" line="3529"/>
         <source>Lay Out J-Card</source>
         <translation>Ułożenie okładki J-card</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3299"/>
-        <location filename="../app_window.py" line="3506"/>
+        <location filename="../app_window.py" line="3324"/>
+        <location filename="../app_window.py" line="3531"/>
         <source>J-Card</source>
         <translation>Okładka J-card</translation>
     </message>
@@ -2442,25 +2442,25 @@ The cover page and the project&apos;s metadata are left alone.</source>
 Strona okładki i metadane projektu pozostaną nietknięte.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3189"/>
-        <location filename="../app_window.py" line="3248"/>
-        <location filename="../app_window.py" line="3369"/>
+        <location filename="../app_window.py" line="3214"/>
+        <location filename="../app_window.py" line="3273"/>
+        <location filename="../app_window.py" line="3394"/>
         <source>Lay Out Disc Label</source>
         <translation>Ułożenie etykiety płyty</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3198"/>
+        <location filename="../app_window.py" line="3223"/>
         <source>Cover Art</source>
         <translation>Okładka</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="3209"/>
-        <location filename="../app_window.py" line="3260"/>
+        <location filename="../app_window.py" line="3234"/>
+        <location filename="../app_window.py" line="3285"/>
         <source>MiniDisc Logo</source>
         <translation>Logo MiniDisc</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1765"/>
+        <location filename="../app_window.py" line="1766"/>
         <source>Export Print PNG</source>
         <translation>Eksportuj wydruk PNG</translation>
     </message>
@@ -2469,14 +2469,14 @@ Strona okładki i metadane projektu pozostaną nietknięte.</translation>
         <translation type="vanished">MDTools - Studio MiniDisc</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1765"/>
-        <location filename="../app_window.py" line="1812"/>
+        <location filename="../app_window.py" line="1766"/>
+        <location filename="../app_window.py" line="1813"/>
         <source>PNG (*.png)</source>
         <translation>PNG (*.png)</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="1771"/>
-        <location filename="../app_window.py" line="1824"/>
+        <location filename="../app_window.py" line="1772"/>
+        <location filename="../app_window.py" line="1825"/>
         <source>Exported print artwork to {path}</source>
         <translation>Wyeksportowano grafikę do druku do {path}</translation>
     </message>
@@ -2489,42 +2489,42 @@ Strona okładki i metadane projektu pozostaną nietknięte.</translation>
         <translation type="vanished">Najpierw ustaw nazwę użytkownika bota w Experimental &gt; Experimental Settings...</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2319"/>
+        <location filename="../app_window.py" line="2326"/>
         <source>This build has no Telegram API credentials. Register an app at my.telegram.org and add its API ID and API Hash to settings.ini to sign in.</source>
         <translation>Ta wersja nie ma danych dostępowych API Telegrama. Zarejestruj aplikację na my.telegram.org i dodaj jej API ID oraz API Hash do settings.ini, aby móc się zalogować.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2387"/>
+        <location filename="../app_window.py" line="2394"/>
         <source>These tracks all belong to one album -- there is nothing to separate.</source>
         <translation>Wszystkie te utwory należą do jednego albumu -- nie ma czego rozdzielać.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2389"/>
+        <location filename="../app_window.py" line="2396"/>
         <source>Everything is already sorted into album folders.</source>
         <translation>Wszystko jest już posortowane na foldery albumów.</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2465"/>
+        <location filename="../app_window.py" line="2472"/>
         <source>Save as Template</source>
         <translation>Zapisz jako szablon</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2465"/>
+        <location filename="../app_window.py" line="2472"/>
         <source>Template name:</source>
         <translation>Nazwa szablonu:</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2484"/>
+        <location filename="../app_window.py" line="2491"/>
         <source>Saved template &apos;{name}&apos;</source>
         <translation>Zapisano szablon &apos;{name}&apos;</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2493"/>
+        <location filename="../app_window.py" line="2500"/>
         <source>Language</source>
         <translation>Język</translation>
     </message>
     <message>
-        <location filename="../app_window.py" line="2512"/>
+        <location filename="../app_window.py" line="2519"/>
         <source>Language Changed</source>
         <translation>Zmieniono język</translation>
     </message>
@@ -2554,37 +2554,37 @@ Strona okładki i metadane projektu pozostaną nietknięte.</translation>
 <context>
     <name>MetadataDialog</name>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="143"/>
+        <location filename="../panels/metadata_dialog.py" line="144"/>
         <source>Project Metadata</source>
         <translation>Metadane projektu</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="155"/>
+        <location filename="../panels/metadata_dialog.py" line="156"/>
         <source>Album title</source>
         <translation>Tytuł albumu</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="158"/>
+        <location filename="../panels/metadata_dialog.py" line="159"/>
         <source>Artist</source>
         <translation>Wykonawca</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="173"/>
+        <location filename="../panels/metadata_dialog.py" line="174"/>
         <source>Import from Folder...</source>
         <translation>Importuj z folderu...</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="176"/>
+        <location filename="../panels/metadata_dialog.py" line="177"/>
         <source>Fills these fields from an album folder&apos;s own tags, then looks up its cover art.</source>
         <translation>Wypełnia te pola tagami z folderu albumu, a potem wyszukuje jego okładkę.</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="184"/>
+        <location filename="../panels/metadata_dialog.py" line="185"/>
         <source>(unspecified)</source>
         <translation>(nieokreślony)</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="186"/>
+        <location filename="../panels/metadata_dialog.py" line="187"/>
         <source>Year of release</source>
         <translation>Rok wydania</translation>
     </message>
@@ -2595,12 +2595,12 @@ cover</source>
 okładki</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="160"/>
+        <location filename="../panels/metadata_dialog.py" line="161"/>
         <source>Lookup Track List...</source>
         <translation>Wyszukaj listę utworów...</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="163"/>
+        <location filename="../panels/metadata_dialog.py" line="164"/>
         <source>Fetch the track list, release year and cover art from the iTunes Search API, using Album + Artist above. A fetched cover is saved for Tools &gt; Insert Asset... to pick up.</source>
         <translation>Pobiera listę utworów, rok wydania i okładkę z iTunes Search API, korzystając z pól Album i Artysta powyżej. Pobrana okładka zostaje zapisana i będzie dostępna w Narzędzia &gt; Wstaw zasób...</translation>
     </message>
@@ -2617,75 +2617,75 @@ okładki</translation>
         <translation type="vanished">Kliknij, żeby samemu wskazać okładkę — przydaje się, gdy pobrana jest nie ta.</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="196"/>
+        <location filename="../panels/metadata_dialog.py" line="197"/>
         <source>Tracks:</source>
         <translation>Utwory:</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="200"/>
+        <location filename="../panels/metadata_dialog.py" line="201"/>
         <source>Title</source>
         <translation>Tytuł</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="200"/>
+        <location filename="../panels/metadata_dialog.py" line="201"/>
         <source>Time (mm:ss, optional)</source>
         <translation>Czas (mm:ss, opcjonalnie)</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="200"/>
+        <location filename="../panels/metadata_dialog.py" line="201"/>
         <source>Artist (only on a compilation)</source>
         <translation>Wykonawca (tylko na składance)</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="208"/>
+        <location filename="../panels/metadata_dialog.py" line="209"/>
         <source>Add Track</source>
         <translation>Dodaj utwór</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="210"/>
+        <location filename="../panels/metadata_dialog.py" line="211"/>
         <source>Remove Selected</source>
         <translation>Usuń zaznaczone</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="212"/>
+        <location filename="../panels/metadata_dialog.py" line="213"/>
         <source>Move Up</source>
         <translation>Przesuń w górę</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="214"/>
+        <location filename="../panels/metadata_dialog.py" line="215"/>
         <source>Move Down</source>
         <translation>Przesuń w dół</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="223"/>
+        <location filename="../panels/metadata_dialog.py" line="224"/>
         <source>Upload Tracklist</source>
         <translation>Wyślij listę utworów</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="226"/>
+        <location filename="../panels/metadata_dialog.py" line="227"/>
         <source>Writes the album title and every track name onto the MiniDisc itself, using the MDRem infrared adapter. Takes several minutes.</source>
         <translation>Zapisuje tytuł albumu i nazwy wszystkich utworów na samej płycie MiniDisc, przy pomocy przystawki MDRem na podczerwień. Trwa kilka minut.</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="243"/>
-        <location filename="../panels/metadata_dialog.py" line="258"/>
-        <location filename="../panels/metadata_dialog.py" line="425"/>
+        <location filename="../panels/metadata_dialog.py" line="249"/>
+        <location filename="../panels/metadata_dialog.py" line="264"/>
+        <location filename="../panels/metadata_dialog.py" line="431"/>
         <source>Lookup Track List</source>
         <translation>Wyszukaj listę utworów</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="243"/>
+        <location filename="../panels/metadata_dialog.py" line="249"/>
         <source>Fill in Artist first.</source>
         <translation>Najpierw uzupełnij pole Wykonawca.</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="320"/>
-        <location filename="../panels/metadata_dialog.py" line="330"/>
+        <location filename="../panels/metadata_dialog.py" line="326"/>
+        <location filename="../panels/metadata_dialog.py" line="336"/>
         <source>Import from Folder</source>
         <translation>Importuj z folderu</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="331"/>
+        <location filename="../panels/metadata_dialog.py" line="337"/>
         <source>No audio files were found in that folder.</source>
         <translation>Nie znaleziono plików audio w tym folderze.</translation>
     </message>
@@ -2694,22 +2694,22 @@ okładki</translation>
         <translation type="vanished">Najpierw wypełnij tytuł albumu i artystę.</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="254"/>
+        <location filename="../panels/metadata_dialog.py" line="260"/>
         <source>No album matching &quot;{album}&quot; by &quot;{artist}&quot; was found.</source>
         <translation>Nie znaleziono albumu &quot;{album}&quot; wykonawcy &quot;{artist}&quot;.</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="256"/>
+        <location filename="../panels/metadata_dialog.py" line="262"/>
         <source>No album by &quot;{artist}&quot; was found.</source>
         <translation>Nie znaleziono albumu wykonawcy „{artist}”.</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="276"/>
+        <location filename="../panels/metadata_dialog.py" line="282"/>
         <source>Select Album</source>
         <translation>Wybierz album</translation>
     </message>
     <message>
-        <location filename="../panels/metadata_dialog.py" line="277"/>
+        <location filename="../panels/metadata_dialog.py" line="283"/>
         <source>Multiple matches were found -- choose the correct one:</source>
         <translation>Znaleziono wiele wyników -- wybierz właściwy:</translation>
     </message>
@@ -2812,6 +2812,543 @@ choose one)</source>
 {error}</source>
         <translation>Nie można otworzyć projektu:
 {error}</translation>
+    </message>
+</context>
+<context>
+    <name>NetMdRecordDialog</name>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="155"/>
+        <source>Record to MiniDisc (NetMD)</source>
+        <translation>Nagraj na MiniDisc (NetMD)</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="182"/>
+        <location filename="../panels/netmd_record_dialog.py" line="195"/>
+        <source>Artist</source>
+        <translation>Wykonawca</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="183"/>
+        <source>Album</source>
+        <translation>Album</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="184"/>
+        <source>Year</source>
+        <translation>Rok</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="195"/>
+        <source>Disc</source>
+        <translation>Płyta</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="195"/>
+        <source>#</source>
+        <translation>#</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="195"/>
+        <source>Title</source>
+        <translation>Tytuł</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="195"/>
+        <source>Length</source>
+        <translation>Czas</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="202"/>
+        <source>Move Up</source>
+        <translation>Przesuń w górę</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="204"/>
+        <source>Move Down</source>
+        <translation>Przesuń w dół</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="207"/>
+        <source>Changes the order the album is recorded in.</source>
+        <translation>Zmienia kolejność, w jakiej album jest nagrywany.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="208"/>
+        <location filename="../panels/netmd_record_dialog.py" line="506"/>
+        <source>Start Disc Here</source>
+        <translation>Zacznij tu nową płytę</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="210"/>
+        <source>Split Automatically</source>
+        <translation>Podziel automatycznie</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="213"/>
+        <source>Throws away the splits placed by hand and works them out again from the running times.</source>
+        <translation>Odrzuca podziały ustawione ręcznie i wylicza je od nowa z czasów trwania.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="237"/>
+        <source>Everything above and in the Title column can be edited, and is what gets written onto the disc. Fill the Artist column in only on a compilation, where each track has its own.</source>
+        <translation>Wszystko powyżej oraz kolumnę Tytuł można edytować — to właśnie trafia na płytę. Kolumnę Wykonawca wypełnij tylko przy składance, gdzie każdy utwór ma swojego.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="244"/>
+        <source>Record across several discs</source>
+        <translation>Nagraj na kilka płyt</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="247"/>
+        <source>For an album longer than one disc. Each disc is prepared, sent and ejected on its own, and you are asked to load the next one.</source>
+        <translation>Dla albumu, który nie mieści się na jednej płycie. Każda płyta jest przygotowywana, wysyłana i wysuwana osobno, a program poprosi o włożenie kolejnej.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="255"/>
+        <source> min</source>
+        <translation> min</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="258"/>
+        <source>What one disc holds in the recording mode chosen in Settings. Fixed, not guessed -- unlike MDRem, NetMD is told which mode it is in rather than having to ask the deck to show it, so this is not something to second-guess here. Change it in Settings instead.</source>
+        <translation>Ile mieści jedna płyta w trybie nagrywania wybranym w Ustawieniach. Wartość ustalona, a nie zgadywana -- w przeciwieństwie do MDRem, NetMD wie, w jakim trybie działa, zamiast pytać o to nagrywarkę, więc nie ma tu czego poprawiać. Zmień to w Ustawieniach.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="269"/>
+        <source>One disc holds</source>
+        <translation>Jedna płyta mieści</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="300"/>
+        <source>Erase MiniDisc...</source>
+        <translation>Skasuj MiniDisc...</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="303"/>
+        <source>Start Recording</source>
+        <translation>Rozpocznij nagrywanie</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="306"/>
+        <source>Cancel</source>
+        <translation>Anuluj</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="323"/>
+        <source>Missing tools: {tools}. Recording is unavailable until they are installed.</source>
+        <translation>Brakujące narzędzia: {tools}. Nagrywanie będzie niedostępne, dopóki nie zostaną zainstalowane.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="331"/>
+        <location filename="../panels/netmd_record_dialog.py" line="702"/>
+        <source>There are no tracks to record.</source>
+        <translation>Nie ma ścieżek do nagrania.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="355"/>
+        <source>{count} tracks, {total} total.
+They will be sent to the deck over USB in this order, each already carrying its own title.</source>
+        <translation>{count} utworów, łącznie {total}.
+Zostaną wysłane do nagrywarki przez USB w tej kolejności, każdy już z własnym tytułem.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="364"/>
+        <source>The files say this is a {count}-disc album, so the disc splits below are already placed where they say.</source>
+        <translation>Pliki mówią, że to album na {count} płyt, więc podziały poniżej są już ustawione tam, gdzie one wskazują.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="463"/>
+        <source>Disc {number}: tracks {first}-{last}, {time}</source>
+        <translation>Płyta {number}: ścieżki {first}-{last}, {time}</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="474"/>
+        <source>These tracks carry no running times, so nothing here knows how full a disc is -- place the splits yourself.</source>
+        <translation>Te ścieżki nie mają czasów trwania, więc nie wiadomo, jak pełna jest płyta — ustaw podziały samodzielnie.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="479"/>
+        <source>That is {over} more than one disc holds. Split it again, or choose a longer mode in Settings and say so above.</source>
+        <translation>To o {over} więcej, niż mieści jedna płyta. Podziel album ponownie albo wybierz dłuższy tryb w Ustawieniach i zaznacz to powyżej.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="491"/>
+        <source>This is longer than the {limit} the chosen mode holds. Turn on &quot;Record across several discs&quot; below, or choose a longer mode in Settings.</source>
+        <translation>To dłużej niż {limit}, które mieści wybrany tryb. Włącz poniżej opcję &quot;Nagraj na kilku płytach&quot; albo wybierz dłuższy tryb w Ustawieniach.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="506"/>
+        <source>Do Not Start Disc Here</source>
+        <translation>Nie zaczynaj tu płyty</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="611"/>
+        <source>Stop</source>
+        <translation>Zatrzymaj</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="619"/>
+        <source>This album takes {count} discs. Each one is prepared, sent and ejected on its own, and you will be asked to load the next.
+
+Recording replaces whatever is on a disc, and nothing about it can be undone. Make sure the first disc is loaded and its write-protect tab is open, then continue.</source>
+        <translation>Ten album zajmuje {count} płyt. Każda z nich jest przygotowywana, wysyłana i wysuwana osobno, a program poprosi o włożenie kolejnej.
+
+Nagrywanie zastępuje wszystko, co jest na płycie, i nie da się tego cofnąć. Upewnij się, że pierwsza płyta jest włożona, a jej zabezpieczenie przed zapisem jest otwarte, po czym kontynuuj.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="626"/>
+        <source>Recording replaces whatever is on the disc, and nothing about it can be undone.
+
+Make sure the right disc is loaded and its write-protect tab is open, then continue.</source>
+        <translation>Nagrywanie zastąpi wszystko, co jest na płycie, i nie da się tego cofnąć.
+
+Upewnij się, że włożona jest właściwa płyta, a blokada zapisu jest otwarta, i kontynuuj.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="644"/>
+        <source>Cancelled.</source>
+        <translation>Anulowano.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="654"/>
+        <source>Preparing disc {number}...</source>
+        <translation>Przygotowywanie płyty {number}...</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="656"/>
+        <source>Preparing the recording...</source>
+        <translation>Przygotowywanie nagrania...</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="674"/>
+        <source>{before} -&gt; {after}</source>
+        <translation>{before} -&gt; {after}</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="679"/>
+        <source>These titles cannot be written to the disc as typed and will be shortened to plain ASCII:
+
+{list}
+
+Continue?</source>
+        <translation>Tych tytułów nie da się zapisać na płycie w takiej postaci, w jakiej zostały wpisane -- zostaną skrócone do zwykłego ASCII:
+
+{list}
+
+Kontynuować?</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="688"/>
+        <source>Nothing can be recorded.</source>
+        <translation>Nie ma nic do nagrania.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="692"/>
+        <source>Track {number} could not be read: {detail}</source>
+        <translation>Nie udało się odczytać utworu {number}: {detail}</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="696"/>
+        <source>A MiniDisc holds at most 99 tracks, and this is {count}.</source>
+        <translation>MiniDisc mieści maksymalnie 99 utworów, a tu jest ich {count}.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="700"/>
+        <source>This is {over} longer than the chosen mode holds.</source>
+        <translation>To o {over} więcej, niż mieści wybrany tryb.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="707"/>
+        <source>Preparing audio...</source>
+        <translation>Przygotowywanie dźwięku...</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="709"/>
+        <source>Sending to the deck over USB...</source>
+        <translation>Wysyłanie do nagrywarki przez USB...</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="719"/>
+        <source>Sending track {index} of {total}: {title}</source>
+        <translation>Wysyłanie utworu {index} z {total}: {title}</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="730"/>
+        <source>Stopped.</source>
+        <translation>Zatrzymano.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="738"/>
+        <source>All {count} discs are recorded and titled.</source>
+        <translation>Wszystkie {count} płyty zostały nagrane i zatytułowane.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="740"/>
+        <source>Recording finished. The disc is titled.</source>
+        <translation>Nagrywanie zakończone. Płyta została zatytułowana.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="754"/>
+        <location filename="../panels/netmd_record_dialog.py" line="766"/>
+        <location filename="../panels/netmd_record_dialog.py" line="835"/>
+        <source>Close</source>
+        <translation>Zamknij</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="762"/>
+        <source>Stopped after disc {number}. The discs already sent are finished.</source>
+        <translation>Zatrzymano po płycie {number}. Płyty już wysłane są ukończone.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="781"/>
+        <source>Disc {done} of {count} is written and titled.
+
+Put a blank disc in the deck and close the tray, then continue to record disc {next}.</source>
+        <translation>Płyta {done} z {count} została nagrana i zatytułowana.
+
+Włóż czystą płytę do nagrywarki i zamknij szufladę, a następnie kontynuuj nagrywanie płyty {next}.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="820"/>
+        <location filename="../panels/netmd_record_dialog.py" line="830"/>
+        <source>Erase MiniDisc</source>
+        <translation>Skasuj MiniDisc</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="821"/>
+        <source>This clears whatever disc is currently in the deck, and cannot be undone. Continue?</source>
+        <translation>To wymaże wszystko na płycie aktualnie znajdującej się w nagrywarce i nie da się tego cofnąć. Kontynuować?</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="871"/>
+        <source>Stop now? A track already being sent will finish or fail on its own; nothing after it goes out.</source>
+        <translation>Zatrzymać teraz? Utwór, który jest właśnie wysyłany, zakończy się sam (powodzeniem lub niepowodzeniem); nic po nim nie zostanie wysłane.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_record_dialog.py" line="879"/>
+        <source>Stopping...</source>
+        <translation>Zatrzymywanie...</translation>
+    </message>
+</context>
+<context>
+    <name>NetMdRemoteDialog</name>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="54"/>
+        <source>Remote (NetMD)</source>
+        <translation>Pilot (NetMD)</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="62"/>
+        <source>Transport</source>
+        <translation>Transport</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="64"/>
+        <source>|&lt;&lt;</source>
+        <translation>|&lt;&lt;</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="65"/>
+        <location filename="../panels/netmd_remote_dialog.py" line="79"/>
+        <location filename="../panels/netmd_remote_dialog.py" line="145"/>
+        <source>Play</source>
+        <translation>Odtwórz</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="66"/>
+        <source>&gt;&gt;|</source>
+        <translation>&gt;&gt;|</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="67"/>
+        <source>&lt;&lt;</source>
+        <translation>&lt;&lt;</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="68"/>
+        <location filename="../panels/netmd_remote_dialog.py" line="152"/>
+        <source>Pause</source>
+        <translation>Pauza</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="69"/>
+        <source>&gt;&gt;</source>
+        <translation>&gt;&gt;</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="70"/>
+        <location filename="../panels/netmd_remote_dialog.py" line="155"/>
+        <source>Stop</source>
+        <translation>Zatrzymaj</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="71"/>
+        <source>Restart</source>
+        <translation>Od nowa</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="74"/>
+        <source>Play a Track</source>
+        <translation>Odtwórz utwór</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="84"/>
+        <source>Play Mode</source>
+        <translation>Tryb odtwarzania</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="87"/>
+        <source>Single</source>
+        <translation>Pojedynczo</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="88"/>
+        <source>Repeat</source>
+        <translation>Powtarzanie</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="89"/>
+        <source>Shuffle</source>
+        <translation>Losowo</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="91"/>
+        <source>Set</source>
+        <translation>Ustaw</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="117"/>
+        <source>Missing tools: {tools}.</source>
+        <translation>Brakujące narzędzia: {tools}.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="123"/>
+        <source>Not connected: {error}</source>
+        <translation>Brak połączenia: {error}</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="128"/>
+        <source>Connected -- {title} ({count} tracks).</source>
+        <translation>Połączono -- {title} ({count} utworów).</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="129"/>
+        <source>(untitled disc)</source>
+        <translation>(płyta bez tytułu)</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="140"/>
+        <source>{action} failed: {error}</source>
+        <translation>{action} nie powiodło się: {error}</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="142"/>
+        <source>Done: {action}</source>
+        <translation>Wykonano: {action}</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="149"/>
+        <source>Play track {number}</source>
+        <translation>Odtwórz utwór {number}</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="158"/>
+        <source>Fast forward</source>
+        <translation>Przewijanie do przodu</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="161"/>
+        <source>Rewind</source>
+        <translation>Przewijanie do tyłu</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="164"/>
+        <source>Next track</source>
+        <translation>Następny utwór</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="167"/>
+        <source>Previous track</source>
+        <translation>Poprzedni utwór</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_remote_dialog.py" line="170"/>
+        <source>Restart track</source>
+        <translation>Odtwórz utwór od nowa</translation>
+    </message>
+</context>
+<context>
+    <name>NetMdUploadDialog</name>
+    <message>
+        <location filename="../panels/netmd_upload_dialog.py" line="111"/>
+        <source>Write Titles over NetMD</source>
+        <translation>Zapisz tytuły przez NetMD</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_upload_dialog.py" line="151"/>
+        <source>Write Titles</source>
+        <translation>Zapisz tytuły</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_upload_dialog.py" line="154"/>
+        <location filename="../panels/netmd_upload_dialog.py" line="220"/>
+        <source>Close</source>
+        <translation>Zamknij</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_upload_dialog.py" line="172"/>
+        <source>{count} track title(s) and the disc title will be written over USB.</source>
+        <translation>{count} tytuł(y) utworów oraz tytuł płyty zostaną zapisane przez USB.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_upload_dialog.py" line="185"/>
+        <source>A MiniDisc holds plain ASCII only, so these are written differently: {changes}</source>
+        <translation>MiniDisc obsługuje tylko zwykły ASCII, więc te tytuły zostaną zapisane inaczej: {changes}</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_upload_dialog.py" line="201"/>
+        <source>netmdcli is missing from this build, so nothing can be written.</source>
+        <translation>W tej wersji brakuje netmdcli, więc nic nie można zapisać.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_upload_dialog.py" line="207"/>
+        <source>Reading the disc...</source>
+        <translation>Odczytywanie płyty...</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_upload_dialog.py" line="220"/>
+        <source>Stop</source>
+        <translation>Zatrzymaj</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_upload_dialog.py" line="231"/>
+        <source>The disc has fewer tracks than the album, so these are not written: {tracks}.</source>
+        <translation>Płyta ma mniej utworów niż album, więc te nie zostaną zapisane: {tracks}.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_upload_dialog.py" line="238"/>
+        <source>Writing {index} of {total}: {what}</source>
+        <translation>Zapisywanie {index} z {total}: {what}</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_upload_dialog.py" line="246"/>
+        <source>The titles could not be written: {error}</source>
+        <translation>Nie udało się zapisać tytułów: {error}</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_upload_dialog.py" line="252"/>
+        <source>The titles are on the disc.</source>
+        <translation>Tytuły znajdują się na płycie.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_upload_dialog.py" line="253"/>
+        <source>Titles written.</source>
+        <translation>Tytuły zapisane.</translation>
+    </message>
+    <message>
+        <location filename="../panels/netmd_upload_dialog.py" line="285"/>
+        <source>Stopping...</source>
+        <translation>Zatrzymywanie...</translation>
     </message>
 </context>
 <context>
@@ -3193,48 +3730,48 @@ choose one)</source>
         <translation type="vanished">Nagrywanie na MiniDisc z foobar2000</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="216"/>
-        <location filename="../panels/record_dialog.py" line="229"/>
+        <location filename="../panels/record_dialog.py" line="221"/>
+        <location filename="../panels/record_dialog.py" line="234"/>
         <source>Artist</source>
         <translation>Wykonawca</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="217"/>
+        <location filename="../panels/record_dialog.py" line="222"/>
         <source>Album</source>
         <translation>Album</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="218"/>
+        <location filename="../panels/record_dialog.py" line="223"/>
         <source>Year</source>
         <translation>Rok</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="229"/>
+        <location filename="../panels/record_dialog.py" line="234"/>
         <source>#</source>
         <translation>#</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="229"/>
+        <location filename="../panels/record_dialog.py" line="234"/>
         <source>Title</source>
         <translation>Tytuł</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="229"/>
+        <location filename="../panels/record_dialog.py" line="234"/>
         <source>Length</source>
         <translation>Czas</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="229"/>
+        <location filename="../panels/record_dialog.py" line="234"/>
         <source>Disc</source>
         <translation>Płyta</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="236"/>
+        <location filename="../panels/record_dialog.py" line="241"/>
         <source>Move Up</source>
         <translation>Przesuń w górę</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="238"/>
+        <location filename="../panels/record_dialog.py" line="243"/>
         <source>Move Down</source>
         <translation>Przesuń w dół</translation>
     </message>
@@ -3243,80 +3780,85 @@ choose one)</source>
         <translation type="vanished">Zmienia kolejność, w jakiej album zostanie nagrany. Przy starcie nagrywania playlista foobara2000 jest przebudowywana pod tę kolejność, więc ścieżki muszą być plikami na dysku.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="242"/>
-        <location filename="../panels/record_dialog.py" line="609"/>
+        <location filename="../panels/record_dialog.py" line="247"/>
+        <location filename="../panels/record_dialog.py" line="614"/>
         <source>Start Disc Here</source>
         <translation>Zacznij tu nową płytę</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="245"/>
+        <location filename="../panels/record_dialog.py" line="250"/>
         <source>Makes the selected track the first one on a new disc, instead of wherever the split was worked out to go.</source>
         <translation>Zaznaczona ścieżka staje się pierwszą na nowej płycie, zamiast podziału wyliczonego automatycznie.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="247"/>
+        <location filename="../panels/record_dialog.py" line="252"/>
         <source>Split Automatically</source>
         <translation>Podziel automatycznie</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="250"/>
+        <location filename="../panels/record_dialog.py" line="255"/>
         <source>Throws away the splits placed by hand and works them out again from the running times.</source>
         <translation>Odrzuca podziały ustawione ręcznie i wylicza je od nowa z czasów trwania.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="278"/>
+        <location filename="../panels/record_dialog.py" line="283"/>
         <source>Everything above and in the Title column can be edited, and is what gets written onto the disc. Fill the Artist column in only on a compilation, where each track has its own.</source>
         <translation>Wszystko powyżej oraz kolumnę Tytuł można edytować — to właśnie trafia na płytę. Kolumnę Wykonawca wypełnij tylko przy składance, gdzie każdy utwór ma swojego.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="285"/>
+        <location filename="../panels/record_dialog.py" line="290"/>
         <source>Mark tracks through the adapter</source>
         <translation>Znaczniki ścieżek przez przystawkę</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="289"/>
+        <location filename="../panels/record_dialog.py" line="294"/>
         <source>Sends a track mark at each track change instead of relying on the deck hearing a gap. This is the only thing that splits a gapless album correctly -- but turn LEVEL-SYNC off on the deck when using it, or both will mark the same boundary and leave a stray sliver of a track between them.</source>
         <translation>Wysyła znacznik ścieżki przy każdej zmianie utworu, zamiast polegać na tym, że magnetofon usłyszy przerwę. Tylko to poprawnie dzieli album grany bezprzerwowo — ale wyłącz wtedy LEVEL-SYNC w magnetofonie, inaczej oba oznaczą tę samą granicę i zostanie między nimi szczątkowa ścieżka.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="297"/>
+        <location filename="../panels/record_dialog.py" line="302"/>
         <source>Record across several discs</source>
         <translation>Nagraj na kilka płyt</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="300"/>
+        <location filename="../panels/record_dialog.py" line="305"/>
         <source>For an album longer than one disc. Each disc is recorded, titled and ejected on its own, and you are asked to load the next one -- so nothing waits for you between the last track and the titles being written.</source>
         <translation>Dla albumu dłuższego niż jedna płyta. Każda płyta jest osobno nagrywana, tytułowana i wysuwana, a program prosi o kolejną — między ostatnim utworem a zapisem tytułów nic nie czeka na Ciebie.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="309"/>
+        <location filename="../panels/record_dialog.py" line="314"/>
         <source> min</source>
         <translation> min</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="312"/>
+        <location filename="../panels/record_dialog.py" line="317"/>
         <source>How long one disc holds: 80 in SP, 160 in LP2, 320 in LP4. Which mode the deck is in can neither be read nor set from here, so this is a number you tell it, not one it finds out.</source>
         <translation>Ile mieści jedna płyta: 80 w SP, 160 w LP2, 320 w LP4. Trybu magnetofonu nie da się stąd ani odczytać, ani ustawić, więc tę liczbę podajesz Ty, a nie program.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="317"/>
+        <location filename="../panels/record_dialog.py" line="322"/>
         <source>One disc holds</source>
         <translation>Jedna płyta mieści</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="348"/>
+        <location filename="../panels/record_dialog.py" line="353"/>
         <source>Erase MiniDisc...</source>
         <translation>Skasuj MiniDisc...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="351"/>
+        <location filename="../panels/record_dialog.py" line="356"/>
         <source>Start Recording</source>
         <translation>Rozpocznij nagrywanie</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="354"/>
+        <location filename="../panels/record_dialog.py" line="359"/>
         <source>Cancel</source>
         <translation>Anuluj</translation>
+    </message>
+    <message>
+        <location filename="../panels/record_dialog.py" line="1239"/>
+        <source>Stopping...</source>
+        <translation>Zatrzymywanie...</translation>
     </message>
     <message>
         <source>Hide</source>
@@ -3327,17 +3869,17 @@ choose one)</source>
         <translation type="vanished">Ukryj to okno i nagrywaj dalej w tle — użyj „Pokaż okno nagrywania” w pasku na dole głównego okna, żeby je przywrócić.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="822"/>
+        <location filename="../panels/record_dialog.py" line="853"/>
         <source>Preparing track {index} of {total}: {name}...</source>
         <translation>Przygotowywanie ścieżki {index} z {total}: {name}...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="889"/>
+        <location filename="../panels/record_dialog.py" line="919"/>
         <source>{title} -- {elapsed} of {total}</source>
         <translation>{title} — {elapsed} z {total}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="916"/>
+        <location filename="../panels/record_dialog.py" line="946"/>
         <source>Recording finished. Writing titles now -- leave the adapter pointing at the deck.</source>
         <translation>Nagrywanie zakończone. Zapisywanie tytułów -- zostaw adapter skierowany na magnetofon.</translation>
     </message>
@@ -3360,7 +3902,7 @@ It will be recorded to the disc in this order, then titled from these names.</so
 Zostaną nagrane na płytę w tej kolejności, a potem nazwane według tych tytułów.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="420"/>
+        <location filename="../panels/record_dialog.py" line="425"/>
         <source>The files say this is a {count}-disc album, so the disc splits below are already placed where they say.</source>
         <translation>Pliki mówią, że to album na {count} płyt, więc podziały poniżej są już ustawione tam, gdzie one wskazują.</translation>
     </message>
@@ -3369,42 +3911,42 @@ Zostaną nagrane na płytę w tej kolejności, a potem nazwane według tych tytu
         <translation type="vanished">Playlista w foobarze2000 jest teraz w tej kolejności — własnej kolejności albumu, wziętej z plików.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="925"/>
+        <location filename="../panels/record_dialog.py" line="955"/>
         <source>Disc {number} recorded. Writing its titles now -- leave the adapter pointing at the deck.</source>
         <translation>Płyta {number} nagrana. Trwa zapis jej tytułów — zostaw przystawkę wycelowaną w magnetofon.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="964"/>
+        <location filename="../panels/record_dialog.py" line="994"/>
         <source>Recording finished. Titles written and the disc ejected.</source>
         <translation>Nagrywanie zakończone. Tytuły zapisane, płyta wysunięta.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="968"/>
+        <location filename="../panels/record_dialog.py" line="998"/>
         <source>Recording finished, but the titles could not be written. The disc itself is fine -- the titles can be written again from Tools &gt; Metadata...</source>
         <translation>Nagrywanie zakończone, ale nie udało się zapisać tytułów. Sama płyta jest w porządku -- tytuły można zapisać ponownie z Narzędzia &gt; Metadane...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="981"/>
+        <location filename="../panels/record_dialog.py" line="1011"/>
         <source>Recording finished.</source>
         <translation>Nagrywanie zakończone.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="993"/>
+        <location filename="../panels/record_dialog.py" line="1023"/>
         <source>Disc {number} was recorded, but its titles could not be written, so the run stopped there. The disc itself is fine -- the titles can be written again from Tools &gt; Metadata...</source>
         <translation>Płyta {number} została nagrana, ale nie udało się zapisać jej tytułów, więc na tym stanęło. Sama płyta jest w porządku — tytuły można zapisać ponownie z Narzędzia &gt; Metadane...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="1002"/>
+        <location filename="../panels/record_dialog.py" line="1032"/>
         <source>All {count} discs are recorded, titled and ejected.</source>
         <translation>Wszystkie płyty ({count}) są nagrane, otytułowane i wysunięte.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="1008"/>
+        <location filename="../panels/record_dialog.py" line="1038"/>
         <source>Stopped after disc {number}. The discs already recorded are finished and titled.</source>
         <translation>Zatrzymano po płycie {number}. Płyty już nagrane są gotowe i otytułowane.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="1023"/>
+        <location filename="../panels/record_dialog.py" line="1053"/>
         <source>Disc {done} of {count} is written, titled and ejected.
 
 Put a blank disc in the deck and close the tray, then continue to record disc {next}.</source>
@@ -3421,25 +3963,25 @@ Włóż czystą płytę do magnetofonu, zamknij kieszeń i przejdź do nagrywani
         <translation type="vanished">foobar2000: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="701"/>
+        <location filename="../panels/record_dialog.py" line="706"/>
         <source>Stop</source>
         <translation>Zatrzymaj</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="739"/>
+        <location filename="../panels/record_dialog.py" line="755"/>
         <source>Recording started -- waiting for the first track...</source>
         <translation>Nagrywanie rozpoczęte — czekam na pierwszy utwór...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="162"/>
-        <location filename="../panels/record_dialog.py" line="761"/>
-        <location filename="../panels/record_dialog.py" line="790"/>
-        <location filename="../panels/record_dialog.py" line="1021"/>
+        <location filename="../panels/record_dialog.py" line="163"/>
+        <location filename="../panels/record_dialog.py" line="793"/>
+        <location filename="../panels/record_dialog.py" line="822"/>
+        <location filename="../panels/record_dialog.py" line="1051"/>
         <source>Record to MiniDisc</source>
         <translation>Nagrywanie na MiniDisc</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="756"/>
+        <location filename="../panels/record_dialog.py" line="788"/>
         <source>Recording replaces whatever is on the disc, and nothing about it can be undone.
 
 Make sure the right disc is loaded and its write-protect tab is open, then continue.</source>
@@ -3448,59 +3990,59 @@ Make sure the right disc is loaded and its write-protect tab is open, then conti
 Upewnij się, że włożona jest właściwa płyta, a blokada zapisu jest otwarta, i kontynuuj.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="561"/>
+        <location filename="../panels/record_dialog.py" line="566"/>
         <source>Disc {number}: tracks {first}-{last}, {time}</source>
         <translation>Płyta {number}: ścieżki {first}-{last}, {time}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="241"/>
+        <location filename="../panels/record_dialog.py" line="246"/>
         <source>Changes the order the album is recorded in.</source>
         <translation>Zmienia kolejność, w jakiej album jest nagrywany.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="370"/>
+        <location filename="../panels/record_dialog.py" line="375"/>
         <source>There are no tracks to record.</source>
         <translation>Nie ma ścieżek do nagrania.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="409"/>
+        <location filename="../panels/record_dialog.py" line="414"/>
         <source>{count} tracks, {total} total.
 They will be recorded to the disc in this order, then titled from these names.</source>
         <translation>{count} ścieżek, {total} łącznie.
 Zostaną nagrane na płytę w tej kolejności, a potem otytułowane tymi nazwami.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="572"/>
+        <location filename="../panels/record_dialog.py" line="577"/>
         <source>These tracks carry no running times, so nothing here knows how full a disc is -- place the splits yourself.</source>
         <translation>Te ścieżki nie mają czasów trwania, więc nie wiadomo, jak pełna jest płyta — ustaw podziały samodzielnie.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="577"/>
+        <location filename="../panels/record_dialog.py" line="582"/>
         <source>That is {over} more than one disc holds. Split it again, or set the deck to a longer mode and say so above.</source>
         <translation>To o {over} więcej, niż mieści jedna płyta. Podziel inaczej albo ustaw magnetofon na dłuższy tryb i podaj go powyżej.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="591"/>
+        <location filename="../panels/record_dialog.py" line="596"/>
         <source>This is longer than the {limit} an MD holds in SP mode. Set the deck to LP2 first, turn on &quot;Record across several discs&quot; below, or the recording will be cut short.</source>
         <translation>To więcej niż {limit}, które mieści płyta MD w trybie SP. Ustaw magnetofon na LP2, włącz poniżej „Nagraj na kilka płyt” albo nagranie zostanie urwane.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="609"/>
+        <location filename="../panels/record_dialog.py" line="614"/>
         <source>Do Not Start Disc Here</source>
         <translation>Nie zaczynaj tu płyty</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="732"/>
+        <location filename="../panels/record_dialog.py" line="765"/>
         <source>Could not decode the album for playback: {error}</source>
         <translation>Nie udało się zdekodować albumu do odtwarzania: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="737"/>
+        <location filename="../panels/record_dialog.py" line="753"/>
         <source>Recording disc {number} -- waiting for the first track...</source>
         <translation>Nagrywanie płyty {number} — czekam na pierwszą ścieżkę...</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="749"/>
+        <location filename="../panels/record_dialog.py" line="781"/>
         <source>This album takes {count} discs. Each one is recorded, titled and ejected on its own, and you will be asked to load the next.
 
 Recording replaces whatever is on a disc, and nothing about it can be undone. Make sure the first disc is loaded and its write-protect tab is open, then continue.</source>
@@ -3529,13 +4071,13 @@ Nagrywanie zastępuje to, co jest na płycie, i nie da się tego cofnąć. Upewn
         <translation type="vanished">Nie znaleziono foobara2000, więc nie da się zmienić kolejności jego playlisty. Podaj jego lokalizację w Okno &gt; Ustawienia... albo ustaw kolejność bezpośrednio w foobarze2000.</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="783"/>
-        <location filename="../panels/record_dialog.py" line="1135"/>
+        <location filename="../panels/record_dialog.py" line="815"/>
+        <location filename="../panels/record_dialog.py" line="1165"/>
         <source>MDRem: {error}</source>
         <translation>MDRem: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="792"/>
+        <location filename="../panels/record_dialog.py" line="824"/>
         <source>The deck was told to start recording.
 
 Is it now showing record-pause (REC lit, paused)?</source>
@@ -3544,7 +4086,7 @@ Is it now showing record-pause (REC lit, paused)?</source>
 Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="802"/>
+        <location filename="../panels/record_dialog.py" line="834"/>
         <source>Cancelled -- the deck was not recording.</source>
         <translation>Anulowano — magnetofon nie nagrywał.</translation>
     </message>
@@ -3553,19 +4095,19 @@ Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
         <translation type="vanished">Utracono łączność z foobar2000: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="868"/>
+        <location filename="../panels/record_dialog.py" line="898"/>
         <source>Disc {disc} of {discs}, track {index} of {count}: {title} -- {elapsed} of {total}</source>
         <translation>Płyta {disc} z {discs}, ścieżka {index} z {count}: {title} — {elapsed} z {total}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="878"/>
+        <location filename="../panels/record_dialog.py" line="908"/>
         <source>Recording {index} of {count}: {title} -- {elapsed} of {total}</source>
         <translation>Nagrywanie {index} z {count}: {title} — {elapsed} z {total}</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="913"/>
-        <location filename="../panels/record_dialog.py" line="1036"/>
-        <location filename="../panels/record_dialog.py" line="1152"/>
+        <location filename="../panels/record_dialog.py" line="943"/>
+        <location filename="../panels/record_dialog.py" line="1066"/>
+        <location filename="../panels/record_dialog.py" line="1182"/>
         <source>Close</source>
         <translation>Zamknij</translation>
     </message>
@@ -3586,7 +4128,7 @@ Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
         <translation type="vanished">Zapisać teraz tytuł albumu i nazwy utworów na płycie?</translation>
     </message>
     <message>
-        <location filename="../panels/record_dialog.py" line="1129"/>
+        <location filename="../panels/record_dialog.py" line="1159"/>
         <source>MDRem: not connected</source>
         <translation>MDRem: brak połączenia</translation>
     </message>
@@ -3631,154 +4173,154 @@ Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
 <context>
     <name>RemoteDialog</name>
     <message>
-        <location filename="../panels/remote_dialog.py" line="217"/>
+        <location filename="../panels/remote_dialog.py" line="219"/>
         <source>Remote</source>
         <translation>Pilot</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="237"/>
+        <location filename="../panels/remote_dialog.py" line="239"/>
         <source>Extended mode -- every key the adapter knows</source>
         <translation>Tryb rozszerzony — wszystkie klawisze, jakie zna przystawka</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="240"/>
+        <location filename="../panels/remote_dialog.py" line="242"/>
         <source>Standard mode is the physical remote, key for key. Extended mode adds what has no key on it: tracks 11 to 25, the deck&apos;s own character entry, the rest of the recording group, the two keys that edit the disc, and typing.</source>
         <translation>Tryb standardowy to fizyczny pilot, klawisz w klawisz. Tryb rozszerzony dokłada to, czego on nie ma: ścieżki od 11 do 25, własną metodę wpisywania znaków magnetofonu, resztę grupy zapisu, dwa klawisze edytujące płytę oraz pisanie z klawiatury.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="254"/>
+        <location filename="../panels/remote_dialog.py" line="256"/>
         <source>Transport</source>
         <translation>Transport</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="256"/>
+        <location filename="../panels/remote_dialog.py" line="258"/>
         <source>Play Mode</source>
         <translation>Tryb odtwarzania</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="257"/>
+        <location filename="../panels/remote_dialog.py" line="259"/>
         <source>Display</source>
         <translation>Wyświetlacz</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="260"/>
+        <location filename="../panels/remote_dialog.py" line="262"/>
         <source>Titling</source>
         <translation>Nazywanie</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="263"/>
+        <location filename="../panels/remote_dialog.py" line="265"/>
         <source>Recording</source>
         <translation>Nagrywanie</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="265"/>
+        <location filename="../panels/remote_dialog.py" line="267"/>
         <source>These start or arm recording on the deck. A write-protected disc ignores them.</source>
         <translation>Te klawisze uruchamiają lub uzbrajają nagrywanie w magnetofonie. Płyta z blokadą zapisu je ignoruje.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="269"/>
+        <location filename="../panels/remote_dialog.py" line="271"/>
         <source>Disc Editing</source>
         <translation>Edycja płyty</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="272"/>
+        <location filename="../panels/remote_dialog.py" line="274"/>
         <source>These change what is on the disc. The deck asks on its own display before doing anything and waits for Enter -- read what it is asking before pressing it.</source>
         <translation>Te klawisze zmieniają zawartość płyty. Magnetofon najpierw pyta na własnym wyświetlaczu i czeka na Enter — przeczytaj pytanie, zanim go naciśniesz.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="284"/>
+        <location filename="../panels/remote_dialog.py" line="286"/>
         <source>Connecting...</source>
         <translation>Łączenie...</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="312"/>
+        <location filename="../panels/remote_dialog.py" line="314"/>
         <source>Tracks</source>
         <translation>Utwory</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="329"/>
+        <location filename="../panels/remote_dialog.py" line="331"/>
         <source>Typing</source>
         <translation>Pisanie</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="333"/>
+        <location filename="../panels/remote_dialog.py" line="335"/>
         <source>Type on your own keyboard and every letter, digit and symbol goes straight to the deck, which has to be in name-edit mode first -- press Name, or select a track and then Name. Backspace deletes, Enter commits the title, and the arrow keys move the cursor. Accented letters lose their marks; anything the deck cannot show at all is refused rather than sent as something else.</source>
         <translation>Pisz na własnej klawiaturze — każda litera, cyfra i znak idzie prosto do magnetofonu, który musi być najpierw w trybie edycji nazwy: naciśnij Name albo wybierz ścieżkę i dopiero potem Name. Backspace kasuje, Enter zatwierdza tytuł, a strzałki przesuwają kursor. Litery z ogonkami tracą znaki diakrytyczne; to, czego magnetofon nie umie pokazać w ogóle, jest odrzucane, a nie podmieniane na coś innego.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="429"/>
+        <location filename="../panels/remote_dialog.py" line="431"/>
         <source>The deck cannot show {chars} -- nothing was sent.</source>
         <translation>Magnetofon nie umie pokazać {chars} — nic nie zostało wysłane.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="436"/>
+        <location filename="../panels/remote_dialog.py" line="438"/>
         <source>Typed: {text}</source>
         <translation>Wpisano: {text}</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="469"/>
+        <location filename="../panels/remote_dialog.py" line="471"/>
         <source>Not connected: {error}</source>
         <translation>Brak połączenia: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="471"/>
+        <location filename="../panels/remote_dialog.py" line="473"/>
         <source>Connected on {port}.</source>
         <translation>Połączono na {port}.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="448"/>
-        <location filename="../panels/remote_dialog.py" line="475"/>
+        <location filename="../panels/remote_dialog.py" line="450"/>
+        <location filename="../panels/remote_dialog.py" line="477"/>
         <source>Not connected -- nothing was sent.</source>
         <translation>Brak połączenia — nic nie wysłano.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="162"/>
+        <location filename="../panels/remote_dialog.py" line="164"/>
         <source>While the deck is in name-edit mode this scrolls the character under the cursor instead of changing track, so it will quietly corrupt a title.</source>
         <translation>W trybie edycji nazwy przewija to znak pod kursorem, zamiast zmieniać ścieżkę — po cichu psuje tytuł.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="168"/>
+        <location filename="../panels/remote_dialog.py" line="170"/>
         <source>Opens a track number field on the deck&apos;s display, which closes itself as soon as two digits have been typed -- no Enter needed, and no room for a third digit.</source>
         <translation>Otwiera na wyświetlaczu pole numeru ścieżki, które domyka się samo po drugiej cyfrze — Enter jest zbędny, a na trzecią cyfrę nie ma już miejsca.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="174"/>
+        <location filename="../panels/remote_dialog.py" line="176"/>
         <source>Pressed while the deck is already recording, this puts a track mark in -- which is how this app splits an album that plays without gaps.</source>
         <translation>Naciśnięty w trakcie nagrywania stawia znacznik ścieżki — tak właśnie program dzieli album grany bez przerw.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="180"/>
+        <location filename="../panels/remote_dialog.py" line="182"/>
         <source>Switches the deck&apos;s own character set, part of the entry method this app bypasses by sending character codes directly. Known to work, and of no use here.</source>
         <translation>Przełącza zestaw znaków magnetofonu, czyli element jego własnej metody wpisywania, którą program omija, wysyłając kody znaków wprost. Działa, ale tutaj na nic się nie przydaje.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="186"/>
+        <location filename="../panels/remote_dialog.py" line="188"/>
         <source>One of three keys the deck&apos;s code table calls Clear. Tried in name-edit mode with the cursor at the start, in the middle, and held down: it does nothing there. It most likely clears a play program.</source>
         <translation>Jeden z trzech klawiszy, które tabela kodów magnetofonu nazywa Clear. Sprawdzony w edycji nazwy z kursorem na początku, w środku i przytrzymany: nie robi tam nic. Najpewniej kasuje program odtwarzania.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="193"/>
+        <location filename="../panels/remote_dialog.py" line="195"/>
         <source>Recognised by the deck as a recording command, but which of that group does what was never told apart -- they have only been tried on a write-protected disc, where every one of them answers the same way.</source>
         <translation>Magnetofon rozpoznaje go jako polecenie zapisu, ale nigdy nie udało się rozróżnić, który klawisz z tej grupy co robi — próbowano ich wyłącznie na płycie zabezpieczonej przed zapisem, gdzie każdy odpowiada tak samo.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="200"/>
+        <location filename="../panels/remote_dialog.py" line="202"/>
         <source>Erases the track the deck is sitting on. Tried on a real disc: it asks on the display first and does nothing until Enter, so Cancel backs out of it.</source>
         <translation>Kasuje ścieżkę, na której stoi magnetofon. Sprawdzone na prawdziwej płycie: najpierw pyta na wyświetlaczu i nie robi nic do czasu Entera, więc Cancel się z tego wycofuje.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="206"/>
+        <location filename="../panels/remote_dialog.py" line="208"/>
         <source>Splits the current track in two. Never tried on an unprotected disc -- Erase, the one key of this group that has been, asked before acting.</source>
         <translation>Dzieli bieżącą ścieżkę na dwie. Nigdy nie sprawdzone na niezabezpieczonej płycie — Erase, jedyny klawisz z tej grupy, który był, najpierw pytał.</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="456"/>
-        <location filename="../panels/remote_dialog.py" line="480"/>
+        <location filename="../panels/remote_dialog.py" line="458"/>
+        <location filename="../panels/remote_dialog.py" line="482"/>
         <source>{key} failed: {error}</source>
         <translation>{key} nie powiodło się: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/remote_dialog.py" line="484"/>
+        <location filename="../panels/remote_dialog.py" line="486"/>
         <source>Sent: {key}</source>
         <translation>Wysłano: {key}</translation>
     </message>
@@ -3786,156 +4328,249 @@ Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
 <context>
     <name>SettingsDialog</name>
     <message>
-        <location filename="../panels/settings_dialog.py" line="72"/>
+        <location filename="../panels/settings_dialog.py" line="88"/>
         <source>Settings</source>
         <translation>Ustawienia</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="80"/>
+        <location filename="../panels/settings_dialog.py" line="96"/>
         <source>General</source>
         <translation>Ogólne</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="81"/>
+        <location filename="../panels/settings_dialog.py" line="97"/>
+        <source>Audio</source>
+        <translation>Audio</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="98"/>
+        <source>MiniDisc Recording</source>
+        <translation>Nagrywanie MiniDisc</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="99"/>
+        <source>CD</source>
+        <translation>CD</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="100"/>
         <source>Telegram</source>
         <translation>Telegram</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="99"/>
+        <location filename="../panels/settings_dialog.py" line="118"/>
         <source>Dots per inch used to display the canvas on screen at 100% zoom. Not necessarily your monitor&apos;s real physical DPI -- adjust this if content looks the wrong physical size on screen.</source>
         <translation>Liczba punktów na cal używana do wyświetlania płótna na ekranie przy powiększeniu 100%. Nie musi odpowiadać rzeczywistej fizycznej rozdzielczości monitora -- zmień tę wartość, jeśli zawartość ma niewłaściwy fizyczny rozmiar na ekranie.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="103"/>
+        <location filename="../panels/settings_dialog.py" line="122"/>
         <source>Screen DPI</source>
         <translation>DPI ekranu</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="105"/>
+        <location filename="../panels/settings_dialog.py" line="124"/>
         <source>Applies to newly created or reopened projects -- not the one currently open.</source>
         <translation>Dotyczy nowo utworzonych lub ponownie otwartych projektów -- nie tego, który jest aktualnie otwarty.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="115"/>
+        <location filename="../panels/settings_dialog.py" line="134"/>
         <source>Default DPI for Export Print PNG / Export Print PNG (Grayscale).</source>
         <translation>Domyślne DPI dla eksportu PNG do druku / eksportu PNG do druku (skala szarości).</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="117"/>
+        <location filename="../panels/settings_dialog.py" line="136"/>
         <source>Default Export DPI</source>
         <translation>Domyślne DPI eksportu</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="125"/>
+        <location filename="../panels/settings_dialog.py" line="144"/>
         <source>DPI Tools &gt; Bake Layers renders at. Higher than the default export DPI by default, since a baked layer&apos;s resolution is locked in permanently, unlike a re-renderable vector layer.</source>
         <translation>DPI, w którym renderowana jest funkcja Narzędzia &gt; Spłaszcz warstwy. Domyślnie wyższe niż domyślne DPI eksportu, ponieważ rozdzielczość spłaszczonej warstwy jest trwale ustalona, w przeciwieństwie do warstwy wektorowej, którą można ponownie wyrenderować.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="129"/>
+        <location filename="../panels/settings_dialog.py" line="148"/>
         <source>Bake DPI</source>
         <translation>DPI spłaszczania warstw</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="135"/>
+        <location filename="../panels/settings_dialog.py" line="152"/>
         <source>Restore Defaults</source>
         <translation>Przywróć domyślne</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="176"/>
+        <location filename="../panels/settings_dialog.py" line="154"/>
+        <source>Resets every group&apos;s fields to their defaults -- not only this one.</source>
+        <translation>Przywraca domyślne wartości pól we wszystkich grupach -- nie tylko w tej.</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="209"/>
         <source>MiniDisc audio output device</source>
         <translation>Urządzenie wyjścia audio dla MiniDisc</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="179"/>
+        <location filename="../panels/settings_dialog.py" line="212"/>
         <source>The output device audio is played through while recording to MiniDisc -- typically a digital (S/PDIF) output feeding the deck. Leave as &quot;System default&quot; to use whatever the operating system currently considers the default output.</source>
         <translation>Urządzenie, przez które odtwarzany jest dźwięk podczas nagrywania na MiniDisc -- zwykle cyfrowe wyjście (S/PDIF) zasilające magnetofon. Zostaw „Domyślne systemowe”, aby używać tego, co system operacyjny aktualnie uznaje za wyjście domyślne.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="186"/>
+        <location filename="../panels/settings_dialog.py" line="219"/>
         <source>Cassette audio output device</source>
         <translation>Urządzenie wyjścia audio dla kasety</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="189"/>
+        <location filename="../panels/settings_dialog.py" line="222"/>
         <source>The output device audio is played through while recording to cassette -- typically an analogue line output feeding the deck. Leave as &quot;System default&quot; to use whatever the operating system currently considers the default output.</source>
         <translation>Urządzenie, przez które odtwarzany jest dźwięk podczas nagrywania na kasetę -- zwykle analogowe wyjście liniowe zasilające magnetofon. Zostaw „Domyślne systemowe”, aby używać tego, co system operacyjny aktualnie uznaje za wyjście domyślne.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="198"/>
+        <location filename="../panels/settings_dialog.py" line="231"/>
         <source> dB</source>
         <translation> dB</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="202"/>
+        <location filename="../panels/settings_dialog.py" line="235"/>
         <source>Headroom below full scale while recording, so a hot digital source has no chance to clip on the way in. Does not affect preview playback.</source>
         <translation>Zapas poniżej pełnej skali podczas nagrywania, dzięki czemu głośne źródło cyfrowe nie ma szans na przesterowanie po drodze. Nie wpływa na odtwarzanie podglądu.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="206"/>
+        <location filename="../panels/settings_dialog.py" line="239"/>
         <source>Recording gain</source>
         <translation>Wzmocnienie nagrywania</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="216"/>
+        <location filename="../panels/settings_dialog.py" line="249"/>
         <source>Refresh</source>
         <translation>Odśwież</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="217"/>
+        <location filename="../panels/settings_dialog.py" line="250"/>
         <source>Re-lists the currently available output devices.</source>
         <translation>Odświeża listę aktualnie dostępnych urządzeń wyjściowych.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="237"/>
+        <location filename="../panels/settings_dialog.py" line="270"/>
         <source>System default</source>
         <translation>Domyślne systemowe</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="247"/>
+        <location filename="../panels/settings_dialog.py" line="280"/>
         <source>{device} (not connected)</source>
         <translation>{device} (niepodłączone)</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="261"/>
+        <location filename="../panels/settings_dialog.py" line="294"/>
         <source>Show experimental features</source>
         <translation>Pokaż funkcje eksperymentalne</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="264"/>
+        <location filename="../panels/settings_dialog.py" line="297"/>
         <source>Shows in-development features that aren&apos;t finished yet.</source>
         <translation>Pokazuje funkcje w trakcie rozwoju, które nie są jeszcze ukończone.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="273"/>
+        <location filename="../panels/settings_dialog.py" line="306"/>
         <source>Enable MDRem IR remote adapter</source>
         <translation>Włącz przystawkę MDRem (pilot na podczerwień)</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="355"/>
+        <source>Use a NetMD USB cable</source>
+        <translation>Użyj kabla USB NetMD</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="359"/>
+        <source>Drives a NetMD-capable deck over USB: it reads the disc, writes the titles into its TOC, and in LP2/LP4 carries the audio itself. Cannot be used together with the MDRem infrared adapter -- turning this on turns that off.</source>
+        <translation>Steruje nagrywarką obsługującą NetMD przez USB: odczytuje płytę, zapisuje tytuły w jej spisie treści (TOC), a w trybach LP2/LP4 przenosi także samo audio. Nie można używać jednocześnie z adapterem podczerwieni MDRem -- włączenie tej opcji wyłącza tamtą.</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="370"/>
+        <source>The deck xD-Tools talks to. netmdcli always uses the first NetMD device it finds and offers no way to pick another, so with two decks plugged in this records which one you meant rather than being able to redirect anything.</source>
+        <translation>Nagrywarka, z którą komunikuje się xD-Tools. netmdcli zawsze używa pierwszego znalezionego urządzenia NetMD i nie pozwala wybrać innego, więc przy podłączonych dwóch nagrywarkach to pole tylko zapamiętuje, o którą chodziło, a nie pozwala przełączyć na inną.</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="377"/>
+        <source>Asks whether a NetMD deck is connected and answering.</source>
+        <translation>Sprawdza, czy nagrywarka NetMD jest podłączona i odpowiada.</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="387"/>
+        <location filename="../panels/settings_dialog.py" line="487"/>
+        <source>NetMD deck</source>
+        <translation>Nagrywarka NetMD</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="394"/>
+        <source>{label} -- {minutes} min a disc</source>
+        <translation>{label} -- {minutes} min na płytę</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="402"/>
+        <source>Which mode a recording is made in. This decides how much fits on the disc.</source>
+        <translation>W jakim trybie wykonywane jest nagranie. To decyduje, ile zmieści się na płycie.</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="405"/>
+        <source>Recording mode</source>
+        <translation>Tryb nagrywania</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="426"/>
+        <source>The connected NetMD deck</source>
+        <translation>Podłączona nagrywarka NetMD</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="458"/>
+        <location filename="../panels/settings_dialog.py" line="476"/>
+        <location filename="../panels/settings_dialog.py" line="491"/>
+        <source>NetMD</source>
+        <translation>NetMD</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="459"/>
+        <source>netmdcli is missing from this build, so a NetMD deck cannot be reached.</source>
+        <translation>W tej wersji brakuje netmdcli, więc nie można połączyć się z nagrywarką NetMD.</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="478"/>
+        <source>No NetMD deck answered: {error}
+
+Check that it is plugged in and switched on, and that it is bound to a libusb-compatible driver (WinUSB) rather than Sony&apos;s own -- from here the two look identical.</source>
+        <translation>Żadna nagrywarka NetMD nie odpowiedziała: {error}
+
+Sprawdź, czy jest podłączona i włączona oraz czy jest przypisana do sterownika zgodnego z libusb (WinUSB), a nie do sterownika Sony -- stąd oba wyglądają identycznie.</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="492"/>
+        <source>A NetMD deck answered. The disc in it holds {count} track(s).</source>
+        <translation>Odpowiedziała nagrywarka NetMD. Płyta w niej zawiera {count} utwor(ów).</translation>
     </message>
     <message>
         <source>Adds Upload Tracklist to Project &gt; Metadata... and a Remote window to the startup screen, for writing titles onto the MiniDisc itself over infrared.</source>
         <translation type="vanished">Dodaje „Wyślij listę utworów” w Projekt &gt; Metadane... oraz okno pilota na ekranie startowym, do zapisywania tytułów na samej płycie MiniDisc przez podczerwień.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="277"/>
+        <location filename="../panels/settings_dialog.py" line="310"/>
         <source>Adds Upload Tracklist to the Metadata dialog, the Recording menu&apos;s entries, and a Remote window to the startup screen, for writing titles onto the MiniDisc itself over infrared.</source>
         <translation>Dodaje „Wyślij listę utworów” w oknie Metadane..., pozycje menu Nagrywanie oraz okno pilota na ekranie startowym, do zapisywania tytułów na samej płycie MiniDisc przez podczerwień.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="286"/>
+        <location filename="../panels/settings_dialog.py" line="319"/>
         <source>Serial port the MDRem adapter is connected to.</source>
         <translation>Port szeregowy, do którego podłączona jest przystawka MDRem.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="288"/>
+        <location filename="../panels/settings_dialog.py" line="321"/>
+        <location filename="../panels/settings_dialog.py" line="375"/>
         <source>Detect</source>
         <translation>Wykryj</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="291"/>
+        <location filename="../panels/settings_dialog.py" line="324"/>
         <source>Asks every serial port whether an MDRem adapter answers on it. The board&apos;s USB ID is shared with its own bootloader and other boards, so it can only be identified by replying.</source>
         <translation>Odpytuje każdy port szeregowy, czy odpowiada na nim przystawka MDRem. Identyfikator USB płytki jest wspólny z jej własnym bootloaderem i innymi płytkami, więc rozpoznać ją można wyłącznie po odpowiedzi.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="303"/>
+        <location filename="../panels/settings_dialog.py" line="336"/>
         <source>MDRem port</source>
         <translation>Port MDRem</translation>
     </message>
@@ -3952,7 +4587,7 @@ Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
         <translation type="vanished">Plik programu foobar2000. Zgrane ścieżki CD są ładowane przez niego, a nie przez Beefweb, który odrzuca pliki spoza folderów muzycznych skonfigurowanych w samym foobarze.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="323"/>
+        <location filename="../panels/settings_dialog.py" line="509"/>
         <source>Browse...</source>
         <translation>Przeglądaj...</translation>
     </message>
@@ -3961,14 +4596,14 @@ Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
         <translation type="vanished">Program foobar2000</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="319"/>
+        <location filename="../panels/settings_dialog.py" line="505"/>
         <source>Where a ripped CD is written. One album is a few hundred megabytes; earlier rips are deleted when the next one starts, not when a recording ends, so they stay playable in the meantime.</source>
         <translation>Gdzie zapisywana jest zgrana płyta. Jeden album to kilkaset megabajtów; wcześniejsze zgrania są kasowane przy rozpoczęciu następnego, a nie po zakończeniu nagrywania, więc do tego czasu można je odtwarzać.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="325"/>
-        <location filename="../panels/settings_dialog.py" line="343"/>
-        <location filename="../panels/settings_dialog.py" line="524"/>
+        <location filename="../panels/settings_dialog.py" line="511"/>
+        <location filename="../panels/settings_dialog.py" line="529"/>
+        <location filename="../panels/settings_dialog.py" line="728"/>
         <source>CD rip folder</source>
         <translation>Folder zgrywania CD</translation>
     </message>
@@ -3977,72 +4612,72 @@ Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
         <translation type="vanished">Programy (*.exe);;Wszystkie pliki (*)</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="361"/>
+        <location filename="../panels/settings_dialog.py" line="547"/>
         <source>{port} (not connected)</source>
         <translation>{port} (niepodłączony)</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="382"/>
+        <location filename="../panels/settings_dialog.py" line="574"/>
         <source>Detect MDRem</source>
         <translation>Wykrywanie MDRem</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="383"/>
+        <location filename="../panels/settings_dialog.py" line="575"/>
         <source>No MDRem adapter answered on any serial port. Check that it is plugged in.</source>
         <translation>Żadna przystawka MDRem nie odpowiedziała na żadnym porcie szeregowym. Sprawdź, czy jest podłączona.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="401"/>
+        <location filename="../panels/settings_dialog.py" line="593"/>
         <source>Telegram bot</source>
         <translation>Bot Telegram</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="407"/>
+        <location filename="../panels/settings_dialog.py" line="599"/>
         <source>Downloading an album from a Telegram bot is still in development. Once signed in, its window appears in the Source menu, which needs &quot;Show experimental features&quot; turned on in General.</source>
-        <translation>Pobieranie albumu z bota Telegram jest wciąż w trakcie rozwoju. Po zalogowaniu jego okno pojawia się w menu Źródło, które wymaga włączenia opcji "Pokaż funkcje eksperymentalne" w grupie Ogólne.</translation>
+        <translation>Pobieranie albumu z bota Telegram jest wciąż w trakcie rozwoju. Po zalogowaniu jego okno pojawia się w menu Źródło, które wymaga włączenia opcji &quot;Pokaż funkcje eksperymentalne&quot; w grupie Ogólne.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="425"/>
+        <location filename="../panels/settings_dialog.py" line="617"/>
         <source>Bot username</source>
         <translation>Nazwa użytkownika bota</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="434"/>
+        <location filename="../panels/settings_dialog.py" line="626"/>
         <source>Status</source>
         <translation>Status</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="436"/>
+        <location filename="../panels/settings_dialog.py" line="628"/>
         <source>Sign in to Telegram...</source>
         <translation>Zaloguj się do Telegrama...</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="440"/>
+        <location filename="../panels/settings_dialog.py" line="632"/>
         <source>Sign out</source>
         <translation>Wyloguj</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="453"/>
+        <location filename="../panels/settings_dialog.py" line="645"/>
         <source>A saved sign-in exists locally.</source>
         <translation>Lokalnie zapisane jest logowanie.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="455"/>
+        <location filename="../panels/settings_dialog.py" line="647"/>
         <source>Not signed in yet.</source>
         <translation>Jeszcze niezalogowano.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="468"/>
+        <location filename="../panels/settings_dialog.py" line="660"/>
         <source>Sign in to Telegram</source>
         <translation>Zaloguj się do Telegrama</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="469"/>
+        <location filename="../panels/settings_dialog.py" line="661"/>
         <source>No Telegram API credentials are configured.</source>
         <translation>Nie skonfigurowano danych dostępowych API Telegrama.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="526"/>
+        <location filename="../panels/settings_dialog.py" line="730"/>
         <source>That folder could not be created: {error}
 
 The setting has been saved anyway, but a CD cannot be ripped there until it exists.</source>
@@ -4058,52 +4693,52 @@ Ustawienie i tak zostało zapisane, ale dopóki folder nie istnieje, nie da się
         <translation type="vanished">Witamy w MDTools</translation>
     </message>
     <message>
-        <location filename="../panels/startup_dialog.py" line="42"/>
+        <location filename="../panels/startup_dialog.py" line="41"/>
         <source>Welcome to xD-Tools</source>
         <translation>Witamy w xD-Tools</translation>
     </message>
     <message>
-        <location filename="../panels/startup_dialog.py" line="47"/>
+        <location filename="../panels/startup_dialog.py" line="46"/>
         <source>Recent Projects:</source>
         <translation>Ostatnie projekty:</translation>
     </message>
     <message>
-        <location filename="../panels/startup_dialog.py" line="56"/>
+        <location filename="../panels/startup_dialog.py" line="55"/>
         <source>(No recent projects)</source>
         <translation>(Brak ostatnich projektów)</translation>
     </message>
     <message>
-        <location filename="../panels/startup_dialog.py" line="63"/>
+        <location filename="../panels/startup_dialog.py" line="62"/>
         <source>Open Selected</source>
         <translation>Otwórz wybrany</translation>
     </message>
     <message>
-        <location filename="../panels/startup_dialog.py" line="66"/>
+        <location filename="../panels/startup_dialog.py" line="65"/>
         <source>Open Other Project...</source>
         <translation>Otwórz inny projekt...</translation>
     </message>
     <message>
-        <location filename="../panels/startup_dialog.py" line="68"/>
+        <location filename="../panels/startup_dialog.py" line="67"/>
         <source>New Project...</source>
         <translation>Nowy projekt...</translation>
     </message>
     <message>
-        <location filename="../panels/startup_dialog.py" line="70"/>
+        <location filename="../panels/startup_dialog.py" line="69"/>
         <source>Multiprint...</source>
         <translation>Multiprint...</translation>
     </message>
     <message>
-        <location filename="../panels/startup_dialog.py" line="78"/>
+        <location filename="../panels/startup_dialog.py" line="77"/>
         <source>Remote...</source>
         <translation>Pilot...</translation>
     </message>
     <message>
-        <location filename="../panels/startup_dialog.py" line="103"/>
+        <location filename="../panels/startup_dialog.py" line="102"/>
         <source>Open Project</source>
         <translation>Otwórz projekt</translation>
     </message>
     <message>
-        <location filename="../panels/startup_dialog.py" line="105"/>
+        <location filename="../panels/startup_dialog.py" line="104"/>
         <source>xD-Tools Project (*.mdproj)</source>
         <translation>Projekt xD-Tools (*.mdproj)</translation>
     </message>
@@ -4127,54 +4762,54 @@ Ustawienie i tak zostało zapisane, ale dopóki folder nie istnieje, nie da się
         <translation type="vanished">Nagraj kasetę z foobara2000</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="143"/>
+        <location filename="../panels/tape_record_dialog.py" line="151"/>
         <source>{name} ({minutes} min, {side} a side)</source>
         <translation>{name} ({minutes} min, {side} na stronę)</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="151"/>
-        <location filename="../panels/tape_record_dialog.py" line="165"/>
+        <location filename="../panels/tape_record_dialog.py" line="159"/>
+        <location filename="../panels/tape_record_dialog.py" line="173"/>
         <source>Artist</source>
         <translation>Wykonawca</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="152"/>
+        <location filename="../panels/tape_record_dialog.py" line="160"/>
         <source>Album</source>
         <translation>Album</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="153"/>
+        <location filename="../panels/tape_record_dialog.py" line="161"/>
         <source>Year</source>
         <translation>Rok</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="154"/>
+        <location filename="../panels/tape_record_dialog.py" line="162"/>
         <source>Cassette</source>
         <translation>Kaseta</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="165"/>
+        <location filename="../panels/tape_record_dialog.py" line="173"/>
         <source>Side</source>
         <translation>Strona</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="165"/>
+        <location filename="../panels/tape_record_dialog.py" line="173"/>
         <source>#</source>
         <translation>#</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="165"/>
+        <location filename="../panels/tape_record_dialog.py" line="173"/>
         <source>Title</source>
         <translation>Tytuł</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="165"/>
+        <location filename="../panels/tape_record_dialog.py" line="173"/>
         <source>Length</source>
         <translation>Czas</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="208"/>
-        <location filename="../panels/tape_record_dialog.py" line="543"/>
+        <location filename="../panels/tape_record_dialog.py" line="216"/>
+        <location filename="../panels/tape_record_dialog.py" line="582"/>
         <source>Cancel</source>
         <translation>Anuluj</translation>
     </message>
@@ -4197,27 +4832,27 @@ It will be recorded in this order, in two sides, through the deck&apos;s line in
 Zostanie nagrana w tej kolejności, na dwie strony, przez wejścia liniowe magnetofonu.</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="312"/>
+        <location filename="../panels/tape_record_dialog.py" line="320"/>
         <source>Side A: {a_count} tracks, {a_time} · Side B: {b_count} tracks, {b_time}</source>
         <translation>Strona A: {a_count} utw., {a_time} · Strona B: {b_count} utw., {b_time}</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="320"/>
+        <location filename="../panels/tape_record_dialog.py" line="328"/>
         <source>These tracks carry no running times, so the album is split down the middle by count -- check it against the tape before recording.</source>
         <translation>Te utwory nie mają czasów trwania, więc album dzielony jest po połowie według liczby utworów — sprawdź to względem taśmy przed nagraniem.</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="325"/>
+        <location filename="../panels/tape_record_dialog.py" line="333"/>
         <source>That is {over} more than one side of this tape holds. Use a longer cassette, or expect the last track to run into the run-out.</source>
         <translation>To o {over} więcej, niż mieści jedna strona tej taśmy. Weź dłuższą kasetę albo licz się z tym, że ostatni utwór wejdzie w wybieg taśmy.</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="367"/>
+        <location filename="../panels/tape_record_dialog.py" line="375"/>
         <source>Start Side A</source>
         <translation>Zacznij stronę A</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="369"/>
+        <location filename="../panels/tape_record_dialog.py" line="377"/>
         <source>Side {side}</source>
         <translation>Strona {side}</translation>
     </message>
@@ -4226,8 +4861,8 @@ Zostanie nagrana w tej kolejności, na dwie strony, przez wejścia liniowe magne
         <translation type="vanished">Włącz w magnetofonie nagrywanie na stronie {side}, ustaw jego wejście na to, z którego jest zasilany, a potem naciśnij przycisk poniżej. Pierwsze {seconds} sekund nagrywa się w ciszy, żeby muzyka minęła rozbiegówkę.</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="379"/>
-        <location filename="../panels/tape_record_dialog.py" line="555"/>
+        <location filename="../panels/tape_record_dialog.py" line="387"/>
+        <location filename="../panels/tape_record_dialog.py" line="594"/>
         <source>Recording -- Start Side {side}</source>
         <translation>Nagrywanie — zacznij stronę {side}</translation>
     </message>
@@ -4236,15 +4871,15 @@ Zostanie nagrana w tej kolejności, na dwie strony, przez wejścia liniowe magne
         <translation type="vanished">foobar2000: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="420"/>
+        <location filename="../panels/tape_record_dialog.py" line="443"/>
         <source>Stop</source>
         <translation>Zatrzymaj</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="100"/>
-        <location filename="../panels/tape_record_dialog.py" line="437"/>
-        <location filename="../panels/tape_record_dialog.py" line="446"/>
-        <location filename="../panels/tape_record_dialog.py" line="674"/>
+        <location filename="../panels/tape_record_dialog.py" line="101"/>
+        <location filename="../panels/tape_record_dialog.py" line="460"/>
+        <location filename="../panels/tape_record_dialog.py" line="469"/>
+        <location filename="../panels/tape_record_dialog.py" line="728"/>
         <source>Record to Cassette</source>
         <translation>Nagraj na kasetę</translation>
     </message>
@@ -4257,44 +4892,44 @@ Zostanie nagrana w tej kolejności, na dwie strony, przez wejścia liniowe magne
         <translation type="vanished">Ukryj to okno i nagrywaj dalej w tle — użyj „Pokaż okno nagrywania” w pasku na dole głównego okna, żeby je przywrócić.</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="231"/>
+        <location filename="../panels/tape_record_dialog.py" line="239"/>
         <source>There are no tracks to record.</source>
         <translation>Nie ma ścieżek do nagrania.</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="241"/>
+        <location filename="../panels/tape_record_dialog.py" line="249"/>
         <source>{count} tracks, {total} total.
 It will be recorded in this order, in two sides, through the deck&apos;s line inputs.</source>
         <translation>{count} ścieżek, {total} łącznie.
 Zostanie nagrane w tej kolejności, na dwóch stronach, przez wejścia liniowe magnetofonu.</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="373"/>
+        <location filename="../panels/tape_record_dialog.py" line="381"/>
         <source>Press RECORD and PAUSE together on side {side} (record-pause -- armed, but not yet moving), set its input to the line it is fed from, then press the button below. Once the tracks are ready you will be told to release Pause; the first {seconds} seconds after that are recorded silent, so the music clears the leader tape.</source>
         <translation>Naciśnij razem RECORD i PAUSE na stronie {side} (pauza nagrywania -- uzbrojony, ale jeszcze nieruszający się), ustaw jego wejście na linię, z której jest zasilany, a potem naciśnij przycisk poniżej. Gdy ścieżki będą gotowe, zostaniesz poproszony o zwolnienie Pauzy; pierwsze {seconds} sekund po tym nagrywane jest w ciszy, aby muzyka ominęła taśmę prowadzącą.</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="412"/>
+        <location filename="../panels/tape_record_dialog.py" line="484"/>
         <source>Could not decode this side for playback: {error}</source>
         <translation>Nie udało się zdekodować tej strony do odtwarzania: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="433"/>
+        <location filename="../panels/tape_record_dialog.py" line="456"/>
         <source>Release Pause now</source>
         <translation>Zwolnij teraz Pauzę</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="433"/>
+        <location filename="../panels/tape_record_dialog.py" line="456"/>
         <source>The deck should start rolling.</source>
         <translation>Magnetofon powinien zacząć się kręcić.</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="438"/>
+        <location filename="../panels/tape_record_dialog.py" line="461"/>
         <source>Release Pause now -- the deck should start rolling.</source>
         <translation>Zwolnij teraz Pauzę -- magnetofon powinien zacząć się kręcić.</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="448"/>
+        <location filename="../panels/tape_record_dialog.py" line="471"/>
         <source>Recording replaces whatever is on the tape, and nothing about it can be undone.
 
 Make sure the right cassette is in the deck, wound to the start of side A, and that its record-protect tabs are intact.</source>
@@ -4303,22 +4938,22 @@ Make sure the right cassette is in the deck, wound to the start of side A, and t
 Upewnij się, że w magnetofonie jest właściwa kaseta, przewinięta na początek strony A, i że ma nienaruszone zabezpieczenia przed zapisem.</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="463"/>
+        <location filename="../panels/tape_record_dialog.py" line="503"/>
         <source>Preparing track {index} of {total}: {name}...</source>
         <translation>Przygotowywanie ścieżki {index} z {total}: {name}...</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="471"/>
+        <location filename="../panels/tape_record_dialog.py" line="510"/>
         <source>Recording silence over the leader -- {seconds}s</source>
         <translation>Nagrywam ciszę na rozbiegówce — {seconds} s</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="525"/>
+        <location filename="../panels/tape_record_dialog.py" line="564"/>
         <source>{title} -- {elapsed} of {total}</source>
         <translation>{title} — {elapsed} z {total}</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="550"/>
+        <location filename="../panels/tape_record_dialog.py" line="589"/>
         <source>Stop the deck, take the cassette out and turn it over, then press RECORD and PAUSE together (record-pause) for side {side} and press the button below. You will be told when to release Pause.</source>
         <translation>Zatrzymaj magnetofon, wyjmij kasetę i odwróć ją, a potem naciśnij razem RECORD i PAUSE (pauza nagrywania) dla strony {side} i naciśnij przycisk poniżej. Zostaniesz poinformowany, kiedy zwolnić Pauzę.</translation>
     </message>
@@ -4327,7 +4962,7 @@ Upewnij się, że w magnetofonie jest właściwa kaseta, przewinięta na począt
         <translation type="vanished">Utracono łączność z foobar2000: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="513"/>
+        <location filename="../panels/tape_record_dialog.py" line="552"/>
         <source>Side {side}, track {index} of {count}: {title} -- {elapsed} of {total}</source>
         <translation>Strona {side}, utwór {index} z {count}: {title} — {elapsed} z {total}</translation>
     </message>
@@ -4336,13 +4971,13 @@ Upewnij się, że w magnetofonie jest właściwa kaseta, przewinięta na począt
         <translation type="vanished">Odtwarzanie zatrzymało się wcześniej, więc strona {side} jest niepełna. Zatrzymaj magnetofon, przewiń taśmę i zacznij tę stronę od nowa.</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="580"/>
-        <location filename="../panels/tape_record_dialog.py" line="633"/>
+        <location filename="../panels/tape_record_dialog.py" line="619"/>
+        <location filename="../panels/tape_record_dialog.py" line="672"/>
         <source>Close</source>
         <translation>Zamknij</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="546"/>
+        <location filename="../panels/tape_record_dialog.py" line="585"/>
         <source>Side A is done</source>
         <translation>Strona A gotowa</translation>
     </message>
@@ -4351,27 +4986,32 @@ Upewnij się, że w magnetofonie jest właściwa kaseta, przewinięta na począt
         <translation type="vanished">Zatrzymaj magnetofon, wyjmij kasetę i odwróć ją, potem znów włącz nagrywanie na stronie {side} i naciśnij przycisk poniżej.</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="557"/>
+        <location filename="../panels/tape_record_dialog.py" line="596"/>
         <source>Side A recorded: {count} tracks, {time}.</source>
         <translation>Strona A nagrana: {count} utw., {time}.</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="573"/>
+        <location filename="../panels/tape_record_dialog.py" line="612"/>
         <source>Both sides are recorded</source>
         <translation>Obie strony nagrane</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="575"/>
+        <location filename="../panels/tape_record_dialog.py" line="614"/>
         <source>Stop the deck and take the cassette out.</source>
         <translation>Zatrzymaj magnetofon i wyjmij kasetę.</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="578"/>
+        <location filename="../panels/tape_record_dialog.py" line="617"/>
         <source>Recording finished. The labels can be laid out from this album.</source>
         <translation>Nagrywanie zakończone. Z tego albumu można teraz rozmieścić etykiety.</translation>
     </message>
     <message>
-        <location filename="../panels/tape_record_dialog.py" line="675"/>
+        <location filename="../panels/tape_record_dialog.py" line="715"/>
+        <source>Stopping...</source>
+        <translation>Zatrzymywanie...</translation>
+    </message>
+    <message>
+        <location filename="../panels/tape_record_dialog.py" line="729"/>
         <source>Playback stopped. Press stop on the deck as well -- it is still recording.</source>
         <translation>Odtwarzanie zatrzymane. Naciśnij stop także w magnetofonie — wciąż nagrywa.</translation>
     </message>
@@ -4403,9 +5043,8 @@ Upewnij się, że w magnetofonie jest właściwa kaseta, przewinięta na począt
         <translation type="vanished">Przejdź do Record Folder...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1186"/>
         <source>Enable the MDRem adapter in Window &gt; Settings to record.</source>
-        <translation>Włącz adapter MDRem w Window &gt; Settings, aby nagrywać.</translation>
+        <translation type="vanished">Włącz adapter MDRem w Window &gt; Settings, aby nagrywać.</translation>
     </message>
     <message>
         <location filename="../panels/telegram_chat_dialog.py" line="796"/>
@@ -4430,8 +5069,8 @@ Upewnij się, że w magnetofonie jest właściwa kaseta, przewinięta na począt
     </message>
     <message>
         <location filename="../panels/telegram_chat_dialog.py" line="783"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="1232"/>
         <location filename="../panels/telegram_chat_dialog.py" line="1236"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1240"/>
         <source>Sort into Album Folders</source>
         <translation>Posortuj na foldery albumów</translation>
     </message>
@@ -4539,7 +5178,7 @@ Upewnij się, że w magnetofonie jest właściwa kaseta, przewinięta na począt
     </message>
     <message>
         <location filename="../panels/telegram_chat_dialog.py" line="1165"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="1190"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1194"/>
         <source>Wait for the current download(s) to finish first.</source>
         <translation>Poczekaj, aż bieżące pobieranie się zakończy.</translation>
     </message>
@@ -4549,17 +5188,22 @@ Upewnij się, że w magnetofonie jest właściwa kaseta, przewinięta na począt
         <translation>Nie ma nic do posortowania.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1193"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1190"/>
+        <source>Enable MDRem or NetMD in Window &gt; Settings to record.</source>
+        <translation>Włącz MDRem lub NetMD w Okno &gt; Ustawienia, aby nagrywać.</translation>
+    </message>
+    <message>
+        <location filename="../panels/telegram_chat_dialog.py" line="1197"/>
         <source>Download at least one file first.</source>
         <translation>Najpierw pobierz co najmniej jeden plik.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1229"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1233"/>
         <source>These tracks all belong to one album -- there is nothing to separate.</source>
         <translation>Wszystkie te utwory należą do jednego albumu -- nie ma czego rozdzielać.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1231"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1235"/>
         <source>Everything is already sorted into album folders.</source>
         <translation>Wszystko jest już posortowane na foldery albumów.</translation>
     </message>
@@ -4577,12 +5221,12 @@ Upewnij się, że w magnetofonie jest właściwa kaseta, przewinięta na począt
         <translation type="vanished">Wykryto tylko jeden album -- nie ma czego sortować.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1237"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1241"/>
         <source>Sorted into {count} album folders.</source>
         <translation>Posortowano na {count} folderów albumów.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1290"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1294"/>
         <source>Disconnecting...</source>
         <translation>Rozłączanie...</translation>
     </message>

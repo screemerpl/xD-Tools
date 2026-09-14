@@ -41,6 +41,7 @@ from mdtools.panels.cover_preview import CoverPreview
 from mdtools.panels.hideable_dialog import exec_hideable
 from mdtools.panels.mdrem_port import resolve_port
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
+from mdtools.panels.netmd_upload_dialog import NetMdUploadDialog
 from mdtools.project import MEDIUM_MD, ProjectMetadata, Track, format_time, parse_time
 
 # Artist sits between them: it belongs with the title it qualifies, and
@@ -228,7 +229,12 @@ class MetadataDialog(QDialog):
             )
         )
         self.upload_btn.clicked.connect(self._upload_tracklist)
-        self.upload_btn.setVisible(app_settings.mdrem_enabled() and medium == MEDIUM_MD)
+        # Either way of driving a deck can write titles onto it, so the
+        # button follows "is there any way to reach the deck at all",
+        # not the infrared adapter specifically. Still MiniDisc-only:
+        # a CD's titles went on as CD-Text when it was burned.
+        can_title = app_settings.md_deck_driveable()
+        self.upload_btn.setVisible(can_title and medium == MEDIUM_MD)
         layout.addWidget(self.upload_btn)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -493,12 +499,23 @@ class MetadataDialog(QDialog):
         )
 
     def _upload_tracklist(self) -> None:
+        """Writes the album's titles onto the disc, over whichever
+        connection is configured.
+
+        Two titlers, one button: NetMD writes them into the TOC over USB
+        and is told whether each one landed; MDRem types them in over
+        infrared and is told nothing at all. Which one is in use is a
+        single setting (see app_settings.set_netmd_enabled), so this
+        chooses rather than asks."""
         if self._is_recording_busy is not None and not self._is_recording_busy():
             return
-        port = resolve_port(self)
-        if port is None:
-            return
-        dialog = MDRemUploadDialog(self._current_metadata(), port, self)
+        if app_settings.netmd_enabled():
+            dialog = NetMdUploadDialog(self._current_metadata(), self)
+        else:
+            port = resolve_port(self)
+            if port is None:
+                return
+            dialog = MDRemUploadDialog(self._current_metadata(), port, self)
         dialog.overall_progress_changed.connect(self.overall_progress_changed)
         dialog.visibility_changed.connect(self.visibility_changed)
         self._nested_dialog = dialog
