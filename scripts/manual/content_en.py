@@ -8,7 +8,7 @@ TITLE = "xD-Tools"
 SUBTITLE = "Retro Media Studio - User Manual"
 TITLE_NOTE = "Designing labels, recording MiniDiscs and cassettes, burning CD-Rs, and titling discs"
 COVER_CAPTION = "What talks to what: commands over USB, keys over infrared, audio over S/PDIF."
-VERSION_LINE = "Version 0.3.4"
+VERSION_LINE = "Version 0.3.5"
 AUTHOR_LINE = 'Artur "Screemer" Jakubowicz'
 DATE_LINE = "August 2026"
 TOC_TITLE = "Contents"
@@ -1267,6 +1267,10 @@ BOOK = [
                   "folder** - the same folder a CD rip uses, since both are raw material for a "
                   "recording rather than a music library; there is no separate Telegram folder setting "
                   "any more."},
+            {"p": "**Simultaneous downloads** caps how many files download at once (2 by default). "
+                  "Telegram's own transfer is bound by round-trip time per file, not by how much bandwidth "
+                  "is free, so a higher number does not always mean faster - it is a knob to try, not a "
+                  "promise."},
             {"note": "There is no API ID or API Hash to fill in. xD-Tools carries its own, so signing in is "
                      "the only step. If a build ever ships without them it says so plainly instead of "
                      "failing to connect."},

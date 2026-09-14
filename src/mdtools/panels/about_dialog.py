@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog, QDialogButtonBox, QLabel, QVBoxLayout
 
 APP_NAME = "xD-Tools"
-APP_VERSION = "0.3.4"
+APP_VERSION = "0.3.5"
 APP_AUTHOR = 'Artur "Screemer" Jakubowicz'
 
 
@@ -35,9 +35,10 @@ class AboutDialog(QDialog):
                 "Record a cassette from a CD or a folder of files, side by side: it works out "
                 "where to turn the tape over, records ten seconds of silence past the leader, "
                 "plays each side and says when to flip it.\n\n"
-                "With an MDRem infrared adapter it also drives a MiniDisc deck: record an album "
-                "from a CD or a folder of files with a track mark at every song, write the disc "
-                "and track titles onto the MiniDisc, and stand in for the remote."
+                "It also drives a MiniDisc deck -- with an MDRem infrared adapter, or over USB via "
+                "NetMD: record an album from a CD or a folder of files with a track mark at every "
+                "song, write the disc and track titles onto the MiniDisc, and stand in for the "
+                "remote."
             )
         )
         description.setWordWrap(True)

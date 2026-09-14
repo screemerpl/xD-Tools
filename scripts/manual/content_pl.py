@@ -13,7 +13,7 @@ TITLE = "xD-Tools"
 SUBTITLE = "Studio Retro Nośników — instrukcja obsługi"
 TITLE_NOTE = "Projektowanie etykiet, nagrywanie MiniDisców i kaset, wypalanie CD-R i nadawanie tytułów"
 COVER_CAPTION = "Co z czym rozmawia: komendy przez USB, klawisze przez podczerwień, dźwięk przez S/PDIF."
-VERSION_LINE = "Wersja 0.3.4"
+VERSION_LINE = "Wersja 0.3.5"
 AUTHOR_LINE = 'Artur "Screemer" Jakubowicz'
 DATE_LINE = "Sierpień 2026"
 TOC_TITLE = "Spis treści"
@@ -1284,6 +1284,10 @@ BOOK = [
                   "zgrywania CD** — tego samego folderu, którego używa zgrywanie CD, bo oba są "
                   "półproduktem do nagrania, a nie kolekcją muzyki; osobnego ustawienia folderu dla "
                   "Telegrama już nie ma."},
+            {"p": "**Jednoczesne pobierania** ogranicza, ile plików pobiera się naraz (domyślnie 2). "
+                  "Transfer pojedynczego pliku w Telegramie zależy od czasu odpowiedzi serwera, a nie od "
+                  "wolnej przepustowości łącza, więc większa liczba nie zawsze znaczy szybciej — to "
+                  "ustawienie do wypróbowania, nie obietnica."},
             {"note": "Nie ma tu żadnego API ID ani API Hash do wpisania. xD-Tools nosi własne, więc "
                      "jedynym krokiem jest zalogowanie. Gdyby jakaś wersja programu została zbudowana bez "
                      "nich, powie to wprost, zamiast nie umieć się połączyć."},

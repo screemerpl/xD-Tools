@@ -23,8 +23,28 @@ Burn an audio CD-R from a folder of files, with CD-Text titles, resampling anyth
 
 Record a cassette from a CD or a folder of files, side by side: it works out where to turn the tape over, records ten seconds of silence past the leader, plays each side and says when to flip it.
 
-With an MDRem infrared adapter it also drives a MiniDisc deck: record an album from a CD or a folder of files with a track mark at every song, write the disc and track titles onto the MiniDisc, and stand in for the remote.</source>
+It also drives a MiniDisc deck -- with an MDRem infrared adapter, or over USB via NetMD: record an album from a CD or a folder of files with a track mark at every song, write the disc and track titles onto the MiniDisc, and stand in for the remote.</source>
         <translation>MiniDisc、CD-R、コンパクトカセットのためのデスクトップワークベンチです。
+
+それぞれのラベルをデザインできます:MiniDiscのステッカーとJカード、CDのリングラベルとケースインサート、あるいはカセットのインレイカードと両面分のステッカー -- そしてCricutカッティングマシン用の切り抜き用SVGと、普通のプリンター用の印刷用PNGとして書き出せます。
+
+CD-Textタイトル付きでフォルダ内のファイルからオーディオCD-Rを作成し、44.1kHz/16bitでないファイルは途中でリサンプリングします。
+
+CDまたはフォルダ内のファイルからカセットに面ごとに録音します:テープを裏返す位置を自動計算し、リーダーテープの先で10秒間無音を録音し、各面を再生して裏返すタイミングを知らせます。
+
+MiniDiscデッキも操作できます -- MDRem赤外線アダプター、またはUSB経由のNetMDで:CDまたはフォルダ内のファイルから曲ごとにトラックマークを付けてアルバムを録音し、ディスクと曲のタイトルをMiniDiscに書き込み、リモコンの代わりを務めます。</translation>
+    </message>
+    <message>
+        <source>A desktop workbench for MiniDisc, CD-R and compact cassette.
+
+Design the labels for any of them: a MiniDisc&apos;s sticker and J-card, a CD&apos;s ring label and case inserts, or a cassette&apos;s inlay card and a sticker for each side -- and export them as cut-ready SVG and print-ready PNG, for a Cricut cutting machine plus a regular printer.
+
+Burn an audio CD-R from a folder of files, with CD-Text titles, resampling anything that is not already 44.1 kHz / 16-bit on the way.
+
+Record a cassette from a CD or a folder of files, side by side: it works out where to turn the tape over, records ten seconds of silence past the leader, plays each side and says when to flip it.
+
+With an MDRem infrared adapter it also drives a MiniDisc deck: record an album from a CD or a folder of files with a track mark at every song, write the disc and track titles onto the MiniDisc, and stand in for the remote.</source>
+        <translation type="vanished">MiniDisc、CD-R、コンパクトカセットのためのデスクトップワークベンチです。
 
 それぞれのラベルをデザインできます:MiniDiscのステッカーとJカード、CDのリングラベルとケースインサート、あるいはカセットのインレイカードと両面分のステッカー -- そしてCricutカッティングマシン用の切り抜き用SVGと、普通のプリンター用の印刷用PNGとして書き出せます。
 
@@ -87,12 +107,12 @@ MDRem赤外線アダプターがあれば、デッキ自体も操作します: f
         <translation type="vanished">MiniDiscのディスクラベルとカバー/Jカードのデスクトップデザインツール。Cricutカッティングマシンと通常のプリンターで使うために、カット用のSVGと印刷用のPNGを書き出します。</translation>
     </message>
     <message>
-        <location filename="../panels/about_dialog.py" line="46"/>
+        <location filename="../panels/about_dialog.py" line="47"/>
         <source>Author: {author}</source>
         <translation>作者: {author}</translation>
     </message>
     <message>
-        <location filename="../panels/about_dialog.py" line="51"/>
+        <location filename="../panels/about_dialog.py" line="52"/>
         <source>Tool icons: &lt;a href=&quot;https://github.com/twitter/twemoji&quot;&gt;Twemoji&lt;/a&gt;, CC-BY 4.0, Copyright Twitter, Inc and other contributors.</source>
         <translation>ツールアイコン: &lt;a href=&quot;https://github.com/twitter/twemoji&quot;&gt;Twemoji&lt;/a&gt;、CC-BY 4.0、Copyright Twitter, Inc and other contributors。</translation>
     </message>
@@ -4328,210 +4348,210 @@ Is it now showing record-pause (REC lit, paused)?</source>
 <context>
     <name>SettingsDialog</name>
     <message>
-        <location filename="../panels/settings_dialog.py" line="88"/>
+        <location filename="../panels/settings_dialog.py" line="89"/>
         <source>Settings</source>
         <translation>設定</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="96"/>
+        <location filename="../panels/settings_dialog.py" line="97"/>
         <source>General</source>
         <translation>全般</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="97"/>
+        <location filename="../panels/settings_dialog.py" line="98"/>
         <source>Audio</source>
         <translation>オーディオ</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="98"/>
+        <location filename="../panels/settings_dialog.py" line="99"/>
         <source>MiniDisc Recording</source>
         <translation>MiniDisc録音</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="99"/>
+        <location filename="../panels/settings_dialog.py" line="100"/>
         <source>CD</source>
         <translation>CD</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="100"/>
+        <location filename="../panels/settings_dialog.py" line="101"/>
         <source>Telegram</source>
         <translation>Telegram</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="118"/>
+        <location filename="../panels/settings_dialog.py" line="119"/>
         <source>Dots per inch used to display the canvas on screen at 100% zoom. Not necessarily your monitor&apos;s real physical DPI -- adjust this if content looks the wrong physical size on screen.</source>
         <translation>100%表示時にキャンバスを画面に表示するための解像度(DPI)です。モニターの実際の物理DPIと一致しない場合があります -- 画面上でのサイズが実際の物理サイズと異なる場合に調整してください。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="122"/>
+        <location filename="../panels/settings_dialog.py" line="123"/>
         <source>Screen DPI</source>
         <translation>画面のDPI</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="124"/>
+        <location filename="../panels/settings_dialog.py" line="125"/>
         <source>Applies to newly created or reopened projects -- not the one currently open.</source>
         <translation>新しく作成または再度開いたプロジェクトに適用されます -- 現在開いているプロジェクトには適用されません。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="134"/>
+        <location filename="../panels/settings_dialog.py" line="135"/>
         <source>Default DPI for Export Print PNG / Export Print PNG (Grayscale).</source>
         <translation>印刷用PNGの書き出し・グレースケール書き出しの既定のDPIです。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="136"/>
+        <location filename="../panels/settings_dialog.py" line="137"/>
         <source>Default Export DPI</source>
         <translation>既定の書き出しDPI</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="144"/>
+        <location filename="../panels/settings_dialog.py" line="145"/>
         <source>DPI Tools &gt; Bake Layers renders at. Higher than the default export DPI by default, since a baked layer&apos;s resolution is locked in permanently, unlike a re-renderable vector layer.</source>
         <translation>ツール &gt; レイヤーを統合の書き出し解像度(DPI)です。統合後のレイヤーは解像度が固定され、後で再レンダリングできるベクターレイヤーとは異なるため、既定では書き出しDPIより高く設定されています。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="148"/>
+        <location filename="../panels/settings_dialog.py" line="149"/>
         <source>Bake DPI</source>
         <translation>統合DPI</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="152"/>
+        <location filename="../panels/settings_dialog.py" line="153"/>
         <source>Restore Defaults</source>
         <translation>既定値に戻す</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="154"/>
+        <location filename="../panels/settings_dialog.py" line="155"/>
         <source>Resets every group&apos;s fields to their defaults -- not only this one.</source>
         <translation>このグループだけでなく、すべてのグループの項目を既定値に戻します。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="209"/>
+        <location filename="../panels/settings_dialog.py" line="210"/>
         <source>MiniDisc audio output device</source>
         <translation>MiniDisc用オーディオ出力デバイス</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="212"/>
+        <location filename="../panels/settings_dialog.py" line="213"/>
         <source>The output device audio is played through while recording to MiniDisc -- typically a digital (S/PDIF) output feeding the deck. Leave as &quot;System default&quot; to use whatever the operating system currently considers the default output.</source>
         <translation>MiniDiscへの録音中に音声が再生される出力デバイスです -- 通常はデッキに接続されるデジタル(S/PDIF)出力です。オペレーティングシステムが現在既定としている出力を使うには「システムの既定」のままにしてください。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="219"/>
+        <location filename="../panels/settings_dialog.py" line="220"/>
         <source>Cassette audio output device</source>
         <translation>カセット用オーディオ出力デバイス</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="222"/>
+        <location filename="../panels/settings_dialog.py" line="223"/>
         <source>The output device audio is played through while recording to cassette -- typically an analogue line output feeding the deck. Leave as &quot;System default&quot; to use whatever the operating system currently considers the default output.</source>
         <translation>カセットへの録音中に音声が再生される出力デバイスです -- 通常はデッキに接続されるアナログのライン出力です。オペレーティングシステムが現在既定としている出力を使うには「システムの既定」のままにしてください。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="231"/>
+        <location filename="../panels/settings_dialog.py" line="232"/>
         <source> dB</source>
         <translation> dB</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="235"/>
+        <location filename="../panels/settings_dialog.py" line="236"/>
         <source>Headroom below full scale while recording, so a hot digital source has no chance to clip on the way in. Does not affect preview playback.</source>
         <translation>録音時にフルスケールから確保する余裕(ヘッドルーム)です。これにより、レベルの高いデジタルソースが途中でクリップすることを防ぎます。プレビュー再生には影響しません。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="239"/>
+        <location filename="../panels/settings_dialog.py" line="240"/>
         <source>Recording gain</source>
         <translation>録音ゲイン</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="249"/>
+        <location filename="../panels/settings_dialog.py" line="250"/>
         <source>Refresh</source>
         <translation>更新</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="250"/>
+        <location filename="../panels/settings_dialog.py" line="251"/>
         <source>Re-lists the currently available output devices.</source>
         <translation>現在利用可能な出力デバイスの一覧を更新します。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="270"/>
+        <location filename="../panels/settings_dialog.py" line="271"/>
         <source>System default</source>
         <translation>システムの既定</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="280"/>
+        <location filename="../panels/settings_dialog.py" line="281"/>
         <source>{device} (not connected)</source>
         <translation>{device}(未接続)</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="294"/>
+        <location filename="../panels/settings_dialog.py" line="295"/>
         <source>Show experimental features</source>
         <translation>実験的機能を表示</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="297"/>
+        <location filename="../panels/settings_dialog.py" line="298"/>
         <source>Shows in-development features that aren&apos;t finished yet.</source>
         <translation>まだ完成していない開発中の機能を表示します。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="306"/>
+        <location filename="../panels/settings_dialog.py" line="307"/>
         <source>Enable MDRem IR remote adapter</source>
         <translation>MDRem赤外線リモコンアダプターを有効にする</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="355"/>
+        <location filename="../panels/settings_dialog.py" line="356"/>
         <source>Use a NetMD USB cable</source>
         <translation>NetMD USBケーブルを使用</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="359"/>
+        <location filename="../panels/settings_dialog.py" line="360"/>
         <source>Drives a NetMD-capable deck over USB: it reads the disc, writes the titles into its TOC, and in LP2/LP4 carries the audio itself. Cannot be used together with the MDRem infrared adapter -- turning this on turns that off.</source>
         <translation>USB経由でNetMD対応デッキを操作します: ディスクを読み取り、タイトルをTOCに書き込み、LP2/LP4モードでは音声そのものも転送します。MDRem赤外線アダプタと同時には使用できません -- こちらを有効にすると、あちらは無効になります。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="370"/>
+        <location filename="../panels/settings_dialog.py" line="371"/>
         <source>The deck xD-Tools talks to. netmdcli always uses the first NetMD device it finds and offers no way to pick another, so with two decks plugged in this records which one you meant rather than being able to redirect anything.</source>
         <translation>xD-Toolsが通信するデッキです。netmdcliは常に最初に見つかったNetMD機器を使用し、他を選ぶ方法はありません。そのため2台のデッキが接続されている場合、この項目はどちらを意図しているかを記録するだけで、実際に切り替えることはできません。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="377"/>
+        <location filename="../panels/settings_dialog.py" line="378"/>
         <source>Asks whether a NetMD deck is connected and answering.</source>
         <translation>NetMD機器が接続され応答するかどうかを確認します。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="387"/>
-        <location filename="../panels/settings_dialog.py" line="487"/>
+        <location filename="../panels/settings_dialog.py" line="388"/>
+        <location filename="../panels/settings_dialog.py" line="488"/>
         <source>NetMD deck</source>
         <translation>NetMD機器</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="394"/>
+        <location filename="../panels/settings_dialog.py" line="395"/>
         <source>{label} -- {minutes} min a disc</source>
         <translation>{label} -- 1枚あたり{minutes}分</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="402"/>
+        <location filename="../panels/settings_dialog.py" line="403"/>
         <source>Which mode a recording is made in. This decides how much fits on the disc.</source>
         <translation>録音を行うモードです。これによりディスクに収まる容量が決まります。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="405"/>
+        <location filename="../panels/settings_dialog.py" line="406"/>
         <source>Recording mode</source>
         <translation>録音モード</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="426"/>
+        <location filename="../panels/settings_dialog.py" line="427"/>
         <source>The connected NetMD deck</source>
         <translation>接続されているNetMD機器</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="458"/>
-        <location filename="../panels/settings_dialog.py" line="476"/>
-        <location filename="../panels/settings_dialog.py" line="491"/>
+        <location filename="../panels/settings_dialog.py" line="459"/>
+        <location filename="../panels/settings_dialog.py" line="477"/>
+        <location filename="../panels/settings_dialog.py" line="492"/>
         <source>NetMD</source>
         <translation>NetMD</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="459"/>
+        <location filename="../panels/settings_dialog.py" line="460"/>
         <source>netmdcli is missing from this build, so a NetMD deck cannot be reached.</source>
         <translation>このビルドにはnetmdcliが含まれていないため、NetMD機器に接続できません。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="478"/>
+        <location filename="../panels/settings_dialog.py" line="479"/>
         <source>No NetMD deck answered: {error}
 
 Check that it is plugged in and switched on, and that it is bound to a libusb-compatible driver (WinUSB) rather than Sony&apos;s own -- from here the two look identical.</source>
@@ -4540,7 +4560,7 @@ Check that it is plugged in and switched on, and that it is bound to a libusb-co
 機器が接続され電源が入っていること、そしてSony純正ドライバではなくlibusb互換ドライバ(WinUSB)に割り当てられていることを確認してください -- ここからは両者を区別できません。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="492"/>
+        <location filename="../panels/settings_dialog.py" line="493"/>
         <source>A NetMD deck answered. The disc in it holds {count} track(s).</source>
         <translation>NetMD機器が応答しました。挿入されているディスクには{count}曲収録されています。</translation>
     </message>
@@ -4549,28 +4569,28 @@ Check that it is plugged in and switched on, and that it is bound to a libusb-co
         <translation type="vanished">プロジェクト &gt; メタデータ... に「トラックリストを転送」を、起動画面にリモコンウィンドウを追加します。赤外線でMiniDisc本体にタイトルを書き込むための機能です。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="310"/>
+        <location filename="../panels/settings_dialog.py" line="311"/>
         <source>Adds Upload Tracklist to the Metadata dialog, the Recording menu&apos;s entries, and a Remote window to the startup screen, for writing titles onto the MiniDisc itself over infrared.</source>
         <translation>メタデータ画面に「トラックリストを転送」を、録音メニューの各項目を、起動画面にリモコンウィンドウを追加します。赤外線でMiniDisc本体にタイトルを書き込むための機能です。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="319"/>
+        <location filename="../panels/settings_dialog.py" line="320"/>
         <source>Serial port the MDRem adapter is connected to.</source>
         <translation>MDRemアダプターが接続されているシリアルポート。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="321"/>
-        <location filename="../panels/settings_dialog.py" line="375"/>
+        <location filename="../panels/settings_dialog.py" line="322"/>
+        <location filename="../panels/settings_dialog.py" line="376"/>
         <source>Detect</source>
         <translation>検出</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="324"/>
+        <location filename="../panels/settings_dialog.py" line="325"/>
         <source>Asks every serial port whether an MDRem adapter answers on it. The board&apos;s USB ID is shared with its own bootloader and other boards, so it can only be identified by replying.</source>
         <translation>各シリアルポートにMDRemアダプターが応答するか問い合わせます。基板のUSB IDはブートローダーや他の基板と共通のため、応答によってのみ識別できます。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="336"/>
+        <location filename="../panels/settings_dialog.py" line="337"/>
         <source>MDRem port</source>
         <translation>MDRemポート</translation>
     </message>
@@ -4587,7 +4607,7 @@ Check that it is plugged in and switched on, and that it is bound to a libusb-co
         <translation type="vanished">foobar2000の実行ファイル。取り込んだCDトラックはBeefwebではなくこれを介して読み込まれます。Beefwebはfoobar2000側で設定された音楽フォルダー以外のファイルを拒否するためです。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="509"/>
+        <location filename="../panels/settings_dialog.py" line="510"/>
         <source>Browse...</source>
         <translation>参照...</translation>
     </message>
@@ -4596,14 +4616,14 @@ Check that it is plugged in and switched on, and that it is bound to a libusb-co
         <translation type="vanished">foobar2000の実行ファイル</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="505"/>
+        <location filename="../panels/settings_dialog.py" line="506"/>
         <source>Where a ripped CD is written. One album is a few hundred megabytes; earlier rips are deleted when the next one starts, not when a recording ends, so they stay playable in the meantime.</source>
         <translation>取り込んだCDの保存先。1枚で数百MBになります。以前の取り込みは録音の終了時ではなく次の取り込みの開始時に削除されるため、それまでは再生できます。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="511"/>
-        <location filename="../panels/settings_dialog.py" line="529"/>
-        <location filename="../panels/settings_dialog.py" line="728"/>
+        <location filename="../panels/settings_dialog.py" line="512"/>
+        <location filename="../panels/settings_dialog.py" line="530"/>
+        <location filename="../panels/settings_dialog.py" line="744"/>
         <source>CD rip folder</source>
         <translation>CD取り込みフォルダー</translation>
     </message>
@@ -4612,72 +4632,82 @@ Check that it is plugged in and switched on, and that it is bound to a libusb-co
         <translation type="vanished">プログラム (*.exe);;すべてのファイル (*)</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="547"/>
+        <location filename="../panels/settings_dialog.py" line="548"/>
         <source>{port} (not connected)</source>
         <translation>{port} (未接続)</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="574"/>
+        <location filename="../panels/settings_dialog.py" line="575"/>
         <source>Detect MDRem</source>
         <translation>MDRemの検出</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="575"/>
+        <location filename="../panels/settings_dialog.py" line="576"/>
         <source>No MDRem adapter answered on any serial port. Check that it is plugged in.</source>
         <translation>どのシリアルポートでもMDRemアダプターが応答しませんでした。接続を確認してください。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="593"/>
+        <location filename="../panels/settings_dialog.py" line="594"/>
         <source>Telegram bot</source>
         <translation>Telegram ボット</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="599"/>
+        <location filename="../panels/settings_dialog.py" line="600"/>
         <source>Downloading an album from a Telegram bot is still in development. Once signed in, its window appears in the Source menu, which needs &quot;Show experimental features&quot; turned on in General.</source>
         <translation>Telegram ボットからのアルバムのダウンロードはまだ開発中です。サインインすると、その画面はソースメニューに表示されます。表示するには全般で「実験的機能を表示」を有効にしてください。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="617"/>
+        <location filename="../panels/settings_dialog.py" line="618"/>
         <source>Bot username</source>
         <translation>ボットのユーザー名</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="626"/>
+        <location filename="../panels/settings_dialog.py" line="633"/>
+        <source>How many files to download at once. Telegram&apos;s own per-file transfer is round-trip-bound, not bandwidth-bound, so a higher number does not always mean faster -- try a small change and see.</source>
+        <translation>同時にダウンロードするファイル数です。Telegramの1ファイルあたりの転送速度は帯域幅ではなく往復応答時間に左右されるため、数を増やせば必ず速くなるとは限りません -- 少し変えて試してみてください。</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="638"/>
+        <source>Simultaneous downloads</source>
+        <translation>同時ダウンロード数</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="641"/>
         <source>Status</source>
         <translation>ステータス</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="628"/>
+        <location filename="../panels/settings_dialog.py" line="643"/>
         <source>Sign in to Telegram...</source>
         <translation>Telegram にサインイン...</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="632"/>
+        <location filename="../panels/settings_dialog.py" line="647"/>
         <source>Sign out</source>
         <translation>サインアウト</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="645"/>
+        <location filename="../panels/settings_dialog.py" line="660"/>
         <source>A saved sign-in exists locally.</source>
         <translation>ローカルに保存されたサインイン情報があります。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="647"/>
+        <location filename="../panels/settings_dialog.py" line="662"/>
         <source>Not signed in yet.</source>
         <translation>まだサインインしていません。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="660"/>
+        <location filename="../panels/settings_dialog.py" line="675"/>
         <source>Sign in to Telegram</source>
         <translation>Telegram にサインイン</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="661"/>
+        <location filename="../panels/settings_dialog.py" line="676"/>
         <source>No Telegram API credentials are configured.</source>
         <translation>Telegram APIの認証情報が設定されていません。</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="730"/>
+        <location filename="../panels/settings_dialog.py" line="746"/>
         <source>That folder could not be created: {error}
 
 The setting has been saved anyway, but a CD cannot be ripped there until it exists.</source>
@@ -5019,22 +5049,22 @@ Make sure the right cassette is in the deck, wound to the start of side A, and t
 <context>
     <name>TelegramChatDialog</name>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="631"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="638"/>
         <source>Telegram Bot</source>
         <translation>Telegram ボット</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="681"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="688"/>
         <source>Connecting...</source>
         <translation>接続中...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="747"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="754"/>
         <source>Quick commands:</source>
         <translation>クイックコマンド:</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="763"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="770"/>
         <source>Send</source>
         <translation>送信</translation>
     </message>
@@ -5047,35 +5077,35 @@ Make sure the right cassette is in the deck, wound to the start of side A, and t
         <translation type="vanished">録音するには Window &gt; Settings で MDRem アダプターを有効にしてください。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="796"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="1152"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="803"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1165"/>
         <source>Close</source>
         <translation>閉じる</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="152"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="153"/>
         <source>More than one album was downloaded -- which one do you want to use?</source>
         <translation>ダウンロードされたアルバムが複数あります。どれを使いますか？</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="714"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="721"/>
         <source>Downloads</source>
         <translation>ダウンロード</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="779"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="786"/>
         <source>Open Download Folder</source>
         <translation>ダウンロードフォルダを開く</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="783"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="1236"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="1240"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="790"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1249"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1253"/>
         <source>Sort into Album Folders</source>
         <translation>アルバムフォルダに振り分け</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="791"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="798"/>
         <source>Record Downloaded Albums...</source>
         <translation>ダウンロードしたアルバムを録音...</translation>
     </message>
@@ -5092,123 +5122,123 @@ Make sure the right cassette is in the deck, wound to the start of side A, and t
         <translation type="vanished">このウィンドウを隠し、チャットとダウンロードをバックグラウンドで続けます。メインウィンドウ下部のバーにある「録音ウィンドウを表示」で戻せます。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="828"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="835"/>
         <source>The Telegram API ID must be a number.</source>
         <translation>Telegram の API ID は数値である必要があります。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="858"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="871"/>
         <source>Connected to {name}.</source>
         <translation>{name} に接続しました。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="872"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="885"/>
         <source>Not signed in to Telegram.</source>
         <translation>Telegram にサインインしていません。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="873"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="886"/>
         <source>Sign in...</source>
         <translation>サインイン...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="887"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="900"/>
         <source>Could not connect: {error}</source>
         <translation>接続できませんでした: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="976"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="989"/>
         <source>Could not send: {error}</source>
         <translation>送信できませんでした: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="983"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="996"/>
         <source>Could not do that: {error}</source>
         <translation>それを実行できませんでした: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1001"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1014"/>
         <source>Could not save image: {error}</source>
         <translation>画像を保存できませんでした: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1003"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1016"/>
         <source>Saved image to {path}</source>
         <translation>{path} に画像を保存しました</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1065"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1078"/>
         <source>Downloaded, but could not be filed into an album folder: {error}</source>
         <translation>ダウンロードは完了しましたが、アルバムフォルダに振り分けられませんでした: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1097"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1110"/>
         <source>{finished}/{total} done</source>
         <translation>{finished}/{total} 完了</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1099"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1112"/>
         <source>{count} queued</source>
         <translation>{count} 件が待機中</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1101"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1114"/>
         <source>{count} downloading</source>
         <translation>{count} 件がダウンロード中</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1103"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1116"/>
         <source>{count} failed</source>
         <translation>{count} 件が失敗</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1106"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1119"/>
         <source>{percent}% overall</source>
         <translation>全体で{percent}%</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1108"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1121"/>
         <source>{speed}/s</source>
         <translation>{speed}/秒</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1152"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1165"/>
         <source>Cancel</source>
         <translation>キャンセル</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1165"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="1194"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1178"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1207"/>
         <source>Wait for the current download(s) to finish first.</source>
         <translation>現在のダウンロードが終わるまでお待ちください。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1168"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1181"/>
         <source>Nothing is waiting to be sorted.</source>
         <translation>振り分けを待っているファイルはありません。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1190"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1203"/>
         <source>Enable MDRem or NetMD in Window &gt; Settings to record.</source>
         <translation>録音するには「ウィンドウ」&gt;「設定」でMDRemまたはNetMDを有効にしてください。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1197"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1210"/>
         <source>Download at least one file first.</source>
         <translation>先に少なくとも1つのファイルをダウンロードしてください。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1233"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1246"/>
         <source>These tracks all belong to one album -- there is nothing to separate.</source>
         <translation>これらのトラックはすべて同じアルバムのものです -- 分ける必要はありません。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1235"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1248"/>
         <source>Everything is already sorted into album folders.</source>
         <translation>すべてすでにアルバムフォルダに振り分けられています。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="151"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="152"/>
         <source>Choose Album</source>
         <translation>アルバムを選択</translation>
     </message>
@@ -5221,12 +5251,12 @@ Make sure the right cassette is in the deck, wound to the start of side A, and t
         <translation type="vanished">アルバムは1つしか検出されませんでした -- 振り分ける必要はありません。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1241"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1254"/>
         <source>Sorted into {count} album folders.</source>
         <translation>{count} 個のアルバムフォルダに振り分けました。</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1294"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1307"/>
         <source>Disconnecting...</source>
         <translation>切断中...</translation>
     </message>
@@ -5793,32 +5823,32 @@ You can try again.</source>
 <context>
     <name>_DownloadQueueItem</name>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="552"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="559"/>
         <source>Queued</source>
         <translation>待機中</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="555"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="562"/>
         <source>Retry</source>
         <translation>再試行</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="567"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="574"/>
         <source>Downloading...</source>
         <translation>ダウンロード中...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="588"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="595"/>
         <source>Downloading... ({speed}/s)</source>
         <translation>ダウンロード中... ({speed}/s)</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="592"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="599"/>
         <source>Saved</source>
         <translation>保存済み</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="596"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="603"/>
         <source>Failed: {error}</source>
         <translation>失敗しました: {error}</translation>
     </message>
@@ -5826,17 +5856,17 @@ You can try again.</source>
 <context>
     <name>_MessageWidget</name>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="450"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="457"/>
         <source>You</source>
         <translation>あなた</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="478"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="485"/>
         <source>Loading image...</source>
         <translation>画像を読み込み中...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="479"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="486"/>
         <source>Click to save this image</source>
         <translation>クリックしてこの画像を保存</translation>
     </message>
@@ -5853,12 +5883,12 @@ You can try again.</source>
         <translation type="vanished">失敗しました: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="499"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="506"/>
         <source>Could not display image</source>
         <translation>画像を表示できませんでした</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="509"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="516"/>
         <source>Translated: {text}</source>
         <translation>翻訳: {text}</translation>
     </message>

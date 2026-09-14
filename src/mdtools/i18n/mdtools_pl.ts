@@ -23,8 +23,28 @@ Burn an audio CD-R from a folder of files, with CD-Text titles, resampling anyth
 
 Record a cassette from a CD or a folder of files, side by side: it works out where to turn the tape over, records ten seconds of silence past the leader, plays each side and says when to flip it.
 
-With an MDRem infrared adapter it also drives a MiniDisc deck: record an album from a CD or a folder of files with a track mark at every song, write the disc and track titles onto the MiniDisc, and stand in for the remote.</source>
+It also drives a MiniDisc deck -- with an MDRem infrared adapter, or over USB via NetMD: record an album from a CD or a folder of files with a track mark at every song, write the disc and track titles onto the MiniDisc, and stand in for the remote.</source>
         <translation>Aplikacja desktopowa do pracy z MiniDisc, płytami CD-R i kasetami magnetofonowymi.
+
+Zaprojektuj etykiety dla każdego z tych nośników: naklejkę i J-card MiniDisc, etykietę pierścieniową i wkładki pudełka CD, albo wkładkę i naklejki na obie strony kasety -- i wyeksportuj je jako pliki SVG gotowe do wycięcia oraz pliki PNG gotowe do druku, dla plotera tnącego Cricut i zwykłej drukarki.
+
+Wypal płytę audio CD-R z folderu plików wraz z tytułami CD-Text, resamplując po drodze wszystko, co nie jest jeszcze w formacie 44,1 kHz / 16-bit.
+
+Nagraj kasetę z płyty CD lub folderu plików, strona po stronie: aplikacja sama wylicza, gdzie przewinąć taśmę, nagrywa dziesięć sekund ciszy za taśmą prowadzącą, odtwarza każdą stronę i mówi, kiedy ją odwrócić.
+
+Steruje też magnetofonem MiniDisc -- adapterem podczerwieni MDRem albo przez USB, przez NetMD: nagrywa album z płyty CD lub folderu plików, znacząc każdy utwór, zapisuje tytuły płyty i utworów na MiniDisc i zastępuje pilota.</translation>
+    </message>
+    <message>
+        <source>A desktop workbench for MiniDisc, CD-R and compact cassette.
+
+Design the labels for any of them: a MiniDisc&apos;s sticker and J-card, a CD&apos;s ring label and case inserts, or a cassette&apos;s inlay card and a sticker for each side -- and export them as cut-ready SVG and print-ready PNG, for a Cricut cutting machine plus a regular printer.
+
+Burn an audio CD-R from a folder of files, with CD-Text titles, resampling anything that is not already 44.1 kHz / 16-bit on the way.
+
+Record a cassette from a CD or a folder of files, side by side: it works out where to turn the tape over, records ten seconds of silence past the leader, plays each side and says when to flip it.
+
+With an MDRem infrared adapter it also drives a MiniDisc deck: record an album from a CD or a folder of files with a track mark at every song, write the disc and track titles onto the MiniDisc, and stand in for the remote.</source>
+        <translation type="vanished">Aplikacja desktopowa do pracy z MiniDisc, płytami CD-R i kasetami magnetofonowymi.
 
 Zaprojektuj etykiety dla każdego z tych nośników: naklejkę i J-card MiniDisc, etykietę pierścieniową i wkładki pudełka CD, albo wkładkę i naklejki na obie strony kasety -- i wyeksportuj je jako pliki SVG gotowe do wycięcia oraz pliki PNG gotowe do druku, dla plotera tnącego Cricut i zwykłej drukarki.
 
@@ -87,12 +107,12 @@ Z przystawką MDRem na podczerwień steruje też samym magnetofonem: nagrywa alb
         <translation type="vanished">Aplikacja biurkowa do projektowania etykiet MiniDisc oraz wkładek okładki/J-card, eksportująca pliki SVG gotowe do cięcia i PNG gotowe do druku, do użytku z plotterem tnącym Cricut oraz zwykłą drukarką.</translation>
     </message>
     <message>
-        <location filename="../panels/about_dialog.py" line="46"/>
+        <location filename="../panels/about_dialog.py" line="47"/>
         <source>Author: {author}</source>
         <translation>Autor: {author}</translation>
     </message>
     <message>
-        <location filename="../panels/about_dialog.py" line="51"/>
+        <location filename="../panels/about_dialog.py" line="52"/>
         <source>Tool icons: &lt;a href=&quot;https://github.com/twitter/twemoji&quot;&gt;Twemoji&lt;/a&gt;, CC-BY 4.0, Copyright Twitter, Inc and other contributors.</source>
         <translation>Ikony narzędzi: &lt;a href=&quot;https://github.com/twitter/twemoji&quot;&gt;Twemoji&lt;/a&gt;, CC-BY 4.0, Copyright Twitter, Inc i inni współautorzy.</translation>
     </message>
@@ -4328,210 +4348,210 @@ Czy pokazuje teraz pauzę nagrywania (świeci REC, wstrzymane)?</translation>
 <context>
     <name>SettingsDialog</name>
     <message>
-        <location filename="../panels/settings_dialog.py" line="88"/>
+        <location filename="../panels/settings_dialog.py" line="89"/>
         <source>Settings</source>
         <translation>Ustawienia</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="96"/>
+        <location filename="../panels/settings_dialog.py" line="97"/>
         <source>General</source>
         <translation>Ogólne</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="97"/>
+        <location filename="../panels/settings_dialog.py" line="98"/>
         <source>Audio</source>
         <translation>Audio</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="98"/>
+        <location filename="../panels/settings_dialog.py" line="99"/>
         <source>MiniDisc Recording</source>
         <translation>Nagrywanie MiniDisc</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="99"/>
+        <location filename="../panels/settings_dialog.py" line="100"/>
         <source>CD</source>
         <translation>CD</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="100"/>
+        <location filename="../panels/settings_dialog.py" line="101"/>
         <source>Telegram</source>
         <translation>Telegram</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="118"/>
+        <location filename="../panels/settings_dialog.py" line="119"/>
         <source>Dots per inch used to display the canvas on screen at 100% zoom. Not necessarily your monitor&apos;s real physical DPI -- adjust this if content looks the wrong physical size on screen.</source>
         <translation>Liczba punktów na cal używana do wyświetlania płótna na ekranie przy powiększeniu 100%. Nie musi odpowiadać rzeczywistej fizycznej rozdzielczości monitora -- zmień tę wartość, jeśli zawartość ma niewłaściwy fizyczny rozmiar na ekranie.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="122"/>
+        <location filename="../panels/settings_dialog.py" line="123"/>
         <source>Screen DPI</source>
         <translation>DPI ekranu</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="124"/>
+        <location filename="../panels/settings_dialog.py" line="125"/>
         <source>Applies to newly created or reopened projects -- not the one currently open.</source>
         <translation>Dotyczy nowo utworzonych lub ponownie otwartych projektów -- nie tego, który jest aktualnie otwarty.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="134"/>
+        <location filename="../panels/settings_dialog.py" line="135"/>
         <source>Default DPI for Export Print PNG / Export Print PNG (Grayscale).</source>
         <translation>Domyślne DPI dla eksportu PNG do druku / eksportu PNG do druku (skala szarości).</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="136"/>
+        <location filename="../panels/settings_dialog.py" line="137"/>
         <source>Default Export DPI</source>
         <translation>Domyślne DPI eksportu</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="144"/>
+        <location filename="../panels/settings_dialog.py" line="145"/>
         <source>DPI Tools &gt; Bake Layers renders at. Higher than the default export DPI by default, since a baked layer&apos;s resolution is locked in permanently, unlike a re-renderable vector layer.</source>
         <translation>DPI, w którym renderowana jest funkcja Narzędzia &gt; Spłaszcz warstwy. Domyślnie wyższe niż domyślne DPI eksportu, ponieważ rozdzielczość spłaszczonej warstwy jest trwale ustalona, w przeciwieństwie do warstwy wektorowej, którą można ponownie wyrenderować.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="148"/>
+        <location filename="../panels/settings_dialog.py" line="149"/>
         <source>Bake DPI</source>
         <translation>DPI spłaszczania warstw</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="152"/>
+        <location filename="../panels/settings_dialog.py" line="153"/>
         <source>Restore Defaults</source>
         <translation>Przywróć domyślne</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="154"/>
+        <location filename="../panels/settings_dialog.py" line="155"/>
         <source>Resets every group&apos;s fields to their defaults -- not only this one.</source>
         <translation>Przywraca domyślne wartości pól we wszystkich grupach -- nie tylko w tej.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="209"/>
+        <location filename="../panels/settings_dialog.py" line="210"/>
         <source>MiniDisc audio output device</source>
         <translation>Urządzenie wyjścia audio dla MiniDisc</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="212"/>
+        <location filename="../panels/settings_dialog.py" line="213"/>
         <source>The output device audio is played through while recording to MiniDisc -- typically a digital (S/PDIF) output feeding the deck. Leave as &quot;System default&quot; to use whatever the operating system currently considers the default output.</source>
         <translation>Urządzenie, przez które odtwarzany jest dźwięk podczas nagrywania na MiniDisc -- zwykle cyfrowe wyjście (S/PDIF) zasilające magnetofon. Zostaw „Domyślne systemowe”, aby używać tego, co system operacyjny aktualnie uznaje za wyjście domyślne.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="219"/>
+        <location filename="../panels/settings_dialog.py" line="220"/>
         <source>Cassette audio output device</source>
         <translation>Urządzenie wyjścia audio dla kasety</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="222"/>
+        <location filename="../panels/settings_dialog.py" line="223"/>
         <source>The output device audio is played through while recording to cassette -- typically an analogue line output feeding the deck. Leave as &quot;System default&quot; to use whatever the operating system currently considers the default output.</source>
         <translation>Urządzenie, przez które odtwarzany jest dźwięk podczas nagrywania na kasetę -- zwykle analogowe wyjście liniowe zasilające magnetofon. Zostaw „Domyślne systemowe”, aby używać tego, co system operacyjny aktualnie uznaje za wyjście domyślne.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="231"/>
+        <location filename="../panels/settings_dialog.py" line="232"/>
         <source> dB</source>
         <translation> dB</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="235"/>
+        <location filename="../panels/settings_dialog.py" line="236"/>
         <source>Headroom below full scale while recording, so a hot digital source has no chance to clip on the way in. Does not affect preview playback.</source>
         <translation>Zapas poniżej pełnej skali podczas nagrywania, dzięki czemu głośne źródło cyfrowe nie ma szans na przesterowanie po drodze. Nie wpływa na odtwarzanie podglądu.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="239"/>
+        <location filename="../panels/settings_dialog.py" line="240"/>
         <source>Recording gain</source>
         <translation>Wzmocnienie nagrywania</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="249"/>
+        <location filename="../panels/settings_dialog.py" line="250"/>
         <source>Refresh</source>
         <translation>Odśwież</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="250"/>
+        <location filename="../panels/settings_dialog.py" line="251"/>
         <source>Re-lists the currently available output devices.</source>
         <translation>Odświeża listę aktualnie dostępnych urządzeń wyjściowych.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="270"/>
+        <location filename="../panels/settings_dialog.py" line="271"/>
         <source>System default</source>
         <translation>Domyślne systemowe</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="280"/>
+        <location filename="../panels/settings_dialog.py" line="281"/>
         <source>{device} (not connected)</source>
         <translation>{device} (niepodłączone)</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="294"/>
+        <location filename="../panels/settings_dialog.py" line="295"/>
         <source>Show experimental features</source>
         <translation>Pokaż funkcje eksperymentalne</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="297"/>
+        <location filename="../panels/settings_dialog.py" line="298"/>
         <source>Shows in-development features that aren&apos;t finished yet.</source>
         <translation>Pokazuje funkcje w trakcie rozwoju, które nie są jeszcze ukończone.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="306"/>
+        <location filename="../panels/settings_dialog.py" line="307"/>
         <source>Enable MDRem IR remote adapter</source>
         <translation>Włącz przystawkę MDRem (pilot na podczerwień)</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="355"/>
+        <location filename="../panels/settings_dialog.py" line="356"/>
         <source>Use a NetMD USB cable</source>
         <translation>Użyj kabla USB NetMD</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="359"/>
+        <location filename="../panels/settings_dialog.py" line="360"/>
         <source>Drives a NetMD-capable deck over USB: it reads the disc, writes the titles into its TOC, and in LP2/LP4 carries the audio itself. Cannot be used together with the MDRem infrared adapter -- turning this on turns that off.</source>
         <translation>Steruje nagrywarką obsługującą NetMD przez USB: odczytuje płytę, zapisuje tytuły w jej spisie treści (TOC), a w trybach LP2/LP4 przenosi także samo audio. Nie można używać jednocześnie z adapterem podczerwieni MDRem -- włączenie tej opcji wyłącza tamtą.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="370"/>
+        <location filename="../panels/settings_dialog.py" line="371"/>
         <source>The deck xD-Tools talks to. netmdcli always uses the first NetMD device it finds and offers no way to pick another, so with two decks plugged in this records which one you meant rather than being able to redirect anything.</source>
         <translation>Nagrywarka, z którą komunikuje się xD-Tools. netmdcli zawsze używa pierwszego znalezionego urządzenia NetMD i nie pozwala wybrać innego, więc przy podłączonych dwóch nagrywarkach to pole tylko zapamiętuje, o którą chodziło, a nie pozwala przełączyć na inną.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="377"/>
+        <location filename="../panels/settings_dialog.py" line="378"/>
         <source>Asks whether a NetMD deck is connected and answering.</source>
         <translation>Sprawdza, czy nagrywarka NetMD jest podłączona i odpowiada.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="387"/>
-        <location filename="../panels/settings_dialog.py" line="487"/>
+        <location filename="../panels/settings_dialog.py" line="388"/>
+        <location filename="../panels/settings_dialog.py" line="488"/>
         <source>NetMD deck</source>
         <translation>Nagrywarka NetMD</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="394"/>
+        <location filename="../panels/settings_dialog.py" line="395"/>
         <source>{label} -- {minutes} min a disc</source>
         <translation>{label} -- {minutes} min na płytę</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="402"/>
+        <location filename="../panels/settings_dialog.py" line="403"/>
         <source>Which mode a recording is made in. This decides how much fits on the disc.</source>
         <translation>W jakim trybie wykonywane jest nagranie. To decyduje, ile zmieści się na płycie.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="405"/>
+        <location filename="../panels/settings_dialog.py" line="406"/>
         <source>Recording mode</source>
         <translation>Tryb nagrywania</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="426"/>
+        <location filename="../panels/settings_dialog.py" line="427"/>
         <source>The connected NetMD deck</source>
         <translation>Podłączona nagrywarka NetMD</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="458"/>
-        <location filename="../panels/settings_dialog.py" line="476"/>
-        <location filename="../panels/settings_dialog.py" line="491"/>
+        <location filename="../panels/settings_dialog.py" line="459"/>
+        <location filename="../panels/settings_dialog.py" line="477"/>
+        <location filename="../panels/settings_dialog.py" line="492"/>
         <source>NetMD</source>
         <translation>NetMD</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="459"/>
+        <location filename="../panels/settings_dialog.py" line="460"/>
         <source>netmdcli is missing from this build, so a NetMD deck cannot be reached.</source>
         <translation>W tej wersji brakuje netmdcli, więc nie można połączyć się z nagrywarką NetMD.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="478"/>
+        <location filename="../panels/settings_dialog.py" line="479"/>
         <source>No NetMD deck answered: {error}
 
 Check that it is plugged in and switched on, and that it is bound to a libusb-compatible driver (WinUSB) rather than Sony&apos;s own -- from here the two look identical.</source>
@@ -4540,7 +4560,7 @@ Check that it is plugged in and switched on, and that it is bound to a libusb-co
 Sprawdź, czy jest podłączona i włączona oraz czy jest przypisana do sterownika zgodnego z libusb (WinUSB), a nie do sterownika Sony -- stąd oba wyglądają identycznie.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="492"/>
+        <location filename="../panels/settings_dialog.py" line="493"/>
         <source>A NetMD deck answered. The disc in it holds {count} track(s).</source>
         <translation>Odpowiedziała nagrywarka NetMD. Płyta w niej zawiera {count} utwor(ów).</translation>
     </message>
@@ -4549,28 +4569,28 @@ Sprawdź, czy jest podłączona i włączona oraz czy jest przypisana do sterown
         <translation type="vanished">Dodaje „Wyślij listę utworów” w Projekt &gt; Metadane... oraz okno pilota na ekranie startowym, do zapisywania tytułów na samej płycie MiniDisc przez podczerwień.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="310"/>
+        <location filename="../panels/settings_dialog.py" line="311"/>
         <source>Adds Upload Tracklist to the Metadata dialog, the Recording menu&apos;s entries, and a Remote window to the startup screen, for writing titles onto the MiniDisc itself over infrared.</source>
         <translation>Dodaje „Wyślij listę utworów” w oknie Metadane..., pozycje menu Nagrywanie oraz okno pilota na ekranie startowym, do zapisywania tytułów na samej płycie MiniDisc przez podczerwień.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="319"/>
+        <location filename="../panels/settings_dialog.py" line="320"/>
         <source>Serial port the MDRem adapter is connected to.</source>
         <translation>Port szeregowy, do którego podłączona jest przystawka MDRem.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="321"/>
-        <location filename="../panels/settings_dialog.py" line="375"/>
+        <location filename="../panels/settings_dialog.py" line="322"/>
+        <location filename="../panels/settings_dialog.py" line="376"/>
         <source>Detect</source>
         <translation>Wykryj</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="324"/>
+        <location filename="../panels/settings_dialog.py" line="325"/>
         <source>Asks every serial port whether an MDRem adapter answers on it. The board&apos;s USB ID is shared with its own bootloader and other boards, so it can only be identified by replying.</source>
         <translation>Odpytuje każdy port szeregowy, czy odpowiada na nim przystawka MDRem. Identyfikator USB płytki jest wspólny z jej własnym bootloaderem i innymi płytkami, więc rozpoznać ją można wyłącznie po odpowiedzi.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="336"/>
+        <location filename="../panels/settings_dialog.py" line="337"/>
         <source>MDRem port</source>
         <translation>Port MDRem</translation>
     </message>
@@ -4587,7 +4607,7 @@ Sprawdź, czy jest podłączona i włączona oraz czy jest przypisana do sterown
         <translation type="vanished">Plik programu foobar2000. Zgrane ścieżki CD są ładowane przez niego, a nie przez Beefweb, który odrzuca pliki spoza folderów muzycznych skonfigurowanych w samym foobarze.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="509"/>
+        <location filename="../panels/settings_dialog.py" line="510"/>
         <source>Browse...</source>
         <translation>Przeglądaj...</translation>
     </message>
@@ -4596,14 +4616,14 @@ Sprawdź, czy jest podłączona i włączona oraz czy jest przypisana do sterown
         <translation type="vanished">Program foobar2000</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="505"/>
+        <location filename="../panels/settings_dialog.py" line="506"/>
         <source>Where a ripped CD is written. One album is a few hundred megabytes; earlier rips are deleted when the next one starts, not when a recording ends, so they stay playable in the meantime.</source>
         <translation>Gdzie zapisywana jest zgrana płyta. Jeden album to kilkaset megabajtów; wcześniejsze zgrania są kasowane przy rozpoczęciu następnego, a nie po zakończeniu nagrywania, więc do tego czasu można je odtwarzać.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="511"/>
-        <location filename="../panels/settings_dialog.py" line="529"/>
-        <location filename="../panels/settings_dialog.py" line="728"/>
+        <location filename="../panels/settings_dialog.py" line="512"/>
+        <location filename="../panels/settings_dialog.py" line="530"/>
+        <location filename="../panels/settings_dialog.py" line="744"/>
         <source>CD rip folder</source>
         <translation>Folder zgrywania CD</translation>
     </message>
@@ -4612,72 +4632,82 @@ Sprawdź, czy jest podłączona i włączona oraz czy jest przypisana do sterown
         <translation type="vanished">Programy (*.exe);;Wszystkie pliki (*)</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="547"/>
+        <location filename="../panels/settings_dialog.py" line="548"/>
         <source>{port} (not connected)</source>
         <translation>{port} (niepodłączony)</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="574"/>
+        <location filename="../panels/settings_dialog.py" line="575"/>
         <source>Detect MDRem</source>
         <translation>Wykrywanie MDRem</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="575"/>
+        <location filename="../panels/settings_dialog.py" line="576"/>
         <source>No MDRem adapter answered on any serial port. Check that it is plugged in.</source>
         <translation>Żadna przystawka MDRem nie odpowiedziała na żadnym porcie szeregowym. Sprawdź, czy jest podłączona.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="593"/>
+        <location filename="../panels/settings_dialog.py" line="594"/>
         <source>Telegram bot</source>
         <translation>Bot Telegram</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="599"/>
+        <location filename="../panels/settings_dialog.py" line="600"/>
         <source>Downloading an album from a Telegram bot is still in development. Once signed in, its window appears in the Source menu, which needs &quot;Show experimental features&quot; turned on in General.</source>
         <translation>Pobieranie albumu z bota Telegram jest wciąż w trakcie rozwoju. Po zalogowaniu jego okno pojawia się w menu Źródło, które wymaga włączenia opcji &quot;Pokaż funkcje eksperymentalne&quot; w grupie Ogólne.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="617"/>
+        <location filename="../panels/settings_dialog.py" line="618"/>
         <source>Bot username</source>
         <translation>Nazwa użytkownika bota</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="626"/>
+        <location filename="../panels/settings_dialog.py" line="633"/>
+        <source>How many files to download at once. Telegram&apos;s own per-file transfer is round-trip-bound, not bandwidth-bound, so a higher number does not always mean faster -- try a small change and see.</source>
+        <translation>Ile plików pobierać jednocześnie. Transfer pojedynczego pliku w Telegramie zależy od czasu odpowiedzi serwera, a nie od przepustowości łącza, więc większa liczba nie zawsze oznacza szybciej -- warto po prostu spróbować zmienić wartość.</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="638"/>
+        <source>Simultaneous downloads</source>
+        <translation>Jednoczesne pobierania</translation>
+    </message>
+    <message>
+        <location filename="../panels/settings_dialog.py" line="641"/>
         <source>Status</source>
         <translation>Status</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="628"/>
+        <location filename="../panels/settings_dialog.py" line="643"/>
         <source>Sign in to Telegram...</source>
         <translation>Zaloguj się do Telegrama...</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="632"/>
+        <location filename="../panels/settings_dialog.py" line="647"/>
         <source>Sign out</source>
         <translation>Wyloguj</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="645"/>
+        <location filename="../panels/settings_dialog.py" line="660"/>
         <source>A saved sign-in exists locally.</source>
         <translation>Lokalnie zapisane jest logowanie.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="647"/>
+        <location filename="../panels/settings_dialog.py" line="662"/>
         <source>Not signed in yet.</source>
         <translation>Jeszcze niezalogowano.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="660"/>
+        <location filename="../panels/settings_dialog.py" line="675"/>
         <source>Sign in to Telegram</source>
         <translation>Zaloguj się do Telegrama</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="661"/>
+        <location filename="../panels/settings_dialog.py" line="676"/>
         <source>No Telegram API credentials are configured.</source>
         <translation>Nie skonfigurowano danych dostępowych API Telegrama.</translation>
     </message>
     <message>
-        <location filename="../panels/settings_dialog.py" line="730"/>
+        <location filename="../panels/settings_dialog.py" line="746"/>
         <source>That folder could not be created: {error}
 
 The setting has been saved anyway, but a CD cannot be ripped there until it exists.</source>
@@ -5019,22 +5049,22 @@ Upewnij się, że w magnetofonie jest właściwa kaseta, przewinięta na począt
 <context>
     <name>TelegramChatDialog</name>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="631"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="638"/>
         <source>Telegram Bot</source>
         <translation>Bot Telegram</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="681"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="688"/>
         <source>Connecting...</source>
         <translation>Łączenie...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="747"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="754"/>
         <source>Quick commands:</source>
         <translation>Szybkie komendy:</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="763"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="770"/>
         <source>Send</source>
         <translation>Wyślij</translation>
     </message>
@@ -5047,35 +5077,35 @@ Upewnij się, że w magnetofonie jest właściwa kaseta, przewinięta na począt
         <translation type="vanished">Włącz adapter MDRem w Window &gt; Settings, aby nagrywać.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="796"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="1152"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="803"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1165"/>
         <source>Close</source>
         <translation>Zamknij</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="152"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="153"/>
         <source>More than one album was downloaded -- which one do you want to use?</source>
         <translation>Pobrano więcej niż jeden album — którego chcesz użyć?</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="714"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="721"/>
         <source>Downloads</source>
         <translation>Pobierania</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="779"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="786"/>
         <source>Open Download Folder</source>
         <translation>Otwórz folder pobierania</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="783"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="1236"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="1240"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="790"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1249"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1253"/>
         <source>Sort into Album Folders</source>
         <translation>Posortuj na foldery albumów</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="791"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="798"/>
         <source>Record Downloaded Albums...</source>
         <translation>Nagraj pobrane albumy...</translation>
     </message>
@@ -5092,123 +5122,123 @@ Upewnij się, że w magnetofonie jest właściwa kaseta, przewinięta na począt
         <translation type="vanished">Ukryj to okno i prowadź rozmowę oraz pobieranie dalej w tle — użyj „Pokaż okno nagrywania” w pasku na dole głównego okna, żeby je przywrócić.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="828"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="835"/>
         <source>The Telegram API ID must be a number.</source>
         <translation>Telegram API ID musi być liczbą.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="858"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="871"/>
         <source>Connected to {name}.</source>
         <translation>Połączono z {name}.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="872"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="885"/>
         <source>Not signed in to Telegram.</source>
         <translation>Niezalogowano do Telegrama.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="873"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="886"/>
         <source>Sign in...</source>
         <translation>Zaloguj się...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="887"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="900"/>
         <source>Could not connect: {error}</source>
         <translation>Nie udało się połączyć: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="976"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="989"/>
         <source>Could not send: {error}</source>
         <translation>Nie udało się wysłać: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="983"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="996"/>
         <source>Could not do that: {error}</source>
         <translation>Nie udało się tego wykonać: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1001"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1014"/>
         <source>Could not save image: {error}</source>
         <translation>Nie udało się zapisać obrazu: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1003"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1016"/>
         <source>Saved image to {path}</source>
         <translation>Zapisano obraz do {path}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1065"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1078"/>
         <source>Downloaded, but could not be filed into an album folder: {error}</source>
         <translation>Pobrano, ale nie udało się umieścić pliku w folderze albumu: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1097"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1110"/>
         <source>{finished}/{total} done</source>
         <translation>{finished}/{total} gotowe</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1099"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1112"/>
         <source>{count} queued</source>
         <translation>{count} w kolejce</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1101"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1114"/>
         <source>{count} downloading</source>
         <translation>{count} pobieranych</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1103"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1116"/>
         <source>{count} failed</source>
         <translation>{count} nieudanych</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1106"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1119"/>
         <source>{percent}% overall</source>
         <translation>{percent}% łącznie</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1108"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1121"/>
         <source>{speed}/s</source>
         <translation>{speed}/s</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1152"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1165"/>
         <source>Cancel</source>
         <translation>Anuluj</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1165"/>
-        <location filename="../panels/telegram_chat_dialog.py" line="1194"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1178"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1207"/>
         <source>Wait for the current download(s) to finish first.</source>
         <translation>Poczekaj, aż bieżące pobieranie się zakończy.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1168"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1181"/>
         <source>Nothing is waiting to be sorted.</source>
         <translation>Nie ma nic do posortowania.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1190"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1203"/>
         <source>Enable MDRem or NetMD in Window &gt; Settings to record.</source>
         <translation>Włącz MDRem lub NetMD w Okno &gt; Ustawienia, aby nagrywać.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1197"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1210"/>
         <source>Download at least one file first.</source>
         <translation>Najpierw pobierz co najmniej jeden plik.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1233"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1246"/>
         <source>These tracks all belong to one album -- there is nothing to separate.</source>
         <translation>Wszystkie te utwory należą do jednego albumu -- nie ma czego rozdzielać.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1235"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1248"/>
         <source>Everything is already sorted into album folders.</source>
         <translation>Wszystko jest już posortowane na foldery albumów.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="151"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="152"/>
         <source>Choose Album</source>
         <translation>Wybierz album</translation>
     </message>
@@ -5221,12 +5251,12 @@ Upewnij się, że w magnetofonie jest właściwa kaseta, przewinięta na począt
         <translation type="vanished">Wykryto tylko jeden album -- nie ma czego sortować.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1241"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1254"/>
         <source>Sorted into {count} album folders.</source>
         <translation>Posortowano na {count} folderów albumów.</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="1294"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="1307"/>
         <source>Disconnecting...</source>
         <translation>Rozłączanie...</translation>
     </message>
@@ -5793,32 +5823,32 @@ Możesz spróbować ponownie.</translation>
 <context>
     <name>_DownloadQueueItem</name>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="552"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="559"/>
         <source>Queued</source>
         <translation>W kolejce</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="555"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="562"/>
         <source>Retry</source>
         <translation>Ponów</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="567"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="574"/>
         <source>Downloading...</source>
         <translation>Pobieranie...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="588"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="595"/>
         <source>Downloading... ({speed}/s)</source>
         <translation>Pobieranie... ({speed}/s)</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="592"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="599"/>
         <source>Saved</source>
         <translation>Zapisano</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="596"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="603"/>
         <source>Failed: {error}</source>
         <translation>Niepowodzenie: {error}</translation>
     </message>
@@ -5826,17 +5856,17 @@ Możesz spróbować ponownie.</translation>
 <context>
     <name>_MessageWidget</name>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="450"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="457"/>
         <source>You</source>
         <translation>Ty</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="478"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="485"/>
         <source>Loading image...</source>
         <translation>Wczytywanie obrazu...</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="479"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="486"/>
         <source>Click to save this image</source>
         <translation>Kliknij, aby zapisać ten obraz</translation>
     </message>
@@ -5853,12 +5883,12 @@ Możesz spróbować ponownie.</translation>
         <translation type="vanished">Niepowodzenie: {error}</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="499"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="506"/>
         <source>Could not display image</source>
         <translation>Nie udało się wyświetlić obrazu</translation>
     </message>
     <message>
-        <location filename="../panels/telegram_chat_dialog.py" line="509"/>
+        <location filename="../panels/telegram_chat_dialog.py" line="516"/>
         <source>Translated: {text}</source>
         <translation>Tłumaczenie: {text}</translation>
     </message>
