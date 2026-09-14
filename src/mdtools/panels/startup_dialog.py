@@ -21,9 +21,8 @@ from PySide6.QtWidgets import (
 )
 
 from mdtools import app_settings, user_paths
-from mdtools.panels.mdrem_port import resolve_port
 from mdtools.panels.print_dialog import MultiprintDialog
-from mdtools.panels.remote_dialog import RemoteDialog
+from mdtools.panels.remote_dialog import open_remote_control
 
 _PATH_ROLE = Qt.ItemDataRole.UserRole
 
@@ -72,12 +71,12 @@ class StartupDialog(QDialog):
         for button in (self.open_btn, browse_btn, new_btn, multiprint_btn):
             button_row.addWidget(button)
         # Same "standalone action, not an outcome" role as Multiprint, and
-        # like Upload Tracklist it only appears once the adapter is enabled
-        # in Window > Settings... -- there is nothing it could usefully do
-        # without hardware.
+        # like Upload Tracklist it only appears once a way of driving a
+        # deck (MDRem or NetMD) is enabled in Window > Settings... -- there
+        # is nothing it could usefully do without hardware.
         self.remote_btn = QPushButton(self.tr("Remote..."))
         self.remote_btn.clicked.connect(self._open_remote)
-        self.remote_btn.setVisible(app_settings.mdrem_enabled())
+        self.remote_btn.setVisible(app_settings.md_deck_driveable())
         button_row.addWidget(self.remote_btn)
         layout.addLayout(button_row)
 
@@ -125,7 +124,4 @@ class StartupDialog(QDialog):
         """Like Multiprint, deliberately not one of the "what should the
         main window do next" outcomes -- controlling the deck has nothing
         to do with which project gets opened afterwards."""
-        port = resolve_port(self)
-        if port is None:
-            return
-        RemoteDialog(port, self).exec()
+        open_remote_control(self)

@@ -140,9 +140,30 @@ def _copy_images(out_dir: Path) -> None:
         shutil.copyfile(src, img_out / src.name)
 
 
+_NUMBERED_PAGE = re.compile(r"^\d{2}-.*\.md$")
+
+
+def _clear_stale_pages(out_dir: Path) -> None:
+    """Removes every existing numbered chapter page before writing fresh
+    ones. Inserting, removing or reordering a chapter changes its index,
+    which is part of the filename (`_page_filename`) -- without this, the
+    old file at the old index survives untouched beside the new one at
+    the new index, since this script only ever writes, never deletes.
+    Real bug: adding the NetMD chapter shifted every later chapter's
+    number and left nine stale duplicate pages in the checkout. Home.md
+    and _Sidebar.md are rewritten unconditionally below regardless, so
+    they don't need clearing here."""
+    if not out_dir.is_dir():
+        return
+    for path in out_dir.iterdir():
+        if path.is_file() and _NUMBERED_PAGE.match(path.name):
+            path.unlink()
+
+
 def build(out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     _copy_images(out_dir)
+    _clear_stale_pages(out_dir)
 
     pages: list[tuple[str, str]] = []  # (title, filename)
     for index, chapter in enumerate(content_en.BOOK, start=1):

@@ -13,6 +13,19 @@ and finding the Telegram one meant knowing it was filed under
 Experimental at all. The groups are pages of one QStackedWidget behind a
 QListWidget, with a single OK/Cancel underneath: whichever group is on
 screen, OK saves all of them, because they are one settings window.
+
+**Five groups, not the one long "General" form this used to be.** That
+form had grown to DPI values, two audio devices, recording gain, the
+experimental flag, the MDRem adapter, NetMD, and the CD rip folder, all in
+a single QFormLayout with no structure beyond the order they were added --
+reported directly as hard to scan. MDRem and NetMD in particular are two
+alternatives for the *same* question ("how is a MiniDisc deck driven?"),
+and used to sit one after another in the form with nothing to say so.
+Splitting by subject (Display, Audio, MiniDisc Recording, CD, Telegram)
+does not move a single setting anywhere semantically new -- every widget
+keeps the same attribute name it always had, since tests and
+`show_group()` callers address fields directly, not through the group
+they happen to live in.
 """
 
 from __future__ import annotations
@@ -34,6 +47,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QMessageBox,
     QPushButton,
+    QSpinBox,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -41,14 +55,17 @@ from PySide6.QtWidgets import (
 
 from PySide6.QtCore import Qt
 
-from mdtools import app_settings, audio_engine, cdrip, mdrem
+from mdtools import app_settings, audio_engine, cdrip, mdrem, netmd
 from mdtools.panels.telegram_login_dialog import TelegramLoginDialog
 
 DPI_RANGE = (20.0, 4800.0)
 
-# Group list entries, by position in the stack -- see _build_groups().
+# Group list entries, by position in the stack -- see __init__.
 GROUP_GENERAL = 0
-GROUP_TELEGRAM = 1
+GROUP_AUDIO = 1
+GROUP_MINIDISC = 2
+GROUP_CD = 3
+GROUP_TELEGRAM = 4
 
 _GROUP_LIST_WIDTH = 150
 
@@ -78,6 +95,9 @@ class SettingsDialog(QDialog):
         self.group_list = QListWidget()
         self.group_list.setFixedWidth(_GROUP_LIST_WIDTH)
         self.group_list.addItem(self.tr("General"))
+        self.group_list.addItem(self.tr("Audio"))
+        self.group_list.addItem(self.tr("MiniDisc Recording"))
+        self.group_list.addItem(self.tr("CD"))
         self.group_list.addItem(self.tr("Telegram"))
         body.addWidget(self.group_list)
 
@@ -128,14 +148,27 @@ class SettingsDialog(QDialog):
         )
         layout.addRow(self.tr("Bake DPI"), self.bake_dpi_spin)
 
-        self._build_audio_output_row(layout)
         self._build_experimental_row(layout)
-        self._build_mdrem_rows(layout)
 
         restore_btn = QPushButton(self.tr("Restore Defaults"))
+        restore_btn.setToolTip(
+            self.tr("Resets every group's fields to their defaults -- not only this one.")
+        )
         restore_btn.clicked.connect(self._restore_defaults)
         layout.addRow(restore_btn)
         self.pages.addWidget(general)
+
+        audio = QWidget()
+        self._build_audio_output_row(QFormLayout(audio))
+        self.pages.addWidget(audio)
+
+        minidisc = QWidget()
+        self._build_mdrem_rows(QFormLayout(minidisc))
+        self.pages.addWidget(minidisc)
+
+        cd = QWidget()
+        self._build_cd_rows(QFormLayout(cd))
+        self.pages.addWidget(cd)
 
         telegram = QWidget()
         self._build_telegram_page(QFormLayout(telegram))
@@ -161,8 +194,9 @@ class SettingsDialog(QDialog):
         """Which device xD-Tools' own audio engine plays recording source
         material through -- e.g. an interface's line/S/PDIF output feeding
         a MiniDisc deck or a CD burner's monitor path. Unrelated to the
-        MDRem checkbox below: this has nothing to do with the infrared
-        adapter. This is what replaced foobar2000's own output device
+        MDRem/NetMD rows on the MiniDisc Recording page: this has nothing
+        to do with the infrared adapter or NetMD's own USB cable. This is
+        what replaced foobar2000's own output device
         setting once recording stopped driving foobar2000 at all -- see
         audio_engine.py's own module docstring.
 
@@ -254,10 +288,10 @@ class SettingsDialog(QDialog):
 
     def _build_experimental_row(self, layout: QFormLayout) -> None:
         """Gates work-in-progress features that aren't ready for everyone --
-        currently just the (empty, for now) Experimental menu. Kept separate
-        from the MDRem checkbox below: that one gates hardware support,
-        this one gates in-development software features, and the two have
-        nothing to do with each other."""
+        currently just the (empty, for now) Experimental menu. Kept on
+        General rather than the MiniDisc Recording page: that one gates
+        hardware support, this one gates in-development software features,
+        and the two have nothing to do with each other."""
         self.experimental_check = QCheckBox(self.tr("Show experimental features"))
         self.experimental_check.setChecked(app_settings.experimental_features_enabled())
         self.experimental_check.setToolTip(
@@ -278,7 +312,7 @@ class SettingsDialog(QDialog):
                 "window to the startup screen, for writing titles onto the MiniDisc itself over infrared."
             )
         )
-        self.mdrem_check.toggled.connect(self._sync_mdrem_enabled)
+        self.mdrem_check.toggled.connect(self._on_mdrem_toggled)
         layout.addRow(self.mdrem_check)
 
         self.mdrem_port_combo = QComboBox()
@@ -302,11 +336,164 @@ class SettingsDialog(QDialog):
         self._mdrem_port_widget = port_widget
         layout.addRow(self.tr("MDRem port"), port_widget)
 
-        self._build_cd_rows(layout)
-        self._mdrem_form = layout
+        self._build_netmd_rows(layout)
 
         self._populate_ports(app_settings.mdrem_port())
         self._sync_mdrem_enabled(self.mdrem_check.isChecked())
+        self._sync_netmd_enabled(self.netmd_check.isChecked())
+
+    def _build_netmd_rows(self, layout: QFormLayout) -> None:
+        """NetMD is the deck's own USB cable -- the other way to drive a
+        MiniDisc recorder, and the only one that can carry the audio
+        itself (see mdtools/netmd.py).
+
+        **Mutually exclusive with the MDRem adapter above**, and enforced
+        here as well as in app_settings: a recording has to know which
+        machine it is driving before it starts, so ticking one unticks the
+        other rather than leaving both on and every call site guessing.
+        Doing it in the UI too means the user sees the exclusion happen
+        instead of finding out on OK."""
+        self.netmd_check = QCheckBox(self.tr("Use a NetMD USB cable"))
+        self.netmd_check.setChecked(app_settings.netmd_enabled())
+        self.netmd_check.setToolTip(
+            self.tr(
+                "Drives a NetMD-capable deck over USB: it reads the disc, writes the titles into its TOC, "
+                "and in LP2/LP4 carries the audio itself. Cannot be used together with the MDRem infrared "
+                "adapter -- turning this on turns that off."
+            )
+        )
+        self.netmd_check.toggled.connect(self._on_netmd_toggled)
+        layout.addRow(self.netmd_check)
+
+        self.netmd_device_combo = QComboBox()
+        self.netmd_device_combo.setToolTip(
+            self.tr(
+                "The deck xD-Tools talks to. netmdcli always uses the first NetMD device it finds and "
+                "offers no way to pick another, so with two decks plugged in this records which one you "
+                "meant rather than being able to redirect anything."
+            )
+        )
+        self.netmd_detect_btn = QPushButton(self.tr("Detect"))
+        self.netmd_detect_btn.setToolTip(
+            self.tr("Asks whether a NetMD deck is connected and answering.")
+        )
+        self.netmd_detect_btn.clicked.connect(self._detect_netmd)
+
+        device_widget = QWidget()
+        device_row = QHBoxLayout(device_widget)
+        device_row.setContentsMargins(0, 0, 0, 0)
+        device_row.addWidget(self.netmd_device_combo, 1)
+        device_row.addWidget(self.netmd_detect_btn)
+        self._netmd_device_widget = device_widget
+        layout.addRow(self.tr("NetMD deck"), device_widget)
+        self._populate_netmd_devices(app_settings.netmd_device())
+
+        self.netmd_mode_combo = QComboBox()
+        for key in (netmd.MODE_SP, netmd.MODE_LP2, netmd.MODE_LP4):
+            chosen = netmd.MODES[key]
+            self.netmd_mode_combo.addItem(
+                self.tr("{label} -- {minutes} min a disc").format(
+                    label=chosen.label, minutes=chosen.minutes
+                ),
+                key,
+            )
+        index = self.netmd_mode_combo.findData(app_settings.netmd_recording_mode())
+        self.netmd_mode_combo.setCurrentIndex(index if index >= 0 else 0)
+        self.netmd_mode_combo.setToolTip(
+            self.tr("Which mode a recording is made in. This decides how much fits on the disc.")
+        )
+        self._netmd_mode_widget = self.netmd_mode_combo
+        layout.addRow(self.tr("Recording mode"), self.netmd_mode_combo)
+
+        self.netmd_advice_label = QLabel()
+        self.netmd_advice_label.setWordWrap(True)
+        layout.addRow(self.netmd_advice_label)
+        self._refresh_netmd_advice()
+
+    def selected_netmd_mode(self) -> str:
+        return str(self.netmd_mode_combo.currentData() or netmd.MODE_SP)
+
+    def selected_netmd_device(self) -> str:
+        return str(self.netmd_device_combo.currentData() or "")
+
+    def _populate_netmd_devices(self, chosen: str) -> None:
+        """The remembered deck, plus whatever answered a Detect.
+
+        The remembered one is listed even when nothing is plugged in --
+        the deck is normally switched off between recordings, and a
+        settings window that forgot it every time would be worse than
+        useless."""
+        self.netmd_device_combo.clear()
+        self.netmd_device_combo.addItem(self.tr("The connected NetMD deck"), "")
+        if chosen:
+            self.netmd_device_combo.addItem(chosen, chosen)
+        index = self.netmd_device_combo.findData(chosen)
+        self.netmd_device_combo.setCurrentIndex(index if index >= 0 else 0)
+
+    def _on_netmd_toggled(self, enabled: bool) -> None:
+        if enabled and self.mdrem_check.isChecked():
+            # Seen, not silently applied on OK -- see _build_netmd_rows.
+            self.mdrem_check.setChecked(False)
+        self._sync_netmd_enabled(enabled)
+
+    def _sync_netmd_enabled(self, enabled: bool) -> None:
+        self._netmd_device_widget.setEnabled(enabled)
+        self._netmd_mode_widget.setEnabled(enabled)
+        self._refresh_netmd_advice()
+
+    def _refresh_netmd_advice(self) -> None:
+        """What to plug in, said in the settings window rather than only
+        when a recording is already under way."""
+        self.netmd_advice_label.setText(netmd.connection_advice(netmd=self.netmd_check.isChecked()))
+
+    def _detect_netmd(self) -> None:
+        """Is a deck there and answering?
+
+        There is no lighter question available -- netmdcli enumerates on
+        every run -- so this runs a real command, which is also why it
+        puts up a wait cursor the way Detect for the serial port does."""
+        missing = netmd.missing_tools()
+        if missing:
+            QMessageBox.information(
+                self,
+                self.tr("NetMD"),
+                self.tr("netmdcli is missing from this build, so a NetMD deck cannot be reached."),
+            )
+            return
+        self.netmd_detect_btn.setEnabled(False)
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            disc = netmd.read_disc()
+        except netmd.NetMdError as exc:
+            disc = None
+            error = str(exc)
+        finally:
+            QApplication.restoreOverrideCursor()
+            self.netmd_detect_btn.setEnabled(True)
+
+        if disc is None:
+            QMessageBox.information(
+                self,
+                self.tr("NetMD"),
+                self.tr(
+                    "No NetMD deck answered: {error}\n\nCheck that it is plugged in and switched on, and "
+                    "that it is bound to a libusb-compatible driver (WinUSB) rather than Sony's own -- "
+                    "from here the two look identical."
+                ).format(error=error),
+            )
+            return
+        # The deck gives no name of its own through netmdcli, so what is
+        # remembered is what it had on it -- enough to tell two decks
+        # apart in the dropdown, which is all this can honestly offer.
+        name = disc.title or self.tr("NetMD deck")
+        self._populate_netmd_devices(name)
+        QMessageBox.information(
+            self,
+            self.tr("NetMD"),
+            self.tr("A NetMD deck answered. The disc in it holds {count} track(s).").format(
+                count=disc.track_count
+            ),
+        )
 
     def _build_cd_rows(self, layout: QFormLayout) -> None:
         """Settings for Record CD to MiniDisc.
@@ -363,6 +550,12 @@ class SettingsDialog(QDialog):
         index = self.mdrem_port_combo.findData(selected)
         if index >= 0:
             self.mdrem_port_combo.setCurrentIndex(index)
+
+    def _on_mdrem_toggled(self, enabled: bool) -> None:
+        if enabled and self.netmd_check.isChecked():
+            # The other half of the exclusion -- see _build_netmd_rows.
+            self.netmd_check.setChecked(False)
+        self._sync_mdrem_enabled(enabled)
 
     def _sync_mdrem_enabled(self, enabled: bool) -> None:
         self._mdrem_port_widget.setEnabled(enabled)
@@ -429,6 +622,20 @@ class SettingsDialog(QDialog):
         # audio on their way into the same recording flow, and keeping two
         # separately-configurable folders for the same purpose only invited
         # them to drift apart.
+
+        self.telegram_concurrency_spin = QSpinBox()
+        self.telegram_concurrency_spin.setRange(
+            app_settings.MIN_TELEGRAM_DOWNLOAD_CONCURRENCY, app_settings.MAX_TELEGRAM_DOWNLOAD_CONCURRENCY
+        )
+        self.telegram_concurrency_spin.setValue(app_settings.telegram_download_concurrency())
+        self.telegram_concurrency_spin.setToolTip(
+            self.tr(
+                "How many files to download at once. Telegram's own per-file transfer is "
+                "round-trip-bound, not bandwidth-bound, so a higher number does not always mean "
+                "faster -- try a small change and see."
+            )
+        )
+        layout.addRow(self.tr("Simultaneous downloads"), self.telegram_concurrency_spin)
 
         self.telegram_status_label = QLabel()
         layout.addRow(self.tr("Status"), self.telegram_status_label)
@@ -499,11 +706,24 @@ class SettingsDialog(QDialog):
         app_settings.set_tape_audio_output_device(self._selected_audio_device(self.tape_audio_device_combo))
         app_settings.set_recording_gain_db(self.recording_gain_spin.value())
         app_settings.set_experimental_features_enabled(self.experimental_check.isChecked())
-        app_settings.set_mdrem_enabled(self.mdrem_check.isChecked())
+        # NetMD first, then MDRem: each setter turns the other off when
+        # it is switched on (see app_settings), so the one written last
+        # would otherwise always win regardless of the checkboxes. Writing
+        # the *disabled* one first and the enabled one second means the
+        # checkboxes decide, not the order.
+        if self.netmd_check.isChecked():
+            app_settings.set_mdrem_enabled(False)
+            app_settings.set_netmd_enabled(True)
+        else:
+            app_settings.set_netmd_enabled(False)
+            app_settings.set_mdrem_enabled(self.mdrem_check.isChecked())
+        app_settings.set_netmd_device(self.selected_netmd_device())
+        app_settings.set_netmd_recording_mode(self.selected_netmd_mode())
         app_settings.set_mdrem_port(self.selected_port())
         app_settings.set_cd_rip_folder(self.cd_rip_folder_edit.text())
         # Every group, not only the one on screen -- see __init__.
         app_settings.set_telegram_bot_username(self.bot_username_edit.text())
+        app_settings.set_telegram_download_concurrency(self.telegram_concurrency_spin.value())
         self._create_rip_folder()
         self.accept()
 

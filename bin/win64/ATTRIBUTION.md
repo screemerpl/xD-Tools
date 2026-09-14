@@ -78,11 +78,43 @@ Windows, and is what the cdrtfe project ships.
 - Licence: GPL-3.0-or-later with the Cygwin linking exception (this predates
   Cygwin's move to LGPL-3.0 in 2.5.2). Upstream: <https://cygwin.com/>.
 
+## netmdcli (linux-minidisc, Jo2003's fork)
+
+Drives a NetMD deck over USB: reads the disc, writes disc and track titles
+into its TOC, and (later) sends audio to it. NetMD is a whole second way
+of talking to a MiniDisc recorder alongside the MDRem infrared adapter --
+see `src/mdtools/netmd.py`.
+
+Jo2003's fork rather than upstream linux-minidisc: it carries fixes to
+large-block transfers and to disc/group naming, and it is the build
+published for Windows. Statically linked -- it needs no DLL of its own,
+unlike everything above.
+
+- Upstream: <https://github.com/Jo2003/netmd> (a fork of
+  <https://github.com/glaubitz/linux-minidisc>)
+- Binary taken from the cd2netmd release, which ships it in a `toolchain`
+  folder alongside the CD tool it is there to serve:
+  <https://github.com/Jo2003/cd2netmd/releases/download/v0.4.0/cd2netmd.zip>
+  (SHA-256 `136f837f5a25e5f5f799ebf813fa6548c45c03663b8157ae68404f2b6e1919b7`)
+  -- `toolchain/netmdcli.exe`
+  (SHA-256 `78d9aa8c6617996036e138d3b0626ef479f7a6955e1507b434f8d4448a4357fc`)
+- Licence: GPL-2.0-or-later.
+
+**A NetMD deck needs a libusb-compatible driver on Windows.** Sony's own
+driver does not expose the device to libusb, so the deck has to be bound
+to WinUSB (with Zadig, or the driver cd2netmd_gui installs) before this
+tool can see it at all. That is a user-facing setup step, not something
+xD-Tools can do for them -- `netmd.py` reports "no NetMD device found"
+for both a missing deck and a deck on the wrong driver, because from here
+they look identical.
+
 ## Source code
 
 Every GPL and CDDL tool here has its complete corresponding source published
 by its upstream project at the addresses above, and by MSYS2 (for the
-libcdio and flac packages) alongside the binaries listed. cdrtools' source
+libcdio and flac packages) alongside the binaries listed. netmdcli's source
+is the GitHub repository named above, at the tag its release was built
+from. cdrtools' source
 is on its SourceForge project page and mirrored in the same cdrtfe tools
 folder the binary came from, under `tools/source/cdrtools`. No binary here
 has been modified.

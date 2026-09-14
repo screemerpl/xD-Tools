@@ -15,6 +15,8 @@ from mdtools.panels.burn_dialog import BurnDialog
 from mdtools.panels.cd_rip_dialog import CdRipDialog
 from mdtools.panels.mdrem_upload_dialog import MDRemUploadDialog
 from mdtools.panels.metadata_dialog import MetadataDialog
+from mdtools.panels.netmd_record_dialog import NetMdRecordDialog
+from mdtools.panels.netmd_upload_dialog import NetMdUploadDialog
 from mdtools.panels.record_dialog import RecordDialog
 from mdtools.panels.tape_record_dialog import TapeRecordDialog
 from mdtools.panels.telegram_chat_dialog import TelegramChatDialog
@@ -23,21 +25,49 @@ from mdtools.panels.telegram_chat_dialog import TelegramChatDialog
 # the six recording/rip/burn/upload dialogs: TelegramChatDialog is wired
 # in too, not because it competes for the same MDRem port/audio device/
 # optical drive (it doesn't), but because it drives the same one shared
-# bar with its own download-queue status.
-DRIVING_DIALOGS = [RecordDialog, TapeRecordDialog, BurnDialog, CdRipDialog, MetadataDialog, TelegramChatDialog]
+# bar with its own download-queue status. NetMdRecordDialog is
+# RecordDialog's NetMD counterpart -- see _run_record_dialog()'s own
+# branch on app_settings.netmd_enabled().
+DRIVING_DIALOGS = [
+    RecordDialog,
+    NetMdRecordDialog,
+    TapeRecordDialog,
+    BurnDialog,
+    CdRipDialog,
+    MetadataDialog,
+    TelegramChatDialog,
+]
 
 # The ones the user can hide -- MetadataDialog is left out on purpose: it
 # only ever proxies for the MDRemUploadDialog it opens, and has no Hide
 # button of its own (see its own request_show()).
-HIDEABLE_DIALOGS = [RecordDialog, TapeRecordDialog, BurnDialog, CdRipDialog, MDRemUploadDialog, TelegramChatDialog]
+HIDEABLE_DIALOGS = [
+    RecordDialog,
+    NetMdRecordDialog,
+    TapeRecordDialog,
+    BurnDialog,
+    CdRipDialog,
+    MDRemUploadDialog,
+    NetMdUploadDialog,
+    TelegramChatDialog,
+]
 
 # Per-track progress exists only where it is genuinely available. Burning
 # is the deliberate exclusion: cdrecord writes a disc as one continuous
 # DAO stream with no per-track breakdown to report. Titling has no
 # per-track concept at all, and MetadataDialog only ever proxies titling.
 # A Telegram download queue has no single "current track" either -- up to
-# _MAX_CONCURRENT_DOWNLOADS files can be in flight at once.
-NO_TRACK_PROGRESS = [BurnDialog, MDRemUploadDialog, MetadataDialog, TelegramChatDialog]
+# app_settings.telegram_download_concurrency() files can be in flight at
+# once.
+# NetMdUploadDialog joins them: a title is one command, not a track
+# being recorded, and "title 3 of 12" is already its overall progress.
+NO_TRACK_PROGRESS = [
+    BurnDialog,
+    MDRemUploadDialog,
+    NetMdUploadDialog,
+    MetadataDialog,
+    TelegramChatDialog,
+]
 
 
 def _build(dialog_class):
@@ -45,6 +75,8 @@ def _build(dialog_class):
     them touches a device or a thread on construction."""
     if dialog_class is RecordDialog:
         return RecordDialog("COM7", [], None)
+    if dialog_class is NetMdRecordDialog:
+        return NetMdRecordDialog([], None)
     if dialog_class is TapeRecordDialog:
         return TapeRecordDialog([], None)
     return BurnDialog([], album="a", artist="b", year=2020, parent=None)
@@ -83,14 +115,16 @@ def test_the_deliberate_exclusions_stay_excluded(dialog_class):
     assert not hasattr(dialog_class, "track_progress_changed")
 
 
-@pytest.mark.parametrize("dialog_class", [RecordDialog, TapeRecordDialog, CdRipDialog], ids=lambda c: c.__name__)
+@pytest.mark.parametrize(
+    "dialog_class", [RecordDialog, NetMdRecordDialog, TapeRecordDialog, CdRipDialog], ids=lambda c: c.__name__
+)
 def test_the_rest_do_report_per_track_progress(dialog_class):
     assert hasattr(dialog_class, "track_progress_changed")
 
 
 # Every dialog that offers the preview player must also take it away
 # while it is actually recording/burning -- see PreviewPlayerBar.set_locked().
-PREVIEW_DIALOGS = [RecordDialog, TapeRecordDialog, BurnDialog]
+PREVIEW_DIALOGS = [RecordDialog, NetMdRecordDialog, TapeRecordDialog, BurnDialog]
 
 
 @pytest.mark.parametrize("dialog_class", PREVIEW_DIALOGS, ids=lambda c: c.__name__)

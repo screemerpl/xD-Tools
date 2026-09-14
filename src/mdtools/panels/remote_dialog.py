@@ -50,6 +50,8 @@ from PySide6.QtWidgets import (
 )
 
 from mdtools import app_settings, mdrem
+from mdtools.panels.mdrem_port import resolve_port
+from mdtools.panels.netmd_remote_dialog import NetMdRemoteDialog
 
 
 @dataclass(frozen=True)
@@ -488,3 +490,21 @@ class RemoteDialog(QDialog):
             self._client.close()
             self._client = None
         super().reject()
+
+
+def open_remote_control(parent) -> None:
+    """"Remote Control..." -- one entry point, two dialogs, picked the
+    same way `app_window._run_record_dialog()` picks NetMdRecordDialog
+    over RecordDialog: `app_settings.netmd_enabled()` says which machine
+    is being driven, and that decides everything downstream. Shared here
+    rather than duplicated at both call sites (the Window menu and the
+    startup screen), which used to each resolve an MDRem port and
+    construct RemoteDialog directly -- correct only for MDRem, and silent
+    about NetMD entirely."""
+    if app_settings.netmd_enabled():
+        NetMdRemoteDialog(parent).exec()
+        return
+    port = resolve_port(parent)
+    if port is None:
+        return
+    RemoteDialog(port, parent).exec()
