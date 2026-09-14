@@ -10,6 +10,7 @@ deck, where getting them wrong costs the disc.
 from __future__ import annotations
 
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -59,12 +60,12 @@ def test_the_three_modes_carry_their_own_capacity():
     assert netmd.MODES[netmd.MODE_LP4].minutes == 320
 
 
-def test_only_the_lp_modes_go_over_usb():
-    """The load-bearing distinction: LP2/LP4 are ATRAC3, which a Toslink
-    cable cannot carry at all, so they are a file transfer instead."""
-    assert netmd.MODES[netmd.MODE_SP].over_usb is False
-    assert netmd.MODES[netmd.MODE_LP2].over_usb is True
-    assert netmd.MODES[netmd.MODE_LP4].over_usb is True
+def test_only_the_lp_modes_carry_an_encoder_flag():
+    """SP is sent as plain, unencoded PCM -- LP2/LP4 need netmdcli's own
+    on-the-fly ATRAC3 encoder, requested with -d."""
+    assert netmd.MODES[netmd.MODE_SP].encoder_flag == ""
+    assert netmd.MODES[netmd.MODE_LP2].encoder_flag == "lp2"
+    assert netmd.MODES[netmd.MODE_LP4].encoder_flag == "lp4"
 
 
 def test_an_unknown_mode_falls_back_to_sp():
@@ -76,22 +77,18 @@ def test_an_unknown_mode_falls_back_to_sp():
     assert netmd.mode("LP2").key == netmd.MODE_LP2, "and it is case-insensitive"
 
 
-def test_sp_advice_names_both_cables(qt_app=None):
-    advice = netmd.connection_advice(netmd.MODE_SP, netmd=True)
-    assert "optical" in advice.lower()
-    assert "usb" in advice.lower()
-
-
-def test_lp_advice_says_usb_only():
-    """A user who runs an optical cable for LP4 gets a disc of silence,
-    so this has to say plainly that the optical cable plays no part."""
-    advice = netmd.connection_advice(netmd.MODE_LP4, netmd=True)
+def test_netmd_advice_is_usb_only_whatever_the_mode():
+    """Every NetMD mode -- SP included -- goes out over USB now, so there
+    is no mode-specific cable mistake to warn about any more."""
+    advice = netmd.connection_advice(netmd=True)
     assert "usb" in advice.lower()
     assert "no optical cable" in advice.lower()
 
 
 def test_without_netmd_the_advice_is_the_mdrem_one():
-    advice = netmd.connection_advice(netmd.MODE_SP, netmd=False)
+    """MDRem still needs the real Toslink feed: it cannot move audio at
+    all, so this half is unaffected by NetMD going USB-only."""
+    advice = netmd.connection_advice(netmd=False)
     assert "MDRem" in advice
     assert "optical" in advice.lower()
 
@@ -189,6 +186,85 @@ def test_an_unreadable_answer_is_an_error_not_an_empty_disc():
 def test_reading_with_no_device_says_so():
     with pytest.raises(netmd.NetMdError, match="no NetMD device"):
         netmd.read_disc(run=_answering(NO_DEVICE))
+
+
+def test_erase_sends_force_so_nothing_here_has_to_ask():
+    sent: list[list[str]] = []
+    netmd.erase_disc(run=_answering(record=sent))
+    assert [args[1:] for args in sent] == [["erase", "force"]]
+
+
+def test_erase_with_no_device_says_so():
+    with pytest.raises(netmd.NetMdError, match="no NetMD device"):
+        netmd.erase_disc(run=_answering(NO_DEVICE))
+
+
+def test_a_refused_erase_is_reported():
+    with pytest.raises(netmd.NetMdError, match="nope"):
+        netmd.erase_disc(run=_answering(_Completed(stderr="nope", returncode=1)))
+
+
+# --- transport control ------------------------------------------------
+
+
+def test_play_with_no_track_just_plays():
+    sent: list[list[str]] = []
+    netmd.play(run=_answering(record=sent))
+    assert [args[1:] for args in sent] == [["play"]]
+
+
+def test_play_a_track_uses_the_same_off_by_one_as_rename():
+    sent: list[list[str]] = []
+    netmd.play(12, run=_answering(record=sent))
+    assert [args[1:] for args in sent] == [["play", "11"]]
+
+
+@pytest.mark.parametrize(
+    "call, expected",
+    [
+        (lambda run: netmd.pause(run=run), ["pause"]),
+        (lambda run: netmd.stop(run=run), ["stop"]),
+        (lambda run: netmd.fast_forward(run=run), ["fforward"]),
+        (lambda run: netmd.rewind(run=run), ["rewind"]),
+        (lambda run: netmd.next_track(run=run), ["next"]),
+        (lambda run: netmd.previous_track(run=run), ["previous"]),
+        (lambda run: netmd.restart_track(run=run), ["restart"]),
+    ],
+)
+def test_each_transport_command_sends_its_own_word(call, expected):
+    sent: list[list[str]] = []
+    call(_answering(record=sent))
+    assert [args[1:] for args in sent] == [expected]
+
+
+def test_set_play_mode_sends_the_word_chosen():
+    sent: list[list[str]] = []
+    netmd.set_play_mode("shuffle", run=_answering(record=sent))
+    assert [args[1:] for args in sent] == [["setplaymode", "shuffle"]]
+
+
+def test_an_unknown_play_mode_is_refused_before_it_reaches_the_deck():
+    sent: list[list[str]] = []
+    with pytest.raises(netmd.NetMdError, match="unknown play mode"):
+        netmd.set_play_mode("random", run=_answering(record=sent))
+    assert sent == [], "nothing should be sent for a mode netmdcli was never going to accept"
+
+
+def test_transport_with_no_device_says_so():
+    with pytest.raises(netmd.NetMdError, match="no NetMD device"):
+        netmd.play(run=_answering(NO_DEVICE))
+
+
+def test_a_refused_transport_command_reports_the_decks_own_complaint():
+    with pytest.raises(netmd.NetMdError, match="nope"):
+        netmd.pause(run=_answering(_Completed(stderr="nope", returncode=1)))
+
+
+def test_a_refused_transport_command_falls_back_to_a_plain_message():
+    """The deck can refuse with nothing useful in its output at all --
+    still an error, not a silent no-op."""
+    with pytest.raises(netmd.NetMdError, match="refused to pause"):
+        netmd.pause(run=_answering(_Completed(returncode=1)))
 
 
 # --- the off-by-one -------------------------------------------------------
@@ -293,3 +369,160 @@ def test_the_deck_disappearing_mid_write_says_so():
 
     with pytest.raises(netmd.NetMdError, match="no NetMD device"):
         netmd.write_titles(plan, run=_answering(_Completed(), NO_DEVICE))
+
+
+# --- recording a disc over USB ---------------------------------------------
+
+
+def _properties(seconds: float):
+    from mdtools import decode
+
+    return decode.AudioProperties(
+        sample_rate=44100, bits_per_sample=16, channels=2, frames=int(seconds * 44100)
+    )
+
+
+def test_a_record_plan_carries_every_track_and_the_mode_chosen():
+    plan = netmd.build_record_plan(
+        [("a.wav", "Harbour Lights"), ("b.wav", "Slow Tide")],
+        disc_title="Night Ferry",
+        mode_key=netmd.MODE_LP2,
+        analyze=lambda path: _properties(200.0),
+    )
+    assert plan.disc_title == "Night Ferry"
+    assert plan.mode.key == netmd.MODE_LP2
+    assert [track.title for track in plan.tracks] == ["Harbour Lights", "Slow Tide"]
+    assert plan.total_seconds == 400.0
+    assert plan.can_record is True
+
+
+def test_record_plan_titles_are_cleaned_like_a_title_plan():
+    plan = netmd.build_record_plan(
+        [("a.wav", "Jôlie")], disc_title="Björk", analyze=lambda path: _properties(10.0)
+    )
+    assert plan.tracks[0].title == "Jolie"
+    assert plan.disc_title == "Bjork"
+    assert ("Björk", "Bjork") in plan.changed
+    assert ("Jôlie", "Jolie") in plan.changed
+
+
+def test_an_unreadable_track_is_a_problem_not_a_crash():
+    from mdtools import decode
+
+    def analyze(path):
+        raise decode.DecodeError(f"bad {path}")
+
+    plan = netmd.build_record_plan([("bad.wav", "x")], analyze=analyze)
+    assert plan.tracks[0].properties is None
+    assert plan.problems_for(1)[0].code == netmd.UNREADABLE
+    assert plan.can_record is False
+
+
+def test_too_long_for_the_chosen_mode_is_a_problem():
+    plan = netmd.build_record_plan(
+        [("a.wav", "x")],
+        mode_key=netmd.MODE_SP,
+        analyze=lambda path: _properties(81 * 60),
+    )
+    assert any(problem.code == netmd.TOO_LONG_FOR_DISC for problem in plan.problems)
+
+
+def test_more_than_99_tracks_is_a_problem():
+    sources = [(f"{i}.wav", str(i)) for i in range(100)]
+    plan = netmd.build_record_plan(sources, analyze=lambda path: _properties(1.0))
+    assert any(problem.code == netmd.TOO_MANY_TRACKS for problem in plan.problems)
+
+
+def test_no_tracks_is_a_problem():
+    plan = netmd.build_record_plan([], analyze=lambda path: _properties(1.0))
+    assert plan.problems == [netmd.RecordProblem(netmd.NO_TRACKS)]
+    assert plan.can_record is False
+
+
+def test_send_args_puts_the_encoder_flag_before_the_command():
+    sp = netmd.MODES[netmd.MODE_SP]
+    lp2 = netmd.MODES[netmd.MODE_LP2]
+    assert netmd.send_args(sp, "01.wav", "Harbour Lights") == ["send", "01.wav", "Harbour Lights"]
+    assert netmd.send_args(lp2, "01.wav", "Harbour Lights") == [
+        "-d",
+        "lp2",
+        "send",
+        "01.wav",
+        "Harbour Lights",
+    ]
+
+
+def test_send_args_omits_an_empty_title():
+    sp = netmd.MODES[netmd.MODE_SP]
+    assert netmd.send_args(sp, "01.wav", "") == ["send", "01.wav"]
+
+
+def test_every_track_is_sent_then_the_disc_is_titled():
+    sent: list[list[str]] = []
+    plan = netmd.build_record_plan(
+        [("a.wav", "one"), ("b.wav", "two")],
+        disc_title="Disc",
+        analyze=lambda path: _properties(10.0),
+    )
+    netmd.send_tracks(plan, "work", ["01.wav", "02.wav"], run=_answering(record=sent))
+
+    assert [args[1:] for args in sent] == [
+        ["send", str(Path("work") / "01.wav"), "one"],
+        ["send", str(Path("work") / "02.wav"), "two"],
+        ["rename_disc", "Disc"],
+    ]
+
+
+def test_send_progress_counts_the_disc_title_as_the_last_step():
+    seen: list[tuple[int, int, str]] = []
+    plan = netmd.build_record_plan(
+        [("a.wav", "one")], disc_title="Disc", analyze=lambda path: _properties(10.0)
+    )
+    netmd.send_tracks(plan, "work", ["01.wav"], on_progress=lambda *a: seen.append(a), run=_answering())
+
+    assert [(index, total) for index, total, _ in seen] == [(1, 2), (2, 2)]
+
+
+def test_a_refused_track_stops_the_recording_before_the_title():
+    sent: list[list[str]] = []
+    plan = netmd.build_record_plan(
+        [("a.wav", "one"), ("b.wav", "two")],
+        disc_title="Disc",
+        analyze=lambda path: _properties(10.0),
+    )
+    results = _answering(_Completed(stderr="write failed", returncode=1), record=sent)
+
+    with pytest.raises(netmd.NetMdError, match="write failed"):
+        netmd.send_tracks(plan, "work", ["01.wav", "02.wav"], run=results)
+
+    assert len(sent) == 1
+
+
+def test_sending_with_no_device_says_so():
+    plan = netmd.build_record_plan([("a.wav", "one")], analyze=lambda path: _properties(10.0))
+    with pytest.raises(netmd.NetMdError, match="no NetMD device"):
+        netmd.send_tracks(plan, "work", ["01.wav"], run=_answering(NO_DEVICE))
+
+
+def test_prepare_track_wavs_decodes_each_track_in_order(tmp_path, monkeypatch):
+    calls = []
+
+    def fake_to_wav(source, destination):
+        calls.append((Path(source), Path(destination)))
+
+    monkeypatch.setattr(netmd.decode, "to_wav", fake_to_wav)
+    plan = netmd.build_record_plan(
+        [("a.wav", "one"), ("b.wav", "two")], analyze=lambda path: _properties(10.0)
+    )
+    names = netmd.prepare_track_wavs(plan, tmp_path)
+
+    assert names == ["01.wav", "02.wav"]
+    assert [destination.name for _source, destination in calls] == ["01.wav", "02.wav"]
+
+
+def test_prepare_track_wavs_cancels_between_tracks(tmp_path):
+    plan = netmd.build_record_plan(
+        [("a.wav", "one"), ("b.wav", "two")], analyze=lambda path: _properties(10.0)
+    )
+    with pytest.raises(netmd.NetMdCancelled):
+        netmd.prepare_track_wavs(plan, tmp_path, should_cancel=lambda: True)

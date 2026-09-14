@@ -1176,14 +1176,18 @@ class TelegramChatDialog(QDialog):
         _on_download_started()/_on_download_finished()/_on_download_failed()
         -- reported as looking permanently disabled with no explanation; a
         disabled button with no tooltip at all reads as broken, not as
-        "waiting for something". The adapter-off check stays first even
+        "waiting for something". The deck-driveable check stays first even
         though a download in progress would also block proceeding, since
-        turning MDRem on is the more fundamental blocker of the two -- it
-        doesn't go away just because the current download finishes."""
-        if not app_settings.mdrem_enabled():
+        having no way to drive a deck is the more fundamental blocker of
+        the two -- it doesn't go away just because the current download
+        finishes. md_deck_driveable(), not mdrem_enabled() alone: NetMD
+        drives a recording just as well as MDRem does, and this used to
+        stay disabled -- wrongly, with a wrong reason given too -- the
+        moment NetMD was switched on instead."""
+        if not app_settings.md_deck_driveable():
             self.continue_btn.setEnabled(False)
             self.continue_btn.setToolTip(
-                self.tr("Enable the MDRem adapter in Window > Settings to record.")
+                self.tr("Enable MDRem or NetMD in Window > Settings to record.")
             )
         elif self._active_downloads:
             self.continue_btn.setEnabled(False)

@@ -233,7 +233,7 @@ class MetadataDialog(QDialog):
         # button follows "is there any way to reach the deck at all",
         # not the infrared adapter specifically. Still MiniDisc-only:
         # a CD's titles went on as CD-Text when it was burned.
-        can_title = app_settings.mdrem_enabled() or app_settings.netmd_enabled()
+        can_title = app_settings.md_deck_driveable()
         self.upload_btn.setVisible(can_title and medium == MEDIUM_MD)
         layout.addWidget(self.upload_btn)
 

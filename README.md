@@ -15,6 +15,11 @@ and track titles onto the MiniDisc itself, lay out both labels from the
 album's own artwork, and use the software remote to drive the deck. xD-Tools
 decodes and plays the audio itself (no external player involved).
 
+**Or record over NetMD** -- if the deck understands NetMD, plug it in over
+USB instead and skip the adapter and the optical cable entirely: xD-Tools
+sends each track straight to the deck (in SP, LP2 or LP4) with its title
+already attached, then writes the disc's own title once the album is on.
+
 **Record from a CD** -- pick an optical drive, and xD-Tools extracts the disc
 to FLAC with the bundled cdparanoia, identifies it on MusicBrainz from its
 table of contents, and hands the ripped files over to the same recording
@@ -97,6 +102,7 @@ src/mdtools/
   app_window.py           main window: page switcher, menus, docks, wiring
   project.py              Project / ProjectMetadata / Track dataclasses
   mdrem.py                MDRem infrared adapter: serial protocol, upload plan
+  netmd.py                NetMD over USB: recording modes, disc TOC, record/title plans, via netmdcli
   audio_engine.py         FLAC decode/encode, resampling, dithering, playback (soundfile/soxr/sounddevice)
   tracks.py               track list + metadata from files' own tags (no external player)
   cdrip.py                audio CD: drives, table of contents, extraction to FLAC
@@ -261,6 +267,17 @@ Worth knowing before you use it:
   memory until the disc is ejected; the upload dialog offers to do it.
 - Aim the adapter at the deck's remote sensor and leave it undisturbed for
   the whole upload.
+
+### Or skip the adapter entirely: NetMD
+
+If your deck speaks NetMD, plug it in over USB, tick **"Use a NetMD USB
+cable"** in Settings instead of the adapter, and pick a recording mode
+(SP/LP2/LP4). xD-Tools then reads the disc, sends every track's audio and
+title in one step (no separate titling pass, and no optical cable for any
+mode -- see the recording dialog's own explanation), and writes the disc
+title last. **Nothing here has been tested against real NetMD hardware
+yet** -- if a deck behaves differently from what `netmdcli` documents,
+that is the first place to look.
 
 ### How a recording works
 

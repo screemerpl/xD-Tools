@@ -13,6 +13,19 @@ and finding the Telegram one meant knowing it was filed under
 Experimental at all. The groups are pages of one QStackedWidget behind a
 QListWidget, with a single OK/Cancel underneath: whichever group is on
 screen, OK saves all of them, because they are one settings window.
+
+**Five groups, not the one long "General" form this used to be.** That
+form had grown to DPI values, two audio devices, recording gain, the
+experimental flag, the MDRem adapter, NetMD, and the CD rip folder, all in
+a single QFormLayout with no structure beyond the order they were added --
+reported directly as hard to scan. MDRem and NetMD in particular are two
+alternatives for the *same* question ("how is a MiniDisc deck driven?"),
+and used to sit one after another in the form with nothing to say so.
+Splitting by subject (Display, Audio, MiniDisc Recording, CD, Telegram)
+does not move a single setting anywhere semantically new -- every widget
+keeps the same attribute name it always had, since tests and
+`show_group()` callers address fields directly, not through the group
+they happen to live in.
 """
 
 from __future__ import annotations
@@ -46,9 +59,12 @@ from mdtools.panels.telegram_login_dialog import TelegramLoginDialog
 
 DPI_RANGE = (20.0, 4800.0)
 
-# Group list entries, by position in the stack -- see _build_groups().
+# Group list entries, by position in the stack -- see __init__.
 GROUP_GENERAL = 0
-GROUP_TELEGRAM = 1
+GROUP_AUDIO = 1
+GROUP_MINIDISC = 2
+GROUP_CD = 3
+GROUP_TELEGRAM = 4
 
 _GROUP_LIST_WIDTH = 150
 
@@ -78,6 +94,9 @@ class SettingsDialog(QDialog):
         self.group_list = QListWidget()
         self.group_list.setFixedWidth(_GROUP_LIST_WIDTH)
         self.group_list.addItem(self.tr("General"))
+        self.group_list.addItem(self.tr("Audio"))
+        self.group_list.addItem(self.tr("MiniDisc Recording"))
+        self.group_list.addItem(self.tr("CD"))
         self.group_list.addItem(self.tr("Telegram"))
         body.addWidget(self.group_list)
 
@@ -128,14 +147,27 @@ class SettingsDialog(QDialog):
         )
         layout.addRow(self.tr("Bake DPI"), self.bake_dpi_spin)
 
-        self._build_audio_output_row(layout)
         self._build_experimental_row(layout)
-        self._build_mdrem_rows(layout)
 
         restore_btn = QPushButton(self.tr("Restore Defaults"))
+        restore_btn.setToolTip(
+            self.tr("Resets every group's fields to their defaults -- not only this one.")
+        )
         restore_btn.clicked.connect(self._restore_defaults)
         layout.addRow(restore_btn)
         self.pages.addWidget(general)
+
+        audio = QWidget()
+        self._build_audio_output_row(QFormLayout(audio))
+        self.pages.addWidget(audio)
+
+        minidisc = QWidget()
+        self._build_mdrem_rows(QFormLayout(minidisc))
+        self.pages.addWidget(minidisc)
+
+        cd = QWidget()
+        self._build_cd_rows(QFormLayout(cd))
+        self.pages.addWidget(cd)
 
         telegram = QWidget()
         self._build_telegram_page(QFormLayout(telegram))
@@ -161,8 +193,9 @@ class SettingsDialog(QDialog):
         """Which device xD-Tools' own audio engine plays recording source
         material through -- e.g. an interface's line/S/PDIF output feeding
         a MiniDisc deck or a CD burner's monitor path. Unrelated to the
-        MDRem checkbox below: this has nothing to do with the infrared
-        adapter. This is what replaced foobar2000's own output device
+        MDRem/NetMD rows on the MiniDisc Recording page: this has nothing
+        to do with the infrared adapter or NetMD's own USB cable. This is
+        what replaced foobar2000's own output device
         setting once recording stopped driving foobar2000 at all -- see
         audio_engine.py's own module docstring.
 
@@ -254,10 +287,10 @@ class SettingsDialog(QDialog):
 
     def _build_experimental_row(self, layout: QFormLayout) -> None:
         """Gates work-in-progress features that aren't ready for everyone --
-        currently just the (empty, for now) Experimental menu. Kept separate
-        from the MDRem checkbox below: that one gates hardware support,
-        this one gates in-development software features, and the two have
-        nothing to do with each other."""
+        currently just the (empty, for now) Experimental menu. Kept on
+        General rather than the MiniDisc Recording page: that one gates
+        hardware support, this one gates in-development software features,
+        and the two have nothing to do with each other."""
         self.experimental_check = QCheckBox(self.tr("Show experimental features"))
         self.experimental_check.setChecked(app_settings.experimental_features_enabled())
         self.experimental_check.setToolTip(
@@ -303,8 +336,6 @@ class SettingsDialog(QDialog):
         layout.addRow(self.tr("MDRem port"), port_widget)
 
         self._build_netmd_rows(layout)
-        self._build_cd_rows(layout)
-        self._mdrem_form = layout
 
         self._populate_ports(app_settings.mdrem_port())
         self._sync_mdrem_enabled(self.mdrem_check.isChecked())
@@ -368,19 +399,14 @@ class SettingsDialog(QDialog):
         index = self.netmd_mode_combo.findData(app_settings.netmd_recording_mode())
         self.netmd_mode_combo.setCurrentIndex(index if index >= 0 else 0)
         self.netmd_mode_combo.setToolTip(
-            self.tr(
-                "Which mode a recording is made in. This decides how much fits on the disc and, more to "
-                "the point, which cable carries the audio -- see the line below."
-            )
+            self.tr("Which mode a recording is made in. This decides how much fits on the disc.")
         )
-        self.netmd_mode_combo.currentIndexChanged.connect(lambda _index: self._refresh_netmd_advice())
         self._netmd_mode_widget = self.netmd_mode_combo
         layout.addRow(self.tr("Recording mode"), self.netmd_mode_combo)
 
         self.netmd_advice_label = QLabel()
         self.netmd_advice_label.setWordWrap(True)
         layout.addRow(self.netmd_advice_label)
-        self._netmd_form = layout
         self._refresh_netmd_advice()
 
     def selected_netmd_mode(self) -> str:
@@ -415,12 +441,9 @@ class SettingsDialog(QDialog):
         self._refresh_netmd_advice()
 
     def _refresh_netmd_advice(self) -> None:
-        """Which cables the chosen mode actually needs, said in the
-        settings window rather than only when a recording is already
-        under way -- plugging in the wrong one costs a disc."""
-        self.netmd_advice_label.setText(
-            netmd.connection_advice(self.selected_netmd_mode(), netmd=self.netmd_check.isChecked())
-        )
+        """What to plug in, said in the settings window rather than only
+        when a recording is already under way."""
+        self.netmd_advice_label.setText(netmd.connection_advice(netmd=self.netmd_check.isChecked()))
 
     def _detect_netmd(self) -> None:
         """Is a deck there and answering?

@@ -112,7 +112,7 @@ src/mdtools/
     layers_panel.py             list + select + reorder + rename + delete items
     startup_dialog.py           the first screen: recent projects, open, new, multiprint, remote
     new_design_dialog.py        File > New: medium, then one template picker per page (remembers last choice)
-    settings_dialog.py          Window > Settings: DPI, MDRem port, rip folder, audio devices, experimental
+    settings_dialog.py          Window > Settings: 5 grouped pages -- General, Audio, MiniDisc Recording, CD, Telegram
     experimental_settings_dialog.py   whatever an experimental feature needs, kept out of the stable one
     metadata_dialog.py          album/artist/year/track-list editor + "Lookup Track List..." + "Upload Tracklist"
     cover_preview.py            the cover thumbnail that is also the button for replacing it, plus its lookup
@@ -123,8 +123,10 @@ src/mdtools/
     mdrem_port.py               resolve_port(): the saved port, a probe, or a warning -- shared by both entry points
     mdrem_upload_dialog.py      preview-then-write dialog + the worker thread driving an upload
     netmd_upload_dialog.py      the same, over USB: reads the disc first, so it knows what landed
-    remote_dialog.py            software Sony MD remote, reachable from Window menu or startup screen
+    remote_dialog.py            software Sony MD remote (MDRem) + open_remote_control(), which picks it or NetMD's own
+    netmd_remote_dialog.py      NetMD's own transport remote: play/pause/stop/seek/track/play-mode over USB
     record_dialog.py            Recording > Record to MiniDisc: arm, play (own AudioPlayer), watch, hand off to titling
+    netmd_record_dialog.py      the same, over NetMD: decode to WAV, send each track (audio + title) over USB
     playback_bridge.py          crosses AudioPlayer's realtime callback thread onto the GUI thread (QObject + Signals)
     decode_worker.py            decoding/resampling/dithering a disc or tape side, off the GUI thread
     cd_rip_dialog.py            Source > Rip Audio CD: read TOC, identify, rip -- and stop there (#16)
@@ -613,12 +615,64 @@ but cannot redirect anything; and **a deck on Sony's own driver looks
 exactly like no deck at all** — it needs WinUSB/libusb (Zadig), which is
 why "no NetMD device" says all three possibilities.
 
-**A mode decides the cable, and the cable decides the flow**
-(`netmd.MODES`): SP is what a Toslink feed carries, so the audio path is
-unchanged and NetMD is there for the titles; LP2/LP4 are ATRAC3, which a
-digital input cannot carry at all, so they go over USB as a file transfer.
-`connection_advice()` states which cables a chosen mode needs, because
-plugging in the wrong one records silence and costs a disc.
+**Every NetMD recording mode goes out over the same USB cable — deliberately
+simplified from the first cut of this feature, which still ran SP over a
+Toslink cable because that is the only way MDRem's own (adapter-driven)
+recording can move audio at all.** `netmdcli`'s `send <file>` takes a
+plain 16-bit/44100Hz WAV with no `-d` flag, which *is* SP — unencoded Red
+Book PCM — so SP goes out as a file exactly like LP2/LP4 already did
+(`-d lp2`/`-d lp4`, netmdcli's own on-the-fly ATRAC3 encoder, since a
+digital input cannot carry ATRAC3 at all). `netmd.connection_advice()`
+now says one thing whatever mode is chosen: connect the USB cable, done.
+MDRem's own recording is unaffected — that adapter presses buttons and
+hears nothing back, so a real album still has to play through a real
+Toslink cable in real time for it; this simplification only applies when
+NetMD is the machine being driven. `netmd.build_record_plan()` +
+`prepare_track_wavs()` (via `decode.to_wav()`, the same conversion
+`cdburn.prepare_wavs()` uses) + `send_tracks()` are the plan-then-execute
+trio `panels/netmd_record_dialog.py`'s `NetMdRecordDialog` drives — closer
+in shape to `BurnDialog` than to MDRem's own `RecordDialog`, since nothing
+here plays in real time: a track's title goes out in the same `send`
+command as its audio, so there is no second titling pass the way MDRem's
+flow needs one. `app_window._run_record_dialog()` branches on
+`app_settings.netmd_enabled()` to pick `NetMdRecordDialog` over
+`RecordDialog`; `_resolve_recording_port()` returns `""` (no MDRem port
+needed) rather than probing for an adapter that will never be asked to do
+anything.
+
+**"Remote Control..." is one entry point for either machine**, same as
+recording: `panels/remote_dialog.py`'s `open_remote_control()` branches on
+`app_settings.netmd_enabled()` to open `NetMdRemoteDialog`
+(`panels/netmd_remote_dialog.py`) instead of the MDRem `RemoteDialog`, and
+both the Window menu and the startup screen's Remote button call it rather
+than each resolving a port and constructing `RemoteDialog` directly (which
+is what they used to do — silently wrong for NetMD, since there is no
+MDRem port to resolve). `NetMdRemoteDialog` is deliberately far smaller
+than `RemoteDialog`: no titling/typing/character-entry groups (a NetMD
+title always goes out in one shot, never typed key by key), no Eject
+button (`netmdcli` has no `eject` command — confirmed against its
+`--help`, not assumed), and a typed track number instead of a bank of
+buttons (NetMD tracks go up to `MAX_TRACK`=99, not the physical remote's
+25). `netmd.py`'s own transport functions (`play()`/`pause()`/`stop()`/
+`fast_forward()`/`rewind()`/`next_track()`/`previous_track()`/
+`restart_track()`/`set_play_mode()`) all go through one shared
+`_run_checked()` helper — the same no-device/non-zero check `erase_disc()`
+already made its own way, now written once.
+
+**A menu action gated on "is there a deck at all" must ask
+`app_settings.md_deck_driveable()` (`mdrem_enabled() or netmd_enabled()`),
+never `mdrem_enabled()` alone.** Three real entries shipped checking only
+the adapter — `record_folder_action`/`telegram_record_action` in
+`app_window.py`, the startup screen's own Remote button, and
+`TelegramChatDialog`'s Continue button — and every one of them went
+invisible or permanently disabled the moment NetMD-only was switched on,
+even though NetMD could drive the exact same recording. `mdrem_enabled()`
+itself already returns `False` whenever `netmd_enabled()` is `True` (see
+above), which is right for "does the *adapter* answer" but wrong for "is
+there a deck to reach at all" — the two questions look identical until
+NetMD exists, which is exactly why this was missed for an entire stage of
+NetMD's development. Any new gate shaped like "hide this without a deck"
+belongs on `md_deck_driveable()`, not on `mdrem_enabled()`.
 
 **Telegram bot integration** (`telegram_bot.py` + 3 panels, experimental,
 gated behind Settings' checkbox): signs in as a real **user account**

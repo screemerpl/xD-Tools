@@ -165,6 +165,20 @@ def set_netmd_enabled(value: bool) -> None:
         _settings().setValue(_MDREM_ENABLED_KEY, False)
 
 
+def md_deck_driveable() -> bool:
+    """Whether *some* way of driving a MiniDisc deck is configured --
+    MDRem or NetMD, whichever it is. Every menu entry that needs a deck to
+    be reachable at all (Record Folder, Record from Rip/Download Folder,
+    Remote Control) used to check `mdrem_enabled()` alone, which is right
+    for whether that deck answers to *keypresses*, but wrong for whether
+    there is a deck to record onto or remote-control at all -- it hid
+    those entries outright the moment NetMD was switched on, since
+    mdrem_enabled() is forced False whenever netmd_enabled() is True (see
+    its own docstring). This is the "is there a deck" question those call
+    sites actually mean to ask."""
+    return mdrem_enabled() or netmd_enabled()
+
+
 def netmd_device() -> str:
     """Which NetMD deck to use, as the name it reported. Empty means "the
     one that is plugged in", which is the ordinary case.
@@ -183,10 +197,11 @@ def set_netmd_device(value: str) -> None:
 
 def netmd_recording_mode() -> str:
     """SP, LP2 or LP4 -- the mode a NetMD recording is made in, which
-    decides both how much fits on the disc and which cable carries the
-    audio (see mdtools.netmd.MODES). Validated there, not here: this
-    returns whatever was stored and netmd.mode() falls back to SP for
-    anything it does not recognise."""
+    decides how much fits on the disc (see mdtools.netmd.MODES). Every
+    mode goes out over the same USB cable now, so this no longer decides
+    a cable too -- see netmd.py's own header. Validated there, not here:
+    this returns whatever was stored and netmd.mode() falls back to SP
+    for anything it does not recognise."""
     return str(_settings().value(_NETMD_RECORDING_MODE_KEY, "sp") or "sp")
 
 

@@ -76,13 +76,14 @@ from mdtools.panels.layers_panel import LayersPanel
 from mdtools.mdrem import disc_title
 from mdtools.panels.mdrem_port import resolve_port
 from mdtools.panels.metadata_dialog import MetadataDialog
+from mdtools.panels.netmd_record_dialog import NetMdRecordDialog
 from mdtools.panels.record_dialog import RecordDialog
 from mdtools.panels.recording_progress_bar import RecordingProgressBar
 from mdtools.panels.tape_record_dialog import TapeRecordDialog
 from mdtools.panels.new_design_dialog import NewDesignDialog
 from mdtools.panels.print_dialog import PrintDialog
 from mdtools.panels.properties_panel import PropertiesPanel
-from mdtools.panels.remote_dialog import RemoteDialog
+from mdtools.panels.remote_dialog import open_remote_control
 from mdtools.panels.settings_dialog import SettingsDialog
 from mdtools.panels.startup_dialog import StartupDialog
 from mdtools.panels.telegram_chat_dialog import TelegramChatDialog, pick_album_folder
@@ -1890,8 +1891,14 @@ class MainWindow(QMainWindow):
         With no project open at all -- only reachable before the startup
         screen has been answered -- nothing is hidden on medium grounds: at
         that point there is no medium to follow.
+
+        `adapter` asks app_settings.md_deck_driveable(), not
+        mdrem_enabled() alone -- these entries mean "is there a deck to
+        reach at all", which NetMD answers just as well as MDRem does; see
+        that function's own docstring for the entries that went missing
+        before this was fixed.
         """
-        adapter = app_settings.mdrem_enabled()
+        adapter = app_settings.md_deck_driveable()
         medium = self.project.medium if self.project is not None else None
         self._refresh_page_combo()
         for_md = medium in (None, MEDIUM_MD)
@@ -2575,8 +2582,17 @@ class MainWindow(QMainWindow):
         needed at all, so a caller can tell "nothing to resolve" from "the
         user has no adapter"; both are falsy, which is exactly the bug that
         would follow from checking truthiness instead of `is None`.
+
+        NetMD needs no MDRem serial port at all -- it drives the deck over
+        its own USB cable, resolved by netmdcli itself -- so it is treated
+        the same as "no adapter needed" here. `_run_record_dialog()` is
+        what actually picks NetMdRecordDialog over RecordDialog for this
+        case; this method only has to stop MDRem's own port probe from
+        running for a machine that will never be asked to use it.
         """
         if not self._recording_needs_an_adapter():
+            return ""
+        if app_settings.netmd_enabled():
             return ""
         if not app_settings.mdrem_enabled():
             return None
@@ -2797,11 +2813,12 @@ class MainWindow(QMainWindow):
         directly and has nothing to do with which label is being
         designed. (Erase MiniDisc used to sit right beside this for the
         same reason -- it's a button on the MiniDisc record dialog now,
-        see record_dialog.py's own _erase_disc.)"""
-        port = resolve_port(self)
-        if port is None:
-            return
-        RemoteDialog(port, self).exec()
+        see record_dialog.py's own _erase_disc.)
+
+        `open_remote_control()` is what actually picks RemoteDialog vs
+        NetMdRemoteDialog, by app_settings.netmd_enabled() -- the same
+        split _run_record_dialog() makes for recording."""
+        open_remote_control(self)
 
     def _run_record_dialog(
         self, port: str, paths: list[Path], metadata: ProjectMetadata | None = None
@@ -2816,13 +2833,21 @@ class MainWindow(QMainWindow):
         side A of a C90, so the branch belongs here rather than in every
         caller. The concurrency guard is checked once, here, before either
         branch -- _run_tape_record_dialog() is only ever reached from this
-        method, never a separate entry point of its own."""
+        method, never a separate entry point of its own.
+
+        A MiniDisc additionally branches on NetMD vs MDRem -- `port` is
+        whatever _resolve_recording_port() worked out, which is "" for
+        NetMD (see its own docstring for why), so NetMdRecordDialog simply
+        never receives one."""
         if not self._guard_no_concurrent_operation():
             return
         if self.project is not None and self.project.medium == MEDIUM_TAPE:
             self._run_tape_record_dialog(paths, metadata)
             return
-        dialog = RecordDialog(port, paths, self, metadata=metadata)
+        if app_settings.netmd_enabled():
+            dialog = NetMdRecordDialog(paths, self, metadata=metadata)
+        else:
+            dialog = RecordDialog(port, paths, self, metadata=metadata)
         self._drive_recording_bar(dialog, track_progress=True)
         try:
             exec_hideable(dialog)

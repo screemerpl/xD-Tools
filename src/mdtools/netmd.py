@@ -14,22 +14,21 @@ know which machine it is driving before it starts: they arm the deck
 differently, mark tracks differently, and write titles differently. One
 answer, chosen once, beats a per-dialog guess.
 
-**What a mode actually changes.** MiniDisc's recording modes are not just
-how much fits on the disc:
-
-- **SP** is what an optical (Toslink) feed carries. The deck records what
-  arrives at its digital input in real time, exactly as it does today for
-  MDRem -- so the audio path is unchanged, and NetMD is there to mark the
-  tracks and write the titles.
-- **LP2 / LP4** cannot arrive over Toslink at all: they are ATRAC3, and a
-  digital input carries Red Book PCM. They go over the USB cable instead,
-  as a file transfer -- which is not a recording in real time, and is
-  faster than one.
-
-So the mode decides the cable, and the cable decides the whole flow. That
-is why `MODES` carries both, and why `connection_advice()` exists: a user
-who plugs in the wrong thing for the mode they picked gets silence, and
-finding out why afterwards costs a disc.
+**Every NetMD recording goes over the USB cable, in every mode, and
+nothing else is ever needed.** MDRem's own recording still runs a real
+album through the sound card and an optical (Toslink) cable in real
+time -- that has not changed, and cannot: MDRem presses buttons and hears
+nothing back, so it cannot itself move audio at all. NetMD is different:
+`netmdcli`'s `send` command takes a plain 16-bit/44100Hz WAV file with no
+`-d` flag at all, which *is* SP -- Red Book PCM, unencoded -- so SP goes
+out over USB exactly the way LP2/LP4 already do (those pass through
+`-d lp2`/`-d lp4`, netmdcli's own on-the-fly ATRAC3 encoder, since a
+digital input cannot carry ATRAC3 at all). One cable, one flow, for every
+mode -- deliberately simpler than the version of this file that shipped
+first, which still ran SP over Toslink because that is the only way MDRem
+can do it. A NetMD user never has to reason about which cable a mode
+needs, which is the whole point of `connection_advice()` existing at
+all.
 
 **Everything here shells out to `netmdcli.exe`** (bundled, see
 `bin/win64/ATTRIBUTION.md`), the same plan-then-execute shape `cdrip.py`
@@ -47,9 +46,10 @@ import json
 import re
 import subprocess
 from dataclasses import dataclass, field
+from pathlib import Path
 
-from mdtools import cdrip
-from mdtools.mdrem import transliterate
+from mdtools import cdrip, decode
+from mdtools.mdrem import MAX_TRACK, transliterate
 
 # How long netmdcli is given to answer. A title write is a fraction of a
 # second and reading the disc little more, but the deck has to spin up
@@ -84,25 +84,24 @@ MODE_LP4 = "lp4"
 class RecordingMode:
     """One of MiniDisc's three recording modes, and what follows from it.
 
-    `over_usb` is the load-bearing field: it decides which cable carries
-    the audio, and with it which recording flow runs at all. `minutes` is
-    the same number RecordDialog's "one disc holds" spin box has always
-    taken -- stated here rather than typed there, now that something in
-    the app actually knows which mode the deck is in."""
+    `minutes` is the same number RecordDialog's "one disc holds" spin box
+    has always taken -- stated here rather than typed there, now that
+    something in the app actually knows which mode the deck is in.
+    `encoder_flag` is what netmdcli's `-d` flag wants for this mode, or ""
+    for SP, which needs no on-the-fly encoder because it is sent as plain
+    PCM, not encoded at all -- see this module's own header for why that
+    no longer means SP needs a different cable from LP2/LP4."""
 
     key: str
     label: str
     minutes: int
-    over_usb: bool
-    # What netmdcli's -d flag wants for this mode, or "" for SP (which
-    # needs no on-the-fly encoder because it is not encoded at all).
     encoder_flag: str
 
 
 MODES: dict[str, RecordingMode] = {
-    MODE_SP: RecordingMode(MODE_SP, "SP", 80, over_usb=False, encoder_flag=""),
-    MODE_LP2: RecordingMode(MODE_LP2, "LP2", 160, over_usb=True, encoder_flag="lp2"),
-    MODE_LP4: RecordingMode(MODE_LP4, "LP4", 320, over_usb=True, encoder_flag="lp4"),
+    MODE_SP: RecordingMode(MODE_SP, "SP", 80, encoder_flag=""),
+    MODE_LP2: RecordingMode(MODE_LP2, "LP2", 160, encoder_flag="lp2"),
+    MODE_LP4: RecordingMode(MODE_LP4, "LP4", 320, encoder_flag="lp4"),
 }
 
 
@@ -116,30 +115,25 @@ def mode(key: str) -> RecordingMode:
     return MODES.get(str(key).strip().lower(), MODES[MODE_SP])
 
 
-def connection_advice(mode_key: str, *, netmd: bool) -> str:
-    """What to plug in, in as many words, for the mode about to be used.
+def connection_advice(*, netmd: bool) -> str:
+    """What to plug in, in as many words.
 
-    The single most expensive mistake available here is a cable that is
-    not connected to the thing the chosen mode needs: the recording runs,
-    the disc turns, and what lands on it is silence. Nothing in the
-    protocol can detect that in advance -- an optical output does not know
-    whether anything is listening -- so it is said plainly up front
-    instead.
+    Only one answer exists on the NetMD side now, whatever mode is chosen
+    -- SP, LP2 and LP4 all go out over the same USB cable as a file
+    transfer, so there is no mode-specific mistake to warn about any more
+    (see this module's own header). The MDRem side is unchanged: that
+    adapter cannot move audio at all, so a real Toslink feed and a real
+    album playing in real time are still how a recording actually reaches
+    the deck.
     """
-    chosen = mode(mode_key)
     if not netmd:
         return (
             "Connect the computer's optical (Toslink) output to the deck's digital input. "
             "The MDRem adapter marks the tracks and writes the titles."
         )
-    if chosen.over_usb:
-        return (
-            "{label}: connect the USB cable only. The audio is sent over USB as a file, so no optical "
-            "cable is needed and nothing plays in real time."
-        ).format(label=chosen.label)
     return (
-        "SP: connect both cables. The audio goes over the optical (Toslink) output to the deck's digital "
-        "input and is recorded in real time; the USB cable marks the tracks and writes the titles."
+        "Connect the USB cable only. The audio, track splits and titles all go over it, in every "
+        "recording mode -- no optical cable is needed."
     )
 
 
@@ -346,6 +340,93 @@ def read_disc(run=subprocess.run) -> NetMdDisc:
     return parse_disc(output)
 
 
+def _run_checked(args: list[str], *, refusal: str, run=subprocess.run) -> None:
+    """One command that either goes through or raises -- the same
+    no-device/non-zero check `erase_disc()`, `write_titles()` and
+    `send_tracks()` each already made their own way. `refusal` is what to
+    say if the deck answers but declines, since "the deck refused" alone
+    would read the same for an erase, a track title and a play command."""
+    completed = run_command(args, run=run)
+    output = _combined(completed)
+    if _NO_DEVICE.search(output):
+        raise NetMdError("no NetMD device found")
+    if completed.returncode != 0:
+        raise NetMdError(_first_useful_line(output) or refusal)
+
+
+def erase_disc(run=subprocess.run) -> None:
+    """Wipes the disc in the deck right now -- netmdcli's own `erase
+    force`, mirroring the "Erase MiniDisc..." button MDRem's own
+    RecordDialog offers (erase_dialog.py), which drives the exact same
+    button sequence blind, over infrared, because it cannot ask the deck
+    whether an erase actually needs confirming first. `force` is required
+    here for the same reason it is in mdrem's own sequence: without it,
+    netmdcli would be the one asking a question nothing here can answer."""
+    _run_checked(["erase", "force"], refusal="the deck refused to erase the disc", run=run)
+
+
+# --- transport control --------------------------------------------------
+#
+# `netmdcli`'s own commands, one call each -- the NetMD half of what
+# RemoteDialog's button grid sends over infrared for MDRem. There is no
+# equivalent of that dialog's titling/character-entry/track-editing
+# groups here: a NetMD title is written by build_record_plan()/
+# write_titles() in one shot, not typed key by key, and the deck answers
+# every command (unlike MDRem), so there is nothing to "send and hope"
+# about. There is also no `eject` in netmdcli's own command list --
+# confirmed against its --help output, not assumed -- so panels/
+# netmd_remote_dialog.py has no Eject button to offer.
+
+PLAY_MODES = ("single", "repeat", "shuffle")
+
+
+def play(track: int | None = None, *, run=subprocess.run) -> None:
+    """Plays the current track, or a given one (1-based, as a person
+    counts them -- track_command_index() owns the same off-by-one every
+    other track-naming command in this module already does)."""
+    args = ["play"] if track is None else ["play", str(track_command_index(track))]
+    _run_checked(args, refusal="the deck refused to play", run=run)
+
+
+def pause(*, run=subprocess.run) -> None:
+    _run_checked(["pause"], refusal="the deck refused to pause", run=run)
+
+
+def stop(*, run=subprocess.run) -> None:
+    _run_checked(["stop"], refusal="the deck refused to stop", run=run)
+
+
+def fast_forward(*, run=subprocess.run) -> None:
+    _run_checked(["fforward"], refusal="the deck refused to fast-forward", run=run)
+
+
+def rewind(*, run=subprocess.run) -> None:
+    _run_checked(["rewind"], refusal="the deck refused to rewind", run=run)
+
+
+def next_track(*, run=subprocess.run) -> None:
+    _run_checked(["next"], refusal="the deck refused to skip ahead", run=run)
+
+
+def previous_track(*, run=subprocess.run) -> None:
+    _run_checked(["previous"], refusal="the deck refused to go back a track", run=run)
+
+
+def restart_track(*, run=subprocess.run) -> None:
+    _run_checked(["restart"], refusal="the deck refused to restart the track", run=run)
+
+
+def set_play_mode(play_mode: str, *, run=subprocess.run) -> None:
+    """`play_mode` is one of PLAY_MODES -- netmdcli takes the word as
+    written, so this refuses anything else itself rather than letting a
+    typo reach the deck as some other, unintended command."""
+    if play_mode not in PLAY_MODES:
+        raise NetMdError(f"unknown play mode: {play_mode}")
+    _run_checked(
+        ["setplaymode", play_mode], refusal="the deck refused to change play mode", run=run
+    )
+
+
 # --- writing titles ---------------------------------------------------
 
 
@@ -457,3 +538,227 @@ def write_titles(plan: TitlePlan, *, on_progress=None, run=subprocess.run) -> No
             raise NetMdError(
                 _first_useful_line(output) or f"the deck refused: {' '.join(command.args)}"
             )
+
+
+# --- recording a disc over USB -----------------------------------------
+#
+# `netmdcli send <file> [<title>]` takes a track's audio *and* its title
+# in one command -- unlike MDRem, there is no separate titling pass here
+# at all: a track lands on the disc already named. Everything below is
+# the plan-then-execute shape cdburn.py's own burn plan already uses,
+# for the same reason: what will happen has to be shown, in full, before
+# a recording that cannot be undone starts.
+
+# Problem codes -- bare strings rather than sentences, the same reasoning
+# cdburn.Problem follows: no Qt in this module, so no tr() to phrase them
+# with, and a dialog does that translation.
+UNREADABLE = "unreadable"
+TOO_MANY_TRACKS = "too_many_tracks"
+TOO_LONG_FOR_DISC = "too_long_for_disc"
+NO_TRACKS = "no_tracks"
+
+
+class NetMdCancelled(Exception):
+    """The user stopped a recording in progress."""
+
+
+@dataclass(frozen=True)
+class RecordProblem:
+    code: str
+    track_number: int = 0  # 1-based; 0 is about the disc as a whole
+    detail: str = ""
+
+
+@dataclass
+class RecordTrack:
+    source: Path
+    title: str
+    properties: object = None  # decode.AudioProperties, or None if unreadable
+
+    @property
+    def seconds(self) -> float:
+        return self.properties.duration_seconds if self.properties else 0.0
+
+
+@dataclass
+class RecordPlan:
+    """One disc's worth of NetMD recording, planned with no deck present.
+
+    Titles are cleaned through `clean_title()` up front -- `changed`
+    carries the same before/after pairs `build_title_plan()` reports --
+    because the title sent alongside a track's audio is the only title a
+    NetMD recording ever gets: there is no second, separate titling pass
+    to catch a dropped character here, unlike MDRem's."""
+
+    disc_title: str
+    mode: RecordingMode
+    tracks: list[RecordTrack] = field(default_factory=list)
+    problems: list[RecordProblem] = field(default_factory=list)
+    changed: list[tuple[str, str]] = field(default_factory=list)
+
+    @property
+    def total_seconds(self) -> float:
+        return sum(track.seconds for track in self.tracks)
+
+    @property
+    def capacity_seconds(self) -> float:
+        return self.mode.minutes * 60
+
+    @property
+    def can_record(self) -> bool:
+        return not self.problems and bool(self.tracks)
+
+    def problems_for(self, track_number: int) -> list[RecordProblem]:
+        return [problem for problem in self.problems if problem.track_number == track_number]
+
+
+def build_record_plan(
+    sources,
+    *,
+    disc_title: str = "",
+    mode_key: str = MODE_SP,
+    analyze=decode.analyze,
+) -> RecordPlan:
+    """Turns (path, title) pairs into a plan, with every reason it could
+    not be recorded attached rather than raised -- cdburn.build_burn_plan()'s
+    own reasoning: the dialog shows all of them at once, next to the
+    tracks they are about, rather than stopping at the first bad file.
+    """
+    chosen = mode(mode_key)
+    cleaned_disc, disc_changed = clean_title(disc_title)
+    plan = RecordPlan(disc_title=cleaned_disc, mode=chosen)
+    if disc_changed:
+        plan.changed.append((disc_title, cleaned_disc))
+
+    for number, (path, title) in enumerate(sources, start=1):
+        path = Path(path)
+        try:
+            properties = analyze(path)
+        except decode.DecodeError as exc:
+            properties = None
+            plan.problems.append(RecordProblem(UNREADABLE, number, str(exc)))
+        cleaned_title, changed = clean_title(title)
+        if changed:
+            plan.changed.append((title, cleaned_title))
+        plan.tracks.append(RecordTrack(source=path, title=cleaned_title, properties=properties))
+
+    if not plan.tracks:
+        plan.problems.append(RecordProblem(NO_TRACKS))
+    if len(plan.tracks) > MAX_TRACK:
+        # The same ceiling MDRem titling is held to (MAX_TRACK) -- see its
+        # own note on why 99 is real, not a round number: the deck's
+        # number field commits on the second digit either way.
+        plan.problems.append(RecordProblem(TOO_MANY_TRACKS, 0, str(len(plan.tracks))))
+    if plan.total_seconds > plan.capacity_seconds:
+        over = plan.total_seconds - plan.capacity_seconds
+        plan.problems.append(RecordProblem(TOO_LONG_FOR_DISC, 0, f"{over:.1f}s"))
+    return plan
+
+
+def wav_name_for(number: int) -> str:
+    """Zero-padded so a scratch folder reads in disc order -- the same
+    convention cdburn.wav_name_for() uses for its own tracks."""
+    return f"{number:02d}.wav"
+
+
+def prepare_track_wavs(
+    plan: RecordPlan,
+    directory: Path | str,
+    *,
+    on_progress=None,
+    should_cancel=None,
+) -> list[str]:
+    """Decodes every track into `directory` as Red Book WAV, in disc order
+    -- cdburn.prepare_wavs(), for the same reason: netmdcli's `send` wants
+    a plain WAV file on disk, not a stream, whatever mode is about to
+    encode it (SP sends it as-is; LP2/LP4's `-d` flag does the ATRAC3
+    encoding itself, on the fly, as the file goes out).
+
+    Returns the bare filenames. Raises NetMdError on the first failure --
+    unlike planning, there is nothing useful to do with a half-decoded
+    album. Cancelling takes effect between tracks and costs nothing here:
+    no deck has been touched yet, only a scratch folder."""
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=True)
+    names: list[str] = []
+    for number, track in enumerate(plan.tracks, start=1):
+        if should_cancel is not None and should_cancel():
+            raise NetMdCancelled()
+        name = wav_name_for(number)
+        try:
+            decode.to_wav(track.source, directory / name)
+        except decode.DecodeError as exc:
+            raise NetMdError(str(exc)) from exc
+        names.append(name)
+        if on_progress is not None:
+            on_progress(number / len(plan.tracks))
+    return names
+
+
+# How long netmdcli is given to send one track. Unlike a title command (a
+# fraction of a second), this moves the whole file, and nothing here has
+# been measured against real hardware: LP2/LP4's on-the-fly ATRAC3
+# encoding is meant to be faster than real time, but whether a given
+# deck's true-PCM SP upload is has not been confirmed on anything. Set
+# generous rather than tight -- a timeout mid-transfer costs more than a
+# slow-looking progress bar.
+SEND_TIMEOUT_S = 600.0
+
+
+def send_args(track_mode: RecordingMode, path: Path | str, title: str) -> list[str]:
+    """One `send` invocation's arguments, after the tool itself --
+    run_command() puts the tool in front, the same shape every other
+    command in this module takes.
+
+    The `-d` flag is netmdcli's own on-the-fly ATRAC3 encoder and comes
+    *before* the command name, not after -- LP2/LP4 only. SP carries no
+    flag at all: it needs no encoding, which is exactly why it can go out
+    over the same USB cable as the other two (see this module's header)."""
+    args = []
+    if track_mode.encoder_flag:
+        args += ["-d", track_mode.encoder_flag]
+    args += ["send", str(path)]
+    if title:
+        args.append(title)
+    return args
+
+
+def send_tracks(
+    plan: RecordPlan,
+    directory: Path | str,
+    names: list[str],
+    *,
+    on_progress=None,
+    run=subprocess.run,
+) -> None:
+    """Sends every track, in order, then writes the disc's own title --
+    stopping at the first refusal, write_titles()'s own reasoning: this is
+    all one recording, and a deck that has just refused a track is not
+    worth sending the next one to.
+
+    `on_progress(index, total, description)` is called before each send,
+    counting the disc title as the final step, so a dialog can show which
+    track (or "the disc title") is going out."""
+    directory = Path(directory)
+    total = len(names) + (1 if plan.disc_title else 0)
+    for index, (name, track) in enumerate(zip(names, plan.tracks), start=1):
+        if on_progress is not None:
+            on_progress(index, total, track.title)
+        completed = run_command(
+            send_args(plan.mode, directory / name, track.title), timeout=SEND_TIMEOUT_S, run=run
+        )
+        output = _combined(completed)
+        if _NO_DEVICE.search(output):
+            raise NetMdError("no NetMD device found")
+        if completed.returncode != 0:
+            raise NetMdError(_first_useful_line(output) or f"the deck refused track {index}")
+
+    if plan.disc_title:
+        if on_progress is not None:
+            on_progress(total, total, plan.disc_title)
+        completed = run_command(["rename_disc", plan.disc_title], run=run)
+        output = _combined(completed)
+        if _NO_DEVICE.search(output):
+            raise NetMdError("no NetMD device found")
+        if completed.returncode != 0:
+            raise NetMdError(_first_useful_line(output) or "the deck refused the disc title")

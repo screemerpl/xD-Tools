@@ -122,17 +122,18 @@ def test_every_mode_is_offered_with_its_capacity(qt_app):
     assert "320" in dialog.netmd_mode_combo.itemText(2)
 
 
-def test_the_advice_follows_the_chosen_mode(qt_app):
-    """The whole point of showing it here: which cables to plug in is
-    decided by the mode, and getting it wrong costs a disc."""
+def test_the_advice_is_usb_only_and_does_not_depend_on_the_mode(qt_app):
+    """Every NetMD mode goes over USB now (see netmd.py's own header), so
+    switching modes must not change what is shown here."""
     dialog = SettingsDialog()
     dialog.netmd_check.setChecked(True)
 
     dialog.netmd_mode_combo.setCurrentIndex(dialog.netmd_mode_combo.findData(netmd.MODE_SP))
-    assert "optical" in dialog.netmd_advice_label.text().lower()
+    sp_advice = dialog.netmd_advice_label.text()
+    assert "no optical cable" in sp_advice.lower()
 
     dialog.netmd_mode_combo.setCurrentIndex(dialog.netmd_mode_combo.findData(netmd.MODE_LP2))
-    assert "no optical cable" in dialog.netmd_advice_label.text().lower()
+    assert dialog.netmd_advice_label.text() == sp_advice
 
 
 def test_ok_saves_the_mode_and_the_exclusion(qt_app):

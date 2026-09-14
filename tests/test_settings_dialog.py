@@ -1,6 +1,13 @@
 from mdtools import app_settings, audio_engine
 from mdtools.app_window import MainWindow
-from mdtools.panels.settings_dialog import GROUP_GENERAL, GROUP_TELEGRAM, SettingsDialog
+from mdtools.panels.settings_dialog import (
+    GROUP_AUDIO,
+    GROUP_CD,
+    GROUP_GENERAL,
+    GROUP_MINIDISC,
+    GROUP_TELEGRAM,
+    SettingsDialog,
+)
 
 
 def test_dialog_seeds_fields_from_current_settings(qt_app):
@@ -364,7 +371,7 @@ def test_browsing_creates_the_folder_first_so_the_picker_opens_in_it(qt_app, tmp
 def test_the_groups_are_listed_down_the_left(qt_app):
     dialog = SettingsDialog()
     labels = [dialog.group_list.item(i).text() for i in range(dialog.group_list.count())]
-    assert labels == ["General", "Telegram"]
+    assert labels == ["General", "Audio", "MiniDisc Recording", "CD", "Telegram"]
     assert dialog.pages.count() == len(labels), "one page per group"
 
 
@@ -378,6 +385,24 @@ def test_picking_a_group_shows_its_page(qt_app):
     dialog.group_list.setCurrentRow(GROUP_TELEGRAM)
 
     assert dialog.pages.currentIndex() == GROUP_TELEGRAM
+
+
+def test_every_group_lands_on_a_page_with_its_own_fields(qt_app):
+    """Splitting the old single "General" form by subject must not move a
+    field to the wrong page."""
+    dialog = SettingsDialog()
+
+    assert dialog.pages.widget(GROUP_AUDIO).isAncestorOf(dialog.audio_device_combo)
+    assert dialog.pages.widget(GROUP_AUDIO).isAncestorOf(dialog.tape_audio_device_combo)
+    assert dialog.pages.widget(GROUP_AUDIO).isAncestorOf(dialog.recording_gain_spin)
+
+    assert dialog.pages.widget(GROUP_MINIDISC).isAncestorOf(dialog.mdrem_check)
+    assert dialog.pages.widget(GROUP_MINIDISC).isAncestorOf(dialog.netmd_check)
+
+    assert dialog.pages.widget(GROUP_CD).isAncestorOf(dialog.cd_rip_folder_edit)
+
+    assert dialog.pages.widget(GROUP_GENERAL).isAncestorOf(dialog.screen_dpi_spin)
+    assert dialog.pages.widget(GROUP_GENERAL).isAncestorOf(dialog.experimental_check)
 
 
 def test_show_group_jumps_straight_to_one(qt_app):
